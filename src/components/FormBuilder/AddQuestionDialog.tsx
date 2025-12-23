@@ -90,6 +90,11 @@ export function AddQuestionDialog({
   const handleQuickAdd = (type: typeof QUICK_TYPES[0]) => {
     const label = getDefaultLabel(type.id);
     const path = generateFieldPath(label);
+    // Deep clone defaultConfig to avoid shared references between fields
+    const clonedConfig = type.defaultConfig
+      ? JSON.parse(JSON.stringify(type.defaultConfig))
+      : {};
+
     const newField: FieldConfig = {
       path,
       label,
@@ -97,7 +102,7 @@ export function AddQuestionDialog({
       included: true,
       required: false,
       source: 'custom',
-      ...type.defaultConfig,
+      ...clonedConfig,
     };
     handleSelect(newField);
   };

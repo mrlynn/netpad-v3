@@ -243,9 +243,15 @@ const QUESTION_TYPES: QuestionType[] = [
     description: 'Upload files',
     icon: <AttachFile />,
     category: 'advanced',
-    fieldType: 'string',
+    fieldType: 'file_upload',
     defaultConfig: {
       placeholder: 'Click to upload or drag and drop',
+      validation: {
+        allowedTypes: ['*/*'],
+        maxSize: 10, // 10MB
+        multiple: false,
+        maxFiles: 1,
+      },
     },
   },
   {
@@ -254,9 +260,15 @@ const QUESTION_TYPES: QuestionType[] = [
     description: 'Upload image',
     icon: <Image />,
     category: 'advanced',
-    fieldType: 'string',
+    fieldType: 'image_upload',
     defaultConfig: {
       placeholder: 'Upload an image',
+      validation: {
+        allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        maxSize: 5, // 5MB
+        multiple: false,
+        maxFiles: 1,
+      },
     },
   },
   {
@@ -364,6 +376,11 @@ export function QuestionTypePicker({ onSelect, variant = 'grid' }: QuestionTypeP
     const label = getDefaultLabel(type.id);
     const path = generateFieldPath(label);
 
+    // Deep clone defaultConfig to avoid shared references between fields
+    const clonedConfig = type.defaultConfig
+      ? JSON.parse(JSON.stringify(type.defaultConfig))
+      : {};
+
     const newField: FieldConfig = {
       path,
       label,
@@ -371,7 +388,7 @@ export function QuestionTypePicker({ onSelect, variant = 'grid' }: QuestionTypeP
       included: true,
       required: false,
       source: 'custom',
-      ...type.defaultConfig,
+      ...clonedConfig,
     };
     onSelect(newField);
   };

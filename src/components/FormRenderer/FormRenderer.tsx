@@ -32,7 +32,7 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
-import { ArrowBack, ArrowForward, Check, Add, Delete, Lock } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close } from '@mui/icons-material';
 import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft } from '@/types/form';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
 import { evaluateFormula } from '@/utils/computedFields';
@@ -135,6 +135,25 @@ function detectKeyValueFields(arr: any[]): { keyField: string; valueField: strin
   const keyField = keys.find(k => ['key', 'name', 'attribute', 'property'].includes(k.toLowerCase())) || keys[0];
   const valueField = keys.find(k => ['value', 'val', 'data'].includes(k.toLowerCase())) || keys[1];
   return { keyField, valueField };
+}
+
+// Helper to convert File to base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper to format file size
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
 interface FormRendererProps {
@@ -1584,6 +1603,177 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
             required={config.required}
             helperText="Separate values with commas"
           />
+        );
+      }
+
+      case 'file_upload':
+      case 'file-upload':
+      case 'image_upload':
+      case 'image-upload': {
+        const isImageOnly = config.type === 'image_upload' || config.type === 'image-upload';
+        const acceptTypes = isImageOnly
+          ? 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml'
+          : config.validation?.allowedTypes?.join(',') || '*/*';
+        const maxSize = config.validation?.maxSize || (isImageOnly ? 10 : 25); // MB
+        const multiple = config.validation?.multiple || false;
+
+        // Value is an array of uploaded file objects: { url, name, size, type }
+        const uploadedFiles = Array.isArray(value) ? value : (value ? [value] : []);
+
+        const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+          const selectedFiles = e.target.files;
+          if (!selectedFiles || selectedFiles.length === 0) return;
+
+          const newFiles: Array<{ url: string; name: string; size: number; type: string; uploading?: boolean }> = [];
+
+          for (const file of Array.from(selectedFiles)) {
+            // Validate file size
+            if (file.size > maxSize * 1024 * 1024) {
+              alert(`File "${file.name}" exceeds maximum size of ${maxSize}MB`);
+              continue;
+            }
+
+            // Validate file type for images
+            if (isImageOnly && !file.type.startsWith('image/')) {
+              alert(`File "${file.name}" is not an image`);
+              continue;
+            }
+
+            // Convert to base64 for storage (for now - can be enhanced to use blob storage)
+            try {
+              const base64 = await fileToBase64(file);
+              newFiles.push({
+                url: base64,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+              });
+            } catch (err) {
+              console.error('Failed to read file:', err);
+            }
+          }
+
+          if (newFiles.length > 0) {
+            if (multiple) {
+              setFieldValue(config.path, [...uploadedFiles, ...newFiles]);
+            } else {
+              setFieldValue(config.path, newFiles[0]);
+            }
+          }
+
+          // Reset input
+          e.target.value = '';
+        };
+
+        const removeFile = (index: number) => {
+          if (multiple) {
+            const newFiles = uploadedFiles.filter((_, i) => i !== index);
+            setFieldValue(config.path, newFiles.length > 0 ? newFiles : null);
+          } else {
+            setFieldValue(config.path, null);
+          }
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+
+            {/* Upload Area */}
+            <Box
+              component="label"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 3,
+                border: '2px dashed',
+                borderColor: 'divider',
+                borderRadius: `${theme.borderRadius || 8}px`,
+                bgcolor: alpha(theme.primaryColor || '#00ED64', 0.02),
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  bgcolor: alpha(theme.primaryColor || '#00ED64', 0.05),
+                },
+              }}
+            >
+              <input
+                type="file"
+                accept={acceptTypes}
+                multiple={multiple}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              <CloudUpload sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                {config.placeholder || 'Click to upload or drag and drop'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {isImageOnly ? 'Images only' : 'All files'} • Max {maxSize}MB
+                {multiple && ' • Multiple files allowed'}
+              </Typography>
+            </Box>
+
+            {/* Uploaded Files List */}
+            {uploadedFiles.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {uploadedFiles.map((file, index) => (
+                  <Paper
+                    key={index}
+                    elevation={0}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: `${theme.borderRadius || 8}px`,
+                    }}
+                  >
+                    {/* Preview for images */}
+                    {file.type?.startsWith('image/') && file.url ? (
+                      <Box
+                        component="img"
+                        src={file.url}
+                        alt={file.name}
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <InsertDriveFile sx={{ fontSize: 40, color: 'text.secondary' }} />
+                    )}
+
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                        {file.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatFileSize(file.size)}
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      size="small"
+                      onClick={() => removeFile(index)}
+                      sx={{ minWidth: 'auto', p: 0.5, color: 'text.secondary' }}
+                    >
+                      <Close fontSize="small" />
+                    </Button>
+                  </Paper>
+                ))}
+              </Box>
+            )}
+          </Box>
         );
       }
 

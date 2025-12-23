@@ -593,6 +593,11 @@ export interface FieldConfig {
     yesLabel?: string;
     noLabel?: string;
     displayStyle?: 'switch' | 'buttons' | 'checkbox';
+    // File/Image upload settings
+    allowedTypes?: string[];     // MIME types allowed (e.g., ['image/jpeg', 'image/png'])
+    maxSize?: number;            // Maximum file size in MB
+    multiple?: boolean;          // Allow multiple file uploads
+    maxFiles?: number;           // Maximum number of files (when multiple is true)
   };
   conditionalLogic?: ConditionalLogic;
   lookup?: LookupConfig;        // For lookup/reference fields
