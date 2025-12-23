@@ -691,6 +691,47 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
 };
 
 // ============================================
+// File Storage
+// ============================================
+
+export interface StoredFile {
+  fileId: string;
+  organizationId: string;
+  formId?: string;
+  submissionId?: string;
+  fieldId?: string;
+
+  // Blob storage info
+  url: string;
+  pathname: string;
+  downloadUrl: string;
+
+  // File metadata
+  originalName: string;
+  mimeType: string;
+  size: number;
+
+  // Tracking
+  uploadedBy: string;
+  uploadedAt: Date;
+  deletedAt?: Date;
+}
+
+export interface FileUploadLimits {
+  maxFileSizeBytes: number;
+  maxTotalStorageBytes: number;
+  allowedMimeTypes: string[];
+}
+
+export type FileUploadErrorCode =
+  | 'QUOTA_EXCEEDED'
+  | 'FILE_TOO_LARGE'
+  | 'INVALID_TYPE'
+  | 'UPLOAD_FAILED'
+  | 'UNAUTHORIZED'
+  | 'NOT_FOUND';
+
+// ============================================
 // Usage Tracking
 // ============================================
 

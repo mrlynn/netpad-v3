@@ -41,6 +41,7 @@
     "jest.config.js",
     "tests/**/*",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "scripts/**/*"
   ]
 }

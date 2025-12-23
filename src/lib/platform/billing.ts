@@ -776,6 +776,147 @@ export async function markEventProcessed(stripeEventId: string): Promise<void> {
 }
 
 // ============================================
+// Storage Quota Management
+// ============================================
+
+/**
+ * Check storage quota for an organization
+ */
+export async function checkStorageQuota(
+  orgId: string,
+  additionalBytes: number = 0
+): Promise<{
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  percentUsed: number;
+}> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return { allowed: false, current: 0, limit: 0, remaining: 0, percentUsed: 0 };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limitMb = SUBSCRIPTION_TIERS[tier].limits.maxFileStorageMb;
+  const limitBytes = limitMb === -1 ? -1 : limitMb * 1024 * 1024;
+
+  const usage = await getOrCreateUsage(orgId);
+  const currentBytes = usage.storage.filesBytes;
+
+  // Unlimited storage
+  if (limitBytes === -1) {
+    return {
+      allowed: true,
+      current: currentBytes,
+      limit: -1,
+      remaining: -1,
+      percentUsed: 0,
+    };
+  }
+
+  const wouldUse = currentBytes + additionalBytes;
+  const allowed = wouldUse <= limitBytes;
+  const remaining = Math.max(0, limitBytes - currentBytes);
+  const percentUsed = (currentBytes / limitBytes) * 100;
+
+  return { allowed, current: currentBytes, limit: limitBytes, remaining, percentUsed };
+}
+
+/**
+ * Increment storage usage after file upload
+ */
+export async function incrementStorageUsage(
+  orgId: string,
+  bytesAdded: number
+): Promise<{ allowed: boolean; current: number; limit: number }> {
+  // Check quota first
+  const quotaCheck = await checkStorageQuota(orgId, bytesAdded);
+
+  if (!quotaCheck.allowed) {
+    return {
+      allowed: false,
+      current: quotaCheck.current,
+      limit: quotaCheck.limit,
+    };
+  }
+
+  // Increment storage
+  const collection = await getUsageCollection();
+  const period = getCurrentPeriod();
+
+  await collection.updateOne(
+    { organizationId: orgId, period },
+    {
+      $inc: { 'storage.filesBytes': bytesAdded },
+      $set: { updatedAt: new Date() },
+    },
+    { upsert: true }
+  );
+
+  return {
+    allowed: true,
+    current: quotaCheck.current + bytesAdded,
+    limit: quotaCheck.limit,
+  };
+}
+
+/**
+ * Decrement storage usage after file deletion
+ */
+export async function decrementStorageUsage(
+  orgId: string,
+  bytesRemoved: number
+): Promise<void> {
+  const collection = await getUsageCollection();
+  const period = getCurrentPeriod();
+
+  await collection.updateOne(
+    { organizationId: orgId, period },
+    {
+      $inc: { 'storage.filesBytes': -Math.abs(bytesRemoved) },
+      $set: { updatedAt: new Date() },
+    }
+  );
+}
+
+/**
+ * Get storage usage summary for display
+ */
+export async function getStorageUsageSummary(orgId: string): Promise<{
+  usedBytes: number;
+  limitBytes: number;
+  remainingBytes: number;
+  percentUsed: number;
+  isUnlimited: boolean;
+  usedFormatted: string;
+  limitFormatted: string;
+}> {
+  const quota = await checkStorageQuota(orgId);
+
+  return {
+    usedBytes: quota.current,
+    limitBytes: quota.limit,
+    remainingBytes: quota.remaining,
+    percentUsed: quota.percentUsed,
+    isUnlimited: quota.limit === -1,
+    usedFormatted: formatBytes(quota.current),
+    limitFormatted: quota.limit === -1 ? 'Unlimited' : formatBytes(quota.limit),
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  if (bytes === -1) return 'Unlimited';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
+
+// ============================================
 // Helpers
 // ============================================
 
