@@ -33,11 +33,12 @@ import {
   RadioGroup,
 } from '@mui/material';
 import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close } from '@mui/icons-material';
-import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft } from '@/types/form';
+import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft, FormHeader } from '@/types/form';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
 import { evaluateFormula } from '@/utils/computedFields';
 import { getResolvedTheme } from '@/lib/formThemes';
 import { TurnstileWidget, TurnstileWidgetRef } from './TurnstileWidget';
+import { FormHeaderDisplay } from '@/components/FormBuilder/FormHeaderDisplay';
 
 // Generate a random honeypot field name to avoid pattern detection
 function generateHoneypotFieldName(): string {
@@ -1478,6 +1479,111 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
           />
         );
 
+      case 'color': {
+        const colorValue = value || '#000000';
+        const presetColors = config.validation?.presetColors || ['#FF5733', '#33FF57', '#3357FF', '#FF33F5', '#F5FF33', '#33FFF5'];
+        const presetsOnly = config.validation?.presetsOnly || false;
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Color preview box */}
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: `${theme.borderRadius || 8}px`,
+                    bgcolor: colorValue,
+                    border: '2px solid',
+                    borderColor: 'divider',
+                    boxShadow: 1,
+                    flexShrink: 0,
+                  }}
+                />
+                {/* Color input */}
+                {!presetsOnly && (
+                  <TextField
+                    type="color"
+                    value={colorValue}
+                    onChange={(e) => setFieldValue(config.path, e.target.value)}
+                    size="small"
+                    sx={{
+                      width: 80,
+                      '& input': { p: 0.5, height: 40, cursor: 'pointer' },
+                    }}
+                  />
+                )}
+                {/* Hex value display */}
+                <TextField
+                  value={colorValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^#[0-9A-Fa-f]{0,6}$/.test(val) || val === '') {
+                      setFieldValue(config.path, val);
+                    }
+                  }}
+                  placeholder="#000000"
+                  size="small"
+                  sx={{ width: 120 }}
+                  inputProps={{ maxLength: 7 }}
+                />
+              </Box>
+              {/* Preset color swatches */}
+              {presetColors.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                  {presetColors.map((color, i) => (
+                    <Box
+                      key={i}
+                      onClick={() => setFieldValue(config.path, color)}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: `${(theme.borderRadius || 8) / 2}px`,
+                        bgcolor: color,
+                        cursor: 'pointer',
+                        border: '2px solid',
+                        borderColor: colorValue === color ? (theme.primaryColor || '#00ED64') : 'divider',
+                        boxShadow: colorValue === color ? `0 0 0 2px ${alpha(theme.primaryColor || '#00ED64', 0.3)}` : 'none',
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                          boxShadow: 1,
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'time': {
+        const minuteStep = config.validation?.minuteStep || 1;
+
+        return (
+          <TextField
+            fullWidth
+            type="time"
+            label={config.label}
+            placeholder={config.placeholder}
+            value={value || ''}
+            onChange={(e) => setFieldValue(config.path, e.target.value)}
+            required={config.required}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{
+              step: minuteStep * 60, // step is in seconds
+            }}
+          />
+        );
+      }
+
       case 'array':
       case 'array-object': {
         const arrayValue = Array.isArray(value) ? value : [];
@@ -1777,6 +1883,1195 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
         );
       }
 
+      case 'phone': {
+        const phoneValue = value || '';
+        return (
+          <TextField
+            fullWidth
+            type="tel"
+            label={config.label}
+            placeholder={config.placeholder || '+1 (555) 000-0000'}
+            value={phoneValue}
+            onChange={(e) => setFieldValue(config.path, e.target.value)}
+            onFocus={() => trackFieldFocus(config.path)}
+            onBlur={() => trackFieldBlur(config.path, !!phoneValue)}
+            required={config.required}
+            inputProps={{
+              pattern: config.validation?.pattern || '[0-9+\\-\\s()]*',
+            }}
+            helperText={config.validation?.showCountrySelector ? 'Include country code' : undefined}
+          />
+        );
+      }
+
+      case 'time': {
+        const minuteStep = config.validation?.minuteStep || 1;
+        return (
+          <TextField
+            fullWidth
+            type="time"
+            label={config.label}
+            placeholder={config.placeholder}
+            value={value || ''}
+            onChange={(e) => setFieldValue(config.path, e.target.value)}
+            onFocus={() => trackFieldFocus(config.path)}
+            onBlur={() => trackFieldBlur(config.path, !!value)}
+            required={config.required}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{
+              step: minuteStep * 60, // step is in seconds
+            }}
+          />
+        );
+      }
+
+      case 'paragraph':
+      case 'long-text':
+      case 'textarea': {
+        return (
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label={config.label}
+            placeholder={config.placeholder || 'Enter detailed response...'}
+            value={value || ''}
+            onChange={(e) => {
+              setFieldValue(config.path, e.target.value);
+              trackFieldChange(config.path);
+            }}
+            onFocus={() => trackFieldFocus(config.path)}
+            onBlur={() => trackFieldBlur(config.path, !!value)}
+            required={config.required}
+            inputProps={{
+              maxLength: config.validation?.maxLength || 2000,
+            }}
+            helperText={config.validation?.maxLength ? `${(value || '').length}/${config.validation.maxLength}` : undefined}
+          />
+        );
+      }
+
+      case 'dropdown':
+      case 'select': {
+        // Options can come from lookup config or validation.options
+        const lookupConfig = config.lookup as LookupConfig | undefined;
+        const validationConfig = config.validation;
+        const options = lookupConfig
+          ? (lookupOptions[config.path] || [])
+          : (validationConfig?.options || []).map((opt: string | { value: any; label: string }) =>
+              typeof opt === 'string' ? { value: opt, label: opt } : opt
+            );
+        const isLoading = lookupConfig ? lookupLoading[config.path] : false;
+        const isSearchable = validationConfig?.searchable || lookupConfig?.searchable;
+
+        if (isSearchable) {
+          return (
+            <Autocomplete
+              options={options}
+              getOptionLabel={(option: any) => option.label || String(option.value || option)}
+              value={options.find((opt: any) => opt.value === value) || null}
+              onChange={(_, newValue: any) => {
+                setFieldValue(config.path, newValue?.value ?? '');
+                trackFieldChange(config.path);
+              }}
+              loading={isLoading}
+              onFocus={() => trackFieldFocus(config.path)}
+              onBlur={() => trackFieldBlur(config.path, !!value)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={config.label}
+                  required={config.required}
+                  placeholder={config.placeholder || 'Select an option'}
+                />
+              )}
+            />
+          );
+        }
+
+        return (
+          <FormControl fullWidth required={config.required}>
+            <InputLabel>{config.label}</InputLabel>
+            <Select
+              value={value || ''}
+              label={config.label}
+              onChange={(e) => {
+                setFieldValue(config.path, e.target.value);
+                trackFieldChange(config.path);
+              }}
+              onFocus={() => trackFieldFocus(config.path)}
+              onBlur={() => trackFieldBlur(config.path, !!value)}
+            >
+              {config.validation?.clearable !== false && (
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+              )}
+              {options.map((opt: any, idx: number) => (
+                <MenuItem key={opt.value || idx} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+      }
+
+      case 'multiple-choice':
+      case 'radio': {
+        const options = (config.validation?.options || []).map((opt: string | { value: any; label: string }) =>
+          typeof opt === 'string' ? { value: opt, label: opt } : opt
+        );
+        const layout = config.validation?.choiceLayout || 'vertical';
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <RadioGroup
+              value={value ?? ''}
+              onChange={(e) => {
+                setFieldValue(config.path, e.target.value);
+                trackFieldChange(config.path);
+              }}
+              sx={{
+                display: 'flex',
+                flexDirection: layout === 'horizontal' ? 'row' : 'column',
+                flexWrap: 'wrap',
+                gap: layout === 'horizontal' ? 2 : 0.5,
+              }}
+            >
+              {options.map((opt: any, idx: number) => (
+                <FormControlLabel
+                  key={opt.value || idx}
+                  value={opt.value}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: alpha(theme.primaryColor || '#00ED64', 0.5),
+                        '&.Mui-checked': {
+                          color: theme.primaryColor || '#00ED64',
+                        },
+                      }}
+                    />
+                  }
+                  label={opt.label}
+                />
+              ))}
+              {config.validation?.allowOther && (
+                <FormControlLabel
+                  value="_other"
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: alpha(theme.primaryColor || '#00ED64', 0.5),
+                        '&.Mui-checked': { color: theme.primaryColor || '#00ED64' },
+                      }}
+                    />
+                  }
+                  label={config.validation?.otherLabel || 'Other'}
+                />
+              )}
+            </RadioGroup>
+            {value === '_other' && (
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Please specify..."
+                sx={{ mt: 1 }}
+                onChange={(e) => setFieldValue(`${config.path}_other`, e.target.value)}
+              />
+            )}
+          </Box>
+        );
+      }
+
+      case 'checkboxes':
+      case 'checkbox-group': {
+        const options = (config.validation?.options || []).map((opt: string | { value: any; label: string }) =>
+          typeof opt === 'string' ? { value: opt, label: opt } : opt
+        );
+        const selectedValues = Array.isArray(value) ? value : [];
+        const layout = config.validation?.choiceLayout || 'vertical';
+        const minSelections = config.validation?.minSelections || 0;
+        const maxSelections = config.validation?.maxSelections || options.length;
+
+        const handleCheckboxChange = (optValue: any, checked: boolean) => {
+          let newValues: any[];
+          if (checked) {
+            if (selectedValues.length < maxSelections) {
+              newValues = [...selectedValues, optValue];
+            } else {
+              return; // Max reached
+            }
+          } else {
+            newValues = selectedValues.filter((v: any) => v !== optValue);
+          }
+          setFieldValue(config.path, newValues);
+          trackFieldChange(config.path);
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            {(minSelections > 0 || maxSelections < options.length) && (
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                {minSelections > 0 && `Select at least ${minSelections}`}
+                {minSelections > 0 && maxSelections < options.length && ' and '}
+                {maxSelections < options.length && `at most ${maxSelections}`}
+              </Typography>
+            )}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: layout === 'horizontal' ? 'row' : 'column',
+                flexWrap: 'wrap',
+                gap: layout === 'horizontal' ? 2 : 0.5,
+              }}
+            >
+              {config.validation?.showSelectAll && options.length > 2 && (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={selectedValues.length === options.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFieldValue(config.path, options.map((o: any) => o.value).slice(0, maxSelections));
+                        } else {
+                          setFieldValue(config.path, []);
+                        }
+                      }}
+                    />
+                  }
+                  label="Select All"
+                  sx={{ mb: 1 }}
+                />
+              )}
+              {options.map((opt: any, idx: number) => (
+                <FormControlLabel
+                  key={opt.value || idx}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={selectedValues.includes(opt.value)}
+                      onChange={(e) => handleCheckboxChange(opt.value, e.target.checked)}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: theme.primaryColor || '#00ED64',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: theme.primaryColor || '#00ED64',
+                        },
+                      }}
+                    />
+                  }
+                  label={opt.label}
+                />
+              ))}
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'rating':
+      case 'stars': {
+        const maxRating = config.validation?.max || 5;
+        const minRating = config.validation?.min || 1;
+        const currentRating = typeof value === 'number' ? value : 0;
+        const ratingStyle = config.validation?.ratingStyle || 'stars';
+
+        const getRatingIcon = (filled: boolean, style: string) => {
+          switch (style) {
+            case 'hearts':
+              return filled ? '❤️' : '🤍';
+            case 'thumbs':
+              return filled ? '👍' : '👎';
+            case 'emojis':
+              return filled ? '😊' : '😐';
+            default:
+              return filled ? '★' : '☆';
+          }
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              {Array.from({ length: maxRating - minRating + 1 }, (_, i) => i + minRating).map((rating) => (
+                <Box
+                  key={rating}
+                  onClick={() => {
+                    setFieldValue(config.path, rating);
+                    trackFieldChange(config.path);
+                  }}
+                  sx={{
+                    cursor: 'pointer',
+                    fontSize: ratingStyle === 'numbers' ? '1.25rem' : '1.75rem',
+                    transition: 'transform 0.15s ease',
+                    '&:hover': {
+                      transform: 'scale(1.2)',
+                    },
+                  }}
+                >
+                  {ratingStyle === 'numbers' ? (
+                    <Chip
+                      label={rating}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        bgcolor: currentRating >= rating ? (theme.primaryColor || '#00ED64') : alpha(theme.primaryColor || '#00ED64', 0.1),
+                        color: currentRating >= rating ? (isDarkMode ? '#000' : '#001E2B') : (theme.primaryColor || '#00ED64'),
+                      }}
+                    />
+                  ) : (
+                    <span style={{ color: currentRating >= rating ? (theme.primaryColor || '#FFD700') : '#ccc' }}>
+                      {getRatingIcon(currentRating >= rating, ratingStyle)}
+                    </span>
+                  )}
+                </Box>
+              ))}
+              {currentRating > 0 && (
+                <Typography variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
+                  {currentRating}/{maxRating}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'tags': {
+        const tagsValue = Array.isArray(value) ? value : [];
+        const suggestions = config.validation?.tagSuggestions || config.arrayPattern?.suggestions || [];
+        const allowCustom = config.validation?.allowCustomTags !== false && config.arrayPattern?.allowCustom !== false;
+        const maxTags = config.validation?.maxTags || 10;
+
+        const handleTagAdd = (tag: string) => {
+          const trimmedTag = tag.trim();
+          if (!trimmedTag) return;
+          if (tagsValue.includes(trimmedTag)) return;
+          if (tagsValue.length >= maxTags) return;
+          if (!allowCustom && !suggestions.includes(trimmedTag)) return;
+
+          setFieldValue(config.path, [...tagsValue, trimmedTag]);
+          trackFieldChange(config.path);
+        };
+
+        const handleTagRemove = (tagToRemove: string) => {
+          setFieldValue(config.path, tagsValue.filter((t: string) => t !== tagToRemove));
+          trackFieldChange(config.path);
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+              {tagsValue.map((tag: string, idx: number) => (
+                <Chip
+                  key={idx}
+                  label={tag}
+                  size="small"
+                  onDelete={() => handleTagRemove(tag)}
+                  sx={{
+                    bgcolor: alpha(theme.primaryColor || '#00ED64', 0.1),
+                    color: theme.primaryColor || '#00ED64',
+                    '& .MuiChip-deleteIcon': {
+                      color: theme.primaryColor || '#00ED64',
+                      '&:hover': { color: theme.errorColor || '#f44336' },
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+            {tagsValue.length < maxTags && (
+              <Autocomplete
+                freeSolo={allowCustom}
+                options={suggestions.filter((s: string) => !tagsValue.includes(s))}
+                onChange={(_, newValue) => {
+                  if (typeof newValue === 'string') {
+                    handleTagAdd(newValue);
+                  }
+                }}
+                onKeyDown={(e: React.KeyboardEvent) => {
+                  const target = e.target as HTMLInputElement;
+                  if ((e.key === 'Enter' || e.key === ',') && target.value?.trim()) {
+                    e.preventDefault();
+                    handleTagAdd(target.value);
+                    target.value = '';
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    placeholder={config.placeholder || 'Add tags...'}
+                    onFocus={() => trackFieldFocus(config.path)}
+                    onBlur={() => trackFieldBlur(config.path, tagsValue.length > 0)}
+                  />
+                )}
+                size="small"
+              />
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {tagsValue.length}/{maxTags} tags {config.validation?.createTagOnEnter !== false && '• Press Enter to add'}
+            </Typography>
+          </Box>
+        );
+      }
+
+      case 'location':
+      case 'address': {
+        const addressValue = typeof value === 'object' && value !== null ? value : {};
+        const components = config.validation?.addressComponents || ['street1', 'city', 'state', 'postalCode', 'country'];
+        const displayMode = config.validation?.addressDisplayMode || 'multi';
+
+        const updateAddressField = (field: string, fieldValue: string) => {
+          setFieldValue(config.path, { ...addressValue, [field]: fieldValue });
+          trackFieldChange(config.path);
+        };
+
+        if (displayMode === 'single') {
+          return (
+            <TextField
+              fullWidth
+              label={config.label}
+              placeholder={config.placeholder || 'Enter full address'}
+              value={addressValue.formatted || ''}
+              onChange={(e) => updateAddressField('formatted', e.target.value)}
+              onFocus={() => trackFieldFocus(config.path)}
+              onBlur={() => trackFieldBlur(config.path, !!addressValue.formatted)}
+              required={config.required}
+              multiline
+              rows={2}
+            />
+          );
+        }
+
+        const fieldLabels: Record<string, string> = {
+          street1: 'Street Address',
+          street2: 'Apt, Suite, etc.',
+          city: 'City',
+          state: 'State/Province',
+          postalCode: 'ZIP/Postal Code',
+          country: 'Country',
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {components.includes('street1') && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={fieldLabels.street1}
+                  value={addressValue.street1 || ''}
+                  onChange={(e) => updateAddressField('street1', e.target.value)}
+                  required={config.validation?.requireAllComponents}
+                />
+              )}
+              {components.includes('street2') && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={fieldLabels.street2}
+                  value={addressValue.street2 || ''}
+                  onChange={(e) => updateAddressField('street2', e.target.value)}
+                />
+              )}
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                {components.includes('city') && (
+                  <TextField
+                    sx={{ flex: 2 }}
+                    size="small"
+                    label={fieldLabels.city}
+                    value={addressValue.city || ''}
+                    onChange={(e) => updateAddressField('city', e.target.value)}
+                    required={config.validation?.requireAllComponents}
+                  />
+                )}
+                {components.includes('state') && (
+                  <TextField
+                    sx={{ flex: 1 }}
+                    size="small"
+                    label={fieldLabels.state}
+                    value={addressValue.state || ''}
+                    onChange={(e) => updateAddressField('state', e.target.value)}
+                    required={config.validation?.requireAllComponents}
+                  />
+                )}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                {components.includes('postalCode') && (
+                  <TextField
+                    sx={{ flex: 1 }}
+                    size="small"
+                    label={fieldLabels.postalCode}
+                    value={addressValue.postalCode || ''}
+                    onChange={(e) => updateAddressField('postalCode', e.target.value)}
+                    required={config.validation?.requireAllComponents}
+                  />
+                )}
+                {components.includes('country') && (
+                  <TextField
+                    sx={{ flex: 1 }}
+                    size="small"
+                    label={fieldLabels.country}
+                    value={addressValue.country || config.validation?.addressDefaultCountry || ''}
+                    onChange={(e) => updateAddressField('country', e.target.value)}
+                    required={config.validation?.requireAllComponents}
+                  />
+                )}
+              </Box>
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'repeater':
+      case 'repeating-section': {
+        const repeaterConfig = config.repeater;
+        if (!repeaterConfig?.enabled) {
+          return (
+            <Typography color="text.secondary">
+              Repeater not configured for this field
+            </Typography>
+          );
+        }
+
+        const items = Array.isArray(value) ? value : [];
+        const itemSchema = repeaterConfig.itemSchema || [];
+        const minItems = repeaterConfig.minItems || 0;
+        const maxItems = repeaterConfig.maxItems || 10;
+
+        const addItem = () => {
+          if (items.length >= maxItems) return;
+          const newItem: Record<string, any> = {};
+          itemSchema.forEach((field) => {
+            newItem[field.name] = field.type === 'boolean' ? false : '';
+          });
+          setFieldValue(config.path, [...items, newItem]);
+          trackFieldChange(config.path);
+        };
+
+        const removeItem = (index: number) => {
+          if (items.length <= minItems) return;
+          setFieldValue(config.path, items.filter((_: any, i: number) => i !== index));
+          trackFieldChange(config.path);
+        };
+
+        const updateItem = (index: number, fieldName: string, fieldValue: any) => {
+          const newItems = [...items];
+          newItems[index] = { ...newItems[index], [fieldName]: fieldValue };
+          setFieldValue(config.path, newItems);
+          trackFieldChange(config.path);
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Paper
+              elevation={0}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: `${theme.borderRadius || 8}px`,
+                overflow: 'hidden',
+              }}
+            >
+              {items.map((item: Record<string, any>, index: number) => (
+                <Box
+                  key={index}
+                  sx={{
+                    p: 2,
+                    borderBottom: index < items.length - 1 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                    bgcolor: index % 2 === 0 ? 'transparent' : alpha(theme.primaryColor || '#00ED64', 0.02),
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                      Item {index + 1}
+                    </Typography>
+                    {items.length > minItems && (
+                      <Button
+                        size="small"
+                        onClick={() => removeItem(index)}
+                        sx={{ minWidth: 'auto', p: 0.5, color: 'text.secondary' }}
+                      >
+                        <Delete fontSize="small" />
+                      </Button>
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {itemSchema.map((field) => {
+                      switch (field.type) {
+                        case 'boolean':
+                          return (
+                            <FormControlLabel
+                              key={field.name}
+                              control={
+                                <Switch
+                                  size="small"
+                                  checked={Boolean(item[field.name])}
+                                  onChange={(e) => updateItem(index, field.name, e.target.checked)}
+                                />
+                              }
+                              label={field.label}
+                            />
+                          );
+                        case 'number':
+                          return (
+                            <TextField
+                              key={field.name}
+                              type="number"
+                              size="small"
+                              label={field.label}
+                              value={item[field.name] ?? ''}
+                              onChange={(e) => updateItem(index, field.name, e.target.value === '' ? '' : Number(e.target.value))}
+                              required={field.required}
+                              placeholder={field.placeholder}
+                            />
+                          );
+                        case 'select':
+                          return (
+                            <FormControl key={field.name} size="small" fullWidth>
+                              <InputLabel>{field.label}</InputLabel>
+                              <Select
+                                value={item[field.name] || ''}
+                                label={field.label}
+                                onChange={(e) => updateItem(index, field.name, e.target.value)}
+                              >
+                                {(field.options || []).map((opt: string) => (
+                                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          );
+                        case 'date':
+                          return (
+                            <TextField
+                              key={field.name}
+                              type="date"
+                              size="small"
+                              label={field.label}
+                              value={item[field.name] || ''}
+                              onChange={(e) => updateItem(index, field.name, e.target.value)}
+                              InputLabelProps={{ shrink: true }}
+                              required={field.required}
+                            />
+                          );
+                        default: // string
+                          return (
+                            <TextField
+                              key={field.name}
+                              size="small"
+                              label={field.label}
+                              value={item[field.name] || ''}
+                              onChange={(e) => updateItem(index, field.name, e.target.value)}
+                              required={field.required}
+                              placeholder={field.placeholder}
+                            />
+                          );
+                      }
+                    })}
+                  </Box>
+                </Box>
+              ))}
+              {items.length < maxItems && (
+                <Box sx={{ p: 1.5, bgcolor: alpha(theme.primaryColor || '#00ED64', 0.03) }}>
+                  <Button
+                    size="small"
+                    startIcon={<Add />}
+                    onClick={addItem}
+                    sx={{ color: theme.primaryColor || '#00ED64' }}
+                  >
+                    Add {config.label?.replace(/s$/, '') || 'Item'}
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              {items.length}/{maxItems} items
+              {minItems > 0 && ` (minimum ${minItems})`}
+            </Typography>
+          </Box>
+        );
+      }
+
+      case 'signature': {
+        const signatureValue = value || '';
+        const canvasWidth = config.validation?.canvasWidth || 400;
+        const canvasHeight = config.validation?.canvasHeight || 150;
+        const allowTyped = config.validation?.allowTypedSignature || false;
+        // For typed signatures, value is the typed name itself
+        const isTypedMode = typeof signatureValue === 'string' && signatureValue.length > 0 && !signatureValue.startsWith('data:');
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            {allowTyped ? (
+              // Typed signature mode
+              <Box>
+                <TextField
+                  fullWidth
+                  value={signatureValue}
+                  onChange={(e) => {
+                    setFieldValue(config.path, e.target.value);
+                    trackFieldChange(config.path);
+                  }}
+                  onFocus={() => trackFieldFocus(config.path)}
+                  onBlur={() => trackFieldBlur(config.path, !!signatureValue)}
+                  placeholder="Type your full name as signature"
+                  sx={{
+                    '& input': {
+                      fontFamily: '"Brush Script MT", cursive',
+                      fontSize: '1.75rem',
+                      fontStyle: 'italic',
+                    },
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Your typed name will serve as your electronic signature
+                </Typography>
+              </Box>
+            ) : (
+              // Draw signature mode (placeholder - would need canvas implementation)
+              <Box
+                sx={{
+                  width: canvasWidth,
+                  height: canvasHeight,
+                  border: '2px dashed',
+                  borderColor: 'divider',
+                  borderRadius: `${theme.borderRadius || 8}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: config.validation?.backgroundColor || '#fff',
+                }}
+              >
+                {signatureValue ? (
+                  <Box
+                    component="img"
+                    src={signatureValue}
+                    alt="Signature"
+                    sx={{ maxWidth: '100%', maxHeight: '100%' }}
+                  />
+                ) : (
+                  <Typography color="text.secondary">
+                    Signature canvas (draw here)
+                  </Typography>
+                )}
+              </Box>
+            )}
+            {signatureValue && (
+              <Button
+                size="small"
+                onClick={() => setFieldValue(config.path, '')}
+                sx={{ mt: 1 }}
+              >
+                Clear Signature
+              </Button>
+            )}
+          </Box>
+        );
+      }
+
+      case 'matrix': {
+        const rows = config.validation?.matrixRows || [];
+        const columns = config.validation?.matrixColumns || [];
+        const cellType = config.validation?.matrixCellType || 'radio';
+        const matrixValue = typeof value === 'object' && value !== null ? value : {};
+
+        const updateMatrixCell = (rowId: string, colId: string, cellValue: any) => {
+          const newValue = { ...matrixValue };
+          if (!newValue[rowId]) newValue[rowId] = {};
+
+          if (cellType === 'radio') {
+            // For radio, only one column per row
+            newValue[rowId] = colId;
+          } else if (cellType === 'checkbox') {
+            // For checkbox, multiple columns per row
+            const rowSelections = Array.isArray(newValue[rowId]) ? [...newValue[rowId]] : [];
+            if (cellValue) {
+              if (!rowSelections.includes(colId)) rowSelections.push(colId);
+            } else {
+              const idx = rowSelections.indexOf(colId);
+              if (idx > -1) rowSelections.splice(idx, 1);
+            }
+            newValue[rowId] = rowSelections;
+          } else {
+            newValue[rowId] = { ...newValue[rowId], [colId]: cellValue };
+          }
+
+          setFieldValue(config.path, newValue);
+          trackFieldChange(config.path);
+        };
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ overflowX: 'auto' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: `200px repeat(${columns.length}, 1fr)`, gap: 1 }}>
+                {/* Header row */}
+                <Box /> {/* Empty corner cell */}
+                {columns.map((col: { id: string; label: string }) => (
+                  <Typography key={col.id} variant="caption" sx={{ fontWeight: 600, textAlign: 'center' }}>
+                    {col.label}
+                  </Typography>
+                ))}
+
+                {/* Data rows */}
+                {rows.map((row: { id: string; label: string }) => (
+                  <>
+                    <Typography key={`label-${row.id}`} variant="body2">
+                      {row.label}
+                    </Typography>
+                    {columns.map((col: { id: string; label: string }) => (
+                      <Box key={`${row.id}-${col.id}`} sx={{ display: 'flex', justifyContent: 'center' }}>
+                        {cellType === 'radio' && (
+                          <Radio
+                            size="small"
+                            checked={matrixValue[row.id] === col.id}
+                            onChange={() => updateMatrixCell(row.id, col.id, true)}
+                            sx={{
+                              color: alpha(theme.primaryColor || '#00ED64', 0.5),
+                              '&.Mui-checked': { color: theme.primaryColor || '#00ED64' },
+                            }}
+                          />
+                        )}
+                        {cellType === 'checkbox' && (
+                          <Switch
+                            size="small"
+                            checked={(Array.isArray(matrixValue[row.id]) ? matrixValue[row.id] : []).includes(col.id)}
+                            onChange={(e) => updateMatrixCell(row.id, col.id, e.target.checked)}
+                          />
+                        )}
+                      </Box>
+                    ))}
+                  </>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'ranking': {
+        const rankingItems = config.validation?.rankingItems || [];
+        const rankedValue = Array.isArray(value) ? value : [];
+        const showNumbers = config.validation?.showRankNumbers !== false;
+
+        const moveItem = (fromIndex: number, toIndex: number) => {
+          if (toIndex < 0 || toIndex >= rankedValue.length) return;
+          const newRanking = [...rankedValue];
+          const [removed] = newRanking.splice(fromIndex, 1);
+          newRanking.splice(toIndex, 0, removed);
+          setFieldValue(config.path, newRanking);
+          trackFieldChange(config.path);
+        };
+
+        // Initialize ranking if empty
+        if (rankedValue.length === 0 && rankingItems.length > 0) {
+          setFieldValue(config.path, rankingItems.map((item: { id: string }) => item.id));
+        }
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              Drag items to reorder or use the arrows
+            </Typography>
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: `${theme.borderRadius || 8}px` }}>
+              {rankedValue.map((itemId: string, index: number) => {
+                const item = rankingItems.find((i: { id: string }) => i.id === itemId);
+                if (!item) return null;
+                return (
+                  <Box
+                    key={itemId}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: 1.5,
+                      borderBottom: index < rankedValue.length - 1 ? '1px solid' : 'none',
+                      borderColor: 'divider',
+                      '&:hover': { bgcolor: alpha(theme.primaryColor || '#00ED64', 0.03) },
+                    }}
+                  >
+                    {showNumbers && (
+                      <Chip
+                        label={index + 1}
+                        size="small"
+                        sx={{
+                          minWidth: 28,
+                          bgcolor: alpha(theme.primaryColor || '#00ED64', 0.1),
+                          color: theme.primaryColor || '#00ED64',
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
+                    <Typography sx={{ flex: 1 }}>{item.label}</Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Button
+                        size="small"
+                        disabled={index === 0}
+                        onClick={() => moveItem(index, index - 1)}
+                        sx={{ minWidth: 'auto', p: 0.5 }}
+                      >
+                        <ArrowBack fontSize="small" sx={{ transform: 'rotate(90deg)' }} />
+                      </Button>
+                      <Button
+                        size="small"
+                        disabled={index === rankedValue.length - 1}
+                        onClick={() => moveItem(index, index + 1)}
+                        sx={{ minWidth: 'auto', p: 0.5 }}
+                      >
+                        <ArrowForward fontSize="small" sx={{ transform: 'rotate(90deg)' }} />
+                      </Button>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Paper>
+          </Box>
+        );
+      }
+
+      case 'datetime': {
+        const dateValue = value?.date || '';
+        const timeValue = value?.time || '';
+        const showTimezone = config.validation?.showTimezoneSelector;
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                label="Date"
+                value={dateValue}
+                onChange={(e) => setFieldValue(config.path, { ...value, date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                label="Time"
+                value={timeValue}
+                onChange={(e) => setFieldValue(config.path, { ...value, time: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+              {showTimezone && (
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>Timezone</InputLabel>
+                  <Select
+                    value={value?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
+                    label="Timezone"
+                    onChange={(e) => setFieldValue(config.path, { ...value, timezone: e.target.value })}
+                  >
+                    <MenuItem value="America/New_York">Eastern</MenuItem>
+                    <MenuItem value="America/Chicago">Central</MenuItem>
+                    <MenuItem value="America/Denver">Mountain</MenuItem>
+                    <MenuItem value="America/Los_Angeles">Pacific</MenuItem>
+                    <MenuItem value="UTC">UTC</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'slider': {
+        const minVal = config.validation?.min ?? 0;
+        const maxVal = config.validation?.max ?? 100;
+        const step = config.validation?.step || 1;
+        const currentValue = typeof value === 'number' ? value : minVal;
+        const showValue = config.validation?.showValue !== false;
+        const lowLabel = config.validation?.lowLabel;
+        const highLabel = config.validation?.highLabel;
+        const marks = config.validation?.sliderMarks || [];
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ px: 1 }}>
+              {(lowLabel || highLabel) && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary">{lowLabel || minVal}</Typography>
+                  {showValue && (
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: theme.primaryColor || '#00ED64' }}>
+                      {currentValue}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary">{highLabel || maxVal}</Typography>
+                </Box>
+              )}
+              <Slider
+                value={currentValue}
+                min={minVal}
+                max={maxVal}
+                step={step}
+                marks={marks.length > 0 ? marks : config.validation?.showTicks}
+                valueLabelDisplay={showValue ? 'auto' : 'off'}
+                onChange={(_, newValue) => {
+                  setFieldValue(config.path, newValue as number);
+                  trackFieldChange(config.path);
+                }}
+                onFocus={() => trackFieldFocus(config.path)}
+                onBlur={() => trackFieldBlur(config.path, true)}
+                sx={{
+                  color: config.validation?.trackColor || theme.primaryColor || '#00ED64',
+                  '& .MuiSlider-thumb': {
+                    bgcolor: theme.primaryColor || '#00ED64',
+                  },
+                  '& .MuiSlider-valueLabel': {
+                    bgcolor: theme.primaryColor || '#00ED64',
+                    color: isDarkMode ? '#000' : '#001E2B',
+                  },
+                }}
+              />
+            </Box>
+          </Box>
+        );
+      }
+
+      case 'opinion-scale': {
+        const scaleType = config.validation?.scaleType || 'agreement';
+        const showNeutral = config.validation?.showNeutral !== false;
+        const displayStyle = config.validation?.opinionDisplayStyle || 'buttons';
+
+        const scaleOptions: Record<string, Array<{ value: number; label: string; emoji?: string }>> = {
+          agreement: [
+            { value: 1, label: 'Strongly Disagree', emoji: '😠' },
+            { value: 2, label: 'Disagree', emoji: '🙁' },
+            ...(showNeutral ? [{ value: 3, label: 'Neutral', emoji: '😐' }] : []),
+            { value: 4, label: 'Agree', emoji: '🙂' },
+            { value: 5, label: 'Strongly Agree', emoji: '😊' },
+          ],
+          satisfaction: [
+            { value: 1, label: 'Very Dissatisfied', emoji: '😠' },
+            { value: 2, label: 'Dissatisfied', emoji: '🙁' },
+            ...(showNeutral ? [{ value: 3, label: 'Neutral', emoji: '😐' }] : []),
+            { value: 4, label: 'Satisfied', emoji: '🙂' },
+            { value: 5, label: 'Very Satisfied', emoji: '😊' },
+          ],
+          frequency: [
+            { value: 1, label: 'Never', emoji: '❌' },
+            { value: 2, label: 'Rarely', emoji: '🔸' },
+            { value: 3, label: 'Sometimes', emoji: '🔶' },
+            { value: 4, label: 'Often', emoji: '✅' },
+            { value: 5, label: 'Always', emoji: '⭐' },
+          ],
+          importance: [
+            { value: 1, label: 'Not Important', emoji: '⬜' },
+            { value: 2, label: 'Slightly Important', emoji: '🟨' },
+            { value: 3, label: 'Moderately Important', emoji: '🟧' },
+            { value: 4, label: 'Important', emoji: '🟩' },
+            { value: 5, label: 'Very Important', emoji: '⭐' },
+          ],
+          likelihood: [
+            { value: 1, label: 'Very Unlikely', emoji: '❌' },
+            { value: 2, label: 'Unlikely', emoji: '🔸' },
+            { value: 3, label: 'Neutral', emoji: '🔶' },
+            { value: 4, label: 'Likely', emoji: '✅' },
+            { value: 5, label: 'Very Likely', emoji: '⭐' },
+          ],
+        };
+
+        const options = scaleOptions[scaleType] || scaleOptions.agreement;
+        const currentValue = typeof value === 'number' ? value : null;
+
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              {config.label}
+              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {options.map((opt) => (
+                <Box
+                  key={opt.value}
+                  onClick={() => {
+                    setFieldValue(config.path, opt.value);
+                    trackFieldChange(config.path);
+                  }}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 1.5,
+                    borderRadius: `${theme.borderRadius || 8}px`,
+                    cursor: 'pointer',
+                    border: '2px solid',
+                    borderColor: currentValue === opt.value ? (theme.primaryColor || '#00ED64') : 'divider',
+                    bgcolor: currentValue === opt.value ? alpha(theme.primaryColor || '#00ED64', 0.1) : 'transparent',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      borderColor: theme.primaryColor || '#00ED64',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  {displayStyle === 'emojis' && (
+                    <Typography sx={{ fontSize: '1.5rem' }}>{opt.emoji}</Typography>
+                  )}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: currentValue === opt.value ? 600 : 400,
+                      color: currentValue === opt.value ? (theme.primaryColor || '#00ED64') : 'text.secondary',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {opt.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        );
+      }
+
       default:
         return (
           <TextField
@@ -1784,7 +3079,12 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
             label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
-            onChange={(e) => setFieldValue(config.path, e.target.value)}
+            onChange={(e) => {
+              setFieldValue(config.path, e.target.value);
+              trackFieldChange(config.path);
+            }}
+            onFocus={() => trackFieldFocus(config.path)}
+            onBlur={() => trackFieldBlur(config.path, !!value)}
             required={config.required}
             multiline={(value?.length || 0) > 100}
             rows={(value?.length || 0) > 100 ? 4 : 1}
@@ -1925,6 +3225,10 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
     },
   };
 
+  // Get header from theme config
+  const headerConfig = form.theme?.header;
+  const showFormHeader = headerConfig && headerConfig.type !== 'none';
+
   return (
     <Box
       component="form"
@@ -1940,6 +3244,17 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
         }),
       }}
     >
+      {/* Form Header (Google Forms style) */}
+      {showFormHeader && (
+        <Box sx={{ mb: getSpacing() }}>
+          <FormHeaderDisplay
+            header={headerConfig}
+            title={form.name}
+            description={form.description}
+          />
+        </Box>
+      )}
+
       {/* Draft Recovery Dialog */}
       {showDraftRecovery && recoveredDraft && (
         <Alert

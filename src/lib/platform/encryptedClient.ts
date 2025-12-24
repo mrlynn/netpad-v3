@@ -279,14 +279,18 @@ export async function encryptDocumentFields(
         algorithm,
       };
 
-      // Only set contentionFactor when algorithm is 'Indexed'
-      // MongoDB driver requires: contentionFactor can ONLY be set for 'Indexed' algorithm
-      // Setting it for 'Unindexed' or 'Range' will cause "cannot set contention factor with no index type" error
-      if (algorithm === 'Indexed' && typeof encryptionConfig.contentionFactor === 'number') {
-        encryptOptions.contentionFactor = encryptionConfig.contentionFactor;
-        console.log(`[DEBUG] Setting contentionFactor=${encryptOptions.contentionFactor} for Indexed field "${fieldPath}"`);
+      // MongoDB driver REQUIRES contentionFactor for 'Indexed' algorithm
+      // contentionFactor can ONLY be set for 'Indexed' algorithm
+      // Setting it for 'Unindexed' will cause "cannot set contention factor with no index type" error
+      if (algorithm === 'Indexed') {
+        // Use configured contentionFactor or default to 4 (balanced between insert and query performance)
+        encryptOptions.contentionFactor = encryptionConfig.contentionFactor ?? 4;
+        // queryType MUST be set for Indexed fields to enable equality queries
+        // Without this, the field cannot be searched
+        encryptOptions.queryType = 'equality';
+        console.log(`[DEBUG] Setting contentionFactor=${encryptOptions.contentionFactor} and queryType=equality for Indexed field "${fieldPath}"`);
       } else {
-        console.log(`[DEBUG] NOT setting contentionFactor for field "${fieldPath}" (algorithm=${algorithm}, hasContention=${typeof encryptionConfig.contentionFactor === 'number'})`);
+        console.log(`[DEBUG] NOT setting contentionFactor/queryType for field "${fieldPath}" (algorithm=${algorithm})`);
       }
 
       // #region agent log - final encrypt options
@@ -656,6 +660,174 @@ export function validateFormEncryption(
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Decrypt a single encrypted value
+ * Used when displaying encrypted field values in search results or form data
+ */
+export async function decryptValue(
+  client: MongoClient,
+  encryptedValue: Binary
+): Promise<unknown> {
+  const clientEncryption = await createClientEncryption(client);
+  return clientEncryption.decrypt(encryptedValue);
+}
+
+/**
+ * Check if a value is a MongoDB Binary (works across module boundaries)
+ */
+function isBinaryValue(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  // Check instanceof first
+  if (value instanceof Binary) return true;
+  // Fallback: check _bsontype for cross-module compatibility
+  return (value as any)._bsontype === 'Binary';
+}
+
+/**
+ * Decrypt encrypted fields in a document for display
+ * Takes a document with encrypted Binary fields and returns a copy with decrypted values
+ */
+export async function decryptDocumentFields(
+  client: MongoClient,
+  document: Record<string, unknown>,
+  encryptedFieldPaths: string[]
+): Promise<Record<string, unknown>> {
+  if (encryptedFieldPaths.length === 0) {
+    return document;
+  }
+
+  const clientEncryption = await createClientEncryption(client);
+
+  // Create a plain object copy for the result (will contain decrypted values)
+  // We'll manually copy non-encrypted fields and decrypt encrypted ones
+  const decryptedDoc: Record<string, unknown> = {};
+
+  // Deep clone non-Binary values, keep Binary references for decryption
+  function cloneValue(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+    if (isBinaryValue(value)) {
+      // Keep Binary objects as-is for decryption (will be replaced with decrypted value)
+      return value;
+    }
+    if (value instanceof Date) return new Date(value.getTime());
+    if (Array.isArray(value)) return value.map(cloneValue);
+    if (typeof value === 'object') {
+      const cloned: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        cloned[k] = cloneValue(v);
+      }
+      return cloned;
+    }
+    return value;
+  }
+
+  // Clone the entire document first
+  for (const [key, value] of Object.entries(document)) {
+    decryptedDoc[key] = cloneValue(value);
+  }
+
+  // Now decrypt the encrypted fields
+  for (const fieldPath of encryptedFieldPaths) {
+    // Get value from the cloned doc (which still has Binary references)
+    const value = getNestedValue(decryptedDoc, fieldPath);
+
+    console.log(`[EncryptedClient] Checking field "${fieldPath}" for decryption:`, {
+      hasValue: !!value,
+      valueType: typeof value,
+      isBinary: isBinaryValue(value),
+      bsonType: value && typeof value === 'object' ? (value as any)._bsontype : 'N/A',
+    });
+
+    // Check if the value is an encrypted Binary
+    if (value && isBinaryValue(value)) {
+      try {
+        const decryptedValue = await clientEncryption.decrypt(value as Binary);
+        setNestedValue(decryptedDoc, fieldPath, decryptedValue);
+        console.log(`[EncryptedClient] Decrypted field "${fieldPath}" successfully, result type: ${typeof decryptedValue}`);
+      } catch (error) {
+        console.error(`[EncryptedClient] Failed to decrypt field "${fieldPath}":`, error);
+        // Convert Binary to a placeholder string for display since decryption failed
+        setNestedValue(decryptedDoc, fieldPath, '[Encrypted - Unable to decrypt]');
+      }
+    } else {
+      console.log(`[EncryptedClient] Field "${fieldPath}" is not a Binary, skipping decryption`);
+    }
+  }
+
+  return decryptedDoc;
+}
+
+/**
+ * Decrypt encrypted fields in multiple documents (for search results)
+ */
+export async function decryptDocuments(
+  client: MongoClient,
+  documents: Record<string, unknown>[],
+  encryptedFieldPaths: string[]
+): Promise<Record<string, unknown>[]> {
+  if (encryptedFieldPaths.length === 0 || documents.length === 0) {
+    return documents;
+  }
+
+  console.log(`[EncryptedClient] Decrypting ${encryptedFieldPaths.length} fields in ${documents.length} documents`);
+
+  const decryptedDocs = await Promise.all(
+    documents.map(doc => decryptDocumentFields(client, doc, encryptedFieldPaths))
+  );
+
+  return decryptedDocs;
+}
+
+/**
+ * Encrypt a single value for search/query purposes
+ * Used when searching on encrypted fields - the search value must be encrypted
+ * with the same key and algorithm to match the stored encrypted data
+ */
+export async function encryptSearchValue(
+  client: MongoClient,
+  value: unknown,
+  encryptionConfig: FieldEncryptionConfig,
+  keyId: any
+): Promise<Binary | null> {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const clientEncryption = await createClientEncryption(client);
+
+  // Determine algorithm - search only works with Indexed algorithm (equality queries)
+  let algorithm: 'Indexed' | 'Unindexed' = 'Unindexed';
+  if (encryptionConfig.algorithm === 'Indexed' || encryptionConfig.queryType === 'equality') {
+    algorithm = 'Indexed';
+  }
+
+  // Only Indexed algorithm supports queries - Unindexed cannot be searched
+  if (algorithm !== 'Indexed') {
+    console.warn('[EncryptedClient] Cannot search on Unindexed encrypted field - queries not supported');
+    return null;
+  }
+
+  // For equality queries on Indexed fields, we MUST include queryType: 'equality'
+  // This tells MongoDB to generate a searchable encryption payload
+  // See: https://www.mongodb.com/docs/manual/core/queryable-encryption/fundamentals/manual-encryption/
+  const encryptOptions: any = {
+    keyId,
+    algorithm,
+    queryType: 'equality', // Required for searchable equality queries
+    contentionFactor: encryptionConfig.contentionFactor ?? 4,
+  };
+
+  console.log(`[EncryptedClient] Encrypting search value with options:`, {
+    algorithm,
+    queryType: 'equality',
+    contentionFactor: encryptOptions.contentionFactor,
+    keyIdType: typeof keyId,
+  });
+
+  const encryptedValue = await clientEncryption.encrypt(value, encryptOptions);
+  return encryptedValue;
 }
 
 /**

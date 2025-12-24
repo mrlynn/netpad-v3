@@ -99,6 +99,15 @@ export function QuickPublishButton({
         connectionString: connectionString || undefined,
       };
 
+      // Debug: Log theme being published
+      console.log('[QuickPublish] Publishing form with theme:', {
+        hasTheme: !!config.theme,
+        theme: config.theme,
+        pageBackgroundColor: config.theme?.pageBackgroundColor,
+        pageBackgroundGradient: config.theme?.pageBackgroundGradient,
+        primaryColor: config.theme?.primaryColor,
+      });
+
       const response = await fetch('/api/forms-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

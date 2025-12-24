@@ -567,7 +567,21 @@ export function EmptyFormState({
         {/* Tab Content */}
         <Box sx={{ minHeight: 300 }}>
           {activeTab === 0 && (
-            <QuestionTypePicker onSelect={onAddField} />
+            <Box
+              sx={{
+                height: 400,
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': {
+                  width: 6,
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  bgcolor: 'divider',
+                  borderRadius: 3,
+                },
+              }}
+            >
+              <QuestionTypePicker onSelect={onAddField} />
+            </Box>
           )}
 
           {activeTab === 1 && (

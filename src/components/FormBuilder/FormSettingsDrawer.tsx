@@ -339,7 +339,16 @@ export function FormSettingsDrawer({
         <Box sx={{ p: 2 }}>
           <ThemeConfigEditor
             config={themeConfig}
-            onChange={onThemeChange}
+            onChange={(theme) => {
+              console.log('[FormSettingsDrawer] Theme changed:', {
+                theme,
+                pageBackgroundColor: theme?.pageBackgroundColor,
+                pageBackgroundGradient: theme?.pageBackgroundGradient,
+              });
+              onThemeChange(theme);
+            }}
+            formTitle={formName}
+            formDescription={formDescription}
           />
         </Box>
       </TabPanel>

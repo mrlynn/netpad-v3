@@ -99,6 +99,15 @@ export async function GET(
 
       // Don't expose sensitive connection info for public access
       const { connectionString, ...publicForm } = form;
+
+      // Debug: Log what we're returning
+      console.log('[API forms/[formId]] Returning form theme:', {
+        hasTheme: !!publicForm.theme,
+        theme: publicForm.theme,
+        pageBackgroundColor: publicForm.theme?.pageBackgroundColor,
+        pageBackgroundGradient: publicForm.theme?.pageBackgroundGradient,
+      });
+
       return NextResponse.json({
         success: true,
         form: publicForm,

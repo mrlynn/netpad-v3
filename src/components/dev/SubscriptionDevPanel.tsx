@@ -65,10 +65,10 @@ export function SubscriptionDevPanel({
     return null;
   }
 
-  // Position styles
+  // Position styles - bottom positions raised to avoid overlap with pagination/buttons
   const positionStyles = {
-    'bottom-right': { bottom: 16, right: 16 },
-    'bottom-left': { bottom: 16, left: 16 },
+    'bottom-right': { bottom: 80, right: 16 },
+    'bottom-left': { bottom: 80, left: 16 },
     'top-right': { top: 16, right: 16 },
     'top-left': { top: 16, left: 16 },
   };

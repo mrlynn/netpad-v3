@@ -440,6 +440,9 @@ export function generateCSSVariables(theme: FormTheme): Record<string, string> {
   const resolved = getResolvedTheme(theme);
 
   return {
+    // Page background
+    '--form-page-background': resolved.pageBackgroundGradient || resolved.pageBackgroundColor || '#F5F5F5',
+    // Form card colors
     '--form-primary': resolved.primaryColor || '#00ED64',
     '--form-secondary': resolved.secondaryColor || '#001E2B',
     '--form-background': resolved.backgroundColor || '#FFFFFF',

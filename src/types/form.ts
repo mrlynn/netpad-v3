@@ -598,6 +598,116 @@ export interface FieldConfig {
     maxSize?: number;            // Maximum file size in MB
     multiple?: boolean;          // Allow multiple file uploads
     maxFiles?: number;           // Maximum number of files (when multiple is true)
+    // Color picker settings
+    colorFormat?: 'hex' | 'rgb' | 'hsl';
+    showAlpha?: boolean;         // Allow alpha/opacity selection
+    presetColors?: string[];     // Preset color swatches
+    presetsOnly?: boolean;       // Only allow preset colors
+    pickerStyle?: 'chrome' | 'sketch' | 'compact' | 'block' | 'swatches';
+    // Email settings
+    allowMultipleEmails?: boolean;  // Allow comma-separated emails
+    blockDisposable?: boolean;      // Block disposable email domains
+    allowedDomains?: string[];      // Whitelist of allowed domains
+    blockedDomains?: string[];      // Blacklist of blocked domains
+    confirmEmail?: boolean;         // Require email confirmation field
+    // URL settings
+    requireHttps?: boolean;         // Require HTTPS protocol
+    allowedProtocols?: string[];    // Allowed protocols (http, https, ftp, etc.)
+    showUrlPreview?: boolean;       // Show link preview
+    // Phone settings
+    defaultCountry?: string;        // Default country code (e.g., 'US')
+    phoneFormat?: 'national' | 'international' | 'e164';
+    showCountrySelector?: boolean;  // Show country dropdown
+    allowedCountries?: string[];    // Restrict to specific countries
+    // Time settings
+    timeFormat?: '12h' | '24h';
+    minuteStep?: number;            // Minute interval (e.g., 15 for quarter hours)
+    minTime?: string;               // Earliest allowed time
+    maxTime?: string;               // Latest allowed time
+    showSeconds?: boolean;          // Include seconds in picker
+    // Signature settings
+    strokeColor?: string;           // Pen color
+    strokeWidth?: number;           // Pen thickness
+    canvasWidth?: number;           // Canvas width in pixels
+    canvasHeight?: number;          // Canvas height in pixels
+    backgroundColor?: string;       // Canvas background
+    allowTypedSignature?: boolean;  // Allow typing name as signature
+    outputFormat?: 'png' | 'svg' | 'base64';
+    // Tags settings
+    tagSuggestions?: string[];      // Auto-complete suggestions
+    allowCustomTags?: boolean;      // Allow creating new tags
+    minTags?: number;               // Minimum required tags
+    maxTags?: number;               // Maximum allowed tags
+    maxTagLength?: number;          // Max characters per tag
+    tagCaseHandling?: 'preserve' | 'lowercase' | 'uppercase';
+    createTagOnEnter?: boolean;     // Create tag on Enter key
+    createTagOnComma?: boolean;     // Create tag on comma
+    // Slider specific settings
+    showTicks?: boolean;            // Show tick marks
+    tickInterval?: number;          // Interval between ticks
+    valuePosition?: 'above' | 'below' | 'tooltip';  // Where to show value
+    showMinMax?: boolean;           // Show min/max labels
+    sliderMarks?: Array<{ value: number; label: string }>;  // Custom marks
+    trackColor?: string;            // Slider track color
+    rangeSelection?: boolean;       // Enable range (two handles)
+    // Opinion scale settings
+    scaleType?: 'agreement' | 'satisfaction' | 'frequency' | 'importance' | 'likelihood' | 'custom';
+    showNeutral?: boolean;          // Show neutral option
+    neutralLabel?: string;          // Label for neutral option
+    opinionDisplayStyle?: 'buttons' | 'emojis' | 'icons' | 'radio';
+    // Multiple choice / Checkboxes settings
+    choiceLayout?: 'vertical' | 'horizontal' | 'grid';
+    choiceColumns?: number;         // Number of columns for grid layout
+    randomizeOptions?: boolean;     // Randomize option order
+    allowOther?: boolean;           // Allow "Other" option with text input
+    otherLabel?: string;            // Label for "Other" option
+    showImages?: boolean;           // Show images with options
+    imageSize?: 'small' | 'medium' | 'large';
+    minSelections?: number;         // Minimum selections (checkboxes)
+    maxSelections?: number;         // Maximum selections (checkboxes)
+    showSelectAll?: boolean;        // Show "Select All" option
+    // Dropdown / Select / Multiple Choice settings
+    options?: Array<string | { value: any; label: string }>;  // Static options for select/radio/checkbox fields
+    searchable?: boolean;           // Enable search/filter
+    allowCreate?: boolean;          // Allow creating new options
+    clearable?: boolean;            // Show clear button
+    groupedOptions?: boolean;       // Group options by category
+    // Image upload specific
+    enableCrop?: boolean;           // Enable image cropping
+    cropAspectRatio?: number;       // Aspect ratio for cropping
+    minImageWidth?: number;         // Minimum image width
+    minImageHeight?: number;        // Minimum image height
+    maxImageWidth?: number;         // Maximum image width
+    maxImageHeight?: number;        // Maximum image height
+    enableCompression?: boolean;    // Compress images
+    compressionQuality?: number;    // 0-1 compression quality
+    // Matrix settings
+    matrixRows?: Array<{ id: string; label: string }>;
+    matrixColumns?: Array<{ id: string; label: string; value?: any }>;
+    matrixCellType?: 'radio' | 'checkbox' | 'dropdown' | 'text' | 'number';
+    requireAllRows?: boolean;       // Require all rows to be answered
+    onePerColumn?: boolean;         // Only one selection per column
+    randomizeRows?: boolean;
+    randomizeColumns?: boolean;
+    // Ranking settings
+    rankingItems?: Array<{ id: string; label: string; imageUrl?: string }>;
+    minRank?: number;               // Minimum items to rank
+    maxRank?: number;               // Maximum items to rank
+    showRankNumbers?: boolean;
+    dragStyle?: 'list' | 'cards' | 'grid';
+    allowTies?: boolean;            // Allow same rank for multiple items
+    // Address settings
+    addressComponents?: Array<'street1' | 'street2' | 'city' | 'state' | 'postalCode' | 'country'>;
+    addressDefaultCountry?: string;
+    enableAutocomplete?: boolean;
+    autocompleteProvider?: 'google' | 'mapbox' | 'here';
+    showMap?: boolean;
+    requireAllComponents?: boolean;
+    addressDisplayMode?: 'single' | 'multi';
+    // DateTime combined settings
+    dateTimeTimezone?: 'local' | 'utc' | 'custom';
+    customTimezone?: string;
+    showTimezoneSelector?: boolean;
   };
   conditionalLogic?: ConditionalLogic;
   lookup?: LookupConfig;        // For lookup/reference fields
@@ -769,14 +879,52 @@ export interface FormConfiguration {
   collectionEncryption?: CollectionEncryptionConfig;
 }
 
+// Form header configuration (Google Forms-style header image and colors)
+export interface FormHeader {
+  // Header type
+  type: 'none' | 'color' | 'gradient' | 'image';
+  // Solid color or gradient start color
+  color?: string;
+  // Gradient end color (only for gradient type)
+  gradientEndColor?: string;
+  // Gradient direction
+  gradientDirection?: 'to-right' | 'to-bottom' | 'to-bottom-right' | 'to-bottom-left';
+  // Image URL (only for image type)
+  imageUrl?: string;
+  // Image position/fit
+  imageFit?: 'cover' | 'contain' | 'fill';
+  imagePosition?: 'center' | 'top' | 'bottom';
+  // Header height
+  height?: number; // in pixels, default 200
+  // Corner radius
+  borderRadius?: number; // in pixels, default 8
+  // Overlay for image headers (to improve text readability)
+  overlay?: boolean;
+  overlayColor?: string;
+  overlayOpacity?: number; // 0-1
+  // Text styling on header
+  showTitle?: boolean;
+  showDescription?: boolean;
+  titleColor?: string;
+  descriptionColor?: string;
+}
+
 // Theme configuration for published forms
 export interface FormTheme {
   // Preset theme ID (optional - if set, uses preset values)
   preset?: string;
-  // Colors
+  // Header configuration (Google Forms-style)
+  header?: FormHeader;
+  // Page background (full page behind the form)
+  pageBackgroundColor?: string;
+  pageBackgroundGradient?: string;  // CSS gradient string, e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+  pageBackgroundImage?: string;     // URL to background image
+  pageBackgroundSize?: 'cover' | 'contain' | 'auto';
+  pageBackgroundPosition?: string;  // e.g., "center center"
+  // Colors (form card)
   primaryColor?: string;
   secondaryColor?: string;
-  backgroundColor?: string;
+  backgroundColor?: string;         // Form card background
   surfaceColor?: string;
   textColor?: string;
   textSecondaryColor?: string;

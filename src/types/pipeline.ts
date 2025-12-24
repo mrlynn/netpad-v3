@@ -19,6 +19,7 @@ export interface PipelineState {
   connectionString: string | null;
   databaseName: string | null;
   collection: string | null;
+  activeVaultId: string | null;  // Track which vault connection is active
   sampleDocs: Document[];
   isExecuting: boolean;
   executionResults: Map<string, Document[]>;

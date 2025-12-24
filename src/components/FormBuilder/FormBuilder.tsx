@@ -22,21 +22,21 @@ import {
 } from '@mui/material';
 import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, Code, ChevronLeft, ChevronRight, Storage, MoreVert, PostAdd, Tune, TuneOutlined, Keyboard } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
-import { CompactFieldList } from './CompactFieldList';
-import { FieldDetailPanel } from './FieldDetailPanel';
 import { FormModeWrapper } from './FormModeWrapper';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
 import { DocumentPreview } from './DocumentPreview';
-import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { FormSettingsDrawer } from './FormSettingsDrawer';
 import { EmptyFormState } from './EmptyFormState';
 import { QuickPublishButton } from './QuickPublishButton';
 import { AddQuestionDialog } from './AddQuestionDialog';
 import { DataSourceSetupModal } from './DataSourceSetupModal';
-import { FormReadinessChecklist } from './FormReadinessChecklist';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { HelpButton } from '@/components/Help';
+import { WYSIWYGFormEditor } from './WYSIWYGFormEditor';
+import { MinimalFieldSidebar } from './MinimalFieldSidebar';
+import { FieldConfigDrawer } from './FieldConfigDrawer';
+import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
 import { generateFieldPath } from '@/utils/fieldPath';
 
@@ -56,6 +56,16 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [multiPageConfig, setMultiPageConfig] = useState<MultiPageConfig | undefined>(undefined);
   const [lifecycleConfig, setLifecycleConfig] = useState<FormLifecycle | undefined>(undefined);
   const [themeConfig, setThemeConfig] = useState<FormTheme | undefined>(undefined);
+
+  // Debug: Log whenever themeConfig changes
+  useEffect(() => {
+    console.log('[FormBuilder] themeConfig state changed:', {
+      themeConfig,
+      pageBackgroundColor: themeConfig?.pageBackgroundColor,
+      pageBackgroundGradient: themeConfig?.pageBackgroundGradient,
+    });
+  }, [themeConfig]);
+
   const [currentFormId, setCurrentFormId] = useState<string | undefined>(undefined);
   const [currentFormName, setCurrentFormName] = useState<string>('');
   const [currentFormDescription, setCurrentFormDescription] = useState<string>('');
@@ -68,7 +78,6 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
   const [showDocPreview, setShowDocPreview] = useState(false);
-  const [fieldListCollapsed, setFieldListCollapsed] = useState(false);
   const [formType, setFormType] = useState<FormType>('data-entry');
   const [searchConfig, setSearchConfig] = useState<SearchConfig | undefined>(undefined);
   const [dataSource, setDataSource] = useState<FormDataSource | undefined>(undefined);
@@ -81,10 +90,12 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
 
   // Get selected field config
   const selectedFieldConfig = selectedFieldPath
-    ? fieldConfigs.find(f => f.path === selectedFieldPath)
+    ? fieldConfigs.find(f => f.path === selectedFieldPath) ?? null
     : null;
 
   // Keyboard shortcuts for power users
@@ -332,8 +343,64 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     );
   };
 
-  const addCustomField = (field: FieldConfig) => {
-    setFieldConfigs((configs) => [field, ...configs]);
+  const addCustomField = (field: FieldConfig, atIndex?: number) => {
+    setFieldConfigs((configs) => {
+      if (atIndex !== undefined && atIndex >= 0) {
+        const newConfigs = [...configs];
+        newConfigs.splice(atIndex, 0, field);
+        return newConfigs;
+      }
+      return [field, ...configs];
+    });
+  };
+
+  const handleAddFieldAtIndex = (index: number) => {
+    setInsertAtIndex(index);
+    setAddQuestionDialogOpen(true);
+  };
+
+  // Quick add field from floating toolbar
+  const handleQuickAddField = (type: string, isLayout?: boolean) => {
+    const labelMap: Record<string, string> = {
+      'text': 'Short Answer',
+      'textarea': 'Paragraph',
+      'radio': 'Multiple Choice',
+      'checkbox': 'Checkboxes',
+      'select': 'Dropdown',
+      'section-header': 'Section Header',
+      'description': 'Description Text',
+      'divider': 'Divider',
+      'image': 'Image',
+      'date': 'Date',
+      'number': 'Number',
+      'email': 'Email',
+      'url': 'URL',
+      'file': 'File Upload',
+      'boolean': 'Toggle',
+      'color': 'Color',
+    };
+
+    const label = labelMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
+    const path = generateFieldPath(label);
+
+    const newField: FieldConfig = {
+      path,
+      label,
+      type,
+      included: true,
+      required: false,
+      source: 'custom',
+      ...(isLayout ? { layout: { type: type as any } } : {}),
+      ...(type === 'radio' || type === 'checkbox' || type === 'select' ? {
+        options: [
+          { value: 'option1', label: 'Option 1' },
+          { value: 'option2', label: 'Option 2' },
+        ]
+      } : {}),
+    };
+
+    addCustomField(newField);
+    setSelectedFieldPath(path);
   };
 
   const removeCustomField = (path: string) => {
@@ -699,145 +766,18 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         />
       ) : (
         <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* Collapsible Field List Panel */}
-          <Box
-            sx={{
-              width: fieldListCollapsed ? 48 : (selectedFieldConfig ? 520 : 280),
-              minWidth: fieldListCollapsed ? 48 : (selectedFieldConfig ? 400 : 240),
-              maxWidth: fieldListCollapsed ? 48 : 600,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRight: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              transition: 'width 0.2s ease',
-              flexShrink: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {fieldListCollapsed ? (
-              // Collapsed state - just show expand button
-              <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                py: 1,
-                height: '100%'
-              }}>
-                <Tooltip title="Show question list" placement="right">
-                  <IconButton
-                    onClick={() => setFieldListCollapsed(false)}
-                    size="small"
-                    sx={{ mb: 1 }}
-                  >
-                    <ChevronRight />
-                  </IconButton>
-                </Tooltip>
-                <Chip
-                  label={fieldConfigs.filter(f => f.included).length}
-                  size="small"
-                  sx={{
-                    fontSize: 11,
-                    height: 20,
-                    bgcolor: alpha('#00ED64', 0.1),
-                    color: '#00ED64'
-                  }}
-                />
-              </Box>
-            ) : (
-              <>
-                {/* Panel Header with collapse toggle */}
-                <Box sx={{
-                  p: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  minHeight: 40,
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Questions
-                    </Typography>
-                    <Chip
-                      label={`${fieldConfigs.filter(f => f.included).length} / ${fieldConfigs.length}`}
-                      size="small"
-                      sx={{ fontSize: 10, height: 18 }}
-                    />
-                  </Box>
-                  <Tooltip title="Collapse question list" placement="right">
-                    <IconButton
-                      onClick={() => setFieldListCollapsed(true)}
-                      size="small"
-                      sx={{ p: 0.5 }}
-                    >
-                      <ChevronLeft sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+          {/* Minimal Field Sidebar - collapsible navigation */}
+          <MinimalFieldSidebar
+            fieldConfigs={fieldConfigs}
+            selectedPath={selectedFieldPath}
+            collapsed={sidebarCollapsed}
+            onSelectField={setSelectedFieldPath}
+            onReorderFields={reorderFields}
+            onAddQuestion={() => setAddQuestionDialogOpen(true)}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
 
-                <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                  {/* Compact Field List */}
-                  <Box sx={{
-                    width: selectedFieldConfig ? '45%' : '100%',
-                    minWidth: selectedFieldConfig ? 180 : 200,
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    borderRight: selectedFieldConfig ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                    transition: 'width 0.2s ease'
-                  }}>
-                    {/* Version History (only show if form has been saved) */}
-                    {currentFormId && (
-                      <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                        <VersionHistoryPanel
-                          formId={currentFormId}
-                          currentVersion={1}
-                        />
-                      </Box>
-                    )}
-                    {/* Compact Field List */}
-                    <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                      <CompactFieldList
-                        fieldConfigs={fieldConfigs}
-                        selectedPath={selectedFieldPath}
-                        onSelectField={setSelectedFieldPath}
-                        onUpdateField={updateFieldConfig}
-                        onAddField={addCustomField}
-                        onRemoveField={removeCustomField}
-                        onReorderFields={reorderFields}
-                      />
-                    </Box>
-                  </Box>
-
-                  {/* Field Detail Panel - slides in when a field is selected */}
-                  {selectedFieldConfig && (
-                    <Box sx={{
-                      width: '55%',
-                      minWidth: 220,
-                      height: '100%',
-                      overflow: 'hidden'
-                    }}>
-                      <FieldDetailPanel
-                        config={selectedFieldConfig}
-                        allFieldConfigs={fieldConfigs}
-                        formSlug={currentFormSlug}
-                        onUpdateField={updateFieldConfig}
-                        onClose={() => setSelectedFieldPath(null)}
-                        advancedMode={advancedMode}
-                      />
-                    </Box>
-                  )}
-                </Box>
-              </>
-            )}
-          </Box>
-
-          {/* CENTER: Form Preview - takes the most space */}
+          {/* CENTER: WYSIWYG Form Editor - main editing surface */}
           <Box
             sx={{
               flex: 1,
@@ -845,43 +785,58 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               overflow: 'hidden',
               position: 'relative',
               minWidth: 400,
+              // Adjust for right drawer
+              mr: selectedFieldConfig ? '360px' : 0,
+              transition: 'margin-right 0.2s ease',
             }}
           >
-            <FormModeWrapper
+            <WYSIWYGFormEditor
               fieldConfigs={fieldConfigs.filter((f) => f.included)}
               formData={formData}
+              selectedFieldPath={selectedFieldPath}
               onFormDataChange={handleFormDataChange}
               onResetForm={() => setFormData({})}
-              allFieldConfigs={fieldConfigs}
-              onUpdateFieldConfig={updateFieldConfig}
+              onSelectField={setSelectedFieldPath}
+              onUpdateField={updateFieldConfig}
               onDeleteField={removeCustomField}
-              onSelectField={(path) => {
-                setSelectedFieldPath(path);
-                setFieldListCollapsed(false);
-              }}
+              onReorderFields={reorderFields}
+              onAddFieldAtIndex={handleAddFieldAtIndex}
+              allFieldConfigs={fieldConfigs}
+              header={themeConfig?.header}
+              formTitle={currentFormName}
+              formDescription={currentFormDescription}
+              onFormTitleChange={setCurrentFormName}
+              onFormDescriptionChange={setCurrentFormDescription}
             />
 
-            {/* Floating Add Question Button */}
-            <Tooltip title="Add new question" placement="left">
-              <Fab
-                color="primary"
-                size="medium"
-                onClick={() => setAddQuestionDialogOpen(true)}
-                sx={{
-                  position: 'absolute',
-                  bottom: 24,
-                  right: 24,
-                  background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                  color: '#001E2B',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)'
-                  }
-                }}
-              >
-                <Add />
-              </Fab>
-            </Tooltip>
+            {/* Floating Action Toolbar - Google Forms Style */}
+            <FloatingActionToolbar
+              onAddField={handleQuickAddField}
+              onOpenAddDialog={() => setAddQuestionDialogOpen(true)}
+            />
           </Box>
+
+          {/* Right Drawer: Field Configuration */}
+          <FieldConfigDrawer
+            open={!!selectedFieldConfig}
+            config={selectedFieldConfig}
+            allFieldConfigs={fieldConfigs}
+            formSlug={currentFormSlug}
+            advancedMode={advancedMode}
+            onClose={() => setSelectedFieldPath(null)}
+            onUpdateField={updateFieldConfig}
+            onDeleteField={removeCustomField}
+            onDuplicateField={(config) => {
+              const newField: FieldConfig = {
+                ...config,
+                path: generateFieldPath(config.label + ' Copy'),
+                label: config.label + ' (Copy)',
+                source: 'custom',
+              };
+              addCustomField(newField);
+              setSelectedFieldPath(newField.path);
+            }}
+          />
 
           {/* Document Preview Toggle Button + Panel */}
           <Box
@@ -896,6 +851,10 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               transition: 'width 0.2s ease',
               flexShrink: 0,
               overflow: 'hidden',
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              zIndex: 5,
             }}
           >
             {showDocPreview ? (
@@ -975,11 +934,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
       {/* Add Question Dialog */}
       <AddQuestionDialog
         open={addQuestionDialogOpen}
-        onClose={() => setAddQuestionDialogOpen(false)}
+        onClose={() => {
+          setAddQuestionDialogOpen(false);
+          setInsertAtIndex(null);
+        }}
         onAdd={(field) => {
-          addCustomField(field);
+          addCustomField(field, insertAtIndex ?? undefined);
           setSelectedFieldPath(field.path);
-          setFieldListCollapsed(false);
+          setInsertAtIndex(null);
         }}
       />
 
@@ -1165,7 +1127,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         formDescription={currentFormDescription}
         onFormDescriptionChange={setCurrentFormDescription}
         themeConfig={themeConfig}
-        onThemeChange={setThemeConfig}
+        onThemeChange={(theme) => {
+          console.log('[FormBuilder] setThemeConfig called with:', {
+            theme,
+            pageBackgroundColor: theme?.pageBackgroundColor,
+            pageBackgroundGradient: theme?.pageBackgroundGradient,
+          });
+          setThemeConfig(theme);
+        }}
         multiPageConfig={multiPageConfig}
         onMultiPageChange={setMultiPageConfig}
         fieldConfigs={fieldConfigs}

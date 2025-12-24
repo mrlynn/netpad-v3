@@ -104,8 +104,19 @@ export function SearchFormRenderer({
   // Get searchable fields from field configs
   // Excludes encrypted fields with queryType 'none' since they cannot be searched
   const searchableFields = useMemo(() => {
+    // Debug: log searchConfig to see what's being passed
+    console.log('[SearchFormRenderer] searchConfig.fields:', searchConfig.fields);
+
     return form.fieldConfigs.filter((field) => {
       const fieldSearchConfig = searchConfig.fields?.[field.path];
+
+      // Debug: log each field's search config
+      console.log(`[SearchFormRenderer] Field "${field.path}":`, {
+        included: field.included,
+        searchConfigExists: !!fieldSearchConfig,
+        enabled: fieldSearchConfig?.enabled,
+      });
+
       // Check if field is included and search is enabled
       if (!field.included || !fieldSearchConfig?.enabled) {
         return false;
@@ -140,6 +151,9 @@ export function SearchFormRenderer({
       const fieldConfig = searchConfig.fields?.[field.path];
       if (fieldConfig?.defaultOperator) {
         defaultOperators[field.path] = fieldConfig.defaultOperator;
+      } else if (field.encryption?.enabled) {
+        // Encrypted fields only support equality queries
+        defaultOperators[field.path] = 'equals';
       } else {
         // Default based on field type
         defaultOperators[field.path] = field.type === 'string' ? 'contains' : 'equals';
@@ -162,8 +176,10 @@ export function SearchFormRenderer({
         if (path.endsWith('_max')) continue;
         if (value === '' || value === null || value === undefined) continue;
 
-        const operator = operators[path] || 'contains';
         const field = searchableFields.find(f => f.path === path);
+        // Use 'equals' as fallback for encrypted fields, 'contains' for others
+        const defaultOperator = field?.encryption?.enabled ? 'equals' : 'contains';
+        const operator = operators[path] || defaultOperator;
 
         // Handle range/between operator - include value2
         if (operator === 'between') {

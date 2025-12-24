@@ -36,13 +36,16 @@ import {
   Edit,
   Brush
 } from '@mui/icons-material';
-import { FormTheme, ThemePreset } from '@/types/form';
+import { FormTheme, ThemePreset, FormHeader } from '@/types/form';
 import { themePresets, getThemesByCategory, categoryInfo, getResolvedTheme } from '@/lib/formThemes';
 import { HelpButton } from '@/components/Help';
+import { FormHeaderEditor } from './FormHeaderEditor';
 
 interface ThemeConfigEditorProps {
   config?: FormTheme;
   onChange: (theme: FormTheme) => void;
+  formTitle?: string;
+  formDescription?: string;
 }
 
 type CategoryTab = ThemePreset['category'];
@@ -58,7 +61,9 @@ const categoryIcons: Record<CategoryTab, React.ReactElement> = {
 
 export function ThemeConfigEditor({
   config,
-  onChange
+  onChange,
+  formTitle,
+  formDescription,
 }: ThemeConfigEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [activeCategory, setActiveCategory] = useState<CategoryTab>('professional');
@@ -74,7 +79,14 @@ export function ThemeConfigEditor({
   };
 
   const handleCustomize = (updates: Partial<FormTheme>) => {
-    onChange({ ...config, ...updates });
+    const newConfig = { ...config, ...updates };
+    console.log('[ThemeConfigEditor] handleCustomize:', {
+      updates,
+      newConfig,
+      pageBackgroundColor: newConfig.pageBackgroundColor,
+      pageBackgroundGradient: newConfig.pageBackgroundGradient,
+    });
+    onChange(newConfig);
   };
 
   const renderThemePreview = (preset: ThemePreset, isSelected: boolean) => {
@@ -204,8 +216,22 @@ export function ThemeConfigEditor({
     );
   };
 
+  const handleHeaderChange = (header: FormHeader | undefined) => {
+    onChange({ ...config, header });
+  };
+
   return (
     <Box>
+      {/* Form Header Editor - Google Forms style */}
+      <FormHeaderEditor
+        config={config?.header}
+        onChange={handleHeaderChange}
+        formTitle={formTitle}
+        formDescription={formDescription}
+      />
+
+      <Divider sx={{ my: 2 }} />
+
       <Box
         sx={{
           display: 'flex',
@@ -326,9 +352,62 @@ export function ThemeConfigEditor({
 
           <Collapse in={showCustomize}>
             <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Colors */}
+              {/* Page Background */}
               <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Colors
+                Page Background
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    label="Page Background"
+                    type="color"
+                    value={resolvedTheme.pageBackgroundColor || '#F5F5F5'}
+                    onChange={(e) => {
+                      console.log('[ThemeConfigEditor] Page background color changed to:', e.target.value);
+                      handleCustomize({ pageBackgroundColor: e.target.value, pageBackgroundGradient: undefined });
+                    }}
+                    InputProps={{
+                      sx: { height: 40 },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Gradient Preset</InputLabel>
+                    <Select
+                      value={resolvedTheme.pageBackgroundGradient || ''}
+                      label="Gradient Preset"
+                      onChange={(e) => {
+                        console.log('[ThemeConfigEditor] Gradient preset changed to:', e.target.value);
+                        handleCustomize({
+                          pageBackgroundGradient: e.target.value || undefined,
+                          pageBackgroundColor: e.target.value ? undefined : resolvedTheme.pageBackgroundColor
+                        });
+                      }}
+                    >
+                      <MenuItem value="">None (Solid Color)</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">Purple Haze</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)">Soft Gray</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)">Pastel Dream</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)">Warm Sunset</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)">Rose Mist</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)">Ocean Blue</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)">Sky Blue</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)">Fresh Green</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)">Dark Teal</MenuItem>
+                      <MenuItem value="linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)">Dark Navy</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Form Card Colors */}
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                Form Card Colors
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
@@ -348,7 +427,7 @@ export function ThemeConfigEditor({
                   <TextField
                     size="small"
                     fullWidth
-                    label="Background"
+                    label="Card Background"
                     type="color"
                     value={resolvedTheme.backgroundColor || '#FFFFFF'}
                     onChange={(e) => handleCustomize({ backgroundColor: e.target.value })}
@@ -496,46 +575,63 @@ export function ThemeConfigEditor({
             <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
               Preview
             </Typography>
-            <Paper
-              elevation={resolvedTheme.elevation || 1}
+            {/* Page background container */}
+            <Box
               sx={{
                 p: 2,
-                bgcolor: resolvedTheme.backgroundColor,
-                borderRadius: `${resolvedTheme.borderRadius || 8}px`,
-                ...(resolvedTheme.glassmorphism && {
-                  backdropFilter: 'blur(10px)',
-                  bgcolor: alpha(resolvedTheme.backgroundColor || '#fff', 0.8),
+                borderRadius: 1,
+                background: resolvedTheme.pageBackgroundGradient ||
+                  resolvedTheme.pageBackgroundColor ||
+                  '#F5F5F5',
+                ...(resolvedTheme.pageBackgroundImage && {
+                  backgroundImage: `url(${resolvedTheme.pageBackgroundImage})`,
+                  backgroundSize: resolvedTheme.pageBackgroundSize || 'cover',
+                  backgroundPosition: resolvedTheme.pageBackgroundPosition || 'center center',
                 }),
               }}
             >
-              <Typography
-                variant="subtitle2"
+              {/* Form card */}
+              <Paper
+                elevation={resolvedTheme.elevation || 1}
                 sx={{
-                  fontFamily: resolvedTheme.fontFamily,
-                  color: resolvedTheme.textColor,
-                  mb: 1,
+                  p: 2,
+                  bgcolor: resolvedTheme.backgroundColor,
+                  borderRadius: `${resolvedTheme.borderRadius || 8}px`,
+                  ...(resolvedTheme.glassmorphism && {
+                    backdropFilter: 'blur(10px)',
+                    bgcolor: alpha(resolvedTheme.backgroundColor || '#fff', 0.8),
+                  }),
                 }}
               >
-                Form Title
-              </Typography>
-              <Box
-                sx={{
-                  height: 36,
-                  borderRadius: `${resolvedTheme.inputBorderRadius || resolvedTheme.borderRadius || 8}px`,
-                  border: resolvedTheme.inputStyle === 'outlined' ? `1px solid ${alpha(resolvedTheme.textColor || '#000', 0.3)}` : 'none',
-                  bgcolor: resolvedTheme.inputStyle === 'filled' ? resolvedTheme.surfaceColor : 'transparent',
-                  mb: 1,
-                }}
-              />
-              <Box
-                sx={{
-                  height: 32,
-                  width: 100,
-                  borderRadius: `${resolvedTheme.buttonBorderRadius || resolvedTheme.borderRadius || 8}px`,
-                  bgcolor: resolvedTheme.primaryColor,
-                }}
-              />
-            </Paper>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontFamily: resolvedTheme.fontFamily,
+                    color: resolvedTheme.textColor,
+                    mb: 1,
+                  }}
+                >
+                  Form Title
+                </Typography>
+                <Box
+                  sx={{
+                    height: 36,
+                    borderRadius: `${resolvedTheme.inputBorderRadius || resolvedTheme.borderRadius || 8}px`,
+                    border: resolvedTheme.inputStyle === 'outlined' ? `1px solid ${alpha(resolvedTheme.textColor || '#000', 0.3)}` : 'none',
+                    bgcolor: resolvedTheme.inputStyle === 'filled' ? resolvedTheme.surfaceColor : 'transparent',
+                    mb: 1,
+                  }}
+                />
+                <Box
+                  sx={{
+                    height: 32,
+                    width: 100,
+                    borderRadius: `${resolvedTheme.buttonBorderRadius || resolvedTheme.borderRadius || 8}px`,
+                    bgcolor: resolvedTheme.primaryColor,
+                  }}
+                />
+              </Paper>
+            </Box>
           </Box>
         </Paper>
       </Collapse>

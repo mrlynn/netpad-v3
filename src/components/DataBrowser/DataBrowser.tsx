@@ -56,9 +56,14 @@ import {
   ExpandLess,
   Close,
   Check,
+  Upload,
 } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
 import { usePipeline } from '@/contexts/PipelineContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { ConnectionPanel } from '@/components/ConnectionPanel/ConnectionPanel';
+import { ExportDialog } from '@/components/DataExport';
+import { SchemaAwareDocumentEditor } from './SchemaAwareDocumentEditor';
 
 interface Document {
   _id: string;
@@ -250,11 +255,15 @@ function DocumentDetailDrawer({
   document,
   onClose,
   onCopy,
+  onEdit,
+  onDelete,
 }: {
   open: boolean;
   document: Document | null;
   onClose: () => void;
   onCopy: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   if (!document) return null;
 
@@ -321,10 +330,10 @@ function DocumentDetailDrawer({
             bgcolor: 'background.paper',
           }}
         >
-          <Button variant="outlined" startIcon={<Edit />} fullWidth>
+          <Button variant="outlined" startIcon={<Edit />} fullWidth onClick={onEdit}>
             Edit Document
           </Button>
-          <Button variant="outlined" color="error" startIcon={<Delete />} fullWidth>
+          <Button variant="outlined" color="error" startIcon={<Delete />} fullWidth onClick={onDelete}>
             Delete
           </Button>
         </Box>
@@ -333,8 +342,172 @@ function DocumentDetailDrawer({
   );
 }
 
+// Document Edit Drawer
+function DocumentEditDrawer({
+  open,
+  document,
+  onClose,
+  onSave,
+  saving,
+  error,
+}: {
+  open: boolean;
+  document: Document | null;
+  onClose: () => void;
+  onSave: (updatedDoc: Record<string, unknown>) => void;
+  saving: boolean;
+  error: string | null;
+}) {
+  const [jsonText, setJsonText] = useState('');
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  // Initialize JSON text when document changes
+  useEffect(() => {
+    if (document) {
+      // Create a copy without _id for editing (can't change _id)
+      const { _id, ...editableFields } = document;
+      setJsonText(JSON.stringify(editableFields, null, 2));
+      setParseError(null);
+    }
+  }, [document]);
+
+  const handleJsonChange = (value: string) => {
+    setJsonText(value);
+    setParseError(null);
+  };
+
+  const handleSave = () => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        setParseError('Document must be a JSON object');
+        return;
+      }
+      // Add back the _id
+      onSave({ _id: document?._id, ...parsed });
+    } catch (e) {
+      setParseError('Invalid JSON: ' + (e instanceof Error ? e.message : 'Parse error'));
+    }
+  };
+
+  if (!document) return null;
+
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={saving ? undefined : onClose}
+      PaperProps={{
+        sx: {
+          width: { xs: '100%', sm: 600 },
+          bgcolor: 'background.default',
+        },
+      }}
+    >
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Edit Document
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+              {String(document._id)}
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={onClose} disabled={saving}>
+            <Close sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Box>
+
+        {/* Editor */}
+        <Box sx={{ flex: 1, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+            Edit the document JSON below. The _id field cannot be changed.
+          </Typography>
+          <TextField
+            multiline
+            fullWidth
+            value={jsonText}
+            onChange={(e) => handleJsonChange(e.target.value)}
+            disabled={saving}
+            sx={{
+              flex: 1,
+              '& .MuiInputBase-root': {
+                fontFamily: 'Monaco, Consolas, monospace',
+                fontSize: 12,
+                height: '100%',
+                alignItems: 'flex-start',
+              },
+              '& .MuiInputBase-input': {
+                height: '100% !important',
+                overflow: 'auto !important',
+              },
+            }}
+            InputProps={{
+              sx: { height: '100%' }
+            }}
+          />
+          {(parseError || error) && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {parseError || error}
+            </Alert>
+          )}
+        </Box>
+
+        {/* Actions */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            display: 'flex',
+            gap: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Button variant="outlined" onClick={onClose} disabled={saving} sx={{ flex: 1 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving || !!parseError}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <Check />}
+            sx={{
+              flex: 1,
+              background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+              color: '#001E2B',
+              fontWeight: 600,
+              '&:hover': {
+                background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+              },
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </Box>
+      </Box>
+    </Drawer>
+  );
+}
+
 export function DataBrowser() {
-  const { connectionString, databaseName, collection } = usePipeline();
+  const { connectionString, databaseName, collection, activeVaultId } = usePipeline();
+  const { currentOrgId } = useOrganization();
+  const router = useRouter();
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -348,14 +521,30 @@ export function DataBrowser() {
   const [columns, setColumns] = useState<string[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [showConnectionPanel, setShowConnectionPanel] = useState(false);
+  const [showConnectionPanel, setShowConnectionPanel] = useState(true); // Always show by default
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [detailDocument, setDetailDocument] = useState<Document | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  // Edit state
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editDocument, setEditDocument] = useState<Document | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const hasConnection = Boolean(connectionString && databaseName && collection);
+  // Can export if we have a connection (either vault or direct)
+  const canExport = hasConnection;
+
+  // Auto-hide connection panel when connected with a collection selected
+  useEffect(() => {
+    if (hasConnection) {
+      setShowConnectionPanel(false);
+    }
+  }, [hasConnection]);
 
   // Fetch documents
   const fetchDocuments = useCallback(async () => {
@@ -535,10 +724,121 @@ export function DataBrowser() {
     handleMenuClose();
   };
 
-  // If not connected, show connection panel
+  const handleEditDocument = (doc: Document) => {
+    setEditDocument(doc);
+    setEditDrawerOpen(true);
+    setSaveError(null);
+    setDetailDrawerOpen(false);  // Close detail drawer if open
+    handleMenuClose();
+  };
+
+  const handleSaveDocument = async (updatedDoc: Record<string, unknown>, encryptedFieldPaths?: string[]) => {
+    if (!connectionString || !databaseName || !collection) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      // Build request body with optional encryption info
+      const requestBody: Record<string, unknown> = {
+        connectionString,
+        databaseName,
+        collection,
+        documentId: String(updatedDoc._id),
+        document: updatedDoc,
+      };
+
+      // If there are encrypted fields, include encryption metadata for re-encryption
+      if (encryptedFieldPaths && encryptedFieldPaths.length > 0 && currentOrgId) {
+        // We'll need to get the form schema to get encryption config for each field
+        // For now, we'll pass minimal info - the API will handle re-encryption
+        requestBody.organizationId = currentOrgId;
+        // Note: formId would need to be passed from the editor
+        // For now, re-encryption requires the schema lookup to be done server-side
+      }
+
+      const response = await fetch('/api/mongodb/document', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEditDrawerOpen(false);
+        setEditDocument(null);
+        setSnackbarMessage('Document updated successfully');
+        setSnackbarOpen(true);
+        // Refresh the documents list
+        fetchDocuments();
+      } else {
+        setSaveError(data.error || 'Failed to update document');
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to update document');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteDocument = async (doc?: Document) => {
+    const docToDelete = doc || selectedDoc || detailDocument;
+    if (!docToDelete || !connectionString || !databaseName || !collection) return;
+
+    if (!confirm(`Are you sure you want to delete this document?\n\nID: ${docToDelete._id}`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/mongodb/document', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connectionString,
+          databaseName,
+          collection,
+          documentId: String(docToDelete._id),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setDetailDrawerOpen(false);
+        setDetailDocument(null);
+        handleMenuClose();
+        setSnackbarMessage('Document deleted successfully');
+        setSnackbarOpen(true);
+        // Refresh the documents list
+        fetchDocuments();
+      } else {
+        setError(data.error || 'Failed to delete document');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete document');
+    }
+  };
+
+  // If not connected, show connection panel in sidebar with empty main content
   if (!hasConnection) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ height: '100%', display: 'flex' }}>
+        {/* Connection Panel Sidebar - Always visible when not connected */}
+        <Box
+          sx={{
+            width: 320,
+            flexShrink: 0,
+            bgcolor: 'background.paper',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+            overflow: 'auto',
+          }}
+        >
+          <ConnectionPanel />
+        </Box>
+
+        {/* Main Content - Prompt to connect */}
         <Box
           sx={{
             flex: 1,
@@ -546,13 +846,14 @@ export function DataBrowser() {
             alignItems: 'center',
             justifyContent: 'center',
             p: 4,
+            bgcolor: 'background.default',
           }}
         >
           <Paper
             elevation={0}
             sx={{
               p: 4,
-              maxWidth: 500,
+              maxWidth: 400,
               width: '100%',
               textAlign: 'center',
               border: '1px solid',
@@ -562,47 +863,16 @@ export function DataBrowser() {
           >
             <Storage sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-              Connect to MongoDB
+              Select a Connection
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Connect to your MongoDB database to browse and explore your data.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Choose a connection from the panel on the left, then select a database and collection to browse your data.
             </Typography>
-            <Button
-              variant="contained"
-              onClick={() => setShowConnectionPanel(true)}
-              sx={{
-                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                color: '#001E2B',
-                fontWeight: 600,
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
-                },
-              }}
-            >
-              Connect Database
-            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Your saved connections from the organization vault will appear as Quick Connect options.
+            </Typography>
           </Paper>
         </Box>
-
-        {/* Connection Panel Drawer */}
-        {showConnectionPanel && (
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 48,
-              left: 0,
-              bottom: 0,
-              width: 360,
-              bgcolor: 'background.paper',
-              borderRight: '1px solid',
-              borderColor: 'divider',
-              zIndex: 1200,
-              overflow: 'auto',
-            }}
-          >
-            <ConnectionPanel />
-          </Box>
-        )}
       </Box>
     );
   }
@@ -706,8 +976,8 @@ export function DataBrowser() {
                 doc={doc}
                 onView={() => handleViewDocument(doc)}
                 onCopy={() => handleCopyDocument(doc)}
-                onEdit={() => {}}
-                onDelete={() => {}}
+                onEdit={() => handleEditDocument(doc)}
+                onDelete={() => handleDeleteDocument(doc)}
               />
             </Grid>
           ))}
@@ -880,11 +1150,42 @@ export function DataBrowser() {
               <Refresh sx={{ fontSize: 18 }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Export">
-            <IconButton size="small" disabled>
-              <Download sx={{ fontSize: 18 }} />
-            </IconButton>
+          <Tooltip title={canExport ? "Export Data" : "Connect to export"}>
+            <span>
+              <IconButton
+                size="small"
+                disabled={!canExport}
+                onClick={() => setExportDialogOpen(true)}
+              >
+                <Download sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
           </Tooltip>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<Upload sx={{ fontSize: 16 }} />}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (databaseName) params.set('database', databaseName);
+              if (collection) params.set('collection', collection);
+              router.push(`/data/import?${params.toString()}`);
+            }}
+            sx={{
+              background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+              color: '#001E2B',
+              fontWeight: 600,
+              fontSize: 12,
+              px: 1.5,
+              py: 0.5,
+              '&:hover': {
+                background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+              },
+            }}
+          >
+            Import Data
+          </Button>
         </Box>
       </Box>
 
@@ -931,7 +1232,7 @@ export function DataBrowser() {
           <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>
           <ListItemText>View</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={() => selectedDoc && handleEditDocument(selectedDoc)}>
           <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
@@ -940,7 +1241,7 @@ export function DataBrowser() {
           <ListItemText>Copy JSON</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={() => handleDeleteDocument()} sx={{ color: 'error.main' }}>
           <ListItemIcon><Delete fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
@@ -952,6 +1253,27 @@ export function DataBrowser() {
         document={detailDocument}
         onClose={() => setDetailDrawerOpen(false)}
         onCopy={() => handleCopyDocument(detailDocument || undefined)}
+        onEdit={() => detailDocument && handleEditDocument(detailDocument)}
+        onDelete={() => handleDeleteDocument()}
+      />
+
+      {/* Schema-Aware Document Editor */}
+      <SchemaAwareDocumentEditor
+        open={editDrawerOpen}
+        document={editDocument}
+        database={databaseName || ''}
+        collection={collection || ''}
+        connectionString={connectionString || ''}
+        organizationId={currentOrgId || undefined}
+        vaultId={activeVaultId || undefined}
+        onClose={() => {
+          setEditDrawerOpen(false);
+          setEditDocument(null);
+          setSaveError(null);
+        }}
+        onSave={handleSaveDocument}
+        saving={saving}
+        error={saveError}
       />
 
       {/* Copy Snackbar */}
@@ -969,6 +1291,19 @@ export function DataBrowser() {
           },
         }}
       />
+
+      {/* Export Dialog */}
+      {canExport && (
+        <ExportDialog
+          open={exportDialogOpen}
+          onClose={() => setExportDialogOpen(false)}
+          organizationId={currentOrgId || undefined}
+          vaultId={activeVaultId || undefined}
+          connectionString={!activeVaultId ? connectionString || undefined : undefined}
+          database={databaseName!}
+          collection={collection!}
+        />
+      )}
     </Box>
   );
 }

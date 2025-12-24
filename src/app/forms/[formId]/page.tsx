@@ -22,6 +22,7 @@ import { FormConfiguration, FormType, SearchConfig } from '@/types/form';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { SearchFormRenderer } from '@/components/FormRenderer/SearchFormRenderer';
 import { AuthMethod } from '@/types/platform';
+import { getResolvedTheme } from '@/lib/formThemes';
 
 interface SearchResult {
   _id: string;
@@ -62,6 +63,16 @@ export default function PublicFormPage() {
         }
 
         setForm(data.form);
+
+        // Debug: Log theme data received from API
+        console.log('[PublicForm] Theme data received:', {
+          hasTheme: !!data.form.theme,
+          theme: data.form.theme,
+          preset: data.form.theme?.preset,
+          pageBackgroundColor: data.form.theme?.pageBackgroundColor,
+          pageBackgroundGradient: data.form.theme?.pageBackgroundGradient,
+          primaryColor: data.form.theme?.primaryColor,
+        });
 
         // Check if access was denied
         if (data.accessDenied) {
@@ -296,6 +307,23 @@ export default function PublicFormPage() {
   const showSearchMode = formType === 'search' || (formType === 'both' && activeMode === 'search');
   const showCreateMode = formType === 'data-entry' || (formType === 'both' && activeMode === 'create');
 
+  // Check if form has a header banner that displays the title
+  const headerConfig = form.theme?.header;
+  const hasHeaderWithTitle = headerConfig &&
+    headerConfig.type !== 'none' &&
+    headerConfig.showTitle !== false;
+
+  // Get resolved theme for page background
+  const resolvedTheme = getResolvedTheme(form.theme);
+
+  // Debug: Log resolved theme
+  console.log('[PublicForm] Resolved theme:', {
+    inputTheme: form.theme,
+    resolvedPageBg: resolvedTheme.pageBackgroundColor,
+    resolvedPageGradient: resolvedTheme.pageBackgroundGradient,
+    resolvedPrimaryColor: resolvedTheme.primaryColor,
+  });
+
   const handleViewDocument = (doc: SearchResult) => {
     setViewingDocument(doc);
   };
@@ -304,27 +332,45 @@ export default function PublicFormPage() {
     setViewingDocument(null);
   };
 
+  // Build page background styles
+  const pageBackgroundStyles = {
+    minHeight: '100vh',
+    background: resolvedTheme.pageBackgroundGradient ||
+      resolvedTheme.pageBackgroundColor ||
+      '#F5F5F5',
+    ...(resolvedTheme.pageBackgroundImage && {
+      backgroundImage: `url(${resolvedTheme.pageBackgroundImage})`,
+      backgroundSize: resolvedTheme.pageBackgroundSize || 'cover',
+      backgroundPosition: resolvedTheme.pageBackgroundPosition || 'center center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+    }),
+  };
+
   return (
+    <Box sx={pageBackgroundStyles}>
     <Container maxWidth="md" sx={{ py: 4 }}>
-      {/* Form Header */}
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        {form.branding?.logoUrl && (
-          <Box
-            component="img"
-            src={form.branding.logoUrl}
-            alt={form.branding.companyName || 'Logo'}
-            sx={{ maxHeight: 60, mb: 2 }}
-          />
-        )}
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-          {form.name}
-        </Typography>
-        {form.description && (
-          <Typography variant="body1" color="text.secondary">
-            {form.description}
+      {/* Form Header - only show if no header banner with title is configured */}
+      {!hasHeaderWithTitle && (
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          {form.branding?.logoUrl && (
+            <Box
+              component="img"
+              src={form.branding.logoUrl}
+              alt={form.branding.companyName || 'Logo'}
+              sx={{ maxHeight: 60, mb: 2 }}
+            />
+          )}
+          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            {form.name}
           </Typography>
-        )}
-      </Box>
+          {form.description && (
+            <Typography variant="body1" color="text.secondary">
+              {form.description}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       {/* Mode Toggle (only for 'both' type) */}
       {showModeToggle && (
@@ -428,5 +474,6 @@ export default function PublicFormPage() {
         </Box>
       )}
     </Container>
+    </Box>
   );
 }

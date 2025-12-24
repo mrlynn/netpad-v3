@@ -16,7 +16,7 @@ type PipelineAction =
   | { type: 'SET_NODES'; payload: { nodes: Node<StageNodeData>[] } }
   | { type: 'SET_EDGES'; payload: { edges: Edge[] } }
   | { type: 'SELECT_NODE'; payload: { nodeId: string | null } }
-  | { type: 'SET_CONNECTION'; payload: { connectionString: string; databaseName: string } }
+  | { type: 'SET_CONNECTION'; payload: { connectionString: string; databaseName: string; vaultId?: string } }
   | { type: 'SET_COLLECTION'; payload: { collection: string } }
   | { type: 'SET_SAMPLE_DOCS'; payload: { docs: Document[] } }
   | { type: 'SET_EXECUTION_RESULTS'; payload: { results: Map<string, Document[]> } }
@@ -30,6 +30,7 @@ const initialState: PipelineState = {
   connectionString: null,
   databaseName: null,
   collection: null,
+  activeVaultId: null,
   sampleDocs: [],
   isExecuting: false,
   executionResults: new Map(),
@@ -88,6 +89,7 @@ function pipelineReducer(state: PipelineState, action: PipelineAction): Pipeline
         ...state,
         connectionString: action.payload.connectionString,
         databaseName: action.payload.databaseName,
+        activeVaultId: action.payload.vaultId || null,
         collection: null // Reset collection when connection changes
       };
 

@@ -38,6 +38,31 @@ interface QuestionTypeAttributeEditorProps {
 function getQuestionTypeId(config: FieldConfig): string | null {
   const type = config.type?.toLowerCase();
 
+  // Direct type matches first - map various naming conventions to canonical type IDs
+  if (type === 'color_picker' || type === 'color-picker' || type === 'colorpicker' || type === 'color') return 'color_picker';
+  if (type === 'email') return 'email';
+  if (type === 'url') return 'url';
+  if (type === 'phone' || type === 'tel' || type === 'telephone') return 'phone';
+  if (type === 'file_upload' || type === 'file-upload' || type === 'fileupload' || type === 'file') return 'file_upload';
+  if (type === 'image_upload' || type === 'image-upload' || type === 'imageupload' || type === 'image') return 'image_upload';
+  if (type === 'time') return 'time';
+  if (type === 'datetime' || type === 'date-time') return 'datetime';
+  if (type === 'signature') return 'signature';
+  if (type === 'tags') return 'tags';
+  if (type === 'slider') return 'slider';
+  if (type === 'opinion_scale' || type === 'opinion-scale' || type === 'opinionscale') return 'opinion_scale';
+  if (type === 'multiple_choice' || type === 'multiple-choice' || type === 'multiplechoice' || type === 'radio') return 'multiple_choice';
+  if (type === 'checkboxes' || type === 'checkbox') return 'checkboxes';
+  if (type === 'dropdown' || type === 'select') return 'dropdown';
+  if (type === 'matrix') return 'matrix';
+  if (type === 'ranking') return 'ranking';
+  if (type === 'address') return 'address';
+  if (type === 'nps') return 'nps';
+  if (type === 'rating') return 'rating';
+  if (type === 'scale') return 'scale';
+  if (type === 'textarea' || type === 'long_text' || type === 'long-text' || type === 'longtext') return 'long-text';
+  if (type === 'text' || type === 'short_text' || type === 'short-text' || type === 'shorttext') return 'short-text';
+
   // Check for special types based on validation or other indicators
   if (type === 'number') {
     // Check if it's a rating or scale based on validation
@@ -57,10 +82,7 @@ function getQuestionTypeId(config: FieldConfig): string | null {
 
   if (type === 'boolean' || type === 'yes_no' || type === 'yes-no') return 'yes-no';
   if (type === 'date') return 'date';
-  if (type === 'email') return 'email';
-  if (type === 'url') return 'url';
   if (type === 'array') return 'checkboxes';
-  if (type === 'nps') return 'nps';
 
   return type;
 }
@@ -614,6 +636,1572 @@ export function QuestionTypeAttributeEditor({
                 </Typography>
               </Box>
             </Box>
+          </Box>
+        );
+
+      case 'color_picker':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Color Picker Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Color Format</InputLabel>
+              <Select
+                value={config.validation?.colorFormat || 'hex'}
+                label="Color Format"
+                onChange={(e) => updateValidation('colorFormat', e.target.value)}
+              >
+                <MenuItem value="hex">HEX (#RRGGBB)</MenuItem>
+                <MenuItem value="rgb">RGB (r, g, b)</MenuItem>
+                <MenuItem value="hsl">HSL (h, s, l)</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Picker Style</InputLabel>
+              <Select
+                value={config.validation?.pickerStyle || 'chrome'}
+                label="Picker Style"
+                onChange={(e) => updateValidation('pickerStyle', e.target.value)}
+              >
+                <MenuItem value="chrome">Chrome (Full)</MenuItem>
+                <MenuItem value="sketch">Sketch</MenuItem>
+                <MenuItem value="compact">Compact</MenuItem>
+                <MenuItem value="swatches">Swatches Only</MenuItem>
+                <MenuItem value="block">Block</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showAlpha || false}
+                  onChange={(e) => updateValidation('showAlpha', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Transparency (Alpha)</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.presetsOnly || false}
+                  onChange={(e) => updateValidation('presetsOnly', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Preset Colors Only</Typography>}
+            />
+
+            <TextField
+              size="small"
+              label="Preset Colors"
+              placeholder="#FF0000, #00FF00, #0000FF"
+              value={(config.validation?.presetColors || []).join(', ')}
+              onChange={(e) => updateValidation('presetColors', e.target.value.split(',').map(c => c.trim()).filter(Boolean))}
+              helperText="Comma-separated color values"
+              fullWidth
+            />
+
+            {/* Preview */}
+            <Box sx={{ px: 1, py: 1.5, bgcolor: alpha('#00ED64', 0.03), borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                Preview
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {(config.validation?.presetColors?.length ? config.validation.presetColors : ['#FF5733', '#33FF57', '#3357FF', '#FF33F5', '#F5FF33']).map((color, i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: color,
+                      borderRadius: 1,
+                      border: '2px solid',
+                      borderColor: 'divider',
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        );
+
+      case 'email':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Email Settings
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowMultipleEmails || false}
+                  onChange={(e) => updateValidation('allowMultipleEmails', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Multiple Emails</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.blockDisposable || false}
+                  onChange={(e) => updateValidation('blockDisposable', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Block Disposable Emails</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.confirmEmail || false}
+                  onChange={(e) => updateValidation('confirmEmail', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Require Email Confirmation</Typography>}
+            />
+
+            <TextField
+              size="small"
+              label="Allowed Domains"
+              placeholder="gmail.com, company.com"
+              value={(config.validation?.allowedDomains || []).join(', ')}
+              onChange={(e) => updateValidation('allowedDomains', e.target.value.split(',').map(d => d.trim()).filter(Boolean))}
+              helperText="Leave empty to allow all domains"
+              fullWidth
+            />
+
+            <TextField
+              size="small"
+              label="Blocked Domains"
+              placeholder="spam.com, temp-mail.org"
+              value={(config.validation?.blockedDomains || []).join(', ')}
+              onChange={(e) => updateValidation('blockedDomains', e.target.value.split(',').map(d => d.trim()).filter(Boolean))}
+              helperText="Domains to reject"
+              fullWidth
+            />
+          </Box>
+        );
+
+      case 'url':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              URL Settings
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.requireHttps || false}
+                  onChange={(e) => updateValidation('requireHttps', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Require HTTPS</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showUrlPreview || false}
+                  onChange={(e) => updateValidation('showUrlPreview', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Link Preview</Typography>}
+            />
+
+            <TextField
+              size="small"
+              label="Allowed Protocols"
+              placeholder="https, http, ftp"
+              value={(config.validation?.allowedProtocols || ['https', 'http']).join(', ')}
+              onChange={(e) => updateValidation('allowedProtocols', e.target.value.split(',').map(p => p.trim()).filter(Boolean))}
+              helperText="Comma-separated list of allowed protocols"
+              fullWidth
+            />
+          </Box>
+        );
+
+      case 'phone':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Phone Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Phone Format</InputLabel>
+              <Select
+                value={config.validation?.phoneFormat || 'national'}
+                label="Phone Format"
+                onChange={(e) => updateValidation('phoneFormat', e.target.value)}
+              >
+                <MenuItem value="national">National (555) 123-4567</MenuItem>
+                <MenuItem value="international">International +1 555 123 4567</MenuItem>
+                <MenuItem value="e164">E.164 (+15551234567)</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              label="Default Country"
+              placeholder="US"
+              value={config.validation?.defaultCountry || ''}
+              onChange={(e) => updateValidation('defaultCountry', e.target.value.toUpperCase())}
+              helperText="ISO country code (e.g., US, GB, CA)"
+              inputProps={{ maxLength: 2 }}
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showCountrySelector !== false}
+                  onChange={(e) => updateValidation('showCountrySelector', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Country Selector</Typography>}
+            />
+
+            <TextField
+              size="small"
+              label="Allowed Countries"
+              placeholder="US, CA, GB, AU"
+              value={(config.validation?.allowedCountries || []).join(', ')}
+              onChange={(e) => updateValidation('allowedCountries', e.target.value.split(',').map(c => c.trim().toUpperCase()).filter(Boolean))}
+              helperText="Leave empty to allow all countries"
+              fullWidth
+            />
+          </Box>
+        );
+
+      case 'file_upload':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              File Upload Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Allowed File Types</InputLabel>
+              <Select
+                multiple
+                value={config.validation?.allowedTypes || []}
+                label="Allowed File Types"
+                onChange={(e) => updateValidation('allowedTypes', e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(selected as string[]).map((value) => (
+                      <Chip key={value} label={value} size="small" sx={{ height: 20 }} />
+                    ))}
+                  </Box>
+                )}
+              >
+                <MenuItem value="application/pdf">PDF</MenuItem>
+                <MenuItem value="application/msword">Word (.doc)</MenuItem>
+                <MenuItem value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">Word (.docx)</MenuItem>
+                <MenuItem value="application/vnd.ms-excel">Excel (.xls)</MenuItem>
+                <MenuItem value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">Excel (.xlsx)</MenuItem>
+                <MenuItem value="text/csv">CSV</MenuItem>
+                <MenuItem value="text/plain">Text</MenuItem>
+                <MenuItem value="image/*">All Images</MenuItem>
+                <MenuItem value="video/*">All Videos</MenuItem>
+                <MenuItem value="audio/*">All Audio</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              type="number"
+              label="Maximum File Size (MB)"
+              value={config.validation?.maxSize || 10}
+              onChange={(e) => updateValidation('maxSize', Number(e.target.value) || 10)}
+              inputProps={{ min: 1, max: 100 }}
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.multiple || false}
+                  onChange={(e) => updateValidation('multiple', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Multiple Files</Typography>}
+            />
+
+            {config.validation?.multiple && (
+              <TextField
+                size="small"
+                type="number"
+                label="Maximum Number of Files"
+                value={config.validation?.maxFiles || 5}
+                onChange={(e) => updateValidation('maxFiles', Number(e.target.value) || 5)}
+                inputProps={{ min: 1, max: 20 }}
+                fullWidth
+              />
+            )}
+          </Box>
+        );
+
+      case 'image_upload':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Image Upload Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Allowed Image Types</InputLabel>
+              <Select
+                multiple
+                value={config.validation?.allowedTypes || ['image/jpeg', 'image/png']}
+                label="Allowed Image Types"
+                onChange={(e) => updateValidation('allowedTypes', e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(selected as string[]).map((value) => (
+                      <Chip key={value} label={value.split('/')[1]?.toUpperCase()} size="small" sx={{ height: 20 }} />
+                    ))}
+                  </Box>
+                )}
+              >
+                <MenuItem value="image/jpeg">JPEG</MenuItem>
+                <MenuItem value="image/png">PNG</MenuItem>
+                <MenuItem value="image/gif">GIF</MenuItem>
+                <MenuItem value="image/webp">WebP</MenuItem>
+                <MenuItem value="image/svg+xml">SVG</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              type="number"
+              label="Maximum File Size (MB)"
+              value={config.validation?.maxSize || 5}
+              onChange={(e) => updateValidation('maxSize', Number(e.target.value) || 5)}
+              inputProps={{ min: 1, max: 50 }}
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.multiple || false}
+                  onChange={(e) => updateValidation('multiple', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Multiple Images</Typography>}
+            />
+
+            {config.validation?.multiple && (
+              <TextField
+                size="small"
+                type="number"
+                label="Maximum Number of Images"
+                value={config.validation?.maxFiles || 5}
+                onChange={(e) => updateValidation('maxFiles', Number(e.target.value) || 5)}
+                inputProps={{ min: 1, max: 20 }}
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.enableCrop || false}
+                  onChange={(e) => updateValidation('enableCrop', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Enable Image Cropping</Typography>}
+            />
+
+            {config.validation?.enableCrop && (
+              <TextField
+                size="small"
+                type="number"
+                label="Crop Aspect Ratio"
+                placeholder="1.78 for 16:9"
+                value={config.validation?.cropAspectRatio || ''}
+                onChange={(e) => updateValidation('cropAspectRatio', e.target.value ? Number(e.target.value) : undefined)}
+                helperText="Leave empty for free crop"
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.enableCompression || false}
+                  onChange={(e) => updateValidation('enableCompression', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Compress Images</Typography>}
+            />
+
+            {config.validation?.enableCompression && (
+              <Box sx={{ px: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Compression Quality: {Math.round((config.validation?.compressionQuality || 0.8) * 100)}%
+                </Typography>
+                <Slider
+                  size="small"
+                  value={config.validation?.compressionQuality || 0.8}
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  onChange={(_, value) => updateValidation('compressionQuality', value)}
+                  sx={{ color: '#00ED64' }}
+                />
+              </Box>
+            )}
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Min Width (px)"
+                value={config.validation?.minImageWidth || ''}
+                onChange={(e) => updateValidation('minImageWidth', e.target.value ? Number(e.target.value) : undefined)}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Min Height (px)"
+                value={config.validation?.minImageHeight || ''}
+                onChange={(e) => updateValidation('minImageHeight', e.target.value ? Number(e.target.value) : undefined)}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+          </Box>
+        );
+
+      case 'time':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Time Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Time Format</InputLabel>
+              <Select
+                value={config.validation?.timeFormat || '12h'}
+                label="Time Format"
+                onChange={(e) => updateValidation('timeFormat', e.target.value)}
+              >
+                <MenuItem value="12h">12-hour (AM/PM)</MenuItem>
+                <MenuItem value="24h">24-hour</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Minute Interval</InputLabel>
+              <Select
+                value={config.validation?.minuteStep || 1}
+                label="Minute Interval"
+                onChange={(e) => updateValidation('minuteStep', Number(e.target.value))}
+              >
+                <MenuItem value={1}>1 minute</MenuItem>
+                <MenuItem value={5}>5 minutes</MenuItem>
+                <MenuItem value={10}>10 minutes</MenuItem>
+                <MenuItem value={15}>15 minutes</MenuItem>
+                <MenuItem value={30}>30 minutes</MenuItem>
+                <MenuItem value={60}>1 hour</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="time"
+                label="Earliest Time"
+                value={config.validation?.minTime || ''}
+                onChange={(e) => updateValidation('minTime', e.target.value || undefined)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="time"
+                label="Latest Time"
+                value={config.validation?.maxTime || ''}
+                onChange={(e) => updateValidation('maxTime', e.target.value || undefined)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showSeconds || false}
+                  onChange={(e) => updateValidation('showSeconds', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Include Seconds</Typography>}
+            />
+          </Box>
+        );
+
+      case 'datetime':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Date & Time Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Time Format</InputLabel>
+              <Select
+                value={config.validation?.timeFormat || '12h'}
+                label="Time Format"
+                onChange={(e) => updateValidation('timeFormat', e.target.value)}
+              >
+                <MenuItem value="12h">12-hour (AM/PM)</MenuItem>
+                <MenuItem value="24h">24-hour</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Timezone Handling</InputLabel>
+              <Select
+                value={config.validation?.dateTimeTimezone || 'local'}
+                label="Timezone Handling"
+                onChange={(e) => updateValidation('dateTimeTimezone', e.target.value)}
+              >
+                <MenuItem value="local">User's Local Time</MenuItem>
+                <MenuItem value="utc">UTC</MenuItem>
+                <MenuItem value="custom">Custom Timezone</MenuItem>
+              </Select>
+            </FormControl>
+
+            {config.validation?.dateTimeTimezone === 'custom' && (
+              <TextField
+                size="small"
+                label="Custom Timezone"
+                placeholder="America/New_York"
+                value={config.validation?.customTimezone || ''}
+                onChange={(e) => updateValidation('customTimezone', e.target.value)}
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showTimezoneSelector || false}
+                  onChange={(e) => updateValidation('showTimezoneSelector', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Timezone Selector</Typography>}
+            />
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Minute Interval</InputLabel>
+              <Select
+                value={config.validation?.minuteStep || 1}
+                label="Minute Interval"
+                onChange={(e) => updateValidation('minuteStep', Number(e.target.value))}
+              >
+                <MenuItem value={1}>1 minute</MenuItem>
+                <MenuItem value={5}>5 minutes</MenuItem>
+                <MenuItem value={15}>15 minutes</MenuItem>
+                <MenuItem value={30}>30 minutes</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowPastDates !== false}
+                  onChange={(e) => updateValidation('allowPastDates', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Past Dates</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowFutureDates !== false}
+                  onChange={(e) => updateValidation('allowFutureDates', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Future Dates</Typography>}
+            />
+          </Box>
+        );
+
+      case 'signature':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Signature Settings
+            </Typography>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Canvas Width (px)"
+                value={config.validation?.canvasWidth || 400}
+                onChange={(e) => updateValidation('canvasWidth', Number(e.target.value) || 400)}
+                inputProps={{ min: 200, max: 800 }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Canvas Height (px)"
+                value={config.validation?.canvasHeight || 150}
+                onChange={(e) => updateValidation('canvasHeight', Number(e.target.value) || 150)}
+                inputProps={{ min: 100, max: 400 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                type="color"
+                label="Stroke Color"
+                value={config.validation?.strokeColor || '#000000'}
+                onChange={(e) => updateValidation('strokeColor', e.target.value)}
+                sx={{ flex: 1 }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Stroke Width"
+                value={config.validation?.strokeWidth || 2}
+                onChange={(e) => updateValidation('strokeWidth', Number(e.target.value) || 2)}
+                inputProps={{ min: 1, max: 10 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <TextField
+              size="small"
+              type="color"
+              label="Background Color"
+              value={config.validation?.backgroundColor || '#ffffff'}
+              onChange={(e) => updateValidation('backgroundColor', e.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowTypedSignature || false}
+                  onChange={(e) => updateValidation('allowTypedSignature', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Typed Signature</Typography>}
+            />
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Output Format</InputLabel>
+              <Select
+                value={config.validation?.outputFormat || 'png'}
+                label="Output Format"
+                onChange={(e) => updateValidation('outputFormat', e.target.value)}
+              >
+                <MenuItem value="png">PNG Image</MenuItem>
+                <MenuItem value="svg">SVG Vector</MenuItem>
+                <MenuItem value="base64">Base64 Data URL</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Preview */}
+            <Box sx={{ px: 1, py: 1.5, bgcolor: alpha('#00ED64', 0.03), borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                Preview
+              </Typography>
+              <Box
+                sx={{
+                  width: Math.min(config.validation?.canvasWidth || 400, 300),
+                  height: Math.min(config.validation?.canvasHeight || 150, 100),
+                  bgcolor: config.validation?.backgroundColor || '#ffffff',
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography variant="caption" color="text.disabled">
+                  Sign here
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        );
+
+      case 'tags':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Tags Settings
+            </Typography>
+
+            <TextField
+              size="small"
+              label="Suggested Tags"
+              placeholder="tag1, tag2, tag3"
+              value={(config.validation?.tagSuggestions || []).join(', ')}
+              onChange={(e) => updateValidation('tagSuggestions', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+              helperText="Comma-separated autocomplete suggestions"
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowCustomTags !== false}
+                  onChange={(e) => updateValidation('allowCustomTags', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Custom Tags</Typography>}
+            />
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Min Tags"
+                value={config.validation?.minTags || ''}
+                onChange={(e) => updateValidation('minTags', e.target.value ? Number(e.target.value) : undefined)}
+                inputProps={{ min: 0 }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Max Tags"
+                value={config.validation?.maxTags || ''}
+                onChange={(e) => updateValidation('maxTags', e.target.value ? Number(e.target.value) : undefined)}
+                inputProps={{ min: 1 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <TextField
+              size="small"
+              type="number"
+              label="Max Tag Length"
+              value={config.validation?.maxTagLength || 50}
+              onChange={(e) => updateValidation('maxTagLength', Number(e.target.value) || 50)}
+              inputProps={{ min: 5, max: 100 }}
+              fullWidth
+            />
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Case Handling</InputLabel>
+              <Select
+                value={config.validation?.tagCaseHandling || 'preserve'}
+                label="Case Handling"
+                onChange={(e) => updateValidation('tagCaseHandling', e.target.value)}
+              >
+                <MenuItem value="preserve">Preserve Case</MenuItem>
+                <MenuItem value="lowercase">Convert to Lowercase</MenuItem>
+                <MenuItem value="uppercase">Convert to Uppercase</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.createTagOnEnter !== false}
+                  onChange={(e) => updateValidation('createTagOnEnter', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Create Tag on Enter</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.createTagOnComma !== false}
+                  onChange={(e) => updateValidation('createTagOnComma', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Create Tag on Comma</Typography>}
+            />
+
+            {/* Preview */}
+            <Box sx={{ px: 1, py: 1.5, bgcolor: alpha('#00ED64', 0.03), borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                Preview
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {(config.validation?.tagSuggestions?.slice(0, 5) || ['example', 'tags', 'here']).map((tag, i) => (
+                  <Chip
+                    key={i}
+                    label={tag}
+                    size="small"
+                    onDelete={() => {}}
+                    sx={{
+                      bgcolor: alpha('#00ED64', 0.1),
+                      color: '#00ED64',
+                      '& .MuiChip-deleteIcon': { color: alpha('#00ED64', 0.5) },
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        );
+
+      case 'slider':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Slider Settings
+            </Typography>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Minimum"
+                value={config.validation?.min ?? 0}
+                onChange={(e) => updateValidation('min', Number(e.target.value))}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Maximum"
+                value={config.validation?.max ?? 100}
+                onChange={(e) => updateValidation('max', Number(e.target.value))}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <TextField
+              size="small"
+              type="number"
+              label="Step"
+              value={config.validation?.step ?? 1}
+              onChange={(e) => updateValidation('step', Number(e.target.value) || 1)}
+              inputProps={{ min: 0.1, step: 0.1 }}
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showTicks || false}
+                  onChange={(e) => updateValidation('showTicks', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Tick Marks</Typography>}
+            />
+
+            {config.validation?.showTicks && (
+              <TextField
+                size="small"
+                type="number"
+                label="Tick Interval"
+                value={config.validation?.tickInterval || 10}
+                onChange={(e) => updateValidation('tickInterval', Number(e.target.value) || 10)}
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showValue !== false}
+                  onChange={(e) => updateValidation('showValue', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Current Value</Typography>}
+            />
+
+            {config.validation?.showValue !== false && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Value Position</InputLabel>
+                <Select
+                  value={config.validation?.valuePosition || 'tooltip'}
+                  label="Value Position"
+                  onChange={(e) => updateValidation('valuePosition', e.target.value)}
+                >
+                  <MenuItem value="tooltip">Tooltip (on hover)</MenuItem>
+                  <MenuItem value="above">Above Slider</MenuItem>
+                  <MenuItem value="below">Below Slider</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showMinMax !== false}
+                  onChange={(e) => updateValidation('showMinMax', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Min/Max Labels</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.rangeSelection || false}
+                  onChange={(e) => updateValidation('rangeSelection', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Range Selection (Two Handles)</Typography>}
+            />
+
+            <TextField
+              size="small"
+              label="Low Label"
+              placeholder="e.g., Low"
+              value={config.validation?.lowLabel || ''}
+              onChange={(e) => updateValidation('lowLabel', e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              size="small"
+              label="High Label"
+              placeholder="e.g., High"
+              value={config.validation?.highLabel || ''}
+              onChange={(e) => updateValidation('highLabel', e.target.value)}
+              fullWidth
+            />
+
+            {/* Preview */}
+            <Box sx={{ px: 2, py: 1.5, bgcolor: alpha('#00ED64', 0.03), borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                Preview
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {config.validation?.lowLabel || config.validation?.min || 0}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {config.validation?.highLabel || config.validation?.max || 100}
+                </Typography>
+              </Box>
+              <Slider
+                value={config.validation?.rangeSelection ? [30, 70] : 50}
+                min={config.validation?.min || 0}
+                max={config.validation?.max || 100}
+                step={config.validation?.step || 1}
+                marks={config.validation?.showTicks}
+                valueLabelDisplay={config.validation?.valuePosition === 'tooltip' ? 'auto' : 'on'}
+                disabled
+                sx={{ color: '#00ED64' }}
+              />
+            </Box>
+          </Box>
+        );
+
+      case 'opinion_scale':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Opinion Scale Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Scale Type</InputLabel>
+              <Select
+                value={config.validation?.scaleType || 'agreement'}
+                label="Scale Type"
+                onChange={(e) => updateValidation('scaleType', e.target.value)}
+              >
+                <MenuItem value="agreement">Agreement (Strongly Disagree → Strongly Agree)</MenuItem>
+                <MenuItem value="satisfaction">Satisfaction (Very Dissatisfied → Very Satisfied)</MenuItem>
+                <MenuItem value="frequency">Frequency (Never → Always)</MenuItem>
+                <MenuItem value="importance">Importance (Not Important → Very Important)</MenuItem>
+                <MenuItem value="likelihood">Likelihood (Very Unlikely → Very Likely)</MenuItem>
+                <MenuItem value="custom">Custom Labels</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Display Style</InputLabel>
+              <Select
+                value={config.validation?.opinionDisplayStyle || 'buttons'}
+                label="Display Style"
+                onChange={(e) => updateValidation('opinionDisplayStyle', e.target.value)}
+              >
+                <MenuItem value="buttons">Buttons</MenuItem>
+                <MenuItem value="radio">Radio Buttons</MenuItem>
+                <MenuItem value="emojis">Emojis</MenuItem>
+                <MenuItem value="icons">Icons</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showNeutral !== false}
+                  onChange={(e) => updateValidation('showNeutral', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Include Neutral Option</Typography>}
+            />
+
+            {config.validation?.showNeutral !== false && (
+              <TextField
+                size="small"
+                label="Neutral Label"
+                placeholder="Neither Agree nor Disagree"
+                value={config.validation?.neutralLabel || ''}
+                onChange={(e) => updateValidation('neutralLabel', e.target.value)}
+                fullWidth
+              />
+            )}
+
+            {config.validation?.scaleType === 'custom' && (
+              <>
+                <TextField
+                  size="small"
+                  label="Low Label"
+                  placeholder="e.g., Strongly Disagree"
+                  value={config.validation?.lowLabel || ''}
+                  onChange={(e) => updateValidation('lowLabel', e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  size="small"
+                  label="High Label"
+                  placeholder="e.g., Strongly Agree"
+                  value={config.validation?.highLabel || ''}
+                  onChange={(e) => updateValidation('highLabel', e.target.value)}
+                  fullWidth
+                />
+              </>
+            )}
+
+            {/* Preview */}
+            <Box sx={{ px: 1, py: 1.5, bgcolor: alpha('#00ED64', 0.03), borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                Preview ({config.validation?.scaleType || 'agreement'})
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {(config.validation?.opinionDisplayStyle === 'emojis' ? ['😠', '😕', '😐', '🙂', '😄'] :
+                  ['1', '2', '3', '4', '5']).map((item, i) => (
+                  <Chip
+                    key={i}
+                    label={item}
+                    size="small"
+                    sx={{
+                      minWidth: 36,
+                      bgcolor: i === 2 ? alpha('#00ED64', 0.2) : alpha('#00ED64', 0.1),
+                      color: '#00ED64',
+                      fontWeight: i === 2 ? 600 : 400,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        );
+
+      case 'multiple_choice':
+      case 'checkboxes':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              {questionType === 'multiple_choice' ? 'Multiple Choice' : 'Checkboxes'} Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Layout</InputLabel>
+              <Select
+                value={config.validation?.choiceLayout || 'vertical'}
+                label="Layout"
+                onChange={(e) => updateValidation('choiceLayout', e.target.value)}
+              >
+                <MenuItem value="vertical">Vertical List</MenuItem>
+                <MenuItem value="horizontal">Horizontal Row</MenuItem>
+                <MenuItem value="grid">Grid</MenuItem>
+              </Select>
+            </FormControl>
+
+            {config.validation?.choiceLayout === 'grid' && (
+              <TextField
+                size="small"
+                type="number"
+                label="Number of Columns"
+                value={config.validation?.choiceColumns || 2}
+                onChange={(e) => updateValidation('choiceColumns', Number(e.target.value) || 2)}
+                inputProps={{ min: 2, max: 6 }}
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.randomizeOptions || false}
+                  onChange={(e) => updateValidation('randomizeOptions', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Randomize Option Order</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowOther || false}
+                  onChange={(e) => updateValidation('allowOther', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow "Other" Option</Typography>}
+            />
+
+            {config.validation?.allowOther && (
+              <TextField
+                size="small"
+                label="Other Option Label"
+                placeholder="Other (please specify)"
+                value={config.validation?.otherLabel || 'Other'}
+                onChange={(e) => updateValidation('otherLabel', e.target.value)}
+                fullWidth
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showImages || false}
+                  onChange={(e) => updateValidation('showImages', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Images with Options</Typography>}
+            />
+
+            {config.validation?.showImages && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Image Size</InputLabel>
+                <Select
+                  value={config.validation?.imageSize || 'medium'}
+                  label="Image Size"
+                  onChange={(e) => updateValidation('imageSize', e.target.value)}
+                >
+                  <MenuItem value="small">Small</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="large">Large</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            {questionType === 'checkboxes' && (
+              <>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Min Selections"
+                    value={config.validation?.minSelections || ''}
+                    onChange={(e) => updateValidation('minSelections', e.target.value ? Number(e.target.value) : undefined)}
+                    inputProps={{ min: 0 }}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Max Selections"
+                    value={config.validation?.maxSelections || ''}
+                    onChange={(e) => updateValidation('maxSelections', e.target.value ? Number(e.target.value) : undefined)}
+                    inputProps={{ min: 1 }}
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={config.validation?.showSelectAll || false}
+                      onChange={(e) => updateValidation('showSelectAll', e.target.checked)}
+                    />
+                  }
+                  label={<Typography variant="body2">Show "Select All" Option</Typography>}
+                />
+              </>
+            )}
+          </Box>
+        );
+
+      case 'dropdown':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Dropdown Settings
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.multiple || false}
+                  onChange={(e) => updateValidation('multiple', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Multiple Selections</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.searchable !== false}
+                  onChange={(e) => updateValidation('searchable', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Enable Search/Filter</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowCreate || false}
+                  onChange={(e) => updateValidation('allowCreate', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Creating New Options</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.clearable !== false}
+                  onChange={(e) => updateValidation('clearable', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Clear Button</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.groupedOptions || false}
+                  onChange={(e) => updateValidation('groupedOptions', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Group Options by Category</Typography>}
+            />
+
+            {config.validation?.multiple && (
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Min Selections"
+                  value={config.validation?.minSelections || ''}
+                  onChange={(e) => updateValidation('minSelections', e.target.value ? Number(e.target.value) : undefined)}
+                  inputProps={{ min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Max Selections"
+                  value={config.validation?.maxSelections || ''}
+                  onChange={(e) => updateValidation('maxSelections', e.target.value ? Number(e.target.value) : undefined)}
+                  inputProps={{ min: 1 }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+            )}
+          </Box>
+        );
+
+      case 'matrix':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Matrix/Grid Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Cell Input Type</InputLabel>
+              <Select
+                value={config.validation?.matrixCellType || 'radio'}
+                label="Cell Input Type"
+                onChange={(e) => updateValidation('matrixCellType', e.target.value)}
+              >
+                <MenuItem value="radio">Radio (Single per row)</MenuItem>
+                <MenuItem value="checkbox">Checkbox (Multiple per row)</MenuItem>
+                <MenuItem value="dropdown">Dropdown</MenuItem>
+                <MenuItem value="text">Text Input</MenuItem>
+                <MenuItem value="number">Number Input</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.requireAllRows || false}
+                  onChange={(e) => updateValidation('requireAllRows', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Require All Rows</Typography>}
+            />
+
+            {config.validation?.matrixCellType === 'radio' && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={config.validation?.onePerColumn || false}
+                    onChange={(e) => updateValidation('onePerColumn', e.target.checked)}
+                  />
+                }
+                label={<Typography variant="body2">One Answer Per Column</Typography>}
+              />
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.randomizeRows || false}
+                  onChange={(e) => updateValidation('randomizeRows', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Randomize Rows</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.randomizeColumns || false}
+                  onChange={(e) => updateValidation('randomizeColumns', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Randomize Columns</Typography>}
+            />
+
+            <Typography variant="caption" color="text.secondary">
+              Configure rows and columns in the Options editor above
+            </Typography>
+          </Box>
+        );
+
+      case 'ranking':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Ranking Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Display Style</InputLabel>
+              <Select
+                value={config.validation?.dragStyle || 'list'}
+                label="Display Style"
+                onChange={(e) => updateValidation('dragStyle', e.target.value)}
+              >
+                <MenuItem value="list">Vertical List</MenuItem>
+                <MenuItem value="cards">Cards</MenuItem>
+                <MenuItem value="grid">Grid</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Min Items to Rank"
+                value={config.validation?.minRank || ''}
+                onChange={(e) => updateValidation('minRank', e.target.value ? Number(e.target.value) : undefined)}
+                helperText="0 = rank all"
+                inputProps={{ min: 0 }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Max Items to Rank"
+                value={config.validation?.maxRank || ''}
+                onChange={(e) => updateValidation('maxRank', e.target.value ? Number(e.target.value) : undefined)}
+                helperText="0 = no limit"
+                inputProps={{ min: 0 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showRankNumbers !== false}
+                  onChange={(e) => updateValidation('showRankNumbers', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Rank Numbers</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.allowTies || false}
+                  onChange={(e) => updateValidation('allowTies', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Allow Ties (Same Rank)</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.randomizeOptions || false}
+                  onChange={(e) => updateValidation('randomizeOptions', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Randomize Initial Order</Typography>}
+            />
+          </Box>
+        );
+
+      case 'address':
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Address Settings
+            </Typography>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Display Mode</InputLabel>
+              <Select
+                value={config.validation?.addressDisplayMode || 'multi'}
+                label="Display Mode"
+                onChange={(e) => updateValidation('addressDisplayMode', e.target.value)}
+              >
+                <MenuItem value="single">Single Line (Autocomplete)</MenuItem>
+                <MenuItem value="multi">Multiple Fields</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Address Components</InputLabel>
+              <Select
+                multiple
+                value={config.validation?.addressComponents || ['street1', 'city', 'state', 'postalCode', 'country']}
+                label="Address Components"
+                onChange={(e) => updateValidation('addressComponents', e.target.value)}
+                renderValue={(selected) => (selected as string[]).join(', ')}
+              >
+                <MenuItem value="street1">Street Address</MenuItem>
+                <MenuItem value="street2">Street Address Line 2</MenuItem>
+                <MenuItem value="city">City</MenuItem>
+                <MenuItem value="state">State/Province</MenuItem>
+                <MenuItem value="postalCode">Postal/ZIP Code</MenuItem>
+                <MenuItem value="country">Country</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              label="Default Country"
+              placeholder="US"
+              value={config.validation?.addressDefaultCountry || ''}
+              onChange={(e) => updateValidation('addressDefaultCountry', e.target.value.toUpperCase())}
+              helperText="ISO country code"
+              inputProps={{ maxLength: 2 }}
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.enableAutocomplete || false}
+                  onChange={(e) => updateValidation('enableAutocomplete', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Enable Address Autocomplete</Typography>}
+            />
+
+            {config.validation?.enableAutocomplete && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Autocomplete Provider</InputLabel>
+                <Select
+                  value={config.validation?.autocompleteProvider || 'google'}
+                  label="Autocomplete Provider"
+                  onChange={(e) => updateValidation('autocompleteProvider', e.target.value)}
+                >
+                  <MenuItem value="google">Google Places</MenuItem>
+                  <MenuItem value="mapbox">Mapbox</MenuItem>
+                  <MenuItem value="here">HERE Maps</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.showMap || false}
+                  onChange={(e) => updateValidation('showMap', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Show Map Preview</Typography>}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={config.validation?.requireAllComponents || false}
+                  onChange={(e) => updateValidation('requireAllComponents', e.target.checked)}
+                />
+              }
+              label={<Typography variant="body2">Require All Components</Typography>}
+            />
           </Box>
         );
 

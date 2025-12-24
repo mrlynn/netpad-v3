@@ -188,19 +188,18 @@ export function AppNavBar() {
           </Button>
         </Tooltip>
 
-        {/* Data Browser Link - Only visible when connected */}
-        <Tooltip title={isConnected ? `Browse data in ${connectionLabel}` : 'Connect to MongoDB to browse data'}>
+        {/* Data Browser Link - Always accessible for authenticated users */}
+        <Tooltip title="Browse and import data">
           <Button
             component={Link}
             href="/data"
             startIcon={<Storage sx={{ fontSize: 18 }} />}
             size="small"
-            disabled={!isConnected}
             sx={{
               minWidth: 'auto',
               px: 1.5,
               py: 0.5,
-              color: isConnected ? 'text.secondary' : 'text.disabled',
+              color: 'text.secondary',
               borderRadius: 1,
               textTransform: 'none',
               fontWeight: 500,
@@ -208,9 +207,6 @@ export function AppNavBar() {
               '&:hover': {
                 bgcolor: alpha('#00ED64', 0.1),
                 color: '#00ED64'
-              },
-              '&.Mui-disabled': {
-                color: 'text.disabled',
               },
               transition: 'all 0.15s ease'
             }}

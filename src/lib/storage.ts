@@ -497,6 +497,17 @@ export async function getPublishedFormBySlug(slug: string): Promise<SavedForm | 
   const collection = database.collection<StoredPublishedForm>(COLLECTIONS.PUBLISHED_FORMS);
 
   const doc = await collection.findOne({ 'form.slug': slug });
+
+  // Debug: Log what we're retrieving from the database
+  console.log('[Storage] getPublishedFormBySlug retrieved theme:', {
+    slug,
+    found: !!doc,
+    hasTheme: !!doc?.form?.theme,
+    theme: doc?.form?.theme,
+    pageBackgroundColor: doc?.form?.theme?.pageBackgroundColor,
+    pageBackgroundGradient: doc?.form?.theme?.pageBackgroundGradient,
+  });
+
   return doc?.form || null;
 }
 
@@ -509,6 +520,14 @@ export async function getPublishedFormById(formId: string): Promise<SavedForm | 
 }
 
 export async function publishForm(form: SavedForm): Promise<void> {
+  // Debug: Log what we're publishing
+  console.log('[Storage] publishForm called with theme:', {
+    hasTheme: !!form.theme,
+    theme: form.theme,
+    pageBackgroundColor: form.theme?.pageBackgroundColor,
+    pageBackgroundGradient: form.theme?.pageBackgroundGradient,
+  });
+
   const database = await getDb();
   const collection = database.collection<StoredPublishedForm>(COLLECTIONS.PUBLISHED_FORMS);
 

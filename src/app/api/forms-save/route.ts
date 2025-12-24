@@ -24,6 +24,15 @@ export async function POST(request: NextRequest) {
     const formConfig: FormConfiguration = body.formConfig;
     const publish = body.publish ?? false;
 
+    // Debug: Log what the API received (full body for debugging)
+    console.log('[API forms-save] Received body:', JSON.stringify(body, null, 2));
+    console.log('[API forms-save] Received formConfig theme:', {
+      hasTheme: !!formConfig?.theme,
+      theme: formConfig?.theme,
+      pageBackgroundColor: formConfig?.theme?.pageBackgroundColor,
+      pageBackgroundGradient: formConfig?.theme?.pageBackgroundGradient,
+    });
+
     if (!formConfig || !formConfig.name) {
       return NextResponse.json(
         { success: false, error: 'Form configuration with name is required' },
@@ -97,6 +106,14 @@ export async function POST(request: NextRequest) {
         publishedAt: publish ? now : undefined,
       };
     }
+
+    // Debug: Log what we're about to save
+    console.log('[API forms-save] Saving form with theme:', {
+      hasTheme: !!savedForm.theme,
+      theme: savedForm.theme,
+      pageBackgroundColor: savedForm.theme?.pageBackgroundColor,
+      pageBackgroundGradient: savedForm.theme?.pageBackgroundGradient,
+    });
 
     // Save to file storage
     await saveForm(sessionId, savedForm);
