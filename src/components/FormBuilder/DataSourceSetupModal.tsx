@@ -66,11 +66,20 @@ interface DataSourceSetupModalProps {
   formName?: string;
 }
 
-const steps = [
-  { label: 'Select Organization', description: 'Choose which organization owns this form' },
-  { label: 'Choose Connection', description: 'Select a secure MongoDB connection' },
-  { label: 'Set Collection', description: 'Where should submissions be stored?' },
-];
+// Steps are dynamic based on context
+const getSteps = (singleOrg: boolean) => {
+  if (singleOrg) {
+    return [
+      { label: 'Choose Connection', description: 'Select or create a MongoDB connection' },
+      { label: 'Set Collection', description: 'Where should submissions be stored?' },
+    ];
+  }
+  return [
+    { label: 'Select Organization', description: 'Choose which organization owns this form' },
+    { label: 'Choose Connection', description: 'Select or create a MongoDB connection' },
+    { label: 'Set Collection', description: 'Where should submissions be stored?' },
+  ];
+};
 
 export function DataSourceSetupModal({
   open,
@@ -89,6 +98,30 @@ export function DataSourceSetupModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addConnectionDialogOpen, setAddConnectionDialogOpen] = useState(false);
+
+  // Determine if we should use simplified flow (single org = skip org selection)
+  const isSingleOrg = organizations.length === 1;
+  const steps = getSteps(isSingleOrg);
+
+  // Map logical step to actual step based on flow
+  const getActualStep = (logicalStep: number) => {
+    if (isSingleOrg) {
+      // In single-org mode: step 0 = connection, step 1 = collection
+      return logicalStep;
+    }
+    // In multi-org mode: step 0 = org, step 1 = connection, step 2 = collection
+    return logicalStep;
+  };
+
+  // Get which logical step we're on
+  const getLogicalStep = () => {
+    if (isSingleOrg) {
+      // Single org: 0 = connection, 1 = collection
+      return activeStep;
+    }
+    // Multi-org: 0 = org, 1 = connection, 2 = collection
+    return activeStep;
+  };
 
   // Fetch organizations on mount
   useEffect(() => {
@@ -136,9 +169,10 @@ export function DataSourceSetupModal({
         if (currentOrganizationId) {
           setSelectedOrgId(currentOrganizationId);
         } else if (data.organizations.length === 1) {
-          // Auto-select if only one org
+          // Auto-select if only one org - no need to advance step since we skip org selection
           setSelectedOrgId(data.organizations[0].orgId);
-          setActiveStep(1);
+          // Start at step 0 which is now "Choose Connection" in single-org mode
+          setActiveStep(0);
         }
       }
     } catch (err) {
@@ -182,17 +216,27 @@ export function DataSourceSetupModal({
   };
 
   const handleNext = () => {
-    if (activeStep === 0 && selectedOrgId) {
-      setActiveStep(1);
-    } else if (activeStep === 1 && selectedVaultId) {
-      setActiveStep(2);
-    } else if (activeStep === 2 && collection) {
-      handleComplete();
+    if (isSingleOrg) {
+      // Single org mode: step 0 = connection, step 1 = collection
+      if (activeStep === 0 && selectedVaultId) {
+        setActiveStep(1);
+      } else if (activeStep === 1 && collection) {
+        handleComplete();
+      }
+    } else {
+      // Multi-org mode: step 0 = org, step 1 = connection, step 2 = collection
+      if (activeStep === 0 && selectedOrgId) {
+        setActiveStep(1);
+      } else if (activeStep === 1 && selectedVaultId) {
+        setActiveStep(2);
+      } else if (activeStep === 2 && collection) {
+        handleComplete();
+      }
     }
   };
 
   const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
+    setActiveStep((prev) => Math.max(0, prev - 1));
   };
 
   const handleComplete = () => {
@@ -206,17 +250,35 @@ export function DataSourceSetupModal({
   const availableCollections = selectedConnection?.allowedCollections || [];
 
   const canProceed = () => {
-    switch (activeStep) {
-      case 0:
-        return !!selectedOrgId;
-      case 1:
-        return !!selectedVaultId;
-      case 2:
-        return !!collection;
-      default:
-        return false;
+    if (isSingleOrg) {
+      // Single org mode
+      switch (activeStep) {
+        case 0:
+          return !!selectedVaultId;
+        case 1:
+          return !!collection;
+        default:
+          return false;
+      }
+    } else {
+      // Multi-org mode
+      switch (activeStep) {
+        case 0:
+          return !!selectedOrgId;
+        case 1:
+          return !!selectedVaultId;
+        case 2:
+          return !!collection;
+        default:
+          return false;
+      }
     }
   };
+
+  // Determine which step content to show
+  const isOrgStep = !isSingleOrg && activeStep === 0;
+  const isConnectionStep = isSingleOrg ? activeStep === 0 : activeStep === 1;
+  const isCollectionStep = isSingleOrg ? activeStep === 1 : activeStep === 2;
 
   return (
     <Dialog
@@ -312,7 +374,68 @@ export function DataSourceSetupModal({
           </Paper>
         ) : (
           <Stepper activeStep={activeStep} orientation="vertical" sx={{ mt: 2 }}>
-            {/* Step 1: Organization */}
+            {/* Step: Organization (only in multi-org mode) */}
+            {!isSingleOrg && (
+              <Step>
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-active': { color: '#00ED64' },
+                      '&.Mui-completed': { color: '#00ED64' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2">{steps[0].label}</Typography>
+                </StepLabel>
+                <StepContent>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                    {steps[0].description}
+                  </Typography>
+
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Organization</InputLabel>
+                    <Select
+                      value={selectedOrgId}
+                      label="Organization"
+                      onChange={(e) => {
+                        setSelectedOrgId(e.target.value);
+                        setSelectedVaultId('');
+                        setCollection('');
+                      }}
+                    >
+                      {organizations.map((org) => (
+                        <MenuItem key={org.orgId} value={org.orgId}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Business sx={{ fontSize: 18, color: 'text.secondary' }} />
+                            {org.name}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      onClick={handleNext}
+                      disabled={!selectedOrgId}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                        color: '#001E2B',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+                        },
+                      }}
+                    >
+                      Continue
+                    </Button>
+                  </Box>
+                </StepContent>
+              </Step>
+            )}
+
+            {/* Step: Connection */}
             <Step>
               <StepLabel
                 StepIconProps={{
@@ -322,71 +445,24 @@ export function DataSourceSetupModal({
                   },
                 }}
               >
-                <Typography variant="subtitle2">{steps[0].label}</Typography>
+                <Typography variant="subtitle2">
+                  {isSingleOrg ? steps[0].label : steps[1].label}
+                </Typography>
               </StepLabel>
               <StepContent>
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-                  {steps[0].description}
+                  {isSingleOrg ? steps[0].description : steps[1].description}
                 </Typography>
 
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Organization</InputLabel>
-                  <Select
-                    value={selectedOrgId}
-                    label="Organization"
-                    onChange={(e) => {
-                      setSelectedOrgId(e.target.value);
-                      setSelectedVaultId('');
-                      setCollection('');
-                    }}
-                  >
-                    {organizations.map((org) => (
-                      <MenuItem key={org.orgId} value={org.orgId}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Business sx={{ fontSize: 18, color: 'text.secondary' }} />
-                          {org.name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleNext}
-                    disabled={!selectedOrgId}
-                    endIcon={<ArrowForward />}
-                    sx={{
-                      background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                      color: '#001E2B',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
-                      },
-                    }}
-                  >
-                    Continue
-                  </Button>
-                </Box>
-              </StepContent>
-            </Step>
-
-            {/* Step 2: Connection */}
-            <Step>
-              <StepLabel
-                StepIconProps={{
-                  sx: {
-                    '&.Mui-active': { color: '#00ED64' },
-                    '&.Mui-completed': { color: '#00ED64' },
-                  },
-                }}
-              >
-                <Typography variant="subtitle2">{steps[1].label}</Typography>
-              </StepLabel>
-              <StepContent>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-                  {steps[1].description}
-                </Typography>
+                {/* Show org chip in single-org mode */}
+                {isSingleOrg && organizations[0] && (
+                  <Chip
+                    size="small"
+                    icon={<Business sx={{ fontSize: 14 }} />}
+                    label={organizations[0].name}
+                    sx={{ mb: 2, bgcolor: alpha('#2196f3', 0.1) }}
+                  />
+                )}
 
                 {loading ? (
                   <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -472,9 +548,11 @@ export function DataSourceSetupModal({
                 )}
 
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button onClick={handleBack} startIcon={<ArrowBack />}>
-                    Back
-                  </Button>
+                  {!isSingleOrg && (
+                    <Button onClick={handleBack} startIcon={<ArrowBack />}>
+                      Back
+                    </Button>
+                  )}
                   <Button
                     variant="contained"
                     onClick={handleNext}
@@ -494,7 +572,7 @@ export function DataSourceSetupModal({
               </StepContent>
             </Step>
 
-            {/* Step 3: Collection */}
+            {/* Step: Collection */}
             <Step>
               <StepLabel
                 StepIconProps={{
@@ -504,11 +582,13 @@ export function DataSourceSetupModal({
                   },
                 }}
               >
-                <Typography variant="subtitle2">{steps[2].label}</Typography>
+                <Typography variant="subtitle2">
+                  {isSingleOrg ? steps[1].label : steps[2].label}
+                </Typography>
               </StepLabel>
               <StepContent>
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-                  {steps[2].description}
+                  {isSingleOrg ? steps[1].description : steps[2].description}
                 </Typography>
 
                 {availableCollections.length > 0 ? (

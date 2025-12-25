@@ -23,11 +23,14 @@ import {
   Search,
   Publish,
   Shield,
+  Bolt,
 } from '@mui/icons-material';
 import { FormTheme, MultiPageConfig, FormLifecycle, FormVariable, FieldConfig, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
+import { FormHooksConfig } from '@/types/formHooks';
 import { ThemeConfigEditor } from './ThemeConfigEditor';
 import { PageConfigEditor } from './PageConfigEditor';
 import { LifecycleConfigEditor } from './LifecycleConfigEditor';
+import { HooksSettingsEditor } from './HooksSettingsEditor';
 import { VariablesPanel } from './VariablesPanel';
 import { SearchConfigEditor } from './SearchConfigEditor';
 import { DataSourceEditor } from './DataSourceEditor';
@@ -95,6 +98,9 @@ interface FormSettingsDrawerProps {
   onBotProtectionChange: (config: BotProtectionConfig | undefined) => void;
   draftSettings?: DraftSettings;
   onDraftSettingsChange: (config: DraftSettings | undefined) => void;
+  // Hooks/Automation
+  hooksConfig?: FormHooksConfig;
+  onHooksConfigChange: (config: FormHooksConfig | undefined) => void;
 }
 
 export function FormSettingsDrawer({
@@ -127,6 +133,8 @@ export function FormSettingsDrawer({
   onBotProtectionChange,
   draftSettings,
   onDraftSettingsChange,
+  hooksConfig,
+  onHooksConfigChange,
 }: FormSettingsDrawerProps) {
   const [activeTab, setActiveTab] = useState(0);
 
@@ -138,6 +146,7 @@ export function FormSettingsDrawer({
   const hasSearch = formType === 'search' || formType === 'both';
   const hasPublishing = !!(dataSource?.vaultId && dataSource?.collection);
   const hasProtection = botProtection?.enabled || draftSettings?.enabled;
+  const hasHooks = !!(hooksConfig?.prefill?.fromUrlParams || hooksConfig?.onSuccess?.message || hooksConfig?.onSuccess?.redirect || hooksConfig?.onSuccess?.webhook || hooksConfig?.onError?.message);
 
   const tabs = [
     {
@@ -175,6 +184,12 @@ export function FormSettingsDrawer({
       icon: <DataObject fontSize="small" />,
       badge: variablesCount > 0 ? variablesCount.toString() : undefined,
       color: '#9c27b0'
+    },
+    {
+      label: 'Actions',
+      icon: <Bolt fontSize="small" />,
+      badge: hasHooks ? '✓' : undefined,
+      color: '#ff9800'
     },
     {
       label: 'Protection',
@@ -385,6 +400,16 @@ export function FormSettingsDrawer({
       </TabPanel>
 
       <TabPanel value={activeTab} index={6}>
+        <Box sx={{ p: 2 }}>
+          <HooksSettingsEditor
+            config={hooksConfig}
+            onChange={onHooksConfigChange}
+            fieldConfigs={fieldConfigs}
+          />
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={7}>
         <Box sx={{ p: 2 }}>
           <BotProtectionEditor
             config={botProtection}

@@ -5,6 +5,7 @@ import { sessionOptions, ensureSessionId } from '@/lib/session';
 import { FormSubmission, BotProtectionConfig } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'mongodb';
+import { executeWebhookAsync } from '@/lib/hooks/executeWebhook';
 
 /**
  * Validate bot protection on server side
@@ -294,15 +295,37 @@ export async function POST(
       });
 
       if (!result.success) {
+        // Execute error webhook if configured
+        if (form.hooks?.onError?.webhook) {
+          executeWebhookAsync(form.hooks.onError.webhook, {
+            formId: form.id!,
+            formName: form.name,
+            data: cleanData,
+            isError: true,
+            errorMessage: result.error,
+          });
+        }
+
         return NextResponse.json(
           { success: false, error: result.error },
           { status: 400 }
         );
       }
 
+      // Execute success webhook if configured
+      if (form.hooks?.onSuccess?.webhook) {
+        executeWebhookAsync(form.hooks.onSuccess.webhook, {
+          formId: form.id!,
+          formName: form.name,
+          responseId: result.submissionId,
+          data: cleanData,
+        });
+      }
+
       return NextResponse.json({
         success: true,
         submissionId: result.submissionId,
+        responseId: result.submissionId, // Also return as responseId for consistency
         syncStatus: result.syncStatus,
         message: 'Form submitted successfully',
       });
@@ -361,9 +384,20 @@ export async function POST(
       }
     }
 
+    // Execute success webhook if configured
+    if (form.hooks?.onSuccess?.webhook) {
+      executeWebhookAsync(form.hooks.onSuccess.webhook, {
+        formId: form.id!,
+        formName: form.name,
+        responseId: submission.id,
+        data: cleanData,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       submissionId: submission.id,
+      responseId: submission.id, // Also return as responseId for consistency
       message: 'Form submitted successfully',
     });
   } catch (error: any) {

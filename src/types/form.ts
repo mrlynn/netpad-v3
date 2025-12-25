@@ -877,6 +877,14 @@ export interface FormConfiguration {
   // Collection-level encryption configuration
   // Enables MongoDB Queryable Encryption for forms with sensitive data
   collectionEncryption?: CollectionEncryptionConfig;
+
+  // ============================================
+  // Form Automation & Hooks (Actions & Automation)
+  // ============================================
+
+  // User-friendly automation configuration
+  // Pre-fill, post-submit actions, webhooks, redirects
+  hooks?: import('./formHooks').FormHooksConfig;
 }
 
 // Form header configuration (Google Forms-style header image and colors)

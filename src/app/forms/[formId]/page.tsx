@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { Add, Search, Close, Lock, Email, Key, Google, GitHub } from '@mui/icons-material';
 import { FormConfiguration, FormType, SearchConfig } from '@/types/form';
+import { replaceTemplateVariables, buildRedirectUrl } from '@/types/formHooks';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { SearchFormRenderer } from '@/components/FormRenderer/SearchFormRenderer';
 import { AuthMethod } from '@/types/platform';
@@ -46,6 +47,9 @@ export default function PublicFormPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState<Record<string, any> | null>(null);
+  const [responseId, setResponseId] = useState<string | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [activeMode, setActiveMode] = useState<'create' | 'search'>('create');
   const [viewingDocument, setViewingDocument] = useState<SearchResult | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -108,14 +112,55 @@ export default function PublicFormPage() {
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Submission failed');
+        // Use custom error message if configured
+        const customErrorMessage = form?.hooks?.onError?.message;
+        throw new Error(customErrorMessage || result.error || 'Submission failed');
       }
 
+      // Store submission data for template replacement
+      setSubmittedData(formData);
+      setResponseId(result.responseId || null);
       setSubmitted(true);
+
+      // Handle redirect if configured
+      const redirectConfig = form?.hooks?.onSuccess?.redirect;
+      if (redirectConfig?.url) {
+        const delay = redirectConfig.delay ?? 3;
+        if (delay > 0) {
+          // Start countdown
+          setRedirectCountdown(delay);
+        } else {
+          // Immediate redirect
+          const redirectUrl = buildRedirectUrl(redirectConfig, formData, result.responseId);
+          window.location.href = redirectUrl;
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     }
   };
+
+  // Handle redirect countdown
+  useEffect(() => {
+    if (redirectCountdown === null || redirectCountdown <= 0) return;
+
+    const timer = setTimeout(() => {
+      setRedirectCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          // Execute redirect
+          const redirectConfig = form?.hooks?.onSuccess?.redirect;
+          if (redirectConfig?.url && submittedData) {
+            const redirectUrl = buildRedirectUrl(redirectConfig, submittedData, responseId || undefined);
+            window.location.href = redirectUrl;
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [redirectCountdown, form?.hooks?.onSuccess?.redirect, submittedData, responseId]);
 
   if (loading) {
     return (
@@ -147,16 +192,32 @@ export default function PublicFormPage() {
     );
   }
 
-  if (submitted) {
+  if (submitted && form) {
+    // Get custom success message or use default
+    const customSuccessMessage = form.hooks?.onSuccess?.message;
+    const successMessage = customSuccessMessage
+      ? replaceTemplateVariables(customSuccessMessage, submittedData || {}, responseId || undefined)
+      : 'Your submission has been received.';
+
+    // Get redirect config for countdown display
+    const redirectConfig = form.hooks?.onSuccess?.redirect;
+
     return (
       <Container maxWidth="sm" sx={{ py: 8 }}>
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h5" sx={{ mb: 2, color: '#00ED64' }}>
             Thank You!
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Your submission has been received.
+          <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+            {successMessage}
           </Typography>
+
+          {/* Show redirect countdown if configured */}
+          {redirectCountdown !== null && redirectCountdown > 0 && redirectConfig && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+              Redirecting in {redirectCountdown} second{redirectCountdown !== 1 ? 's' : ''}...
+            </Typography>
+          )}
         </Paper>
       </Container>
     );

@@ -31,8 +31,11 @@ import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { WYSIWYGFormEditor } from './WYSIWYGFormEditor';
 import { FieldConfigDrawer } from './FieldConfigDrawer';
 import { FloatingActionToolbar } from './FloatingActionToolbar';
+import { ConnectionStatusChip } from './ConnectionStatusChip';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
+import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
+import { useChat } from '@/contexts/ChatContext';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -80,6 +83,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [dataSourceModalOpen, setDataSourceModalOpen] = useState(false);
   const [botProtection, setBotProtection] = useState<BotProtectionConfig | undefined>(undefined);
   const [draftSettings, setDraftSettings] = useState<DraftSettings | undefined>(undefined);
+  const [hooksConfig, setHooksConfig] = useState<FormHooksConfig | undefined>(undefined);
   const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
@@ -89,6 +93,83 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const selectedFieldConfig = selectedFieldPath
     ? fieldConfigs.find(f => f.path === selectedFieldPath) ?? null
     : null;
+
+  // Chat assistant integration
+  const { setFormContext, registerActionHandlers } = useChat();
+
+  // Sync form context to chat assistant
+  useEffect(() => {
+    setFormContext({
+      formId: currentFormId,
+      formName: currentFormName,
+      formDescription: currentFormDescription,
+      fields: fieldConfigs,
+      selectedFieldPath,
+      formType,
+      currentView: 'form-builder',
+    });
+  }, [
+    currentFormId,
+    currentFormName,
+    currentFormDescription,
+    fieldConfigs,
+    selectedFieldPath,
+    formType,
+    setFormContext,
+  ]);
+
+  // Register action handlers for chat assistant
+  useEffect(() => {
+    registerActionHandlers({
+      onAddField: (field, position) => {
+        const path = field.path || generateFieldPath(field.label || 'New Field');
+        const newField: FieldConfig = {
+          path,
+          label: field.label || 'New Field',
+          type: field.type || 'text',
+          included: true,
+          required: field.required || false,
+          placeholder: field.placeholder,
+          source: 'custom',
+          // Copy full validation config if provided (patterns, min/max, etc.)
+          ...(field.validation ? {
+            validation: field.validation
+          } : {}),
+          // Copy encryption config if provided (for sensitive fields like SSN)
+          ...(field.encryption ? {
+            encryption: field.encryption
+          } : {}),
+        };
+        setFieldConfigs((configs) => {
+          if (position !== undefined && position >= 0) {
+            const newConfigs = [...configs];
+            newConfigs.splice(position, 0, newField);
+            return newConfigs;
+          }
+          return [...configs, newField];
+        });
+        setSelectedFieldPath(path);
+      },
+      onUpdateField: (path, updates) => {
+        setFieldConfigs((configs) =>
+          configs.map((c) => (c.path === path ? { ...c, ...updates } : c))
+        );
+      },
+      onDeleteField: (path) => {
+        setFieldConfigs((configs) => configs.filter((c) => c.path !== path));
+        if (selectedFieldPath === path) {
+          setSelectedFieldPath(null);
+        }
+      },
+      onNavigate: (to) => {
+        if (to === 'settings') {
+          setSettingsDrawerOpen(true);
+        } else if (to === 'library') {
+          setShowLibrary(true);
+        }
+      },
+    });
+  }, [registerActionHandlers, selectedFieldPath]);
 
   // Keyboard shortcuts for power users
   const handleKeyboardShortcuts = useCallback((e: KeyboardEvent) => {
@@ -551,6 +632,13 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
             </Tooltip>
           )}
           {isLoading && <CircularProgress size={14} />}
+
+          {/* Connection status */}
+          <ConnectionStatusChip
+            dataSource={dataSource}
+            organizationId={organizationId}
+            onClick={() => setDataSourceModalOpen(true)}
+          />
         </Box>
 
         {/* Spacer */}
@@ -809,6 +897,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           multiPage: multiPageConfig,
           lifecycle: lifecycleConfig,
           theme: themeConfig,
+          hooks: hooksConfig,
           formType,
           searchConfig,
           dataSource,
@@ -942,6 +1031,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               setMultiPageConfig(config.multiPage);
               setLifecycleConfig(config.lifecycle);
               setThemeConfig(config.theme);
+              setHooksConfig(config.hooks);
               setCurrentFormId(config.id);
               setCurrentFormName(config.name || '');
               setCurrentFormDescription(config.description || '');
@@ -998,6 +1088,8 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         onBotProtectionChange={setBotProtection}
         draftSettings={draftSettings}
         onDraftSettingsChange={setDraftSettings}
+        hooksConfig={hooksConfig}
+        onHooksConfigChange={setHooksConfig}
       />
 
       {/* Data Source Setup Modal */}

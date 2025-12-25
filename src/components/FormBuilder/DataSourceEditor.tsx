@@ -17,6 +17,9 @@ import {
   alpha,
   Link,
   Autocomplete,
+  Collapse,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import {
   Storage,
@@ -25,6 +28,11 @@ import {
   CheckCircle,
   Warning,
   Lock,
+  Visibility,
+  VisibilityOff,
+  PlayArrow,
+  Close,
+  Bolt,
 } from '@mui/icons-material';
 import { FormDataSource } from '@/types/form';
 import NextLink from 'next/link';
@@ -61,6 +69,20 @@ export function DataSourceEditor({
   const [selectedOrgId, setSelectedOrgId] = useState<string>(organizationId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inline connection creation state
+  const [showInlineCreate, setShowInlineCreate] = useState(false);
+  const [newConnectionName, setNewConnectionName] = useState('');
+  const [newConnectionString, setNewConnectionString] = useState('');
+  const [newDatabase, setNewDatabase] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    collections?: string[];
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Fetch organizations on mount
   useEffect(() => {
@@ -139,6 +161,110 @@ export function DataSourceEditor({
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!newConnectionString || !newDatabase) {
+      setTestResult({
+        success: false,
+        message: 'Connection string and database are required',
+      });
+      return;
+    }
+
+    try {
+      setTesting(true);
+      setTestResult(null);
+
+      const response = await fetch('/api/mongodb/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connectionString: newConnectionString,
+          database: newDatabase,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({
+          success: true,
+          message: `Connected! Found ${data.collections?.length || 0} collections`,
+          collections: data.collections,
+        });
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error || 'Connection failed',
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        success: false,
+        message: 'Failed to test connection',
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleCreateConnection = async () => {
+    if (!newConnectionString || !newDatabase || !selectedOrgId) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const response = await fetch(`/api/organizations/${selectedOrgId}/vault`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newConnectionName || `Connection ${new Date().toLocaleDateString()}`,
+          connectionString: newConnectionString,
+          database: newDatabase,
+          allowedCollections: [],
+          testFirst: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Add the new connection to the list
+        const newConn: Connection = {
+          vaultId: data.connection.vaultId,
+          name: newConnectionName || `Connection ${new Date().toLocaleDateString()}`,
+          database: newDatabase,
+          allowedCollections: [],
+          status: 'active',
+        };
+        setConnections((prev) => [...prev, newConn]);
+
+        // Auto-select the new connection
+        onChange({ vaultId: newConn.vaultId, collection: '' }, selectedOrgId);
+
+        // Reset form
+        resetInlineForm();
+      } else {
+        setError(data.error || 'Failed to create connection');
+      }
+    } catch (err) {
+      setError('Failed to create connection');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetInlineForm = () => {
+    setShowInlineCreate(false);
+    setNewConnectionName('');
+    setNewConnectionString('');
+    setNewDatabase('');
+    setTestResult(null);
+  };
+
   const selectedConnection = connections.find((c) => c.vaultId === value?.vaultId);
   const availableCollections = selectedConnection?.allowedCollections || [];
 
@@ -207,7 +333,7 @@ export function DataSourceEditor({
         <Box sx={{ textAlign: 'center', py: 2 }}>
           <CircularProgress size={24} sx={{ color: '#00ED64' }} />
         </Box>
-      ) : connections.length === 0 ? (
+      ) : connections.length === 0 && !showInlineCreate ? (
         <Paper
           elevation={0}
           sx={{
@@ -226,15 +352,131 @@ export function DataSourceEditor({
             Add a secure MongoDB connection to store form submissions.
           </Typography>
           <Button
-            component={NextLink}
-            href="/settings?tab=connections"
-            variant="outlined"
-            startIcon={<Add />}
+            variant="contained"
+            startIcon={<Bolt />}
             size="small"
-            sx={{ borderColor: '#00ED64', color: '#00ED64' }}
+            onClick={() => setShowInlineCreate(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+              color: '#001E2B',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+              },
+            }}
           >
-            Add Connection
+            Quick Connect
           </Button>
+        </Paper>
+      ) : connections.length === 0 && showInlineCreate ? (
+        // Inline connection creation form
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            border: '1px solid',
+            borderColor: alpha('#00ED64', 0.3),
+            borderRadius: 2,
+            bgcolor: alpha('#00ED64', 0.02),
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Bolt sx={{ color: '#00ED64', fontSize: 18 }} />
+              Quick Connect
+            </Typography>
+            <IconButton size="small" onClick={resetInlineForm}>
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <TextField
+            fullWidth
+            size="small"
+            label="Connection Name (optional)"
+            value={newConnectionName}
+            onChange={(e) => setNewConnectionName(e.target.value)}
+            placeholder="My MongoDB Connection"
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
+            size="small"
+            label="MongoDB Connection String"
+            value={newConnectionString}
+            onChange={(e) => setNewConnectionString(e.target.value)}
+            type={showPassword ? 'text' : 'password'}
+            placeholder="mongodb+srv://user:pass@cluster.mongodb.net/"
+            required
+            sx={{ mb: 2 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <TextField
+            fullWidth
+            size="small"
+            label="Database Name"
+            value={newDatabase}
+            onChange={(e) => setNewDatabase(e.target.value)}
+            placeholder="my_database"
+            required
+            sx={{ mb: 2 }}
+          />
+
+          {testResult && (
+            <Alert
+              severity={testResult.success ? 'success' : 'error'}
+              sx={{ mb: 2 }}
+              icon={testResult.success ? <CheckCircle /> : <Warning />}
+            >
+              {testResult.message}
+            </Alert>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={testing ? <CircularProgress size={14} /> : <PlayArrow />}
+              onClick={handleTestConnection}
+              disabled={testing || !newConnectionString || !newDatabase}
+              sx={{ borderColor: '#00ED64', color: '#00ED64' }}
+            >
+              Test
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <Storage />}
+              onClick={handleCreateConnection}
+              disabled={saving || !newConnectionString || !newDatabase}
+              sx={{
+                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                color: '#001E2B',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+                },
+              }}
+            >
+              {saving ? 'Creating...' : 'Create Connection'}
+            </Button>
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+            Connection strings are encrypted with AES-256 before storage
+          </Typography>
         </Paper>
       ) : (
         <>

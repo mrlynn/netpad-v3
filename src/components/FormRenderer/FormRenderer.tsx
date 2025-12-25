@@ -271,15 +271,11 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
   useEffect(() => {
     if (urlParamsProcessed) return;
 
-    const urlParamFields = fieldConfigs.filter((f) => f.urlParam || f.type === 'url-param');
-    if (urlParamFields.length === 0) {
-      setUrlParamsProcessed(true);
-      return;
-    }
-
     const newFormData = { ...formData };
     let hasChanges = false;
 
+    // 1. Process legacy per-field URL param config
+    const urlParamFields = fieldConfigs.filter((f) => f.urlParam || f.type === 'url-param');
     for (const field of urlParamFields) {
       const config = field.urlParam;
       if (!config?.paramName) continue;
@@ -305,11 +301,68 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
       }
     }
 
+    // 2. Process new hooks-based prefill config
+    const prefillConfig = form.hooks?.prefill;
+    if (prefillConfig?.fromUrlParams) {
+      const fieldPaths = fieldConfigs.map(f => f.path);
+
+      // Iterate through all URL parameters
+      searchParams.forEach((value, param) => {
+        // Check if there's a custom mapping for this param
+        const fieldPath = prefillConfig.urlParamMapping?.[param] ?? param;
+
+        // Only apply if the field exists in the form
+        if (fieldPaths.includes(fieldPath)) {
+          // Set value at the field path
+          const keys = fieldPath.split('.');
+          const lastKey = keys.pop()!;
+          let target = newFormData;
+
+          for (const key of keys) {
+            if (!target[key] || typeof target[key] !== 'object') {
+              target[key] = {};
+            }
+            target = target[key];
+          }
+
+          // Only set if not already set by legacy config
+          if (target[lastKey] === undefined || target[lastKey] === null || target[lastKey] === '') {
+            target[lastKey] = value;
+            hasChanges = true;
+          }
+        }
+      });
+
+      // Apply defaults if specified
+      if (prefillConfig.defaults) {
+        for (const [fieldPath, defaultValue] of Object.entries(prefillConfig.defaults)) {
+          if (fieldPaths.includes(fieldPath)) {
+            const keys = fieldPath.split('.');
+            const lastKey = keys.pop()!;
+            let target = newFormData;
+
+            for (const key of keys) {
+              if (!target[key] || typeof target[key] !== 'object') {
+                target[key] = {};
+              }
+              target = target[key];
+            }
+
+            // Only set default if not already set
+            if (target[lastKey] === undefined || target[lastKey] === null || target[lastKey] === '') {
+              target[lastKey] = defaultValue;
+              hasChanges = true;
+            }
+          }
+        }
+      }
+    }
+
     if (hasChanges) {
       setFormData(newFormData);
     }
     setUrlParamsProcessed(true);
-  }, [fieldConfigs, formData, searchParams, urlParamsProcessed]);
+  }, [fieldConfigs, form.hooks?.prefill, formData, searchParams, urlParamsProcessed]);
 
   // Load lookup options for fields that have lookup config
   useEffect(() => {
