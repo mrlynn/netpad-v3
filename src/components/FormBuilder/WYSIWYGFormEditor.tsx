@@ -6,22 +6,14 @@ import {
   Paper,
   Typography,
   alpha,
-  LinearProgress,
-  Chip,
   IconButton,
   Tooltip,
-  Collapse,
-  Fab,
-  TextField,
   InputBase,
+  Collapse,
 } from '@mui/material';
 import {
-  CheckCircle,
-  RadioButtonUnchecked,
-  RestartAlt,
   Add,
   DragIndicator,
-  Edit as EditIcon,
 } from '@mui/icons-material';
 import { FieldConfig, LayoutFieldType, FormHeader } from '@/types/form';
 import { WYSIWYGFieldCard } from './WYSIWYGFieldCard';
@@ -172,115 +164,8 @@ export function WYSIWYGFormEditor({
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      {/* Header with progress */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-            Form Editor
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {formStats.totalFields > 0 && (
-              <>
-                <Tooltip title={`${formStats.filledFields} of ${formStats.totalFields} questions answered`}>
-                  <Chip
-                    icon={formStats.filledFields > 0 ? <CheckCircle sx={{ fontSize: 14 }} /> : <RadioButtonUnchecked sx={{ fontSize: 14 }} />}
-                    label={`${formStats.filledFields}/${formStats.totalFields}`}
-                    size="small"
-                    sx={{
-                      height: 22,
-                      fontSize: '0.7rem',
-                      bgcolor: formStats.filledFields > 0 ? alpha('#00ED64', 0.1) : alpha('#000', 0.05),
-                      color: formStats.filledFields > 0 ? '#00ED64' : 'text.secondary',
-                      '& .MuiChip-icon': {
-                        color: formStats.filledFields > 0 ? '#00ED64' : 'text.disabled'
-                      }
-                    }}
-                  />
-                </Tooltip>
-                {formStats.requiredFields > 0 && (
-                  <Tooltip title={`${formStats.filledRequiredFields} of ${formStats.requiredFields} required questions answered`}>
-                    <Chip
-                      label={`${formStats.filledRequiredFields}/${formStats.requiredFields} req`}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        fontSize: '0.7rem',
-                        bgcolor: formStats.isComplete ? alpha('#00ED64', 0.1) : alpha('#ff9800', 0.1),
-                        color: formStats.isComplete ? '#00ED64' : '#ff9800'
-                      }}
-                    />
-                  </Tooltip>
-                )}
-              </>
-            )}
-            {onResetForm && formStats.filledFields > 0 && (
-              <Tooltip title="Reset form">
-                <IconButton
-                  size="small"
-                  onClick={onResetForm}
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': {
-                      color: 'error.main',
-                      bgcolor: alpha('#f44336', 0.1)
-                    }
-                  }}
-                >
-                  <RestartAlt sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        </Box>
-
-        {/* Progress bar */}
-        {formStats.totalFields > 0 && (
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                {formStats.completionPercent}% complete
-              </Typography>
-              {formStats.isComplete && formStats.requiredFields > 0 && (
-                <Chip
-                  icon={<CheckCircle sx={{ fontSize: 12 }} />}
-                  label="Ready to submit"
-                  size="small"
-                  sx={{
-                    height: 18,
-                    fontSize: '0.65rem',
-                    bgcolor: alpha('#00ED64', 0.15),
-                    color: '#00ED64',
-                    '& .MuiChip-icon': { color: '#00ED64' }
-                  }}
-                />
-              )}
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={formStats.completionPercent}
-              sx={{
-                height: 4,
-                borderRadius: 2,
-                bgcolor: alpha('#00ED64', 0.1),
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: formStats.isComplete ? '#00ED64' : '#2196f3',
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
-        )}
-      </Box>
-
-      {/* Scrollable form area */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
+      {/* Scrollable form area - Google Forms style centered */}
+      <Box sx={{ flex: 1, overflow: 'auto', py: 3, px: 2 }}>
         {/* Form Header with inline editable title - matches published form */}
         <Box sx={{ maxWidth: 700, mx: 'auto', mb: 3 }}>
           {/* Header Image (if configured) with editable title overlay */}

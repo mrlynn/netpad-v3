@@ -1,11 +1,35 @@
 import { MongoClient, ObjectId } from 'mongodb';
-import { FormResponse } from '@/types/form';
+import { FormResponse, FormSubmission } from '@/types/form';
+import { getGlobalSubmissionsForForm } from './storage';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'form_builder';
 
 if (!MONGODB_URI) {
   throw new Error('MONGODB_URI environment variable is not set');
+}
+
+/**
+ * Convert FormSubmission to FormResponse format
+ */
+function submissionToResponse(submission: FormSubmission): FormResponse {
+  return {
+    _id: submission.id,
+    formId: submission.formId,
+    formVersion: submission.formVersion || 1,
+    data: submission.data,
+    status: submission.status,
+    submittedAt: new Date(submission.submittedAt),
+    startedAt: submission.startedAt ? new Date(submission.startedAt) : undefined,
+    completedAt: submission.completedAt ? new Date(submission.completedAt) : undefined,
+    completionTime: submission.completionTime,
+    metadata: {
+      userAgent: submission.metadata?.userAgent,
+      ipAddress: submission.metadata?.ipAddress,
+      referrer: submission.metadata?.referrer,
+      deviceType: submission.metadata?.deviceType,
+    },
+  };
 }
 
 interface ResponseFilters {
@@ -94,6 +118,7 @@ export async function saveResponse(
 
 /**
  * Get responses for a form with filtering and pagination
+ * Merges data from global_submissions (file storage) and form_responses (MongoDB) collections
  */
 export async function getResponses(
   formId: string,
@@ -101,75 +126,109 @@ export async function getResponses(
   pagination: PaginationOptions = { page: 1, pageSize: 50 },
   connectionString?: string
 ): Promise<ResponseListResult> {
-  const mongoUri = connectionString || MONGODB_URI;
-  if (!mongoUri) {
-    throw new Error('MongoDB connection string is required');
-  }
-  const client = new MongoClient(mongoUri);
-  
+  let allResponses: FormResponse[] = [];
+
+  // First, get submissions from global_submissions collection (file storage)
   try {
-    await client.connect();
-    const db = client.db(MONGODB_DATABASE);
-    const collection = db.collection<FormResponse>('form_responses');
-
-    // Build query
-    const query: any = { formId };
-    
-    if (filters.status) {
-      query.status = filters.status;
-    }
-    
-    if (filters.dateRange) {
-      query.submittedAt = {
-        $gte: filters.dateRange.start,
-        $lte: filters.dateRange.end,
-      };
-    }
-    
-    if (filters.deviceType) {
-      query['metadata.deviceType'] = filters.deviceType;
-    }
-    
-    // Field filters
-    if (filters.fieldFilters) {
-      Object.entries(filters.fieldFilters).forEach(([field, value]) => {
-        query[`data.${field}`] = value;
-      });
-    }
-
-    // Get total count
-    const total = await collection.countDocuments(query);
-
-    // Build sort
-    const sort: any = {};
-    if (pagination.sortBy) {
-      sort[pagination.sortBy] = pagination.sortOrder === 'desc' ? -1 : 1;
-    } else {
-      sort.submittedAt = -1; // Default: newest first
-    }
-
-    // Get paginated results
-    const skip = (pagination.page - 1) * pagination.pageSize;
-    const responses = await collection
-      .find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(pagination.pageSize)
-      .toArray();
-
-    return {
-      responses: responses.map(r => ({
-        ...r,
-        _id: r._id.toString(),
-      })),
-      total,
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      totalPages: Math.ceil(total / pagination.pageSize),
-    };
-  } finally {
-    await client.close();
+    const globalSubmissions = await getGlobalSubmissionsForForm(formId);
+    const globalResponses = globalSubmissions.map(submissionToResponse);
+    allResponses = [...globalResponses];
+  } catch (err) {
+    console.error('Error loading from global_submissions:', err);
   }
+
+  // Then, get responses from form_responses collection (MongoDB with optional custom connection)
+  const mongoUri = connectionString || MONGODB_URI;
+  if (mongoUri) {
+    const client = new MongoClient(mongoUri);
+
+    try {
+      await client.connect();
+      const db = client.db(MONGODB_DATABASE);
+      const collection = db.collection<FormResponse>('form_responses');
+
+      // Build query
+      const query: any = { formId };
+
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      if (filters.dateRange) {
+        query.submittedAt = {
+          $gte: filters.dateRange.start,
+          $lte: filters.dateRange.end,
+        };
+      }
+
+      if (filters.deviceType) {
+        query['metadata.deviceType'] = filters.deviceType;
+      }
+
+      // Field filters
+      if (filters.fieldFilters) {
+        Object.entries(filters.fieldFilters).forEach(([field, value]) => {
+          query[`data.${field}`] = value;
+        });
+      }
+
+      const mongoResponses = await collection.find(query).toArray();
+
+      // Merge with global responses, avoiding duplicates by ID
+      const existingIds = new Set(allResponses.map(r => r._id));
+      for (const mongoResponse of mongoResponses) {
+        const mongoId = mongoResponse._id?.toString();
+        if (!existingIds.has(mongoId)) {
+          allResponses.push({ ...mongoResponse, _id: mongoId });
+        }
+      }
+    } catch (err) {
+      console.error('Error loading from form_responses:', err);
+    } finally {
+      await client.close();
+    }
+  }
+
+  // Apply filters to merged results
+  let filteredResponses = allResponses;
+
+  if (filters.status) {
+    filteredResponses = filteredResponses.filter(r => r.status === filters.status);
+  }
+
+  if (filters.dateRange) {
+    filteredResponses = filteredResponses.filter(r => {
+      const date = new Date(r.submittedAt);
+      return date >= filters.dateRange!.start && date <= filters.dateRange!.end;
+    });
+  }
+
+  if (filters.deviceType) {
+    filteredResponses = filteredResponses.filter(r => r.metadata?.deviceType === filters.deviceType);
+  }
+
+  // Sort
+  const sortOrder = pagination.sortOrder === 'asc' ? 1 : -1;
+  filteredResponses.sort((a, b) => {
+    const aVal = pagination.sortBy ? (a as any)[pagination.sortBy] : a.submittedAt;
+    const bVal = pagination.sortBy ? (b as any)[pagination.sortBy] : b.submittedAt;
+    if (aVal < bVal) return -1 * sortOrder;
+    if (aVal > bVal) return 1 * sortOrder;
+    return 0;
+  });
+
+  // Paginate
+  const total = filteredResponses.length;
+  const skip = (pagination.page - 1) * pagination.pageSize;
+  const paginatedResponses = filteredResponses.slice(skip, skip + pagination.pageSize);
+
+  return {
+    responses: paginatedResponses,
+    total,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    totalPages: Math.ceil(total / pagination.pageSize),
+  };
 }
 
 /**
@@ -293,6 +352,7 @@ export async function updateResponse(
 
 /**
  * Get basic response statistics
+ * Merges data from global_submissions and form_responses collections
  */
 export async function getResponseStats(
   formId: string,
@@ -304,57 +364,63 @@ export async function getResponseStats(
   incomplete: number;
   averageCompletionTime: number;
 }> {
-  const mongoUri = connectionString || MONGODB_URI;
-  if (!mongoUri) {
-    throw new Error('MongoDB connection string is required');
-  }
-  const client = new MongoClient(mongoUri);
-  
-  try {
-    await client.connect();
-    const db = client.db(MONGODB_DATABASE);
-    const collection = db.collection('form_responses');
+  let allResponses: FormResponse[] = [];
 
-    const pipeline = [
-      { $match: { formId } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          submitted: {
-            $sum: { $cond: [{ $eq: ['$status', 'submitted'] }, 1, 0] }
-          },
-          draft: {
-            $sum: { $cond: [{ $eq: ['$status', 'draft'] }, 1, 0] }
-          },
-          incomplete: {
-            $sum: { $cond: [{ $eq: ['$status', 'incomplete'] }, 1, 0] }
-          },
-          avgTime: { $avg: '$completionTime' },
+  // First, get submissions from global_submissions collection
+  try {
+    const globalSubmissions = await getGlobalSubmissionsForForm(formId);
+    const globalResponses = globalSubmissions.map(submissionToResponse);
+    allResponses = [...globalResponses];
+  } catch (err) {
+    console.error('Error loading stats from global_submissions:', err);
+  }
+
+  // Then, get responses from form_responses collection
+  const mongoUri = connectionString || MONGODB_URI;
+  if (mongoUri) {
+    const client = new MongoClient(mongoUri);
+
+    try {
+      await client.connect();
+      const db = client.db(MONGODB_DATABASE);
+      const collection = db.collection<FormResponse>('form_responses');
+
+      const mongoResponses = await collection.find({ formId }).toArray();
+
+      // Merge with global responses, avoiding duplicates by ID
+      const existingIds = new Set(allResponses.map(r => r._id));
+      for (const mongoResponse of mongoResponses) {
+        const mongoId = mongoResponse._id?.toString();
+        if (!existingIds.has(mongoId)) {
+          allResponses.push({ ...mongoResponse, _id: mongoId });
         }
       }
-    ];
-
-    const result = await collection.aggregate(pipeline).toArray();
-    
-    if (result.length === 0) {
-      return {
-        total: 0,
-        submitted: 0,
-        draft: 0,
-        incomplete: 0,
-        averageCompletionTime: 0,
-      };
+    } catch (err) {
+      console.error('Error loading stats from form_responses:', err);
+    } finally {
+      await client.close();
     }
-
-    return {
-      total: result[0].total || 0,
-      submitted: result[0].submitted || 0,
-      draft: result[0].draft || 0,
-      incomplete: result[0].incomplete || 0,
-      averageCompletionTime: result[0].avgTime || 0,
-    };
-  } finally {
-    await client.close();
   }
+
+  // Calculate stats from merged responses
+  const total = allResponses.length;
+  const submitted = allResponses.filter(r => r.status === 'submitted').length;
+  const draft = allResponses.filter(r => r.status === 'draft').length;
+  const incomplete = allResponses.filter(r => r.status === 'incomplete').length;
+
+  const completionTimes = allResponses
+    .map(r => r.completionTime)
+    .filter((t): t is number => t !== null && t !== undefined);
+
+  const averageCompletionTime = completionTimes.length > 0
+    ? completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length
+    : 0;
+
+  return {
+    total,
+    submitted,
+    draft,
+    incomplete,
+    averageCompletionTime,
+  };
 }

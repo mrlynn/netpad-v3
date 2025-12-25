@@ -25,6 +25,7 @@ import {
   Tooltip,
   Snackbar,
   Alert,
+  useTheme as useMuiTheme,
 } from '@mui/material';
 import {
   Add,
@@ -64,6 +65,7 @@ interface SavedForm {
 
 export default function MyFormsPage() {
   const router = useRouter();
+  const theme = useMuiTheme();
   const [forms, setForms] = useState<SavedForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,12 +179,12 @@ export default function MyFormsPage() {
         flexDirection: 'column',
         bgcolor: 'background.paper',
         border: '1px solid',
-        borderColor: form.isPublished ? alpha('#00ED64', 0.3) : 'divider',
+        borderColor: form.isPublished ? alpha(theme.palette.primary.main, 0.3) : 'divider',
         borderRadius: 2,
         transition: 'all 0.2s ease',
         '&:hover': {
-          borderColor: '#00ED64',
-          boxShadow: `0 4px 20px ${alpha('#00ED64', 0.15)}`,
+          borderColor: theme.palette.primary.main,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.15)}`,
           transform: 'translateY(-2px)',
         },
       }}
@@ -221,10 +223,10 @@ export default function MyFormsPage() {
             sx={{
               height: 24,
               fontSize: '0.7rem',
-              bgcolor: form.isPublished ? alpha('#00ED64', 0.15) : alpha('#fff', 0.05),
-              color: form.isPublished ? '#00ED64' : 'text.secondary',
+              bgcolor: form.isPublished ? alpha(theme.palette.primary.main, 0.15) : alpha(theme.palette.text.primary, 0.05),
+              color: form.isPublished ? theme.palette.primary.main : 'text.secondary',
               '& .MuiChip-icon': {
-                color: form.isPublished ? '#00ED64' : 'text.secondary',
+                color: form.isPublished ? theme.palette.primary.main : 'text.secondary',
               },
             }}
           />
@@ -236,7 +238,7 @@ export default function MyFormsPage() {
               sx={{
                 height: 24,
                 fontSize: '0.7rem',
-                bgcolor: alpha('#fff', 0.05),
+                bgcolor: alpha(theme.palette.text.primary, 0.05),
               }}
             />
           )}
@@ -248,9 +250,9 @@ export default function MyFormsPage() {
               sx={{
                 height: 24,
                 fontSize: '0.7rem',
-                bgcolor: alpha('#2196f3', 0.15),
-                color: '#2196f3',
-                '& .MuiChip-icon': { color: '#2196f3' },
+                bgcolor: alpha(theme.palette.info.main, 0.15),
+                color: theme.palette.info.main,
+                '& .MuiChip-icon': { color: theme.palette.info.main },
               }}
             />
           )}
@@ -279,13 +281,13 @@ export default function MyFormsPage() {
             component={Link}
             href={`/builder?formId=${form.id}`}
             sx={{
-              borderColor: alpha('#2196f3', 0.5),
-              color: '#2196f3',
+              borderColor: alpha(theme.palette.info.main, 0.5),
+              color: theme.palette.info.main,
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
-                borderColor: '#2196f3',
-                bgcolor: alpha('#2196f3', 0.1),
+                borderColor: theme.palette.info.main,
+                bgcolor: alpha(theme.palette.info.main, 0.1),
               },
             }}
           >
@@ -302,11 +304,11 @@ export default function MyFormsPage() {
               href={`/forms/${form.slug || form.id}`}
               target="_blank"
               sx={{
-                bgcolor: '#00ED64',
-                color: '#001E2B',
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
                 textTransform: 'none',
                 fontWeight: 600,
-                '&:hover': { bgcolor: '#00CC55' },
+                '&:hover': { bgcolor: theme.palette.primary.dark },
               }}
             >
               Open
@@ -343,13 +345,13 @@ export default function MyFormsPage() {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Header */}
       <Box
         sx={{
           borderBottom: '1px solid',
-          borderColor: alpha('#fff', 0.1),
-          bgcolor: alpha('#fff', 0.02),
+          borderColor: 'divider',
+          bgcolor: alpha(theme.palette.background.paper, 0.5),
         }}
       >
         <Container maxWidth="lg">
@@ -361,14 +363,14 @@ export default function MyFormsPage() {
                   href="/builder"
                   sx={{
                     color: 'text.secondary',
-                    '&:hover': { color: '#00ED64', bgcolor: alpha('#00ED64', 0.1) },
+                    '&:hover': { color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.1) },
                   }}
                 >
                   <ArrowBack />
                 </IconButton>
               </Tooltip>
               <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff' }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
                   My Forms
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -382,12 +384,12 @@ export default function MyFormsPage() {
               variant="contained"
               startIcon={<Add />}
               sx={{
-                bgcolor: '#00ED64',
-                color: '#001E2B',
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
                 textTransform: 'none',
                 fontWeight: 600,
                 px: 3,
-                '&:hover': { bgcolor: '#00CC55' },
+                '&:hover': { bgcolor: theme.palette.primary.dark },
               }}
             >
               Create Form
@@ -414,10 +416,10 @@ export default function MyFormsPage() {
           sx={{
             mb: 4,
             '& .MuiOutlinedInput-root': {
-              bgcolor: alpha('#fff', 0.03),
-              '& fieldset': { borderColor: alpha('#fff', 0.1) },
-              '&:hover fieldset': { borderColor: alpha('#fff', 0.2) },
-              '&.Mui-focused fieldset': { borderColor: '#00ED64' },
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              '& fieldset': { borderColor: 'divider' },
+              '&:hover fieldset': { borderColor: alpha(theme.palette.text.primary, 0.2) },
+              '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
             },
           }}
         />
@@ -429,7 +431,7 @@ export default function MyFormsPage() {
                 <Skeleton
                   variant="rounded"
                   height={200}
-                  sx={{ bgcolor: alpha('#fff', 0.05) }}
+                  sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05) }}
                 />
               </Grid>
             ))}
@@ -439,14 +441,14 @@ export default function MyFormsPage() {
             sx={{
               p: 6,
               textAlign: 'center',
-              bgcolor: alpha('#fff', 0.02),
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
               border: '1px dashed',
-              borderColor: alpha('#fff', 0.1),
+              borderColor: 'divider',
               borderRadius: 2,
             }}
           >
             <Description sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: '#fff', mb: 1 }}>
+            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
               {searchQuery ? 'No forms found' : 'No forms yet'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -461,11 +463,11 @@ export default function MyFormsPage() {
                 variant="contained"
                 startIcon={<Add />}
                 sx={{
-                  bgcolor: '#00ED64',
-                  color: '#001E2B',
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
                   textTransform: 'none',
                   fontWeight: 600,
-                  '&:hover': { bgcolor: '#00CC55' },
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
                 }}
               >
                 Create Your First Form
@@ -481,7 +483,7 @@ export default function MyFormsPage() {
                   variant="h6"
                   sx={{
                     fontWeight: 600,
-                    color: '#00ED64',
+                    color: theme.palette.primary.main,
                     mb: 2,
                     display: 'flex',
                     alignItems: 'center',
@@ -496,8 +498,8 @@ export default function MyFormsPage() {
                     sx={{
                       height: 20,
                       fontSize: '0.7rem',
-                      bgcolor: alpha('#00ED64', 0.15),
-                      color: '#00ED64',
+                      bgcolor: alpha(theme.palette.primary.main, 0.15),
+                      color: theme.palette.primary.main,
                     }}
                   />
                 </Typography>
@@ -533,7 +535,7 @@ export default function MyFormsPage() {
                     sx={{
                       height: 20,
                       fontSize: '0.7rem',
-                      bgcolor: alpha('#fff', 0.1),
+                      bgcolor: alpha(theme.palette.text.primary, 0.1),
                       color: 'text.secondary',
                     }}
                   />
@@ -571,7 +573,7 @@ export default function MyFormsPage() {
           onClick={handleMenuClose}
         >
           <ListItemIcon>
-            <Edit fontSize="small" sx={{ color: '#2196f3' }} />
+            <Edit fontSize="small" sx={{ color: theme.palette.info.main }} />
           </ListItemIcon>
           <ListItemText>Edit Form</ListItemText>
         </MenuItem>

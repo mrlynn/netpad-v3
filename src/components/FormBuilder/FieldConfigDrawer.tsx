@@ -61,18 +61,13 @@ export function FieldConfigDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      variant="persistent"
       PaperProps={{
         sx: {
-          width: 360,
+          width: 380,
           bgcolor: 'background.paper',
           borderLeft: '1px solid',
           borderColor: 'divider',
-          boxShadow: '-4px 0 20px rgba(0,0,0,0.08)',
         },
-      }}
-      ModalProps={{
-        keepMounted: true,
       }}
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

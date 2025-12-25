@@ -16,7 +16,6 @@ import { FormAnalytics, FormDropOffAnalytics } from '@/types/form';
 import { ResponseTrendChart } from './charts/ResponseTrendChart';
 import { FieldDropOffChart } from './charts/FieldDropOffChart';
 import { FieldAnalytics } from './FieldAnalytics';
-import { RealTimeCounter } from './RealTimeCounter';
 import { format } from 'date-fns';
 import { HelpButton } from '@/components/Help/HelpButton';
 
@@ -113,14 +112,11 @@ export function AnalyticsDashboard({
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h4">
-            Form Analytics
-          </Typography>
-          <HelpButton topicId="form-analytics" tooltip="Form Analytics Help" />
-        </Box>
-        <RealTimeCounter formId={formId} connectionString={connectionString} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+        <Typography variant="h4">
+          Form Analytics
+        </Typography>
+        <HelpButton topicId="form-analytics" tooltip="Form Analytics Help" />
       </Box>
 
       {/* Overview Cards */}

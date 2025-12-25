@@ -66,13 +66,13 @@ export function RealTimeCounter({
       }}
     >
       <Typography variant="caption" color="text.secondary">
-        Total Responses
+        Live Responses
       </Typography>
       <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
         {stats.total}
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-        Live • Updates every {refreshInterval / 1000}s
+        Updates every {refreshInterval / 1000}s
       </Typography>
     </Paper>
   );

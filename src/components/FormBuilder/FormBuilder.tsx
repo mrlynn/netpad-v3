@@ -11,8 +11,6 @@ import {
   Snackbar,
   IconButton,
   Tooltip,
-  Fab,
-  Chip,
   Drawer,
   Menu,
   MenuItem,
@@ -20,21 +18,17 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
-import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, Code, ChevronLeft, ChevronRight, Storage, MoreVert, PostAdd, Tune, TuneOutlined, Keyboard } from '@mui/icons-material';
+import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
-import { FormModeWrapper } from './FormModeWrapper';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
-import { DocumentPreview } from './DocumentPreview';
 import { FormSettingsDrawer } from './FormSettingsDrawer';
 import { EmptyFormState } from './EmptyFormState';
 import { QuickPublishButton } from './QuickPublishButton';
 import { AddQuestionDialog } from './AddQuestionDialog';
 import { DataSourceSetupModal } from './DataSourceSetupModal';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
-import { HelpButton } from '@/components/Help';
 import { WYSIWYGFormEditor } from './WYSIWYGFormEditor';
-import { MinimalFieldSidebar } from './MinimalFieldSidebar';
 import { FieldConfigDrawer } from './FieldConfigDrawer';
 import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
@@ -77,7 +71,6 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   }>({ open: false, savedForm: null });
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
-  const [showDocPreview, setShowDocPreview] = useState(false);
   const [formType, setFormType] = useState<FormType>('data-entry');
   const [searchConfig, setSearchConfig] = useState<SearchConfig | undefined>(undefined);
   const [dataSource, setDataSource] = useState<FormDataSource | undefined>(undefined);
@@ -88,10 +81,9 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [botProtection, setBotProtection] = useState<BotProtectionConfig | undefined>(undefined);
   const [draftSettings, setDraftSettings] = useState<DraftSettings | undefined>(undefined);
   const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
-  const [advancedMode, setAdvancedMode] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   // Get selected field config
   const selectedFieldConfig = selectedFieldPath
@@ -125,11 +117,6 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     else if (cmdKey && e.key === ',') {
       e.preventDefault();
       setSettingsDrawerOpen(true);
-    }
-    // Cmd/Ctrl + Shift + A: Toggle advanced mode
-    else if (cmdKey && e.shiftKey && e.key === 'A') {
-      e.preventDefault();
-      setAdvancedMode(prev => !prev);
     }
     // Escape: Close panels/dialogs
     else if (e.key === 'Escape') {
@@ -558,77 +545,35 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           </Typography>
 
           {/* Status badges - minimal */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {currentFormIsPublished && (
-              <Tooltip title="Published">
-                <Public sx={{ fontSize: 16, color: 'success.main' }} />
-              </Tooltip>
-            )}
-            {isLoading && <CircularProgress size={14} />}
-          </Box>
-
-          <HelpButton topicId="form-builder" tooltip="Help" />
-        </Box>
-
-        {/* Center: Contextual info - only show when relevant */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, justifyContent: 'center' }}>
-          {fieldConfigs.length > 0 && !dataSource?.collection && (
-            <Chip
-              icon={<Storage sx={{ fontSize: 14 }} />}
-              label="Configure storage"
-              size="small"
-              variant="outlined"
-              onClick={() => setDataSourceModalOpen(true)}
-              sx={{
-                cursor: 'pointer',
-                borderColor: 'warning.main',
-                color: 'warning.main',
-                '& .MuiChip-icon': { color: 'inherit' },
-                '&:hover': { bgcolor: alpha('#ff9800', 0.08) },
-              }}
-            />
+          {currentFormIsPublished && (
+            <Tooltip title="Published">
+              <Public sx={{ fontSize: 16, color: 'success.main' }} />
+            </Tooltip>
           )}
+          {isLoading && <CircularProgress size={14} />}
         </Box>
 
-        {/* Right: Actions - consolidated */}
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-          <Tooltip title="My Forms">
-            <IconButton
-              onClick={() => setShowLibrary(!showLibrary)}
-              size="small"
-              sx={{
-                color: showLibrary ? 'primary.main' : 'text.secondary',
-                bgcolor: showLibrary ? alpha('#00ED64', 0.08) : 'transparent',
-              }}
-            >
-              <Folder fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        {/* Spacer */}
+        <Box sx={{ flex: 1 }} />
 
-          <Tooltip title="Settings">
-            <IconButton
-              onClick={() => setSettingsDrawerOpen(true)}
-              size="small"
-              sx={{ color: 'text.secondary' }}
-            >
-              <Settings fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        {/* Right: Actions - minimal Google Forms style */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
 
-          <Tooltip title={advancedMode ? "Switch to Simple Mode" : "Switch to Advanced Mode"}>
+          <Tooltip title={advancedMode ? "Disable Advanced Mode" : "Enable Advanced Mode"}>
             <IconButton
               onClick={() => setAdvancedMode(!advancedMode)}
               size="small"
               sx={{
                 color: advancedMode ? 'primary.main' : 'text.secondary',
-                bgcolor: advancedMode ? alpha('#00ED64', 0.08) : 'transparent',
+                bgcolor: advancedMode ? 'action.selected' : 'transparent',
+                '&:hover': {
+                  bgcolor: advancedMode ? 'action.selected' : 'action.hover',
+                },
               }}
             >
-              {advancedMode ? <Tune fontSize="small" /> : <TuneOutlined fontSize="small" />}
+              <TuneOutlined fontSize="small" />
             </IconButton>
           </Tooltip>
-
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 0.5 }} />
 
           <Button
             variant="outlined"
@@ -686,9 +631,13 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             slotProps={{
-              paper: { sx: { minWidth: 180 } }
+              paper: { sx: { minWidth: 200 } }
             }}
           >
+            <MenuItem onClick={() => { setShowLibrary(true); setMoreMenuAnchor(null); }}>
+              <ListItemIcon><Folder fontSize="small" /></ListItemIcon>
+              <ListItemText>My Forms</ListItemText>
+            </MenuItem>
             {currentFormId && (
               <MenuItem onClick={() => { handleNewForm(); setMoreMenuAnchor(null); }}>
                 <ListItemIcon><NoteAdd fontSize="small" /></ListItemIcon>
@@ -706,9 +655,13 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
                 <ListItemText>View Published Form</ListItemText>
               </MenuItem>
             )}
-            {(currentFormId || currentFormIsPublished) && <Divider sx={{ my: 0.5 }} />}
+            <Divider sx={{ my: 0.5 }} />
+            <MenuItem onClick={() => { setSettingsDrawerOpen(true); setMoreMenuAnchor(null); }}>
+              <ListItemIcon><Settings fontSize="small" /></ListItemIcon>
+              <ListItemText>Form Settings</ListItemText>
+            </MenuItem>
             <MenuItem onClick={() => { setDataSourceModalOpen(true); setMoreMenuAnchor(null); }}>
-              <ListItemIcon><Storage fontSize="small" /></ListItemIcon>
+              <ListItemIcon><PostAdd fontSize="small" /></ListItemIcon>
               <ListItemText>Storage Settings</ListItemText>
             </MenuItem>
             {hasConnection && (
@@ -765,58 +718,35 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           hasConnection={hasConnection}
         />
       ) : (
-        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* Minimal Field Sidebar - collapsible navigation */}
-          <MinimalFieldSidebar
-            fieldConfigs={fieldConfigs}
-            selectedPath={selectedFieldPath}
-            collapsed={sidebarCollapsed}
+        // Main editing area - Google Forms style centered layout
+        <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {/* Centered Form Editor */}
+          <WYSIWYGFormEditor
+            fieldConfigs={fieldConfigs.filter((f) => f.included)}
+            formData={formData}
+            selectedFieldPath={selectedFieldPath}
+            onFormDataChange={handleFormDataChange}
+            onResetForm={() => setFormData({})}
             onSelectField={setSelectedFieldPath}
+            onUpdateField={updateFieldConfig}
+            onDeleteField={removeCustomField}
             onReorderFields={reorderFields}
-            onAddQuestion={() => setAddQuestionDialogOpen(true)}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onAddFieldAtIndex={handleAddFieldAtIndex}
+            allFieldConfigs={fieldConfigs}
+            header={themeConfig?.header}
+            formTitle={currentFormName}
+            formDescription={currentFormDescription}
+            onFormTitleChange={setCurrentFormName}
+            onFormDescriptionChange={setCurrentFormDescription}
           />
 
-          {/* CENTER: WYSIWYG Form Editor - main editing surface */}
-          <Box
-            sx={{
-              flex: 1,
-              height: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              minWidth: 400,
-              // Adjust for right drawer
-              mr: selectedFieldConfig ? '360px' : 0,
-              transition: 'margin-right 0.2s ease',
-            }}
-          >
-            <WYSIWYGFormEditor
-              fieldConfigs={fieldConfigs.filter((f) => f.included)}
-              formData={formData}
-              selectedFieldPath={selectedFieldPath}
-              onFormDataChange={handleFormDataChange}
-              onResetForm={() => setFormData({})}
-              onSelectField={setSelectedFieldPath}
-              onUpdateField={updateFieldConfig}
-              onDeleteField={removeCustomField}
-              onReorderFields={reorderFields}
-              onAddFieldAtIndex={handleAddFieldAtIndex}
-              allFieldConfigs={fieldConfigs}
-              header={themeConfig?.header}
-              formTitle={currentFormName}
-              formDescription={currentFormDescription}
-              onFormTitleChange={setCurrentFormName}
-              onFormDescriptionChange={setCurrentFormDescription}
-            />
+          {/* Floating Action Toolbar - Google Forms Style */}
+          <FloatingActionToolbar
+            onAddField={handleQuickAddField}
+            onOpenAddDialog={() => setAddQuestionDialogOpen(true)}
+          />
 
-            {/* Floating Action Toolbar - Google Forms Style */}
-            <FloatingActionToolbar
-              onAddField={handleQuickAddField}
-              onOpenAddDialog={() => setAddQuestionDialogOpen(true)}
-            />
-          </Box>
-
-          {/* Right Drawer: Field Configuration */}
+          {/* Field Configuration Drawer - overlays content */}
           <FieldConfigDrawer
             open={!!selectedFieldConfig}
             config={selectedFieldConfig}
@@ -837,97 +767,6 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               setSelectedFieldPath(newField.path);
             }}
           />
-
-          {/* Document Preview Toggle Button + Panel */}
-          <Box
-            sx={{
-              width: showDocPreview ? 320 : 48,
-              height: '100%',
-              borderLeft: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'width 0.2s ease',
-              flexShrink: 0,
-              overflow: 'hidden',
-              position: 'absolute',
-              right: 0,
-              top: 0,
-              zIndex: 5,
-            }}
-          >
-            {showDocPreview ? (
-              <>
-                {/* Document Preview Header */}
-                <Box sx={{
-                  p: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  minHeight: 40,
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Code sx={{ fontSize: 16, color: 'text.secondary' }} />
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Document
-                    </Typography>
-                  </Box>
-                  <Tooltip title="Hide document preview" placement="left">
-                    <IconButton
-                      onClick={() => setShowDocPreview(false)}
-                      size="small"
-                      sx={{ p: 0.5 }}
-                    >
-                      <ChevronRight sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Box sx={{ flex: 1, overflow: 'auto' }}>
-                  <DocumentPreview
-                    fieldConfigs={fieldConfigs.filter((f) => f.included)}
-                    formData={formData}
-                  />
-                </Box>
-              </>
-            ) : (
-              // Collapsed state - just show toggle button
-              <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                py: 1,
-                height: '100%'
-              }}>
-                <Tooltip title="Show document preview" placement="left">
-                  <IconButton
-                    onClick={() => setShowDocPreview(true)}
-                    size="small"
-                    sx={{
-                      mb: 1,
-                      color: Object.keys(formData).length > 0 ? '#00ED64' : 'text.secondary'
-                    }}
-                  >
-                    <Code />
-                  </IconButton>
-                </Tooltip>
-                {Object.keys(formData).length > 0 && (
-                  <Chip
-                    label={Object.keys(formData).length}
-                    size="small"
-                    sx={{
-                      fontSize: 10,
-                      height: 18,
-                      bgcolor: alpha('#00ED64', 0.1),
-                      color: '#00ED64'
-                    }}
-                  />
-                )}
-              </Box>
-            )}
-          </Box>
         </Box>
       )}
 

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+import { sessionOptions, ensureSessionId } from '@/lib/session';
+import { getFormById, getPublishedFormById, getPublishedFormBySlug } from '@/lib/storage';
+import { MongoClient } from 'mongodb';
 import {
   saveResponse,
   getResponses,
@@ -6,8 +11,56 @@ import {
 } from '@/lib/formResponseService';
 import { logAuditEvent } from '@/lib/auditLogger';
 
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'form_builder';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+// Helper function to resolve the internal form ID from URL parameter (which could be a slug or ID)
+async function resolveFormId(formIdParam: string, connectionString?: string): Promise<string> {
+  let formConfig = null;
+
+  // Try session-based storage first
+  try {
+    const session = await getIronSession(await cookies(), sessionOptions);
+    const sessionId = ensureSessionId(session);
+    await session.save();
+    formConfig = await getFormById(sessionId, formIdParam);
+  } catch (err) {
+    console.error('Error loading form from session storage:', err);
+  }
+
+  // Try published forms if not found in session
+  if (!formConfig) {
+    formConfig = await getPublishedFormById(formIdParam);
+  }
+
+  // Try by slug
+  if (!formConfig) {
+    formConfig = await getPublishedFormBySlug(formIdParam);
+  }
+
+  // If still not found and we have a connection string, try MongoDB
+  if (!formConfig && connectionString) {
+    const client = new MongoClient(connectionString);
+    try {
+      await client.connect();
+      const db = client.db(MONGODB_DATABASE);
+      const collection = db.collection('form_configurations');
+      const config = await collection.findOne({ id: formIdParam });
+      if (config) {
+        formConfig = config as any;
+      }
+    } catch (err) {
+      console.error('Error loading form from MongoDB:', err);
+    } finally {
+      await client.close();
+    }
+  }
+
+  // Return the internal form ID, falling back to the URL parameter if not found
+  return formConfig?.id || formIdParam;
+}
 
 interface RouteParams {
   params: Promise<{
@@ -97,11 +150,14 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { formId } = await params;
+    const { formId: formIdParam } = await params;
     const { searchParams } = new URL(request.url);
-    
+
     const connectionString = searchParams.get('connectionString') || undefined;
     const statsOnly = searchParams.get('statsOnly') === 'true';
+
+    // Resolve the internal form ID (URL param could be a slug or ID)
+    const formId = await resolveFormId(formIdParam, connectionString);
 
     // If only stats requested
     if (statsOnly) {
