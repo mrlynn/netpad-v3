@@ -14,6 +14,10 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Close,
@@ -31,7 +35,7 @@ import {
   Repeat,
   DataArray,
 } from '@mui/icons-material';
-import { FieldConfig, LayoutFieldType } from '@/types/form';
+import { FieldConfig, LayoutFieldType, FieldWidth } from '@/types/form';
 import { ConditionalLogicEditor } from './ConditionalLogicEditor';
 import { LookupConfigEditor } from './LookupConfigEditor';
 import { ComputedConfigEditor } from './ComputedConfigEditor';
@@ -321,6 +325,19 @@ export function FieldDetailPanel({
                 onChange={(e) => onUpdateField(config.path, { placeholder: e.target.value })}
                 fullWidth
               />
+              <FormControl size="small" fullWidth>
+                <InputLabel>Field Width</InputLabel>
+                <Select
+                  label="Field Width"
+                  value={config.fieldWidth || 'full'}
+                  onChange={(e) => onUpdateField(config.path, { fieldWidth: e.target.value as FieldWidth })}
+                >
+                  <MenuItem value="full">Full Width</MenuItem>
+                  <MenuItem value="half">Half (1/2)</MenuItem>
+                  <MenuItem value="third">Third (1/3)</MenuItem>
+                  <MenuItem value="quarter">Quarter (1/4)</MenuItem>
+                </Select>
+              </FormControl>
 
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <FormControlLabel

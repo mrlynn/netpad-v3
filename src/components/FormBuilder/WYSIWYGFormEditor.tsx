@@ -401,42 +401,68 @@ export function WYSIWYGFormEditor({
             {/* First dropzone */}
             <AddQuestionDropzone onAdd={() => handleAddAtIndex(0)} />
 
-            {/* Field cards */}
-            {fieldConfigs.map((config, index) => {
-              const isVisible = evaluateConditionalLogic(
-                config.conditionalLogic,
-                formData
-              );
-              const isSelected = selectedFieldPath === config.path;
-              const isDragging = draggedIndex === index;
-              const isDragOver = dragOverIndex === index;
+            {/* Field cards - 12-column grid layout */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(12, 1fr)',
+                gap: 0,
+                alignItems: 'start',
+              }}
+            >
+              {fieldConfigs.map((config, index) => {
+                const isVisible = evaluateConditionalLogic(
+                  config.conditionalLogic,
+                  formData
+                );
+                const isSelected = selectedFieldPath === config.path;
+                const isDragging = draggedIndex === index;
+                const isDragOver = dragOverIndex === index;
 
-              return (
-                <Collapse key={config.path} in={isVisible} unmountOnExit>
-                  <Box>
-                    <WYSIWYGFieldCard
-                      config={config}
-                      formData={formData}
-                      allFieldConfigs={allFieldConfigs}
-                      isSelected={isSelected}
-                      isDragging={isDragging}
-                      isDragOver={isDragOver}
-                      onSelect={() => onSelectField(isSelected ? null : config.path)}
-                      onFormDataChange={onFormDataChange}
-                      onUpdateField={onUpdateField}
-                      onDelete={onDeleteField ? () => onDeleteField(config.path) : undefined}
-                      onDragStart={() => handleDragStart(index)}
-                      onDragEnd={handleDragEnd}
-                      onDragEnter={() => handleDragEnter(index)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={() => handleDrop(index)}
-                      draggable={!!onReorderFields}
-                    />
-                    <AddQuestionDropzone onAdd={() => handleAddAtIndex(index + 1)} />
-                  </Box>
-                </Collapse>
-              );
-            })}
+                // Map fieldWidth to grid column span
+                const getGridColumn = () => {
+                  switch (config.fieldWidth) {
+                    case 'quarter': return 'span 3';
+                    case 'third': return 'span 4';
+                    case 'half': return 'span 6';
+                    case 'full':
+                    default: return 'span 12';
+                  }
+                };
+
+                return (
+                  <Collapse
+                    key={config.path}
+                    in={isVisible}
+                    unmountOnExit
+                    sx={{ gridColumn: getGridColumn() }}
+                  >
+                    <Box>
+                      <WYSIWYGFieldCard
+                        config={config}
+                        formData={formData}
+                        allFieldConfigs={allFieldConfigs}
+                        isSelected={isSelected}
+                        isDragging={isDragging}
+                        isDragOver={isDragOver}
+                        onSelect={() => onSelectField(isSelected ? null : config.path)}
+                        onFormDataChange={onFormDataChange}
+                        onUpdateField={onUpdateField}
+                        onDelete={onDeleteField ? () => onDeleteField(config.path) : undefined}
+                        onDragStart={() => handleDragStart(index)}
+                        onDragEnd={handleDragEnd}
+                        onDragEnter={() => handleDragEnter(index)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={() => handleDrop(index)}
+                        draggable={!!onReorderFields}
+                      />
+                    </Box>
+                  </Collapse>
+                );
+              })}
+            </Box>
+            {/* Add dropzone after grid */}
+            <AddQuestionDropzone onAdd={() => handleAddAtIndex(fieldConfigs.length)} />
           </Box>
         )}
       </Box>

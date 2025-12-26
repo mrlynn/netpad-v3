@@ -3424,14 +3424,37 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
         </Box>
       )}
 
-      {/* Form Fields */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: getSpacing() }}>
-        {currentPageFields.map((config, index) => {
+      {/* Form Fields - 12-column grid layout */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(12, 1fr)',
+          gap: getSpacing(),
+          alignItems: 'start',
+        }}
+      >
+        {currentPageFields.map((config) => {
           const isVisible = evaluateConditionalLogic(config.conditionalLogic, formData);
           const isEncrypted = config.encryption?.enabled;
 
+          // Map fieldWidth to grid column span
+          const getGridColumn = () => {
+            switch (config.fieldWidth) {
+              case 'quarter': return 'span 3';
+              case 'third': return 'span 4';
+              case 'half': return 'span 6';
+              case 'full':
+              default: return 'span 12';
+            }
+          };
+
           return (
-            <Collapse key={config.path} in={isVisible} unmountOnExit>
+            <Collapse
+              key={config.path}
+              in={isVisible}
+              unmountOnExit
+              sx={{ gridColumn: getGridColumn() }}
+            >
               <Box sx={inputSx}>
                 {/* Encryption indicator for sensitive fields */}
                 {isEncrypted && (
@@ -3457,7 +3480,6 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
                   </Box>
                 )}
                 {renderField(config)}
-                {index < currentPageFields.length - 1 && <Divider sx={{ mt: getSpacing() }} />}
               </Box>
             </Collapse>
           );

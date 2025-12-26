@@ -557,6 +557,9 @@ export interface LayoutConfig {
   padding?: number;
 }
 
+// Field width options for multi-field row layouts
+export type FieldWidth = 'full' | 'half' | 'third' | 'quarter';
+
 export interface FieldConfig {
   path: string;
   label: string;
@@ -567,6 +570,7 @@ export interface FieldConfig {
   placeholder?: string;
   source?: FieldSource;         // Where this field came from (default: 'schema')
   includeInDocument?: boolean;  // Whether to include in final document (default: true for schema, configurable for custom)
+  fieldWidth?: FieldWidth;      // Width of field in form layout (default: 'full')
   validation?: {
     // Number validation
     min?: number;
