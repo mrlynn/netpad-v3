@@ -1004,9 +1004,20 @@ export default function LandingPage() {
               gap: 2
             }}
           >
-            <Typography variant="body2" sx={{ color: alpha('#fff', 0.4) }}>
-              Built with MongoDB, Next.js, and Material-UI
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Image
+                src="/logo-250x250-trans.png"
+                alt="NetPad"
+                width={24}
+                height={24}
+              />
+              <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), fontWeight: 500 }}>
+                NetPad
+              </Typography>
+              <Typography variant="body2" sx={{ color: alpha('#fff', 0.3) }}>
+                Built with MongoDB, Next.js, and Material-UI
+              </Typography>
+            </Box>
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Typography
                 component={Link}
@@ -1034,7 +1045,7 @@ export default function LandingPage() {
               </Typography>
               <Typography
                 component="a"
-                href="https://github.com/mrlynn/aggregation-builder"
+                href="https://github.com/mrlynn/netpad-v3"
                 target="_blank"
                 variant="body2"
                 sx={{

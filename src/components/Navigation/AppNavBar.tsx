@@ -350,7 +350,7 @@ export function AppNavBar() {
 
                   <MenuItem
                     component="a"
-                    href="https://github.com/mrlynn/aggregation-builder"
+                    href="https://github.com/mrlynn/netpad-v3"
                     target="_blank"
                     onClick={handleMenuClose}
                   >
