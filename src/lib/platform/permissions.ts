@@ -94,6 +94,7 @@ export async function checkOrganizationPermission(
   const role = await getUserOrgRole(userId, orgId);
 
   if (!role) {
+    console.warn(`[Permission] User ${userId} is not a member of org ${orgId}. Requested capability: ${capability}`);
     return { allowed: false, reason: 'Not a member of this organization' };
   }
 

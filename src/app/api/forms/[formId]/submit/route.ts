@@ -6,6 +6,7 @@ import { FormSubmission, BotProtectionConfig } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'mongodb';
 import { executeWebhookAsync } from '@/lib/hooks/executeWebhook';
+import { triggerFormWorkflowsAsync } from '@/lib/workflow/triggerWorkflow';
 
 /**
  * Validate bot protection on server side
@@ -322,6 +323,25 @@ export async function POST(
         });
       }
 
+      // Trigger any workflows configured for this form
+      if (form.organizationId) {
+        triggerFormWorkflowsAsync(
+          form.organizationId,
+          form.id!,
+          form.name,
+          result.submissionId!,
+          cleanData,
+          {
+            ipAddress,
+            userAgent,
+            referrer,
+            deviceType,
+            userId: userId || undefined,
+            email: authSession.email || undefined,
+          }
+        );
+      }
+
       return NextResponse.json({
         success: true,
         submissionId: result.submissionId,
@@ -392,6 +412,25 @@ export async function POST(
         responseId: submission.id,
         data: cleanData,
       });
+    }
+
+    // Trigger any workflows configured for this form (legacy mode)
+    if (form.organizationId) {
+      triggerFormWorkflowsAsync(
+        form.organizationId,
+        form.id!,
+        form.name,
+        submission.id,
+        cleanData,
+        {
+          ipAddress,
+          userAgent,
+          referrer,
+          deviceType,
+          userId: userId || undefined,
+          email: authSession.email || undefined,
+        }
+      );
     }
 
     return NextResponse.json({

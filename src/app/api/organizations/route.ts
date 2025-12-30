@@ -10,6 +10,7 @@ import { getSession } from '@/lib/auth/session';
 import {
   createOrganization,
   getUserOrganizations,
+  repairUserOrgMemberships,
 } from '@/lib/platform/organizations';
 import { findUserById } from '@/lib/platform/users';
 
@@ -33,7 +34,22 @@ export async function GET() {
       );
     }
 
-    const organizations = await getUserOrganizations(user.userId);
+    // Auto-repair: If user has no orgs but created some, add them as owner
+    // This fixes any data inconsistencies from failed org creation
+    let currentUser = user;
+    if (!user.organizations || user.organizations.length === 0) {
+      const repaired = await repairUserOrgMemberships(user.userId);
+      if (repaired > 0) {
+        console.log(`[Organizations API] Repaired ${repaired} org memberships for user ${user.userId}`);
+        // Refetch user to get updated organizations
+        const refreshedUser = await findUserById(session.userId);
+        if (refreshedUser) {
+          currentUser = refreshedUser;
+        }
+      }
+    }
+
+    const organizations = await getUserOrganizations(currentUser.userId);
 
     return NextResponse.json({
       organizations: organizations.map(org => ({
@@ -43,7 +59,7 @@ export async function GET() {
         plan: org.plan,
         subscription: org.subscription,
         settings: org.settings,
-        role: user.organizations.find(o => o.orgId === org.orgId)?.role,
+        role: currentUser.organizations?.find(o => o.orgId === org.orgId)?.role,
         createdAt: org.createdAt,
       })),
     });

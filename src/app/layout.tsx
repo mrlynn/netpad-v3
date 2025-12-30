@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <AuthProvider>
             <OrganizationProvider>
               <PipelineProvider>{children}</PipelineProvider>
-              <DevPanelWrapper />
+              <DevPanelWrapper position="bottom-right" />
             </OrganizationProvider>
           </AuthProvider>
         </ClientLayout>

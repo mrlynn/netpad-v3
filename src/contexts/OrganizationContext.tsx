@@ -97,6 +97,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       if (savedOrgId) {
         selectedOrg = orgs.find(o => o.orgId === savedOrgId) || null;
+        // Clear stale org from localStorage if it doesn't exist anymore
+        if (!selectedOrg) {
+          console.warn(`[OrganizationContext] Saved org ${savedOrgId} not found in user's organizations. Clearing stale selection.`);
+          localStorage.removeItem(SELECTED_ORG_KEY);
+        }
       }
 
       // Default to first org if none selected

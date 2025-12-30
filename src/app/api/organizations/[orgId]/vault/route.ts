@@ -13,6 +13,7 @@ import {
   testConnectionString,
 } from '@/lib/platform/connectionVault';
 import { assertOrgPermission, checkConnectionPermission } from '@/lib/platform/permissions';
+import { repairOrgCreatorMembership } from '@/lib/platform/organizations';
 
 export async function GET(
   request: NextRequest,
@@ -73,19 +74,39 @@ export async function POST(
 
     // Check permission to create connections
     // Owners/admins have 'manage_all_connections', members have 'use_connections'
+    let hasPermission = false;
     try {
       // Try manage_all_connections first (for owners/admins)
       await assertOrgPermission(session.userId, orgId, 'manage_all_connections');
+      hasPermission = true;
     } catch {
       // Fall back to use_connections (for members)
       try {
         await assertOrgPermission(session.userId, orgId, 'use_connections');
+        hasPermission = true;
       } catch {
-        return NextResponse.json(
-          { error: 'Permission denied' },
-          { status: 403 }
-        );
+        // Permission denied - try to auto-repair if user is the org creator
+        console.log(`[Vault API] Permission denied for user ${session.userId} on org ${orgId}. Attempting repair...`);
+        const repaired = await repairOrgCreatorMembership(session.userId, orgId);
+
+        if (repaired) {
+          // Retry permission check after repair
+          try {
+            await assertOrgPermission(session.userId, orgId, 'manage_all_connections');
+            hasPermission = true;
+            console.log(`[Vault API] Repair successful, user ${session.userId} now has access to org ${orgId}`);
+          } catch {
+            // Still no permission after repair
+          }
+        }
       }
+    }
+
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Permission denied' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

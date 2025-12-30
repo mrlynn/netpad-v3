@@ -48,6 +48,7 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AppNavBar } from '@/components/Navigation/AppNavBar';
 
 interface SavedForm {
   id: string;
@@ -346,7 +347,10 @@ export default function MyFormsPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Header */}
+      {/* Global Navigation */}
+      <AppNavBar />
+
+      {/* Page Header */}
       <Box
         sx={{
           borderBottom: '1px solid',
@@ -356,27 +360,13 @@ export default function MyFormsPage() {
       >
         <Container maxWidth="lg">
           <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Tooltip title="Back to builder">
-                <IconButton
-                  component={Link}
-                  href="/builder"
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': { color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.1) },
-                  }}
-                >
-                  <ArrowBack />
-                </IconButton>
-              </Tooltip>
-              <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  My Forms
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Manage and access your saved forms
-                </Typography>
-              </Box>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                My Forms
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Manage and access your saved forms
+              </Typography>
             </Box>
             <Button
               component={Link}

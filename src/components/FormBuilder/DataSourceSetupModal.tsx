@@ -137,19 +137,12 @@ export function DataSourceSetupModal({
     }
   }, [selectedOrgId]);
 
-  // Reset step when modal opens
+  // Reset step when modal opens - always start at step 0 to allow editing
   useEffect(() => {
     if (open) {
-      // If we have existing values, skip to appropriate step
-      if (currentOrganizationId && currentDataSource?.vaultId && currentDataSource?.collection) {
-        setActiveStep(2);
-      } else if (currentOrganizationId && currentDataSource?.vaultId) {
-        setActiveStep(2);
-      } else if (currentOrganizationId) {
-        setActiveStep(1);
-      } else {
-        setActiveStep(0);
-      }
+      // Always start at step 0 to allow user to review/modify settings
+      // The stepper will show completed checkmarks for steps with values
+      setActiveStep(0);
       setSelectedOrgId(currentOrganizationId || '');
       setSelectedVaultId(currentDataSource?.vaultId || '');
       setCollection(currentDataSource?.collection || '');
@@ -163,16 +156,25 @@ export function DataSourceSetupModal({
       const data = await response.json();
 
       if (response.ok && data.organizations) {
-        setOrganizations(data.organizations);
+        const orgs: Organization[] = data.organizations;
+        setOrganizations(orgs);
 
-        // If we have a current org, use it
-        if (currentOrganizationId) {
+        // Validate current org exists in user's organizations
+        const currentOrgValid = currentOrganizationId && orgs.some(o => o.orgId === currentOrganizationId);
+
+        if (currentOrgValid) {
+          // Use the stored org if it's still valid
           setSelectedOrgId(currentOrganizationId);
-        } else if (data.organizations.length === 1) {
-          // Auto-select if only one org - no need to advance step since we skip org selection
-          setSelectedOrgId(data.organizations[0].orgId);
-          // Start at step 0 which is now "Choose Connection" in single-org mode
-          setActiveStep(0);
+        } else {
+          // Current org is stale/invalid - use first available org
+          if (currentOrganizationId) {
+            console.warn(`[DataSourceSetupModal] Stored org ${currentOrganizationId} not found in user's organizations. Using first available.`);
+          }
+          if (orgs.length >= 1) {
+            setSelectedOrgId(orgs[0].orgId);
+            // Start at step 0 which is "Choose Connection" in single-org mode
+            setActiveStep(0);
+          }
         }
       }
     } catch (err) {

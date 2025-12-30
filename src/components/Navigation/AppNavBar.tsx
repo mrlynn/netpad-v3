@@ -31,19 +31,56 @@ import {
   DarkMode,
   LightMode,
   Settings,
+  AccountTree,
+  Storage,
 } from '@mui/icons-material';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  matchPaths?: string[]; // Additional paths that should highlight this nav item
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    href: '/my-forms',
+    label: 'My Forms',
+    icon: <Folder sx={{ fontSize: 18 }} />,
+    matchPaths: ['/forms'],
+  },
+  {
+    href: '/workflows',
+    label: 'Workflows',
+    icon: <AccountTree sx={{ fontSize: 18 }} />,
+  },
+  {
+    href: '/data',
+    label: 'Data',
+    icon: <Storage sx={{ fontSize: 18 }} />,
+  },
+];
+
 export function AppNavBar() {
+  const pathname = usePathname();
   const { user, isAuthenticated, isLoading, logout, registerPasskey } = useAuth();
   const { openSearch } = useHelp();
   const { mode, toggleTheme } = useTheme();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
+
+  // Check if a nav item is active based on current path
+  const isNavItemActive = (item: NavItem): boolean => {
+    if (pathname === item.href) return true;
+    if (item.matchPaths?.some(path => pathname.startsWith(path))) return true;
+    return false;
+  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -128,30 +165,37 @@ export function AppNavBar() {
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* My Forms Link */}
-        <Button
-          component={Link}
-          href="/my-forms"
-          startIcon={<Folder sx={{ fontSize: 18 }} />}
-          size="small"
-          sx={{
-            minWidth: 'auto',
-            px: 1.5,
-            py: 0.5,
-            color: 'text.secondary',
-            borderRadius: 1,
-            textTransform: 'none',
-            fontWeight: 500,
-            fontSize: '0.8125rem',
-            '&:hover': {
-              bgcolor: alpha('#00ED64', 0.1),
-              color: '#00ED64'
-            },
-            transition: 'all 0.15s ease'
-          }}
-        >
-          My Forms
-        </Button>
+        {/* Navigation Items */}
+        {NAV_ITEMS.map((item) => {
+          const isActive = isNavItemActive(item);
+          return (
+            <Button
+              key={item.href}
+              component={Link}
+              href={item.href}
+              startIcon={item.icon}
+              size="small"
+              sx={{
+                minWidth: 'auto',
+                px: 1.5,
+                py: 0.5,
+                color: isActive ? '#00ED64' : 'text.secondary',
+                bgcolor: isActive ? alpha('#00ED64', 0.1) : 'transparent',
+                borderRadius: 1,
+                textTransform: 'none',
+                fontWeight: isActive ? 600 : 500,
+                fontSize: '0.8125rem',
+                '&:hover': {
+                  bgcolor: alpha('#00ED64', 0.15),
+                  color: '#00ED64'
+                },
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {item.label}
+            </Button>
+          );
+        })}
 
         {/* New Form Button */}
         <Button

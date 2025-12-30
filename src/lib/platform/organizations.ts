@@ -90,8 +90,8 @@ export async function createOrganization(input: CreateOrgInput): Promise<Organiz
 
   await orgsCollection.insertOne(org);
 
-  // Add creator as owner
-  await usersCollection.updateOne(
+  // Add creator as owner - ensure this succeeds
+  const updateResult = await usersCollection.updateOne(
     { userId: input.createdBy },
     {
       $push: {
@@ -104,6 +104,17 @@ export async function createOrganization(input: CreateOrgInput): Promise<Organiz
       $set: { updatedAt: new Date() },
     }
   );
+
+  // Verify the update was successful
+  if (updateResult.matchedCount === 0) {
+    // Rollback the org creation if we couldn't add the user
+    await orgsCollection.deleteOne({ orgId: org.orgId });
+    throw new Error('Failed to add creator as organization owner: user not found');
+  }
+
+  if (updateResult.modifiedCount === 0) {
+    console.warn(`[Org] Warning: User ${input.createdBy} not modified when adding to org ${org.orgId}. May already be a member.`);
+  }
 
   // Audit log
   await logOrgEvent({
@@ -638,4 +649,101 @@ async function logOrgEvent(event: Omit<AuditLogEntry, '_id'>): Promise<void> {
   } catch (error) {
     console.error('[Org Audit] Failed to log event:', error);
   }
+}
+
+// ============================================
+// Data Repair Utilities
+// ============================================
+
+/**
+ * Repair organization membership for a user who created an org but isn't a member.
+ * This can happen if there was a race condition or failure during org creation.
+ */
+export async function repairOrgCreatorMembership(userId: string, orgId: string): Promise<boolean> {
+  const usersCollection = await getUsersCollection();
+  const orgsCollection = await getOrganizationsCollection();
+
+  // Verify the org exists and was created by this user
+  const org = await orgsCollection.findOne({ orgId });
+  if (!org) {
+    console.error(`[Repair] Organization ${orgId} not found`);
+    return false;
+  }
+
+  if (org.createdBy !== userId) {
+    console.error(`[Repair] User ${userId} is not the creator of org ${orgId}`);
+    return false;
+  }
+
+  // Check if user is already a member
+  const user = await usersCollection.findOne({ userId });
+  if (!user) {
+    console.error(`[Repair] User ${userId} not found`);
+    return false;
+  }
+
+  const existingMembership = user.organizations?.find((o) => o.orgId === orgId);
+  if (existingMembership) {
+    console.log(`[Repair] User ${userId} is already a member of org ${orgId} with role ${existingMembership.role}`);
+    return true;
+  }
+
+  // Add user as owner
+  const updateResult = await usersCollection.updateOne(
+    { userId },
+    {
+      $push: {
+        organizations: {
+          orgId,
+          role: 'owner' as OrgRole,
+          joinedAt: new Date(),
+        },
+      },
+      $set: { updatedAt: new Date() },
+    }
+  );
+
+  if (updateResult.modifiedCount > 0) {
+    console.log(`[Repair] Successfully added user ${userId} as owner of org ${orgId}`);
+    return true;
+  }
+
+  console.error(`[Repair] Failed to add user ${userId} to org ${orgId}`);
+  return false;
+}
+
+/**
+ * Ensure the current user is properly added as owner to their created orgs.
+ * Call this on login if the user's org list is empty but they've created orgs.
+ */
+export async function repairUserOrgMemberships(userId: string): Promise<number> {
+  const usersCollection = await getUsersCollection();
+  const orgsCollection = await getOrganizationsCollection();
+
+  const user = await usersCollection.findOne({ userId });
+  if (!user) {
+    return 0;
+  }
+
+  // Find all orgs created by this user
+  const createdOrgs = await orgsCollection.find({ createdBy: userId }).toArray();
+
+  if (createdOrgs.length === 0) {
+    return 0;
+  }
+
+  const userOrgIds = new Set((user.organizations || []).map((o) => o.orgId));
+  let repaired = 0;
+
+  for (const org of createdOrgs) {
+    if (!userOrgIds.has(org.orgId)) {
+      console.log(`[Repair] User ${userId} created org ${org.orgId} but isn't a member. Repairing...`);
+      const success = await repairOrgCreatorMembership(userId, org.orgId);
+      if (success) {
+        repaired++;
+      }
+    }
+  }
+
+  return repaired;
 }

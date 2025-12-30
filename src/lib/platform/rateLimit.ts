@@ -28,6 +28,9 @@ export interface RateLimitResult {
 
 /**
  * Check and increment rate limit for a key
+ * Uses a two-phase approach to handle the unique index properly:
+ * 1. Try to increment existing valid window entry
+ * 2. If no valid window exists, reset and start new window
  */
 export async function checkRateLimit(
   key: string,
@@ -41,22 +44,31 @@ export async function checkRateLimit(
   const windowStart = new Date(now.getTime() - limits.windowSeconds * 1000);
   const expiresAt = new Date(now.getTime() + limits.windowSeconds * 1000);
 
-  // Try to find existing entry within the window
-  const existing = await collection.findOne({
-    key,
-    resource,
-    windowStart: { $gte: windowStart },
-  });
+  // First, try to increment an existing entry that's within the valid window
+  const existingResult = await collection.findOneAndUpdate(
+    {
+      key,
+      resource,
+      windowStart: { $gte: windowStart },
+    },
+    {
+      $inc: { count: 1 },
+      $set: { expiresAt },
+    },
+    {
+      returnDocument: 'after',
+    }
+  );
 
-  if (existing) {
-    // Check if limit exceeded
-    if (existing.count >= limits.limit) {
-      const resetAt = new Date(existing.windowStart.getTime() + limits.windowSeconds * 1000);
+  if (existingResult) {
+    // Found and incremented an existing valid window entry
+    const resetAt = new Date(existingResult.windowStart.getTime() + limits.windowSeconds * 1000);
+
+    if (existingResult.count > limits.limit) {
       const retryAfter = Math.ceil((resetAt.getTime() - now.getTime()) / 1000);
-
       return {
         allowed: false,
-        current: existing.count,
+        current: existingResult.count,
         limit: limits.limit,
         remaining: 0,
         resetAt,
@@ -64,44 +76,90 @@ export async function checkRateLimit(
       };
     }
 
-    // Increment counter
-    await collection.updateOne(
-      { _id: existing._id },
-      {
-        $inc: { count: 1 },
-        $set: { expiresAt }, // Extend expiry
-      }
-    );
-
-    const resetAt = new Date(existing.windowStart.getTime() + limits.windowSeconds * 1000);
-
     return {
       allowed: true,
-      current: existing.count + 1,
+      current: existingResult.count,
       limit: limits.limit,
-      remaining: limits.limit - existing.count - 1,
+      remaining: limits.limit - existingResult.count,
       resetAt,
     };
   }
 
-  // Create new entry
-  const entry: RateLimitEntry = {
-    key,
-    resource,
-    count: 1,
-    windowStart: now,
-    expiresAt,
-  };
+  // No valid window exists - either no entry or it's expired
+  // Use findOneAndUpdate to atomically reset the entry (or create if doesn't exist)
+  try {
+    const resetResult = await collection.findOneAndUpdate(
+      {
+        key,
+        resource,
+      },
+      {
+        $set: {
+          count: 1,
+          windowStart: now,
+          expiresAt,
+        },
+      },
+      {
+        upsert: true,
+        returnDocument: 'after',
+      }
+    );
 
-  await collection.insertOne(entry);
+    // Successfully reset or created entry
+    return {
+      allowed: true,
+      current: 1,
+      limit: limits.limit,
+      remaining: limits.limit - 1,
+      resetAt: expiresAt,
+    };
+  } catch (error) {
+    // Handle race condition: another request may have created/updated the entry
+    if (error instanceof Error && error.message.includes('E11000')) {
+      // Retry the increment - entry should exist now
+      const retryResult = await collection.findOneAndUpdate(
+        {
+          key,
+          resource,
+        },
+        {
+          $inc: { count: 1 },
+          $set: { expiresAt },
+        },
+        {
+          returnDocument: 'after',
+        }
+      );
 
-  return {
-    allowed: true,
-    current: 1,
-    limit: limits.limit,
-    remaining: limits.limit - 1,
-    resetAt: expiresAt,
-  };
+      if (retryResult) {
+        const resetAt = new Date(retryResult.windowStart.getTime() + limits.windowSeconds * 1000);
+
+        if (retryResult.count > limits.limit) {
+          const retryAfter = Math.ceil((resetAt.getTime() - now.getTime()) / 1000);
+          return {
+            allowed: false,
+            current: retryResult.count,
+            limit: limits.limit,
+            remaining: 0,
+            resetAt,
+            retryAfter: retryAfter > 0 ? retryAfter : 1,
+          };
+        }
+
+        return {
+          allowed: true,
+          current: retryResult.count,
+          limit: limits.limit,
+          remaining: limits.limit - retryResult.count,
+          resetAt,
+        };
+      }
+    }
+
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**
