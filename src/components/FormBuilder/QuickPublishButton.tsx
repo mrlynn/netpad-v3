@@ -30,6 +30,7 @@ import {
   Share,
   Warning,
   Storage,
+  Code,
 } from '@mui/icons-material';
 import { FormConfiguration, FormDataSource } from '@/types/form';
 import { saveFormConfiguration } from '@/lib/formStorage';
@@ -61,6 +62,7 @@ export function QuickPublishButton({
   const [error, setError] = useState<string | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showEmbedCode, setShowEmbedCode] = useState(false);
 
   // Check if data storage is configured (either new vault-based or legacy direct connection)
   const hasDataSource = !!(formConfig.dataSource?.vaultId && formConfig.dataSource?.collection);
@@ -127,6 +129,11 @@ export function QuickPublishButton({
       // Generate shareable URL
       const url = `${window.location.origin}/forms/${data.form.slug}`;
       setPublishedUrl(url);
+      
+      // Store form info for embed code
+      if (data.form.id && data.form.slug) {
+        // Embed code will use these values
+      }
 
       // Notify parent
       onPublished?.({
@@ -421,13 +428,14 @@ export function QuickPublishButton({
               </Box>
 
               {/* Quick action buttons */}
-              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+              <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>
                 <Button
                   variant="outlined"
                   startIcon={<OpenInNew />}
                   onClick={handleOpenForm}
-                  fullWidth
                   sx={{
+                    flex: 1,
+                    minWidth: 120,
                     borderColor: alpha('#00ED64', 0.5),
                     color: '#00ED64',
                     '&:hover': {
@@ -442,11 +450,89 @@ export function QuickPublishButton({
                   variant="outlined"
                   startIcon={<Share />}
                   onClick={handleShare}
-                  fullWidth
+                  sx={{ flex: 1, minWidth: 120 }}
                 >
                   Share
                 </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Code />}
+                  onClick={() => setShowEmbedCode(!showEmbedCode)}
+                  sx={{ flex: 1, minWidth: 120 }}
+                >
+                  {showEmbedCode ? 'Hide' : 'Embed'}
+                </Button>
               </Box>
+
+              {/* Embed Code Section */}
+              {showEmbedCode && publishedUrl && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    Embed Code
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: '#001E2B',
+                      borderRadius: 1,
+                      position: 'relative',
+                    }}
+                  >
+                    <Box
+                      component="pre"
+                      sx={{
+                        m: 0,
+                        color: '#00ED64',
+                        fontSize: '0.75rem',
+                        fontFamily: 'monospace',
+                        overflow: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {`<iframe
+  src="${publishedUrl}"
+  width="100%"
+  height="600px"
+  frameborder="0"
+  style="border: none; border-radius: 8px;"
+  title="${formName || formConfig.name || 'Form'}"
+></iframe>`}
+                    </Box>
+                    <Tooltip title="Copy embed code">
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          const embedCode = `<iframe
+  src="${publishedUrl}"
+  width="100%"
+  height="600px"
+  frameborder="0"
+  style="border: none; border-radius: 8px;"
+  title="${formName || formConfig.name || 'Form'}"
+></iframe>`;
+                          await navigator.clipboard.writeText(embedCode);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          color: 'white',
+                          bgcolor: alpha('#fff', 0.1),
+                          '&:hover': { bgcolor: alpha('#fff', 0.2) },
+                        }}
+                      >
+                        <ContentCopy fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Copy this code and paste it into your website HTML
+                  </Typography>
+                </Box>
+              )}
             </DialogContent>
 
             <DialogActions sx={{ px: 3, pb: 3 }}>

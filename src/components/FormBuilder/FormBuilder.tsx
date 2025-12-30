@@ -1200,6 +1200,9 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         onDraftSettingsChange={setDraftSettings}
         hooksConfig={hooksConfig}
         onHooksConfigChange={setHooksConfig}
+        formId={currentFormId}
+        formSlug={currentFormSlug}
+        isPublished={currentFormIsPublished}
       />
 
       {/* Data Source Setup Modal */}

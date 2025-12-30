@@ -15,7 +15,9 @@
       "Bash(npm test:*)",
       "Bash(node -e:*)",
       "Bash(cat:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(xargs:*)",
+      "Bash(timeout 15s npm run dev)"
     ]
   }
 }

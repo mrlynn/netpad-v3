@@ -32,6 +32,7 @@ import {
   Settings,
   AccountTree,
   Storage,
+  Payments,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -350,6 +351,17 @@ export function AppNavBar() {
                       <HelpOutline sx={{ fontSize: 18 }} />
                     </ListItemIcon>
                     <ListItemText primary="Help" secondary="Cmd+/" />
+                  </MenuItem>
+
+                  <MenuItem
+                    component={Link}
+                    href="/pricing"
+                    onClick={handleMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Payments sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Pricing" secondary="Plans & features" />
                   </MenuItem>
 
                   <MenuItem

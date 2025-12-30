@@ -455,3 +455,464 @@ export interface GenerateWorkflowResponse {
     totalTokens: number;
   };
 }
+
+// ============================================
+// Completion Hints Types
+// ============================================
+
+/**
+ * Request for completion hints as user types
+ */
+export interface CompletionHintsRequest {
+  /** The field type (short_text, email, phone, etc.) */
+  fieldType: string;
+  /** Current partial value the user has typed */
+  partialValue: string;
+  /** Field label for context */
+  fieldLabel: string;
+  /** Optional context about the form */
+  formContext?: {
+    /** Form name */
+    formName?: string;
+    /** Industry or domain */
+    industry?: string;
+    /** Previous responses for this field (for learning patterns) */
+    previousResponses?: string[];
+  };
+  /** Number of suggestions to return (default 5) */
+  limit?: number;
+}
+
+/**
+ * A single completion hint suggestion
+ */
+export interface CompletionHint {
+  /** The suggested completion value */
+  value: string;
+  /** Display text (may include highlighting) */
+  displayText: string;
+  /** Confidence score (0-1) */
+  confidence: number;
+}
+
+/**
+ * Response from completion hints generation
+ */
+export interface CompletionHintsResponse {
+  /** Whether generation was successful */
+  success: boolean;
+  /** Generated completion hints */
+  hints: CompletionHint[];
+  /** Error message if generation failed */
+  error?: string;
+  /** Token usage for billing/tracking */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
+// Response Insights Agent Types
+// ============================================
+
+/**
+ * Request for response insights analysis
+ */
+export interface ResponseInsightsRequest {
+  /** Form ID to analyze */
+  formId: string;
+  /** Form configuration for context */
+  form: {
+    name: string;
+    description?: string;
+    fieldConfigs: Array<{
+      path: string;
+      label: string;
+      type: string;
+      required?: boolean;
+    }>;
+  };
+  /** Sample of responses to analyze (max 100) */
+  responses: Array<Record<string, unknown>>;
+  /** Time range for analysis */
+  timeRange?: {
+    start: string;
+    end: string;
+  };
+  /** Areas to focus on */
+  focusAreas?: ('patterns' | 'anomalies' | 'trends' | 'quality')[];
+}
+
+/**
+ * A detected pattern in responses
+ */
+export interface ResponsePattern {
+  /** Description of the pattern */
+  description: string;
+  /** Which field(s) this pattern relates to */
+  fields: string[];
+  /** How often this pattern occurs (percentage) */
+  frequency: number;
+  /** Example values demonstrating the pattern */
+  examples: unknown[];
+  /** Pattern type */
+  type: 'common_value' | 'correlation' | 'sequence' | 'timing';
+}
+
+/**
+ * A detected anomaly in responses
+ */
+export interface ResponseAnomaly {
+  /** Description of the anomaly */
+  description: string;
+  /** Which field(s) this anomaly relates to */
+  fields: string[];
+  /** Severity of the anomaly */
+  severity: 'low' | 'medium' | 'high';
+  /** IDs or indices of affected responses */
+  affectedResponses: string[];
+  /** Anomaly type */
+  type: 'outlier' | 'duplicate' | 'spam' | 'incomplete' | 'invalid';
+}
+
+/**
+ * A trend detected in responses
+ */
+export interface ResponseTrend {
+  /** Metric being tracked */
+  metric: string;
+  /** Direction of the trend */
+  direction: 'increasing' | 'decreasing' | 'stable';
+  /** Percentage change */
+  change: number;
+  /** Description of the trend */
+  description: string;
+}
+
+/**
+ * Response from insights analysis
+ */
+export interface ResponseInsightsResponse {
+  /** Whether analysis was successful */
+  success: boolean;
+  /** Executive summary of insights */
+  summary?: string;
+  /** Detected patterns */
+  patterns?: ResponsePattern[];
+  /** Detected anomalies */
+  anomalies?: ResponseAnomaly[];
+  /** Detected trends */
+  trends?: ResponseTrend[];
+  /** Quality score (0-100) */
+  qualityScore?: number;
+  /** Recommendations for improving the form */
+  recommendations?: string[];
+  /** Error message if analysis failed */
+  error?: string;
+  /** Token usage */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
+// Form Optimization Agent Types
+// ============================================
+
+/**
+ * Request for form optimization analysis
+ */
+export interface FormOptimizationRequest {
+  /** Form ID to optimize */
+  formId: string;
+  /** Form configuration */
+  form: {
+    name: string;
+    description?: string;
+    fieldConfigs: Array<{
+      path: string;
+      label: string;
+      type: string;
+      required?: boolean;
+      placeholder?: string;
+      validation?: Record<string, unknown>;
+    }>;
+  };
+  /** Include response data for conversion analysis */
+  includeResponseData?: boolean;
+  /** Response statistics if available */
+  responseStats?: {
+    totalResponses: number;
+    completionRate: number;
+    averageCompletionTime: number;
+    fieldCompletionRates: Record<string, number>;
+    dropOffPoints: string[];
+  };
+}
+
+/**
+ * An optimization issue found in the form
+ */
+export interface OptimizationIssue {
+  /** Category of the issue */
+  type: 'ux' | 'conversion' | 'accessibility' | 'mobile' | 'performance';
+  /** Severity level */
+  severity: 'critical' | 'warning' | 'suggestion';
+  /** Which field this relates to (if applicable) */
+  field?: string;
+  /** Description of the issue */
+  description: string;
+  /** Recommended fix */
+  recommendation: string;
+  /** Estimated impact on conversion (0-100) */
+  estimatedImpact: number;
+}
+
+/**
+ * Response from optimization analysis
+ */
+export interface FormOptimizationResponse {
+  /** Whether analysis was successful */
+  success: boolean;
+  /** Overall optimization score (0-100) */
+  score?: number;
+  /** Detected issues */
+  issues?: OptimizationIssue[];
+  /** Quick wins that can be implemented immediately */
+  quickWins?: string[];
+  /** Suggested field reordering */
+  reorderSuggestions?: Array<{
+    from: number;
+    to: number;
+    reason: string;
+  }>;
+  /** Error message if analysis failed */
+  error?: string;
+  /** Token usage */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
+// Response Processing Agent Types
+// ============================================
+
+/**
+ * Request for processing a form response
+ */
+export interface ProcessResponseRequest {
+  /** The response data to process */
+  response: Record<string, unknown>;
+  /** Form configuration for context */
+  form: {
+    name: string;
+    fieldConfigs: Array<{
+      path: string;
+      label: string;
+      type: string;
+    }>;
+  };
+  /** Processing actions to perform */
+  actions: ('categorize' | 'extract' | 'sentiment' | 'summarize' | 'route')[];
+  /** Processing rules */
+  rules?: {
+    /** Categories for classification */
+    categories?: string[];
+    /** Fields to extract from free-text */
+    extractFields?: string[];
+    /** Routing rules */
+    routingRules?: Array<{
+      condition: string;
+      destination: string;
+    }>;
+  };
+}
+
+/**
+ * Response from processing
+ */
+export interface ProcessResponseResponse {
+  /** Whether processing was successful */
+  success: boolean;
+  /** Categorization result */
+  category?: {
+    primary: string;
+    secondary?: string;
+    confidence: number;
+  };
+  /** Extracted entities */
+  extracted?: Record<string, unknown>;
+  /** Sentiment analysis */
+  sentiment?: {
+    score: number; // -1 to 1
+    label: 'positive' | 'neutral' | 'negative';
+    confidence: number;
+  };
+  /** Summary of the response */
+  summary?: string;
+  /** Routing decision */
+  routing?: {
+    destination: string;
+    reason: string;
+  };
+  /** Error message if processing failed */
+  error?: string;
+  /** Token usage */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
+// Translation Agent Types
+// ============================================
+
+/**
+ * Request for translating form content
+ */
+export interface TranslateFormRequest {
+  /** Form ID to translate */
+  formId: string;
+  /** Form content to translate */
+  form: {
+    name: string;
+    description?: string;
+    fieldConfigs: Array<{
+      path: string;
+      label: string;
+      placeholder?: string;
+      helpText?: string;
+      options?: Array<{ label: string; value: string }>;
+      validation?: {
+        errorMessage?: string;
+      };
+    }>;
+  };
+  /** Source language (auto-detect if not specified) */
+  sourceLanguage?: string;
+  /** Target languages to translate to */
+  targetLanguages: string[];
+  /** Include validation messages */
+  includeValidationMessages?: boolean;
+}
+
+/**
+ * Translated form content for a single language
+ */
+export interface TranslatedForm {
+  /** Target language code */
+  language: string;
+  /** Translated form name */
+  name: string;
+  /** Translated description */
+  description?: string;
+  /** Translated field content */
+  fields: Array<{
+    path: string;
+    label: string;
+    placeholder?: string;
+    helpText?: string;
+    options?: Array<{ label: string; value: string }>;
+    errorMessage?: string;
+  }>;
+}
+
+/**
+ * Response from translation
+ */
+export interface TranslateFormResponse {
+  /** Whether translation was successful */
+  success: boolean;
+  /** Detected source language */
+  sourceLanguage?: string;
+  /** Translations for each target language */
+  translations?: TranslatedForm[];
+  /** Error message if translation failed */
+  error?: string;
+  /** Token usage */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
+// Compliance Audit Agent Types
+// ============================================
+
+/**
+ * Request for compliance audit
+ */
+export interface ComplianceAuditRequest {
+  /** Form ID to audit */
+  formId: string;
+  /** Form configuration */
+  form: {
+    name: string;
+    description?: string;
+    fieldConfigs: Array<{
+      path: string;
+      label: string;
+      type: string;
+      required?: boolean;
+      encryption?: {
+        enabled: boolean;
+        algorithm?: string;
+      };
+    }>;
+  };
+  /** Compliance frameworks to check against */
+  frameworks: ('GDPR' | 'HIPAA' | 'CCPA' | 'PCI-DSS' | 'SOC2')[];
+}
+
+/**
+ * A compliance violation or concern
+ */
+export interface ComplianceViolation {
+  /** Framework this relates to */
+  framework: string;
+  /** Regulation or rule being violated */
+  regulation: string;
+  /** Severity */
+  severity: 'critical' | 'warning' | 'info';
+  /** Which field this relates to */
+  field?: string;
+  /** Description of the issue */
+  description: string;
+  /** How to remediate */
+  remediation: string;
+}
+
+/**
+ * Response from compliance audit
+ */
+export interface ComplianceAuditResponse {
+  /** Whether audit was successful */
+  success: boolean;
+  /** Overall compliance score per framework */
+  scores?: Record<string, number>;
+  /** Detected violations */
+  violations?: ComplianceViolation[];
+  /** Recommendations for improving compliance */
+  recommendations?: string[];
+  /** Compliant aspects (positive findings) */
+  compliantAspects?: string[];
+  /** Error message if audit failed */
+  error?: string;
+  /** Token usage */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}

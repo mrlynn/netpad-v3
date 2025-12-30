@@ -36,6 +36,7 @@ import { SearchConfigEditor } from './SearchConfigEditor';
 import { DataSourceEditor } from './DataSourceEditor';
 import { AccessControlEditor } from './AccessControlEditor';
 import { BotProtectionEditor, DraftSettingsEditor } from './BotProtectionEditor';
+import { EmbedCodeGenerator } from './EmbedCodeGenerator';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -101,6 +102,10 @@ interface FormSettingsDrawerProps {
   // Hooks/Automation
   hooksConfig?: FormHooksConfig;
   onHooksConfigChange: (config: FormHooksConfig | undefined) => void;
+  // Embed
+  formId?: string;
+  formSlug?: string;
+  isPublished?: boolean;
 }
 
 export function FormSettingsDrawer({
@@ -135,6 +140,9 @@ export function FormSettingsDrawer({
   onDraftSettingsChange,
   hooksConfig,
   onHooksConfigChange,
+  formId,
+  formSlug,
+  isPublished,
 }: FormSettingsDrawerProps) {
   const [activeTab, setActiveTab] = useState(0);
 
@@ -335,6 +343,21 @@ export function FormSettingsDrawer({
             value={accessControl}
             onChange={onAccessControlChange}
           />
+
+          {/* Embed Code Generator - only show if form is published */}
+          {isPublished && formId && formSlug && (
+            <>
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                Embed Form
+              </Typography>
+              <EmbedCodeGenerator
+                formId={formId}
+                formSlug={formSlug}
+                formName={formName}
+              />
+            </>
+          )}
         </Box>
       </TabPanel>
 

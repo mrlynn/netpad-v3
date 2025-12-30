@@ -163,6 +163,163 @@ NetPad
   }
 }
 
+export interface SendContactNotificationParams {
+  name: string;
+  email: string;
+  company?: string;
+  interest: string;
+  message?: string;
+}
+
+const INTEREST_LABELS: Record<string, string> = {
+  demo: 'Request a demo',
+  pricing: 'Pricing inquiry',
+  support: 'Technical support',
+  partnership: 'Partnership opportunity',
+  other: 'Other',
+};
+
+export async function sendContactNotification({
+  name,
+  email,
+  company,
+  interest,
+  message,
+}: SendContactNotificationParams): Promise<boolean> {
+  const notifyEmail = process.env.SMTP_USER || 'michael@netpad.io';
+  const interestLabel = INTEREST_LABELS[interest] || interest;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Contact Form Submission</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #001E2B;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #001E2B; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #0a2633; border-radius: 12px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid rgba(0, 237, 100, 0.2);">
+              <div style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 16px;">
+                <span style="color: #001E2B; font-size: 20px; font-weight: 700;">NetPad</span>
+              </div>
+              <h1 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">New Contact Form Submission</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Name</span><br>
+                    <span style="color: #ffffff; font-size: 16px; font-weight: 500;">${name}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Email</span><br>
+                    <a href="mailto:${email}" style="color: #00ED64; font-size: 16px; font-weight: 500; text-decoration: none;">${email}</a>
+                  </td>
+                </tr>
+                ${company ? `
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Company</span><br>
+                    <span style="color: #ffffff; font-size: 16px; font-weight: 500;">${company}</span>
+                  </td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Interest</span><br>
+                    <span style="display: inline-block; background: rgba(0, 237, 100, 0.15); color: #00ED64; padding: 4px 12px; border-radius: 4px; font-size: 14px; font-weight: 500; margin-top: 4px;">${interestLabel}</span>
+                  </td>
+                </tr>
+                ${message ? `
+                <tr>
+                  <td style="padding: 12px 0;">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Message</span><br>
+                    <p style="color: rgba(255, 255, 255, 0.85); font-size: 15px; line-height: 1.6; margin: 8px 0 0; white-space: pre-wrap;">${message}</p>
+                  </td>
+                </tr>
+                ` : ''}
+              </table>
+
+              <!-- Reply Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="mailto:${email}?subject=Re: Your NetPad Inquiry" style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); color: #001E2B; text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 28px; border-radius: 8px;">
+                      Reply to ${name.split(' ')[0]}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background: rgba(0, 0, 0, 0.2); text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; line-height: 1.5; margin: 0;">
+                This message was sent from the NetPad contact form.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  const text = `
+New Contact Form Submission
+
+Name: ${name}
+Email: ${email}
+${company ? `Company: ${company}\n` : ''}Interest: ${interestLabel}
+${message ? `\nMessage:\n${message}` : ''}
+
+--
+NetPad Contact Form
+`;
+
+  try {
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: notifyEmail,
+      replyTo: email,
+      subject: `[NetPad Contact] ${interestLabel} from ${name}`,
+      text,
+      html,
+    });
+
+    // In development without SMTP, log the submission
+    if (process.env.NODE_ENV !== 'production' && !EMAIL_CONFIG.auth.user) {
+      console.log('\n📧 Contact Form Notification (Dev Mode)');
+      console.log('From:', name, `<${email}>`);
+      console.log('Interest:', interestLabel);
+      console.log('Message:', message || '(none)');
+      console.log('');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to send contact notification:', error);
+    return false;
+  }
+}
+
 export async function sendPasskeyRegisteredEmail(to: string, deviceName: string): Promise<boolean> {
   const html = `
 <!DOCTYPE html>

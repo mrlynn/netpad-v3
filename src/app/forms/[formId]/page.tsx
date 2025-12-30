@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
   Container,
@@ -41,7 +41,13 @@ interface AccessResult {
 export default function PublicFormPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formId = params.formId as string;
+
+  // Read embed parameters from query string
+  const hideHeader = searchParams.get('hideHeader') === 'true';
+  const hideBranding = searchParams.get('hideBranding') === 'true';
+  const embedTheme = searchParams.get('theme') as 'light' | 'dark' | 'auto' | null;
 
   const [form, setForm] = useState<FormConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
@@ -411,8 +417,8 @@ export default function PublicFormPage() {
   return (
     <Box sx={pageBackgroundStyles}>
     <Container maxWidth="md" sx={{ py: 4 }}>
-      {/* Form Header - only show if no header banner with title is configured */}
-      {!hasHeaderWithTitle && (
+      {/* Form Header - only show if no header banner with title is configured and not hidden by embed params */}
+      {!hasHeaderWithTitle && !hideHeader && (
         <Box sx={{ mb: 4, textAlign: 'center' }}>
           {form.branding?.logoUrl && (
             <Box
@@ -526,8 +532,8 @@ export default function PublicFormPage() {
         </Box>
       </Drawer>
 
-      {/* Footer */}
-      {form.branding?.showPoweredBy !== false && (
+      {/* Footer - hide if hideBranding is true */}
+      {form.branding?.showPoweredBy !== false && !hideBranding && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
             Powered by NetPad

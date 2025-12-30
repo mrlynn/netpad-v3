@@ -1041,6 +1041,18 @@ export default function LandingPage() {
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Typography
                 component={Link}
+                href="/pricing"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Pricing
+              </Typography>
+              <Typography
+                component={Link}
                 href="/privacy"
                 variant="body2"
                 sx={{
