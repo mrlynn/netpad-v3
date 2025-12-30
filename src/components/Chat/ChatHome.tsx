@@ -196,7 +196,7 @@ export function ChatHome({ onAskQuestion, onClose }: ChatHomeProps) {
         <ActionCard
           title="Read Our Documentation"
           icon={<ExternalIcon fontSize="small" />}
-          href="#"
+          href="https://docs.netpad.io"
           isExternal
         />
 
