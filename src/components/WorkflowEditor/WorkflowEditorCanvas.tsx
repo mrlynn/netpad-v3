@@ -28,6 +28,7 @@ import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
 import { EmptyWorkflowState, WorkflowTemplate } from './Panels/EmptyWorkflowState';
+import { GeneratedWorkflow } from '@/lib/ai/types';
 
 // Node components
 import { BaseNode } from './Nodes/BaseNode';
@@ -354,6 +355,55 @@ export function WorkflowEditorCanvas({
     }, 100);
   }, [readOnly, addNode, addWorkflowEdge]);
 
+  // Handle AI-generated workflow
+  const handleGenerateWorkflow = useCallback((generatedWorkflow: GeneratedWorkflow) => {
+    if (readOnly) return;
+
+    // Map tempIds to real node IDs
+    const tempIdToRealId: Record<string, string> = {};
+
+    // Create nodes from generated workflow
+    generatedWorkflow.nodes.forEach((genNode) => {
+      const nodeId = `${genNode.type}_${nanoid(8)}`;
+      tempIdToRealId[genNode.tempId] = nodeId;
+
+      const newNode: WorkflowNode = {
+        id: nodeId,
+        type: genNode.type,
+        label: genNode.label,
+        position: genNode.position,
+        config: genNode.config || {},
+        enabled: genNode.enabled,
+      };
+
+      addNode(newNode);
+    });
+
+    // Create edges from generated workflow
+    generatedWorkflow.edges.forEach((genEdge) => {
+      const sourceId = tempIdToRealId[genEdge.sourceTempId];
+      const targetId = tempIdToRealId[genEdge.targetTempId];
+
+      if (sourceId && targetId) {
+        const newEdge: WorkflowEdge = {
+          id: `edge_${nanoid(8)}`,
+          source: sourceId,
+          sourceHandle: genEdge.sourceHandle || 'output',
+          target: targetId,
+          targetHandle: genEdge.targetHandle || 'input',
+          condition: genEdge.condition,
+        };
+
+        addWorkflowEdge(newEdge);
+      }
+    });
+
+    // Fit view after adding nodes
+    setTimeout(() => {
+      reactFlowInstance.current?.fitView({ padding: 0.2 });
+    }, 100);
+  }, [readOnly, addNode, addWorkflowEdge]);
+
   // Handle drop (for drag and drop from palette)
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -551,6 +601,7 @@ export function WorkflowEditorCanvas({
         <EmptyWorkflowState
           onAddNode={handleAddNodeFromEmpty}
           onLoadTemplate={handleLoadTemplate}
+          onGenerateWorkflow={handleGenerateWorkflow}
         />
       )}
     </Box>

@@ -347,3 +347,111 @@ export interface AIGenerationMetadata {
   /** Whether user modified after generation */
   modified?: boolean;
 }
+
+// ============================================
+// Workflow Generation Types
+// ============================================
+
+/**
+ * Request for generating a workflow from natural language
+ */
+export interface GenerateWorkflowRequest {
+  /** Natural language description of the workflow */
+  prompt: string;
+  /** Optional context about the workflow's purpose */
+  context?: {
+    /** Industry or domain (e.g., "ecommerce", "hr") */
+    industry?: string;
+    /** Existing forms that can be used as triggers */
+    availableForms?: Array<{ id: string; name: string }>;
+    /** Existing connections for integrations */
+    availableConnections?: Array<{ id: string; name: string; type: string }>;
+  };
+  /** Generation options */
+  options?: {
+    /** Maximum number of nodes to generate */
+    maxNodes?: number;
+    /** Include specific trigger type */
+    preferredTrigger?: 'manual' | 'form' | 'webhook' | 'schedule';
+    /** Include AI nodes */
+    includeAINodes?: boolean;
+  };
+}
+
+/**
+ * Generated workflow structure
+ */
+export interface GeneratedWorkflow {
+  /** Workflow name */
+  name: string;
+  /** Workflow description */
+  description?: string;
+  /** Generated nodes */
+  nodes: GeneratedWorkflowNode[];
+  /** Generated edges/connections */
+  edges: GeneratedWorkflowEdge[];
+  /** Suggested workflow settings */
+  settings?: {
+    executionMode?: 'sequential' | 'parallel' | 'auto';
+    errorHandling?: 'stop' | 'continue';
+  };
+}
+
+/**
+ * Generated workflow node
+ */
+export interface GeneratedWorkflowNode {
+  /** Temporary ID for edge references */
+  tempId: string;
+  /** Node type (e.g., 'form-trigger', 'email-send') */
+  type: string;
+  /** Display label */
+  label: string;
+  /** Position on canvas */
+  position: { x: number; y: number };
+  /** Node configuration */
+  config: Record<string, unknown>;
+  /** Whether the node is enabled */
+  enabled: boolean;
+}
+
+/**
+ * Generated workflow edge
+ */
+export interface GeneratedWorkflowEdge {
+  /** Source node tempId */
+  sourceTempId: string;
+  /** Source handle */
+  sourceHandle: string;
+  /** Target node tempId */
+  targetTempId: string;
+  /** Target handle */
+  targetHandle: string;
+  /** Optional condition for conditional edges */
+  condition?: {
+    expression: string;
+    label?: string;
+  };
+}
+
+/**
+ * Response from workflow generation
+ */
+export interface GenerateWorkflowResponse {
+  /** Whether generation was successful */
+  success: boolean;
+  /** Generated workflow configuration */
+  workflow?: GeneratedWorkflow;
+  /** Confidence score (0-1) for the generation */
+  confidence: number;
+  /** Suggestions or warnings */
+  suggestions?: string[];
+  /** Error message if generation failed */
+  error?: string;
+  /** Token usage for billing/tracking */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}

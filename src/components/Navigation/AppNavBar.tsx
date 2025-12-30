@@ -44,6 +44,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  color: string;
   matchPaths?: string[]; // Additional paths that should highlight this nav item
 }
 
@@ -52,17 +53,20 @@ const NAV_ITEMS: NavItem[] = [
     href: '/my-forms',
     label: 'Forms',
     icon: <Folder sx={{ fontSize: 18 }} />,
-    matchPaths: ['/forms'],
+    color: '#00ED64',
+    matchPaths: ['/forms', '/builder'],
   },
   {
     href: '/workflows',
     label: 'Workflows',
     icon: <AccountTree sx={{ fontSize: 18 }} />,
+    color: '#9C27B0',
   },
   {
     href: '/data',
     label: 'Data',
     icon: <Storage sx={{ fontSize: 18 }} />,
+    color: '#2196F3',
   },
 ];
 
@@ -188,15 +192,15 @@ export function AppNavBar() {
                 minWidth: 'auto',
                 px: 1.5,
                 py: 0.5,
-                color: isActive ? '#00ED64' : 'text.secondary',
-                bgcolor: isActive ? alpha('#00ED64', 0.1) : 'transparent',
+                color: isActive ? item.color : 'text.secondary',
+                bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
                 borderRadius: 1,
                 textTransform: 'none',
                 fontWeight: isActive ? 600 : 500,
                 fontSize: '0.8125rem',
                 '&:hover': {
-                  bgcolor: alpha('#00ED64', 0.15),
-                  color: '#00ED64'
+                  bgcolor: alpha(item.color, 0.15),
+                  color: item.color
                 },
                 transition: 'all 0.15s ease'
               }}

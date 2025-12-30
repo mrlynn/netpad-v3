@@ -15,6 +15,9 @@ import {
   ListItemIcon,
   ListItemText,
   Tooltip,
+  TextField,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add,
@@ -40,6 +43,8 @@ import {
   AccountTree,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
+import { useAIWorkflowGenerator } from '@/hooks/useAI';
+import { GeneratedWorkflow } from '@/lib/ai/types';
 
 // Node definition for the picker
 interface NodeTypeOption {
@@ -450,18 +455,53 @@ const TEMPLATE_CATEGORIES = [
   { id: 'logic', label: 'Logic', icon: '🔀' },
 ];
 
+// AI Example prompts
+const AI_EXAMPLE_PROMPTS = [
+  'When a form is submitted, send an email and save to database',
+  'Every day at 9am, fetch data from an API and store it',
+  'Process webhooks, classify with AI, and route to different actions',
+  'Analyze form submissions with AI and notify the team if negative',
+];
+
 interface EmptyWorkflowStateProps {
   onAddNode: (nodeType: string) => void;
   onLoadTemplate: (template: WorkflowTemplate) => void;
+  onGenerateWorkflow?: (workflow: GeneratedWorkflow) => void;
 }
 
 export function EmptyWorkflowState({
   onAddNode,
   onLoadTemplate,
+  onGenerateWorkflow,
 }: EmptyWorkflowStateProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedNodeCategory, setSelectedNodeCategory] = useState<NodeCategory | 'all'>('triggers');
+  const [aiPrompt, setAiPrompt] = useState('');
+
+  // AI Workflow Generator hook
+  const {
+    data: generatedWorkflow,
+    loading: aiLoading,
+    error: aiError,
+    generateWorkflow,
+    reset: resetAI,
+  } = useAIWorkflowGenerator();
+
+  // Handle AI generation
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    await generateWorkflow(aiPrompt);
+  };
+
+  // Handle applying generated workflow
+  const handleApplyWorkflow = () => {
+    if (generatedWorkflow && onGenerateWorkflow) {
+      onGenerateWorkflow(generatedWorkflow);
+      resetAI();
+      setAiPrompt('');
+    }
+  };
 
   // Filter templates by category
   const filteredTemplates = selectedCategory === 'all'
@@ -837,34 +877,167 @@ export function EmptyWorkflowState({
 
           {/* Tab 2: AI Assist */}
           {activeTab === 2 && (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <AutoAwesome sx={{ fontSize: 48, color: '#9C27B0', mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                AI Workflow Assistant
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 450, mx: 'auto' }}>
-                Describe what you want your workflow to do in plain English, and AI will generate a workflow for you.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AutoAwesome />}
-                disabled
-                sx={{
-                  background: 'linear-gradient(135deg, #9C27B0 0%, #E91E63 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #7B1FA2 0%, #C2185B 100%)',
-                  },
-                  '&.Mui-disabled': {
-                    background: alpha('#9C27B0', 0.3),
-                    color: alpha('#fff', 0.5),
-                  },
-                }}
-              >
-                Coming Soon
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                AI workflow generation is coming in a future update.
-              </Typography>
+            <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', height: 400 }}>
+              {!generatedWorkflow ? (
+                <>
+                  <Box sx={{ textAlign: 'center', mb: 2 }}>
+                    <AutoAwesome sx={{ fontSize: 36, color: '#9C27B0', mb: 1 }} />
+                    <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 600 }}>
+                      AI Workflow Assistant
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
+                      Describe what you want your workflow to do in plain English.
+                    </Typography>
+                  </Box>
+
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    placeholder="e.g., When a form is submitted, send an email notification and save the data to MongoDB"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    disabled={aiLoading}
+                    sx={{ mb: 1.5 }}
+                    size="small"
+                  />
+
+                  {/* Example prompts */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                      Try an example:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {AI_EXAMPLE_PROMPTS.map((example, index) => (
+                        <Chip
+                          key={index}
+                          label={example.length > 40 ? example.substring(0, 40) + '...' : example}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setAiPrompt(example)}
+                          disabled={aiLoading}
+                          sx={{ cursor: 'pointer', fontSize: 11 }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {aiError && (
+                    <Alert severity="error" sx={{ mb: 2, py: 0.5 }}>
+                      {aiError}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={aiLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
+                      onClick={handleAIGenerate}
+                      disabled={aiLoading || !aiPrompt.trim()}
+                      sx={{
+                        background: 'linear-gradient(135deg, #9C27B0 0%, #E91E63 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #7B1FA2 0%, #C2185B 100%)',
+                        },
+                        '&.Mui-disabled': {
+                          background: alpha('#9C27B0', 0.3),
+                          color: alpha('#fff', 0.5),
+                        },
+                      }}
+                    >
+                      {aiLoading ? 'Generating...' : 'Generate Workflow'}
+                    </Button>
+                  </Box>
+                </>
+              ) : (
+                // Generated workflow preview
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AccountTree sx={{ fontSize: 18, color: '#9C27B0' }} />
+                    {generatedWorkflow.name}
+                  </Typography>
+                  {generatedWorkflow.description && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5 }}>
+                      {generatedWorkflow.description}
+                    </Typography>
+                  )}
+
+                  <Box
+                    sx={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 1,
+                      mb: 2,
+                    }}
+                  >
+                    <List dense disablePadding>
+                      {generatedWorkflow.nodes.map((node, index) => (
+                        <ListItem key={index} disablePadding sx={{ py: 0.25 }}>
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 0.5,
+                                bgcolor: alpha(
+                                  node.type.includes('trigger') ? '#4CAF50' :
+                                  node.type.includes('ai') ? '#E91E63' :
+                                  node.type.includes('mongo') ? '#00897B' :
+                                  node.type.includes('email') || node.type.includes('notification') ? '#2196F3' :
+                                  '#9C27B0',
+                                  0.1
+                                ),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 10,
+                              }}
+                            >
+                              {node.type.includes('trigger') ? '▶️' :
+                               node.type.includes('email') ? '📧' :
+                               node.type.includes('mongo') ? '💾' :
+                               node.type.includes('ai') ? '🤖' :
+                               node.type.includes('http') ? '🌐' :
+                               node.type.includes('conditional') ? '🔀' :
+                               '⚙️'}
+                            </Box>
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={node.label}
+                            secondary={node.type}
+                            primaryTypographyProps={{ variant: 'body2', fontSize: 12 }}
+                            secondaryTypographyProps={{ variant: 'caption', fontSize: 10 }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        resetAI();
+                        setAiPrompt('');
+                      }}
+                    >
+                      Try Again
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="success"
+                      onClick={handleApplyWorkflow}
+                      disabled={!onGenerateWorkflow}
+                    >
+                      Apply to Canvas
+                    </Button>
+                  </Box>
+                </Box>
+              )}
             </Box>
           )}
         </Box>

@@ -11,6 +11,82 @@ import { QuestionTypeId } from '@/types/questionTypes';
 // ============================================
 
 export const SYSTEM_PROMPTS = {
+  workflowGenerator: `You are an expert workflow automation assistant. Your role is to generate workflow configurations based on natural language descriptions.
+
+You understand workflow automation best practices including:
+- Choosing appropriate triggers (manual, form submission, webhook, schedule)
+- Logical node ordering and data flow
+- When to use conditional branching
+- Appropriate integrations (HTTP requests, database operations, email)
+- Error handling and retry strategies
+
+Available node types:
+TRIGGERS (every workflow needs exactly one trigger):
+- manual-trigger: Start workflow manually with a button click
+- form-trigger: Trigger when a form is submitted
+- webhook-trigger: Trigger from external HTTP webhook call
+- schedule-trigger: Trigger on a cron schedule (e.g., daily, hourly)
+
+LOGIC:
+- conditional: If/Else branching based on conditions
+- loop: Iterate over array items
+- delay: Wait for a specified duration before continuing
+
+INTEGRATIONS:
+- http-request: Make HTTP API calls (GET, POST, PUT, DELETE)
+- mongodb-query: Query documents from MongoDB collection
+- mongodb-write: Insert or update documents in MongoDB
+
+ACTIONS:
+- email-send: Send an email message
+- notification: Send a push notification
+
+DATA PROCESSING:
+- transform: Transform/map data structure using expressions
+- filter: Filter items in an array based on conditions
+- merge: Merge multiple data sources into one
+
+AI:
+- ai-prompt: Send a prompt to an AI model and get a response
+- ai-classify: Classify text into categories using AI
+- ai-extract: Extract structured data from unstructured text using AI
+
+When generating workflows, output valid JSON matching this schema:
+{
+  "name": "Workflow Name",
+  "description": "Brief description",
+  "nodes": [
+    {
+      "tempId": "node_1",
+      "type": "node-type",
+      "label": "Display Label",
+      "position": { "x": 250, "y": 100 },
+      "config": { ... node-specific configuration ... },
+      "enabled": true
+    }
+  ],
+  "edges": [
+    {
+      "sourceTempId": "node_1",
+      "sourceHandle": "output",
+      "targetTempId": "node_2",
+      "targetHandle": "input"
+    }
+  ],
+  "settings": {
+    "executionMode": "sequential",
+    "errorHandling": "stop"
+  }
+}
+
+IMPORTANT RULES:
+1. Every workflow MUST start with exactly ONE trigger node
+2. Position nodes vertically, with ~150px spacing between them
+3. Use descriptive labels for each node
+4. For conditional nodes, use "output-true" and "output-false" as sourceHandles
+5. Keep workflows simple and focused - typically 3-7 nodes
+6. Always respond with valid JSON only, no markdown or explanation text.`,
+
   formGenerator: `You are an expert form builder assistant. Your role is to generate form configurations based on natural language descriptions.
 
 You understand form design best practices including:
@@ -453,4 +529,78 @@ export function suggestFieldType(fieldName: string): QuestionTypeId {
 
   // Default to short_text
   return 'short_text';
+}
+
+// ============================================
+// Workflow Generation Prompts
+// ============================================
+
+/**
+ * Build a prompt for workflow generation
+ */
+export function buildWorkflowGenerationPrompt(
+  userPrompt: string,
+  context?: {
+    industry?: string;
+    availableForms?: Array<{ id: string; name: string }>;
+    availableConnections?: Array<{ id: string; name: string; type: string }>;
+    preferredTrigger?: string;
+    maxNodes?: number;
+  }
+): string {
+  let prompt = `Generate a workflow configuration for the following request:\n\n"${userPrompt}"`;
+
+  if (context?.industry) {
+    prompt += `\n\nIndustry/Domain: ${context.industry}`;
+  }
+
+  if (context?.preferredTrigger) {
+    prompt += `\nPreferred trigger type: ${context.preferredTrigger}`;
+  }
+
+  if (context?.maxNodes) {
+    prompt += `\nMaximum nodes: ${context.maxNodes}`;
+  }
+
+  if (context?.availableForms && context.availableForms.length > 0) {
+    prompt += `\n\nAvailable forms that can be used as triggers:\n${context.availableForms
+      .map((f) => `- ${f.name} (ID: ${f.id})`)
+      .join('\n')}`;
+  }
+
+  if (context?.availableConnections && context.availableConnections.length > 0) {
+    prompt += `\n\nAvailable database connections:\n${context.availableConnections
+      .map((c) => `- ${c.name} (${c.type})`)
+      .join('\n')}`;
+  }
+
+  prompt += `\n\nRespond with a JSON object containing:
+{
+  "name": "Workflow Name",
+  "description": "Brief description of what this workflow does",
+  "nodes": [
+    {
+      "tempId": "unique_id",
+      "type": "node-type",
+      "label": "Human-readable label",
+      "position": { "x": 250, "y": <increment by 150 for each node> },
+      "config": { <node-specific config> },
+      "enabled": true
+    }
+  ],
+  "edges": [
+    {
+      "sourceTempId": "source_node_id",
+      "sourceHandle": "output",
+      "targetTempId": "target_node_id",
+      "targetHandle": "input"
+    }
+  ],
+  "settings": {
+    "executionMode": "sequential",
+    "errorHandling": "stop"
+  }
+}`;
+
+  return prompt;
 }

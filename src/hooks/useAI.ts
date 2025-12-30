@@ -12,6 +12,8 @@ import {
   GenerateFormulaResponse,
   GenerateValidationResponse,
   GenerateConditionalLogicResponse,
+  GenerateWorkflowResponse,
+  GeneratedWorkflow,
 } from '@/lib/ai/types';
 
 // ============================================
@@ -345,4 +347,84 @@ export function useAIStatus() {
   }, []);
 
   return { available, loading, checkStatus };
+}
+
+// ============================================
+// Workflow Generation Hooks
+// ============================================
+
+interface UseAIWorkflowGeneratorReturn extends UseAIState<GeneratedWorkflow> {
+  generateWorkflow: (
+    prompt: string,
+    context?: {
+      industry?: string;
+      availableForms?: Array<{ id: string; name: string }>;
+      availableConnections?: Array<{ id: string; name: string; type: string }>;
+    },
+    options?: {
+      maxNodes?: number;
+      preferredTrigger?: 'manual' | 'form' | 'webhook' | 'schedule';
+      includeAINodes?: boolean;
+    }
+  ) => Promise<void>;
+  reset: () => void;
+  suggestions: string[];
+  confidence: number;
+}
+
+/**
+ * Hook for AI-powered workflow generation
+ */
+export function useAIWorkflowGenerator(): UseAIWorkflowGeneratorReturn {
+  const [data, setData] = useState<GeneratedWorkflow | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [confidence, setConfidence] = useState(0);
+
+  const generateWorkflow = useCallback(
+    async (
+      prompt: string,
+      context?: {
+        industry?: string;
+        availableForms?: Array<{ id: string; name: string }>;
+        availableConnections?: Array<{ id: string; name: string; type: string }>;
+      },
+      options?: {
+        maxNodes?: number;
+        preferredTrigger?: 'manual' | 'form' | 'webhook' | 'schedule';
+        includeAINodes?: boolean;
+      }
+    ) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await fetchAI<GenerateWorkflowResponse>('/api/ai/generate-workflow', {
+          prompt,
+          context,
+          options,
+        });
+
+        setData(result.workflow || null);
+        setSuggestions(result.suggestions || []);
+        setConfidence(result.confidence);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to generate workflow');
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+    setSuggestions([]);
+    setConfidence(0);
+  }, []);
+
+  return { data, loading, error, generateWorkflow, reset, suggestions, confidence };
 }
