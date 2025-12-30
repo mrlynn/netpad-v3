@@ -29,13 +29,17 @@ import {
   Tune,
   Code,
   TrendingUp,
+  AccountTree,
+  PlayArrow,
+  Schedule,
 } from '@mui/icons-material';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const heroStats = [
   { value: '30+', label: 'Field Types' },
   { value: '100+', label: 'API Endpoints' },
-  { value: 'Free', label: 'M0 Cluster' },
+  { value: 'Free', label: 'MongoDB Atlas' },
 ];
 
 const features = [
@@ -101,6 +105,29 @@ const aiFeatures = [
   { icon: <Functions />, title: 'Formula Helper', description: 'Generate and explain calculated field formulas' },
 ];
 
+const workflowFeatures = [
+  {
+    icon: <AccountTree sx={{ fontSize: 28 }} />,
+    title: 'Visual Workflow Builder',
+    description: 'Design automation flows with our drag-and-drop canvas. No coding required.',
+  },
+  {
+    icon: <PlayArrow sx={{ fontSize: 28 }} />,
+    title: 'MongoDB Triggers',
+    description: 'React to database events like inserts, updates, and deletes automatically.',
+  },
+  {
+    icon: <Schedule sx={{ fontSize: 28 }} />,
+    title: 'Scheduled Jobs',
+    description: 'Run workflows on a schedule with cron expressions. Perfect for reports and maintenance.',
+  },
+  {
+    icon: <Webhook sx={{ fontSize: 28 }} />,
+    title: 'Data Transformations',
+    description: 'Transform, filter, and route data between collections and external services.',
+  },
+];
+
 const useCases = [
   {
     title: 'Customer Feedback',
@@ -160,13 +187,50 @@ export default function LandingPage() {
       {/* Hero Section */}
       <Box
         sx={{
-          pt: { xs: 8, md: 12 },
+          pt: { xs: 6, md: 8 },
           pb: { xs: 8, md: 10 },
-          background: 'radial-gradient(ellipse at top, rgba(0, 237, 100, 0.12) 0%, transparent 50%)'
+          background: 'radial-gradient(ellipse at top, rgba(0, 237, 100, 0.15) 0%, transparent 60%)'
         }}
       >
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
+            {/* Logo */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                mb: 3,
+              }}
+            >
+              <Image
+                src="/logo-250x250-trans.png"
+                alt="NetPad"
+                width={120}
+                height={120}
+                priority
+                style={{
+                  filter: 'drop-shadow(0 8px 24px rgba(0, 237, 100, 0.2))',
+                }}
+              />
+            </Box>
+
+            {/* Brand Name */}
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2rem', md: '2.5rem' },
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              NetPad
+            </Typography>
+
             <Chip
               label="Open Source"
               icon={<GitHub sx={{ fontSize: 16 }} />}
@@ -178,17 +242,18 @@ export default function LandingPage() {
                 '& .MuiChip-icon': { color: '#00ED64' }
               }}
             />
+
             <Typography
               variant="h1"
               sx={{
-                fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
+                fontSize: { xs: '2rem', md: '3rem', lg: '3.5rem' },
                 fontWeight: 700,
                 color: '#fff',
                 mb: 2,
                 lineHeight: 1.2
               }}
             >
-              Build MongoDB Forms
+              Build MongoDB Forms & Workflows
               <Box
                 component="span"
                 sx={{
@@ -206,14 +271,15 @@ export default function LandingPage() {
               variant="h5"
               sx={{
                 color: alpha('#fff', 0.7),
-                maxWidth: 750,
+                maxWidth: 800,
                 mx: 'auto',
                 mb: 4,
                 fontWeight: 400,
-                lineHeight: 1.6
+                lineHeight: 1.6,
+                fontSize: { xs: '1rem', md: '1.25rem' }
               }}
             >
-              Create beautiful data entry forms, surveys, and search interfaces connected directly to MongoDB.
+              Create beautiful data entry forms, automate workflows, and manage data—all connected directly to MongoDB.
               AI-powered. Enterprise-ready. Free to start.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mb: 4 }}>
@@ -244,9 +310,10 @@ export default function LandingPage() {
               </Button>
               <Button
                 component={Link}
-                href="/my-forms"
+                href="/workflows"
                 variant="outlined"
                 size="large"
+                startIcon={<AccountTree />}
                 sx={{
                   px: 4,
                   py: 1.5,
@@ -262,7 +329,7 @@ export default function LandingPage() {
                   }
                 }}
               >
-                Forms
+                Explore Workflows
               </Button>
             </Box>
 
@@ -455,8 +522,109 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* How It Works */}
+      {/* Workflow Automation Section */}
       <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <Chip
+                label="New"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#00ED64', 0.2),
+                  color: '#00ED64',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                }}
+              />
+              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Automate Your
+                <br />
+                <Box
+                  component="span"
+                  sx={{
+                    background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  MongoDB Workflows
+                </Box>
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Build powerful automations that respond to database events, run on schedules,
+                and transform data—all without writing code. Connect forms to workflows for
+                end-to-end data pipelines.
+              </Typography>
+              <Button
+                component={Link}
+                href="/workflows"
+                variant="contained"
+                startIcon={<AccountTree />}
+                sx={{
+                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                  color: '#001E2B',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
+                  }
+                }}
+              >
+                Build a Workflow
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Grid container spacing={2}>
+                {workflowFeatures.map((feature, index) => (
+                  <Grid item xs={12} sm={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 3,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          bgcolor: alpha('#00ED64', 0.05),
+                          borderColor: alpha('#00ED64', 0.3),
+                        }
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 1.5,
+                          bgcolor: alpha('#00ED64', 0.1),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#00ED64',
+                          mb: 2
+                        }}
+                      >
+                        {feature.icon}
+                      </Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: alpha('#fff', 0.5) }}>
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* How It Works */}
+      <Box sx={{ py: { xs: 8, md: 12 } }}>
         <Container maxWidth="lg">
           <Typography
             variant="h3"

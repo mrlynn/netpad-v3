@@ -19,7 +19,6 @@ import {
   Avatar,
 } from '@mui/material';
 import {
-  Home,
   GitHub,
   HelpOutline,
   Login,
@@ -35,6 +34,7 @@ import {
   Storage,
 } from '@mui/icons-material';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
@@ -129,38 +129,47 @@ export function AppNavBar() {
       >
         {/* Logo / Home */}
         <Tooltip title="Back to home">
-          <IconButton
+          <Box
             component={Link}
             href="/"
-            size="small"
             sx={{
-              color: '#00ED64',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              textDecoration: 'none',
+              borderRadius: 1,
+              px: 0.5,
+              py: 0.25,
               '&:hover': {
                 bgcolor: alpha('#00ED64', 0.1)
-              }
+              },
+              transition: 'background-color 0.15s ease'
             }}
           >
-            <Home sx={{ fontSize: 20 }} />
-          </IconButton>
+            <Image
+              src="/logo-250x250-trans.png"
+              alt="NetPad"
+              width={28}
+              height={28}
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 237, 100, 0.2))',
+              }}
+            />
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                display: { xs: 'none', sm: 'block' }
+              }}
+            >
+              NetPad
+            </Typography>
+          </Box>
         </Tooltip>
-
-        {/* App Title */}
-        <Typography
-          variant="subtitle2"
-          component={Link}
-          href="/"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textDecoration: 'none',
-            display: { xs: 'none', sm: 'block' }
-          }}
-        >
-          NetPad
-        </Typography>
 
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
