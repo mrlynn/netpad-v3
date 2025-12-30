@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
+import { validateAIRequestWithGuestAccess, recordAIUsage, recordGuestUsage } from '@/lib/ai/aiRequestGuard';
 import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext, WorkflowBuilderContext } from '@/types/chat';
 
 // ============================================
@@ -396,17 +396,77 @@ function parseActionFromResponse(content: string): { message: string; action?: C
 }
 
 // ============================================
+// Contact/Support Detection
+// ============================================
+
+const CONTACT_KEYWORDS = [
+  'contact', 'support', 'help', 'sales', 'demo', 'pricing', 'price', 'cost',
+  'enterprise', 'plan', 'subscription', 'talk to', 'speak to', 'reach out',
+  'get in touch', 'call', 'phone', 'email', 'question about', 'interested in',
+  'how much', 'free trial', 'trial', 'sign up', 'partnership', 'integrate',
+  'api access', 'custom', 'hello', 'hi', 'hey', 'good morning', 'good afternoon'
+];
+
+const GENERAL_SUPPORT_PROMPT = `You are a friendly customer support assistant for NetPad, a platform that helps users build forms and workflows connected to MongoDB.
+
+## About NetPad
+- NetPad lets you create forms that save data directly to MongoDB
+- Forms support 30+ field types including text, email, phone, date, file uploads, signatures, and more
+- Includes AI-powered features for form generation and field suggestions
+- Supports workflow automation (triggers, conditions, actions)
+- Offers field-level encryption for sensitive data (MongoDB Queryable Encryption)
+- Teams can collaborate on forms with role-based access
+
+## Pricing
+- Free tier: 3 forms, 100 responses/month, basic features
+- Pro tier: Unlimited forms, 10,000 responses/month, AI features, webhooks
+- Enterprise: Custom pricing, SSO, audit logs, dedicated support
+
+## How to Help
+- For demos or sales inquiries: Direct them to /contact or suggest they fill out the contact form
+- For technical questions: Provide helpful answers about NetPad's capabilities
+- For pricing questions: Share the tier information above
+- For account issues: Suggest they check Settings or contact support via /contact
+
+## Guidelines
+- Be friendly and helpful
+- Keep responses concise (2-3 sentences max for simple queries)
+- For complex questions, offer to connect them with the team via the contact form
+- If they want to try features, mention they can sign up for free
+
+Don't include ACTION JSON - this is just conversational support.`;
+
+function isContactOrSupportQuery(message: string, history?: Array<{ role: string; content: string }>): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  // Check if message contains contact/support keywords
+  const hasContactKeyword = CONTACT_KEYWORDS.some(keyword => lowerMessage.includes(keyword));
+
+  // Check if there's no form/workflow context (user isn't actively building something)
+  const isGeneralQuery = !lowerMessage.includes('field') &&
+                         !lowerMessage.includes('validation') &&
+                         !lowerMessage.includes('form builder') &&
+                         !lowerMessage.includes('workflow') &&
+                         !lowerMessage.includes('node') &&
+                         !lowerMessage.includes('trigger');
+
+  // Short greetings or questions are likely support queries
+  const isShortGreeting = message.length < 50 && (
+    lowerMessage.startsWith('hi') ||
+    lowerMessage.startsWith('hello') ||
+    lowerMessage.startsWith('hey') ||
+    lowerMessage.includes('?')
+  );
+
+  return (hasContactKeyword && isGeneralQuery) || isShortGreeting;
+}
+
+// ============================================
 // API Handler
 // ============================================
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate authentication and feature access
-    const guard = await validateAIRequest('ai_form_generator', true);
-    if (!guard.success) {
-      return guard.response;
-    }
-
     const body = await request.json() as ChatRequest;
 
     // Validate request
@@ -426,11 +486,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine if this is a contact/support query (no rate limits) or form-building query (rate limited)
+    const isContactQuery = isContactOrSupportQuery(body.message, body.conversationHistory);
+
+    let shouldRecordUsage = false;
+    let guardContext: { userId: string; orgId: string; isGuest?: boolean } = {
+      userId: 'support',
+      orgId: 'support',
+      isGuest: true,
+    };
+
+    // For form/workflow building queries, validate with rate limits
+    if (!isContactQuery) {
+      const guard = await validateAIRequestWithGuestAccess('ai_form_generator', request, true);
+      if (!guard.success) {
+        return guard.response;
+      }
+
+      // We'll record usage after successful response
+      shouldRecordUsage = true;
+      guardContext = guard.context;
+    }
+
     const openai = new OpenAI({ apiKey });
 
-    // Determine which context to use and build appropriate system prompt
+    // Determine which system prompt to use
     let systemPrompt: string;
-    if (body.contextType === 'workflow' && body.workflowContext) {
+    if (isContactQuery) {
+      // Use general support prompt for contact/support queries
+      systemPrompt = GENERAL_SUPPORT_PROMPT;
+    } else if (body.contextType === 'workflow' && body.workflowContext) {
       systemPrompt = buildWorkflowSystemPrompt(body.workflowContext);
     } else {
       systemPrompt = buildSystemPrompt(body.context || { fields: [], currentView: 'other' });
@@ -465,14 +550,20 @@ export async function POST(request: NextRequest) {
       model: 'gpt-4o-mini', // Fast and cost-effective for chat
       messages,
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: isContactQuery ? 500 : 1000, // Shorter responses for support queries
     });
 
     const responseContent = completion.choices[0]?.message?.content || '';
     const { message, action } = parseActionFromResponse(responseContent);
 
-    // Record usage
-    await recordAIUsage(guard.context.orgId);
+    // Record usage only for form/workflow queries (not contact/support)
+    if (shouldRecordUsage) {
+      if (guardContext.isGuest) {
+        recordGuestUsage(request);
+      } else {
+        await recordAIUsage(guardContext.orgId);
+      }
+    }
 
     const response: ChatResponse = {
       success: true,
