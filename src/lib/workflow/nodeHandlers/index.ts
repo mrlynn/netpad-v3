@@ -22,3 +22,4 @@ export {
 import './formTrigger';
 import './mongodbWrite';
 import './transform';
+import './delay';

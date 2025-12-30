@@ -1,10 +1,10 @@
-# MongoDB FormBuilder - Product Overview & Capabilities
+# NetPad - Product Overview & Capabilities
 
-## What is FormBuilder?
+## What is NetPad?
 
-**FormBuilder** is a comprehensive, open-source platform for creating MongoDB-connected data entry forms, search interfaces, and data management applications—all without writing code.
+**NetPad** is a comprehensive, open-source platform for creating MongoDB-connected data entry forms, workflows, search interfaces, and data management applications—all without writing code.
 
-Built for developers, data teams, and organizations that need to collect, manage, and analyze data stored in MongoDB, FormBuilder bridges the gap between your database and your users with a beautiful, intuitive interface.
+Built for developers, data teams, and organizations that need to collect, manage, and analyze data stored in MongoDB, NetPad bridges the gap between your database and your users with a beautiful, intuitive interface.
 
 ---
 

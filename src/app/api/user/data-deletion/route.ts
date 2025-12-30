@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'Your account and data have been permanently deleted.',
         deletedAt: new Date().toISOString(),
-        note: 'You have been logged out. Thank you for using MongoDB Tools.',
+        note: 'You have been logged out. Thank you for using NetPad.',
       });
     } catch (deleteError) {
       console.error('[Data Deletion] Error during deletion:', deleteError);

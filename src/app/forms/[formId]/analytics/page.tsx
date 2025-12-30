@@ -42,7 +42,7 @@ export default function FormAnalyticsPage() {
             }}
           >
             <Folder sx={{ fontSize: 16 }} />
-            My Forms
+            Forms
           </Typography>
           <Typography
             sx={{

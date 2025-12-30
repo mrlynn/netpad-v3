@@ -350,7 +350,7 @@ export default function PublicFormPage() {
         {form.branding?.showPoweredBy !== false && (
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              Powered by MongoDB Form Builder
+              Powered by NetPad
             </Typography>
           </Box>
         )}
@@ -530,7 +530,7 @@ export default function PublicFormPage() {
       {form.branding?.showPoweredBy !== false && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
-            Powered by MongoDB Form Builder
+            Powered by NetPad
           </Typography>
         </Box>
       )}

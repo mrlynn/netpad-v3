@@ -262,7 +262,7 @@ export default function LandingPage() {
                   }
                 }}
               >
-                My Forms
+                Forms
               </Button>
             </Box>
 

@@ -362,7 +362,7 @@ export default function MyFormsPage() {
           <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                My Forms
+                Forms
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Manage and access your saved forms

@@ -27,6 +27,7 @@ import { Box, useTheme } from '@mui/material';
 import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
+import { EmptyWorkflowState, WorkflowTemplate } from './Panels/EmptyWorkflowState';
 
 // Node components
 import { BaseNode } from './Nodes/BaseNode';
@@ -132,41 +133,42 @@ export function WorkflowEditorCanvas({
     const workflowChanged = workflow?.id !== currentWorkflowIdRef.current;
     currentWorkflowIdRef.current = workflow?.id || null;
 
-    // Get current node IDs
-    const currentNodeIds = new Set(workflowNodes.map(n => n.id));
-    const prevNodeIds = prevNodeIdsRef.current;
+    // Update tracked node IDs
+    prevNodeIdsRef.current = new Set(workflowNodes.map(n => n.id));
 
-    // Check if nodes were added or removed
-    const nodesAdded = [...currentNodeIds].some(id => !prevNodeIds.has(id));
-    const nodesRemoved = [...prevNodeIds].some(id => !currentNodeIds.has(id));
-    const nodeCountChanged = nodesAdded || nodesRemoved;
-
-    prevNodeIdsRef.current = currentNodeIds;
-
-    // Full sync if workflow changed or nodes added/removed
-    if (workflowChanged || nodeCountChanged) {
+    // Full sync only if workflow changed (loading a different workflow)
+    if (workflowChanged) {
       setNodes(convertToFlowNodes(workflowNodes));
       return;
     }
 
-    // For other changes (like selection), update only non-position properties
+    // For nodes added/removed, merge while preserving local positions
+    // This ensures existing node positions aren't lost when adding new nodes
     setNodes((currentNodes) => {
-      return currentNodes.map((node) => {
-        const storeNode = workflowNodes.find((n) => n.id === node.id);
-        if (!storeNode) return node;
+      // Create a map of current local positions
+      const localPositions = new Map(currentNodes.map(n => [n.id, n.position]));
 
-        // Keep local position, update other properties
+      // Build the new node list
+      return workflowNodes.map((storeNode) => {
+        // For existing nodes, preserve local position (may differ from store during drag)
+        // For new nodes, use store position
+        const position = localPositions.get(storeNode.id) || storeNode.position;
+
         return {
-          ...node,
-          selected: storeNode.id === selectedNodeId,
+          id: storeNode.id,
+          type: storeNode.type,
+          position,
           data: {
             ...storeNode,
             label: storeNode.label || getNodeLabel(storeNode.type),
           },
+          selected: storeNode.id === selectedNodeId,
+          draggable: !readOnly,
+          selectable: true,
         };
       });
     });
-  }, [workflow?.id, workflowNodes, selectedNodeId, convertToFlowNodes]);
+  }, [workflow?.id, workflowNodes, selectedNodeId, readOnly]);
 
   // Convert workflow edges to React Flow format
   const edges: Edge[] = useMemo(() => {
@@ -190,27 +192,36 @@ export function WorkflowEditorCanvas({
     if (readOnly) return;
 
     // Apply all changes to local state for smooth visual updates
-    setNodes((nds) => applyNodeChanges(changes, nds));
+    setNodes((nds) => {
+      const updatedNodes = applyNodeChanges(changes, nds);
 
-    // Handle specific change types that need to be persisted to store
-    changes.forEach((change) => {
-      switch (change.type) {
-        case 'position':
-          // Only persist to store when drag ends (not during dragging)
-          if (change.dragging === false && change.position) {
-            moveNode(change.id, change.position);
-          }
-          break;
-        case 'select':
-          if (change.selected) {
-            selectNode(change.id);
-            onNodeSelect?.(change.id);
-          }
-          break;
-        case 'remove':
-          removeNode(change.id);
-          break;
-      }
+      // Handle specific change types that need to be persisted to store
+      changes.forEach((change) => {
+        switch (change.type) {
+          case 'position':
+            // Persist to store when drag ends
+            // ReactFlow may not always include position in the change when dragging === false
+            // so we get the position from the updated nodes
+            if (change.dragging === false) {
+              const node = updatedNodes.find(n => n.id === change.id);
+              if (node?.position) {
+                moveNode(change.id, node.position);
+              }
+            }
+            break;
+          case 'select':
+            if (change.selected) {
+              selectNode(change.id);
+              onNodeSelect?.(change.id);
+            }
+            break;
+          case 'remove':
+            removeNode(change.id);
+            break;
+        }
+      });
+
+      return updatedNodes;
     });
   }, [readOnly, moveNode, selectNode, removeNode, onNodeSelect]);
 
@@ -273,6 +284,76 @@ export function WorkflowEditorCanvas({
     setViewport(viewport);
   }, [setViewport]);
 
+  // Handle adding a node from the empty state
+  const handleAddNodeFromEmpty = useCallback((nodeType: string) => {
+    if (readOnly) return;
+
+    // Create new node at center of viewport
+    const position = reactFlowInstance.current
+      ? reactFlowInstance.current.screenToFlowPosition({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        })
+      : { x: 250, y: 150 };
+
+    const newNode: WorkflowNode = {
+      id: `${nodeType}_${nanoid(8)}`,
+      type: nodeType,
+      position,
+      config: {},
+      enabled: true,
+    };
+
+    addNode(newNode);
+  }, [readOnly, addNode]);
+
+  // Handle loading a template from the empty state
+  const handleLoadTemplate = useCallback((template: WorkflowTemplate) => {
+    if (readOnly) return;
+
+    // Create nodes from template
+    const nodeIdMap: Record<number, string> = {};
+
+    template.nodes.forEach((templateNode, index) => {
+      const nodeId = `${templateNode.type}_${nanoid(8)}`;
+      nodeIdMap[index] = nodeId;
+
+      const newNode: WorkflowNode = {
+        id: nodeId,
+        type: templateNode.type,
+        label: templateNode.label,
+        position: templateNode.position,
+        config: {},
+        enabled: true,
+      };
+
+      addNode(newNode);
+    });
+
+    // Create edges from template
+    template.edges.forEach((templateEdge) => {
+      const sourceId = nodeIdMap[templateEdge.source];
+      const targetId = nodeIdMap[templateEdge.target];
+
+      if (sourceId && targetId) {
+        const newEdge: WorkflowEdge = {
+          id: `edge_${nanoid(8)}`,
+          source: sourceId,
+          sourceHandle: 'output',
+          target: targetId,
+          targetHandle: 'input',
+        };
+
+        addWorkflowEdge(newEdge);
+      }
+    });
+
+    // Fit view after adding nodes
+    setTimeout(() => {
+      reactFlowInstance.current?.fitView({ padding: 0.2 });
+    }, 100);
+  }, [readOnly, addNode, addWorkflowEdge]);
+
   // Handle drop (for drag and drop from palette)
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -311,9 +392,12 @@ export function WorkflowEditorCanvas({
   const onInit = useCallback((instance: ReactFlowInstance) => {
     reactFlowInstance.current = instance;
 
-    // Restore viewport if available
-    if (workflow?.canvas.viewport) {
+    // Restore viewport if available, otherwise fit view once on init
+    if (workflow?.canvas.viewport && (workflow.canvas.viewport.x !== 0 || workflow.canvas.viewport.y !== 0 || workflow.canvas.viewport.zoom !== 1)) {
       instance.setViewport(workflow.canvas.viewport);
+    } else {
+      // Only fit view on initial load when no viewport is saved
+      instance.fitView({ padding: 0.2 });
     }
   }, [workflow?.canvas.viewport]);
 
@@ -413,8 +497,6 @@ export function WorkflowEditorCanvas({
         onDrop={onDrop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
         defaultEdgeOptions={{
           animated: true,
           style: {
@@ -463,6 +545,14 @@ export function WorkflowEditorCanvas({
           zoomable
         />
       </ReactFlow>
+
+      {/* Empty State Dialog - show when workflow has no nodes */}
+      {workflowNodes.length === 0 && !readOnly && (
+        <EmptyWorkflowState
+          onAddNode={handleAddNodeFromEmpty}
+          onLoadTemplate={handleLoadTemplate}
+        />
+      )}
     </Box>
   );
 }

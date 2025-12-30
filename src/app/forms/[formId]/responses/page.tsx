@@ -42,7 +42,7 @@ export default function FormResponsesPage() {
             }}
           >
             <Folder sx={{ fontSize: 16 }} />
-            My Forms
+            Forms
           </Typography>
           <Typography
             sx={{

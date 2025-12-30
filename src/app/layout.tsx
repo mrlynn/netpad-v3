@@ -7,8 +7,8 @@ import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
 
 export const metadata: Metadata = {
-  title: 'FormBuilder - Build MongoDB Forms in Minutes',
-  description: 'Create beautiful, validated data entry forms connected directly to your MongoDB collections. No coding required.'
+  title: 'NetPad - Build MongoDB Forms & Workflows',
+  description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.'
 };
 
 import './globals.css';

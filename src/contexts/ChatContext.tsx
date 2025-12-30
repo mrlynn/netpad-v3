@@ -13,9 +13,11 @@ import {
   ChatMessage,
   ChatAction,
   FormBuilderContext,
+  WorkflowBuilderContext,
   CurrentView,
 } from '@/types/chat';
 import { FieldConfig } from '@/types/form';
+import { WorkflowNode, WorkflowEdge, WorkflowSettings } from '@/types/workflow';
 
 // ============================================
 // State Types
@@ -83,6 +85,12 @@ interface ChatContextValue {
   // Form builder context
   formContext: FormBuilderContext;
 
+  // Workflow builder context
+  workflowContext: WorkflowBuilderContext;
+
+  // Active context type
+  activeContextType: 'form' | 'workflow' | 'none';
+
   // Actions
   openChat: () => void;
   closeChat: () => void;
@@ -94,8 +102,14 @@ interface ChatContextValue {
   // Context setters (called by FormBuilder)
   setFormContext: (context: Partial<FormBuilderContext>) => void;
 
+  // Workflow context setters (called by WorkflowEditor)
+  setWorkflowContext: (context: Partial<WorkflowBuilderContext>) => void;
+
   // Action handlers (set by FormBuilder)
   registerActionHandlers: (handlers: ActionHandlers) => void;
+
+  // Workflow action handlers (set by WorkflowEditor)
+  registerWorkflowActionHandlers: (handlers: WorkflowActionHandlers) => void;
 }
 
 export interface ActionHandlers {
@@ -107,13 +121,21 @@ export interface ActionHandlers {
   onNavigate?: (to: string) => void;
 }
 
+export interface WorkflowActionHandlers {
+  onAddNode?: (nodeType: string, label?: string, position?: { x: number; y: number }, config?: Record<string, unknown>) => void;
+  onUpdateNode?: (nodeId: string, updates: { label?: string; config?: Record<string, unknown>; enabled?: boolean }) => void;
+  onDeleteNode?: (nodeId: string) => void;
+  onConnectNodes?: (sourceId: string, targetId: string, sourceHandle?: string, targetHandle?: string) => void;
+  onUpdateWorkflowSettings?: (settings: Partial<WorkflowSettings>) => void;
+}
+
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 // ============================================
 // Provider
 // ============================================
 
-const WELCOME_MESSAGE: ChatMessage = {
+const FORM_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
@@ -126,10 +148,24 @@ const WELCOME_MESSAGE: ChatMessage = {
   timestamp: new Date(),
 };
 
+const WORKFLOW_WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome-workflow',
+  role: 'assistant',
+  content:
+    "Hi! I'm your workflow building assistant. I can help you:\n\n" +
+    "- **Add nodes** - \"Add an email notification after form submission\"\n" +
+    "- **Connect steps** - \"Connect the trigger to the email node\"\n" +
+    "- **Configure nodes** - \"Set the delay to 5 minutes\"\n" +
+    "- **Explain concepts** - \"How do conditional branches work?\"\n" +
+    "- **Suggest workflows** - \"Create a workflow for form submissions\"\n\n" +
+    "What would you like to build?",
+  timestamp: new Date(),
+};
+
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [state, dispatch] = useReducer(chatReducer, {
-    messages: [WELCOME_MESSAGE],
+    messages: [FORM_WELCOME_MESSAGE],
     isLoading: false,
     error: null,
   });
@@ -139,7 +175,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     currentView: 'other',
   });
 
+  const [workflowContext, setWorkflowContextState] = useState<WorkflowBuilderContext>({
+    nodes: [],
+    edges: [],
+    currentView: 'other',
+  });
+
+  const [activeContextType, setActiveContextType] = useState<'form' | 'workflow' | 'none'>('none');
+
   const [actionHandlers, setActionHandlers] = useState<ActionHandlers>({});
+  const [workflowActionHandlers, setWorkflowActionHandlers] = useState<WorkflowActionHandlers>({});
 
   // Chat visibility
   const openChat = useCallback(() => setIsOpen(true), []);
@@ -149,6 +194,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Update form context
   const setFormContext = useCallback((context: Partial<FormBuilderContext>) => {
     setFormContextState((prev) => ({ ...prev, ...context }));
+    setActiveContextType('form');
+  }, []);
+
+  // Update workflow context
+  const setWorkflowContext = useCallback((context: Partial<WorkflowBuilderContext>) => {
+    setWorkflowContextState((prev) => ({ ...prev, ...context }));
+    setActiveContextType('workflow');
   }, []);
 
   // Register action handlers from FormBuilder
@@ -156,11 +208,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setActionHandlers(handlers);
   }, []);
 
+  // Register workflow action handlers from WorkflowEditor
+  const registerWorkflowActionHandlers = useCallback((handlers: WorkflowActionHandlers) => {
+    setWorkflowActionHandlers(handlers);
+  }, []);
+
   // Execute an action from assistant
   const executeAction = useCallback(
     (messageId: string, action: ChatAction) => {
       try {
         switch (action.type) {
+          // Form Builder Actions
           case 'add_field':
             if (actionHandlers.onAddField) {
               actionHandlers.onAddField(
@@ -203,6 +261,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           case 'explain':
             // No action needed - content is in message
             break;
+
+          // Workflow Builder Actions
+          case 'add_node':
+            if (workflowActionHandlers.onAddNode) {
+              workflowActionHandlers.onAddNode(
+                action.payload.nodeType,
+                action.payload.label,
+                action.payload.position,
+                action.payload.config
+              );
+            }
+            break;
+          case 'update_node':
+            if (workflowActionHandlers.onUpdateNode) {
+              workflowActionHandlers.onUpdateNode(
+                action.payload.nodeId,
+                action.payload.updates
+              );
+            }
+            break;
+          case 'delete_node':
+            if (workflowActionHandlers.onDeleteNode) {
+              workflowActionHandlers.onDeleteNode(action.payload.nodeId);
+            }
+            break;
+          case 'connect_nodes':
+            if (workflowActionHandlers.onConnectNodes) {
+              workflowActionHandlers.onConnectNodes(
+                action.payload.sourceNodeId,
+                action.payload.targetNodeId,
+                action.payload.sourceHandle,
+                action.payload.targetHandle
+              );
+            }
+            break;
+          case 'update_workflow_settings':
+            if (workflowActionHandlers.onUpdateWorkflowSettings) {
+              workflowActionHandlers.onUpdateWorkflowSettings(action.payload.settings);
+            }
+            break;
+          case 'suggest_workflow':
+            // Handled in UI - shows workflow template suggestion
+            break;
         }
         dispatch({ type: 'MARK_ACTION_EXECUTED', payload: messageId });
       } catch (error) {
@@ -213,7 +314,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [actionHandlers]
+    [actionHandlers, workflowActionHandlers]
   );
 
   // Send a message
@@ -265,7 +366,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({
             message: message.trim(),
             conversationHistory,
-            context: formContext,
+            context: activeContextType === 'form' ? formContext : undefined,
+            workflowContext: activeContextType === 'workflow' ? workflowContext : undefined,
+            contextType: activeContextType,
           }),
         });
 
@@ -307,14 +410,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     },
-    [state.messages, formContext]
+    [state.messages, formContext, workflowContext, activeContextType]
   );
 
   // Clear messages
   const clearMessages = useCallback(() => {
     dispatch({ type: 'CLEAR_MESSAGES' });
-    dispatch({ type: 'ADD_MESSAGE', payload: { ...WELCOME_MESSAGE, id: `welcome-${Date.now()}` } });
-  }, []);
+    const welcomeMessage = activeContextType === 'workflow'
+      ? { ...WORKFLOW_WELCOME_MESSAGE, id: `welcome-workflow-${Date.now()}` }
+      : { ...FORM_WELCOME_MESSAGE, id: `welcome-${Date.now()}` };
+    dispatch({ type: 'ADD_MESSAGE', payload: welcomeMessage });
+  }, [activeContextType]);
 
   // Keyboard shortcut: Cmd/Ctrl + Shift + A to toggle chat
   useEffect(() => {
@@ -341,6 +447,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoading: state.isLoading,
         error: state.error,
         formContext,
+        workflowContext,
+        activeContextType,
         openChat,
         closeChat,
         toggleChat,
@@ -348,7 +456,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         clearMessages,
         executeAction,
         setFormContext,
+        setWorkflowContext,
         registerActionHandlers,
+        registerWorkflowActionHandlers,
       }}
     >
       {children}

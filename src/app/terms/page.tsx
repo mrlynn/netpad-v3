@@ -68,7 +68,7 @@ export default function TermsOfServicePage() {
           {/* Agreement */}
           <Section title="1. Agreement to Terms">
             <Typography variant="body1" color="text.secondary" paragraph>
-              By accessing or using MongoDB Tools (&quot;Service&quot;), you agree to be bound by these
+              By accessing or using NetPad (&quot;Service&quot;), you agree to be bound by these
               Terms of Service (&quot;Terms&quot;). If you disagree with any part of the terms, you may
               not access the Service.
             </Typography>
@@ -84,7 +84,7 @@ export default function TermsOfServicePage() {
           {/* Description of Service */}
           <Section title="2. Description of Service">
             <Typography variant="body1" color="text.secondary" paragraph>
-              MongoDB Tools is a web-based platform that enables users to:
+              NetPad is a web-based platform that enables users to:
             </Typography>
             <List dense>
               {[
@@ -231,7 +231,7 @@ export default function TermsOfServicePage() {
           <Section title="7. Intellectual Property">
             <Typography variant="body1" color="text.secondary" paragraph>
               The Service and its original content, features, and functionality are owned by
-              MongoDB Tools and are protected by international copyright, trademark, and other
+              NetPad and are protected by international copyright, trademark, and other
               intellectual property laws.
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -340,7 +340,7 @@ export default function TermsOfServicePage() {
           {/* Indemnification */}
           <Section title="11. Indemnification">
             <Typography variant="body1" color="text.secondary" paragraph>
-              You agree to defend, indemnify, and hold harmless MongoDB Tools and its officers,
+              You agree to defend, indemnify, and hold harmless NetPad and its officers,
               directors, employees, and agents from any claims, damages, losses, liabilities,
               and expenses arising out of:
             </Typography>
@@ -438,8 +438,8 @@ export default function TermsOfServicePage() {
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Email:{' '}
-                <a href="mailto:legal@mongodbtools.com" style={{ color: theme.palette.primary.main }}>
-                  legal@mongodbtools.com
+                <a href="mailto:legal@netpad.io" style={{ color: theme.palette.primary.main }}>
+                  legal@netpad.io
                 </a>
               </Typography>
             </Box>

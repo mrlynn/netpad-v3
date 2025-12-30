@@ -57,7 +57,7 @@ test.describe('Form Builder', () => {
     });
   });
 
-  test.describe('My Forms Page', () => {
+  test.describe('Forms Page', () => {
     test('should display the forms library', async ({ page }) => {
       await page.goto('/my-forms');
       await page.waitForLoadState('networkidle');

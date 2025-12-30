@@ -2,13 +2,13 @@
  * AI Chat Assistant API Endpoint
  *
  * POST /api/ai/chat
- * Context-aware chat for helping users build forms.
+ * Context-aware chat for helping users build forms and workflows.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
-import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext } from '@/types/chat';
+import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext, WorkflowBuilderContext } from '@/types/chat';
 
 // ============================================
 // System Prompt
@@ -192,6 +192,188 @@ You can help users configure automation for their forms in the Settings > Action
 }
 
 // ============================================
+// Workflow System Prompt
+// ============================================
+
+function buildWorkflowSystemPrompt(context: WorkflowBuilderContext): string {
+  const nodeList = context.nodes.length > 0
+    ? context.nodes.map(n => {
+        const enabled = n.enabled ? '' : ' (disabled)';
+        return `- "${n.label || n.type}" (type: ${n.type}, id: ${n.id}${enabled})`;
+      }).join('\n')
+    : 'No nodes yet';
+
+  const edgeList = context.edges.length > 0
+    ? context.edges.map(e => {
+        const sourceNode = context.nodes.find(n => n.id === e.source);
+        const targetNode = context.nodes.find(n => n.id === e.target);
+        const conditionStr = e.condition ? ` (condition: ${e.condition.label})` : '';
+        return `- ${sourceNode?.label || e.source} → ${targetNode?.label || e.target}${conditionStr}`;
+      }).join('\n')
+    : 'No connections yet';
+
+  const selectedNode = context.selectedNodeId
+    ? context.nodes.find(n => n.id === context.selectedNodeId)
+    : null;
+
+  const selectedNodeStr = selectedNode
+    ? `\n- **Selected Node**: "${selectedNode.label || selectedNode.type}" (${selectedNode.type})`
+    : '';
+
+  const statsStr = context.stats
+    ? `- **Executions**: ${context.stats.totalExecutions} total (${context.stats.successfulExecutions} successful, ${context.stats.failedExecutions} failed)`
+    : '';
+
+  const descStr = context.workflowDescription ? ` - ${context.workflowDescription}` : '';
+
+  return `You are a helpful AI assistant integrated into a workflow builder application. Your role is to help users create and configure automated workflows efficiently.
+
+## Current Context
+- **View**: ${context.currentView}
+- **Workflow**: ${context.workflowName || 'Untitled Workflow'}${descStr}
+- **Status**: ${context.status || 'draft'}
+- **Current Nodes**:
+${nodeList}
+- **Connections**:
+${edgeList}${selectedNodeStr}
+${statsStr}
+
+## Your Capabilities
+1. **Add Nodes**: You can add workflow nodes (triggers, actions, logic, etc.)
+2. **Connect Nodes**: You can create connections between nodes
+3. **Configure Nodes**: You can modify node settings and behavior
+4. **Explain Concepts**: You can explain how workflow features work
+5. **Suggest Workflows**: You can recommend complete workflow patterns
+
+## Node Types Available
+
+### Triggers (start a workflow)
+- **manual-trigger**: Start workflow manually with a button click
+- **form-trigger**: Trigger when a form is submitted
+- **webhook-trigger**: Trigger from external webhook call
+- **schedule-trigger**: Trigger on a time-based schedule (cron)
+
+### Logic (control flow)
+- **conditional**: If/Else branch based on conditions
+- **loop**: Iterate over a list of items
+- **delay**: Wait for a specified time before continuing
+
+### Actions
+- **email-send**: Send an email message
+- **notification**: Send push notification
+- **http-request**: Make HTTP API calls to external services
+
+### Data Operations
+- **transform**: Transform data structure (map, filter, reshape)
+- **filter**: Filter items in a list based on conditions
+- **merge**: Merge multiple data sources together
+- **mongodb-query**: Query documents from a MongoDB collection
+- **mongodb-write**: Insert, update, or delete MongoDB documents
+
+### AI Operations
+- **ai-prompt**: Send a prompt to an AI model and get response
+- **ai-classify**: Classify text into categories using AI
+- **ai-extract**: Extract structured data from unstructured text
+
+## Node Configuration
+
+Each node type has specific configuration options:
+
+**Schedule Trigger:**
+- cronExpression: Cron schedule (e.g., "0 9 * * 1-5" for 9 AM weekdays)
+- timezone: Timezone for schedule
+
+**Delay Node:**
+- delayType: "fixed" or "until"
+- duration: Time to wait (for fixed)
+- unit: "seconds", "minutes", "hours", "days"
+
+**HTTP Request:**
+- method: GET, POST, PUT, DELETE, PATCH
+- url: Target URL
+- headers: Request headers
+- body: Request body (for POST/PUT)
+
+**Email Send:**
+- to: Recipient email(s)
+- subject: Email subject
+- body: Email body (supports variables)
+
+**MongoDB Query:**
+- collection: Collection name
+- operation: find, findOne, aggregate
+- query: MongoDB query document
+- projection: Fields to return
+
+**MongoDB Write:**
+- collection: Collection name
+- operation: insertOne, insertMany, updateOne, updateMany, deleteOne, deleteMany
+- document: Document to insert/update
+- filter: Query filter for updates/deletes
+
+**Conditional:**
+- conditions: Array of condition rules
+- defaultBranch: Which path to take if no conditions match
+
+**Transform:**
+- expression: JavaScript/JSONata expression for transformation
+- outputVariable: Name for transformed result
+
+## Data Flow & Variables
+
+Workflows pass data between nodes:
+- Each node receives input from previous nodes
+- Nodes can access data using {{nodeName.fieldPath}} syntax
+- Examples:
+  - {{formTrigger.data.email}} - Email from form submission
+  - {{httpRequest.response.body.userId}} - Response from API call
+  - {{mongoQuery.results[0].name}} - First result from query
+
+## Response Format
+
+Respond naturally and helpfully. For actions, include JSON at message end:
+
+**Add a node:**
+ACTION: {"type": "add_node", "payload": {"nodeType": "email-send", "label": "Send Welcome Email", "position": {"x": 300, "y": 200}}}
+
+**Connect two nodes:**
+ACTION: {"type": "connect_nodes", "payload": {"sourceNodeId": "form-trigger_abc123", "targetNodeId": "email-send_def456"}}
+
+**Update node config:**
+ACTION: {"type": "update_node", "payload": {"nodeId": "delay_xyz789", "updates": {"config": {"delayType": "fixed", "duration": 5, "unit": "minutes"}}}}
+
+**Suggest a complete workflow:**
+ACTION: {"type": "suggest_workflow", "payload": {"description": "Form submission to email notification", "nodes": [{"type": "form-trigger", "label": "Form Submitted", "position": {"x": 250, "y": 100}}, {"type": "email-send", "label": "Send Notification", "position": {"x": 250, "y": 250}}], "edges": [{"source": 0, "target": 1}]}}
+
+Only include ACTION when suggesting concrete changes. For explanations, respond naturally without ACTION.
+
+## Common Workflow Patterns
+
+**Form → Email:**
+Form trigger → Email send (notify on submission)
+
+**Form → Database:**
+Form trigger → MongoDB write (save form data)
+
+**Scheduled Report:**
+Schedule trigger → MongoDB query → Transform → Email send
+
+**API Integration:**
+Webhook trigger → Transform → HTTP request → MongoDB write
+
+**Conditional Routing:**
+Form trigger → Conditional → (Branch A: Email) or (Branch B: Notification)
+
+## Guidelines
+- Be concise but helpful
+- Suggest appropriate triggers based on user's use case
+- When adding nodes, position them logically (triggers at top, flow downward)
+- Explain data flow when connecting nodes
+- For complex workflows, suggest step-by-step approach
+- Remember conversation context - reference earlier discussion`;
+}
+
+// ============================================
 // Parse Action from Response
 // ============================================
 
@@ -246,11 +428,19 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey });
 
+    // Determine which context to use and build appropriate system prompt
+    let systemPrompt: string;
+    if (body.contextType === 'workflow' && body.workflowContext) {
+      systemPrompt = buildWorkflowSystemPrompt(body.workflowContext);
+    } else {
+      systemPrompt = buildSystemPrompt(body.context || { fields: [], currentView: 'other' });
+    }
+
     // Build messages array
     const messages: OpenAI.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: buildSystemPrompt(body.context || { fields: [], currentView: 'other' }),
+        content: systemPrompt,
       },
     ];
 

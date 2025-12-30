@@ -5,7 +5,7 @@ import { findUserById as findAuthUserById, storeChallenge } from '@/lib/auth/db'
 import { findUserById as findPlatformUserById } from '@/lib/platform/users';
 import crypto from 'crypto';
 
-const RP_NAME = 'MongoDB Tools';
+const RP_NAME = 'NetPad';
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
 const RP_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

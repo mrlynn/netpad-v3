@@ -3,6 +3,7 @@
  */
 
 import { FieldConfig, FormConfiguration } from './form';
+import { WorkflowNode, WorkflowEdge, WorkflowSettings } from './workflow';
 
 // ============================================
 // Message Types
@@ -26,6 +27,7 @@ export interface ChatMessage {
 // ============================================
 
 export type ChatActionType =
+  // Form Builder Actions
   | 'add_field'
   | 'update_field'
   | 'delete_field'
@@ -33,7 +35,14 @@ export type ChatActionType =
   | 'update_settings'
   | 'navigate'
   | 'suggest_fields'
-  | 'explain';
+  | 'explain'
+  // Workflow Builder Actions
+  | 'add_node'
+  | 'update_node'
+  | 'delete_node'
+  | 'connect_nodes'
+  | 'update_workflow_settings'
+  | 'suggest_workflow';
 
 export interface AddFieldAction {
   type: 'add_field';
@@ -94,7 +103,78 @@ export interface ExplainAction {
   };
 }
 
+// ============================================
+// Workflow Action Types
+// ============================================
+
+export interface AddNodeAction {
+  type: 'add_node';
+  payload: {
+    nodeType: string;
+    label?: string;
+    position?: { x: number; y: number };
+    config?: Record<string, unknown>;
+  };
+}
+
+export interface UpdateNodeAction {
+  type: 'update_node';
+  payload: {
+    nodeId: string;
+    updates: {
+      label?: string;
+      config?: Record<string, unknown>;
+      enabled?: boolean;
+    };
+  };
+}
+
+export interface DeleteNodeAction {
+  type: 'delete_node';
+  payload: {
+    nodeId: string;
+  };
+}
+
+export interface ConnectNodesAction {
+  type: 'connect_nodes';
+  payload: {
+    sourceNodeId: string;
+    targetNodeId: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+    condition?: {
+      label: string;
+      expression?: string;
+    };
+  };
+}
+
+export interface UpdateWorkflowSettingsAction {
+  type: 'update_workflow_settings';
+  payload: {
+    settings: Partial<WorkflowSettings>;
+  };
+}
+
+export interface SuggestWorkflowAction {
+  type: 'suggest_workflow';
+  payload: {
+    nodes: Array<{
+      type: string;
+      label: string;
+      position: { x: number; y: number };
+    }>;
+    edges: Array<{
+      source: number;
+      target: number;
+    }>;
+    description: string;
+  };
+}
+
 export type ChatAction =
+  // Form Actions
   | AddFieldAction
   | UpdateFieldAction
   | DeleteFieldAction
@@ -102,7 +182,14 @@ export type ChatAction =
   | UpdateSettingsAction
   | NavigateAction
   | SuggestFieldsAction
-  | ExplainAction;
+  | ExplainAction
+  // Workflow Actions
+  | AddNodeAction
+  | UpdateNodeAction
+  | DeleteNodeAction
+  | ConnectNodesAction
+  | UpdateWorkflowSettingsAction
+  | SuggestWorkflowAction;
 
 // ============================================
 // Context Types
@@ -139,6 +226,58 @@ export interface FormBuilderContext {
   responseCount?: number;
 }
 
+export type WorkflowCurrentView =
+  | 'workflow-editor'
+  | 'workflow-list'
+  | 'execution-logs'
+  | 'settings'
+  | 'other';
+
+export interface WorkflowBuilderContext {
+  /** Current workflow being edited */
+  workflowId?: string;
+  workflowName?: string;
+  workflowDescription?: string;
+
+  /** Workflow status */
+  status?: 'draft' | 'active' | 'paused' | 'archived';
+
+  /** Current nodes in the workflow */
+  nodes: Array<{
+    id: string;
+    type: string;
+    label?: string;
+    enabled: boolean;
+    config?: Record<string, unknown>;
+  }>;
+
+  /** Current edges connecting nodes */
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    condition?: { label: string };
+  }>;
+
+  /** Currently selected node (if any) */
+  selectedNodeId?: string | null;
+
+  /** Current view/screen */
+  currentView: WorkflowCurrentView;
+
+  /** Execution stats */
+  stats?: {
+    totalExecutions: number;
+    successfulExecutions: number;
+    failedExecutions: number;
+  };
+}
+
+/** Combined context type - either form or workflow */
+export type BuilderContext =
+  | { type: 'form'; data: FormBuilderContext }
+  | { type: 'workflow'; data: WorkflowBuilderContext };
+
 // ============================================
 // API Types
 // ============================================
@@ -149,7 +288,12 @@ export interface ChatRequest {
     role: 'user' | 'assistant';
     content: string;
   }>;
-  context: FormBuilderContext;
+  /** Form context (for backwards compatibility) */
+  context?: FormBuilderContext;
+  /** Workflow context */
+  workflowContext?: WorkflowBuilderContext;
+  /** Context type indicator */
+  contextType?: 'form' | 'workflow';
 }
 
 export interface ChatResponse {

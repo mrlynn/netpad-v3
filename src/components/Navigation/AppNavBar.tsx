@@ -50,7 +50,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: '/my-forms',
-    label: 'My Forms',
+    label: 'Forms',
     icon: <Folder sx={{ fontSize: 18 }} />,
     matchPaths: ['/forms'],
   },
@@ -159,7 +159,7 @@ export function AppNavBar() {
             display: { xs: 'none', sm: 'block' }
           }}
         >
-          FormBuilder
+          NetPad
         </Typography>
 
         {/* Spacer */}

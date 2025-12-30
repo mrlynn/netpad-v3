@@ -833,7 +833,7 @@ export function EmptyFormState({
                 },
               }}
             >
-              My Forms
+              Forms
             </Button>
             {onConnectDatabase && (
               <Button

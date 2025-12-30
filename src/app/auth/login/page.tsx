@@ -202,7 +202,7 @@ function LoginContent() {
             <Typography sx={{ color: textSecondary }}>
               {step === 'magic-link-sent'
                 ? `We sent a login link to ${email}`
-                : 'Sign in to MongoDB Tools'}
+                : 'Sign in to NetPad'}
             </Typography>
           </Box>
 

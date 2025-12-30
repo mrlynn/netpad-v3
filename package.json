@@ -1,7 +1,7 @@
 {
-  "name": "mongodb-formbuilder",
-  "version": "0.1.0",
-  "description": "Build and publish MongoDB-connected data forms",
+  "name": "netpad",
+  "version": "3.1.0",
+  "description": "NetPad - Build and publish MongoDB-connected data forms and workflows",
   "private": true,
   "scripts": {
     "dev": "next dev",

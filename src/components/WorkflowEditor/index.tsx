@@ -39,12 +39,17 @@ import {
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
 
-import { WorkflowProvider, useWorkflow, useWorkflowEditor } from '@/contexts/WorkflowContext';
+import { WorkflowProvider, useWorkflow, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { WorkflowEditorCanvas } from './WorkflowEditorCanvas';
 import { NodePalette } from './Panels/NodePalette';
 import { NodeConfigPanel } from './Panels/NodeConfigPanel';
 import { EdgeConfigPanel } from './Panels/EdgeConfigPanel';
 import { ExecutionLogsPanel } from './Panels/ExecutionLogsPanel';
+import { WorkflowSettingsPanel } from './Panels/WorkflowSettingsPanel';
+import { useChat, WorkflowActionHandlers } from '@/contexts/ChatContext';
+import { WorkflowBuilderContext } from '@/types/chat';
+import { nanoid } from 'nanoid';
+import { WorkflowNode, WorkflowEdge } from '@/types/workflow';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -88,10 +93,95 @@ function WorkflowEditorInner({
     selectedEdgeId,
   } = useWorkflowEditor();
 
+  // Get workflow actions for chat integration
+  const {
+    addNode,
+    updateNode,
+    removeNode,
+    addEdge: addWorkflowEdge,
+    updateSettings,
+  } = useWorkflowActions();
+
+  // Chat integration
+  const { setWorkflowContext, registerWorkflowActionHandlers } = useChat();
+
+  // Sync workflow context to chat
+  useEffect(() => {
+    if (!workflow) return;
+
+    const context: WorkflowBuilderContext = {
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      workflowDescription: workflow.description,
+      status: workflow.status,
+      nodes: workflow.canvas.nodes.map(n => ({
+        id: n.id,
+        type: n.type,
+        label: n.label,
+        enabled: n.enabled,
+        config: n.config,
+      })),
+      edges: workflow.canvas.edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        condition: e.condition ? { label: e.condition.label || '' } : undefined,
+      })),
+      selectedNodeId,
+      currentView: 'workflow-editor',
+      stats: workflow.stats ? {
+        totalExecutions: workflow.stats.totalExecutions,
+        successfulExecutions: workflow.stats.successfulExecutions,
+        failedExecutions: workflow.stats.failedExecutions,
+      } : undefined,
+    };
+
+    setWorkflowContext(context);
+  }, [workflow, selectedNodeId, setWorkflowContext]);
+
+  // Register chat action handlers
+  useEffect(() => {
+    const handlers: WorkflowActionHandlers = {
+      onAddNode: (nodeType, label, position, config) => {
+        const newNode: WorkflowNode = {
+          id: `${nodeType}_${nanoid(8)}`,
+          type: nodeType,
+          label: label || nodeType.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+          position: position || { x: 250, y: 200 },
+          config: config || {},
+          enabled: true,
+        };
+        addNode(newNode);
+      },
+      onUpdateNode: (nodeId, updates) => {
+        updateNode(nodeId, updates);
+      },
+      onDeleteNode: (nodeId) => {
+        removeNode(nodeId);
+      },
+      onConnectNodes: (sourceId, targetId, sourceHandle, targetHandle) => {
+        const newEdge: WorkflowEdge = {
+          id: `edge_${nanoid(8)}`,
+          source: sourceId,
+          sourceHandle: sourceHandle || 'output',
+          target: targetId,
+          targetHandle: targetHandle || 'input',
+        };
+        addWorkflowEdge(newEdge);
+      },
+      onUpdateWorkflowSettings: (settings) => {
+        updateSettings(settings);
+      },
+    };
+
+    registerWorkflowActionHandlers(handlers);
+  }, [addNode, updateNode, removeNode, addWorkflowEdge, updateSettings, registerWorkflowActionHandlers]);
+
   // Config panel states
   const [nodeConfigPanelOpen, setNodeConfigPanelOpen] = useState(false);
   const [edgeConfigPanelOpen, setEdgeConfigPanelOpen] = useState(false);
   const [logsPanelOpen, setLogsPanelOpen] = useState(false);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
 
   // Status menu state
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null);
@@ -311,8 +401,8 @@ function WorkflowEditorInner({
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-          <Tooltip title="Settings">
-            <IconButton size="small">
+          <Tooltip title="Workflow Settings">
+            <IconButton size="small" onClick={() => setSettingsPanelOpen(true)}>
               <SettingsIcon />
             </IconButton>
           </Tooltip>
@@ -385,6 +475,12 @@ function WorkflowEditorInner({
           workflowId={workflow.id}
         />
       )}
+
+      {/* Workflow Settings Panel */}
+      <WorkflowSettingsPanel
+        open={settingsPanelOpen}
+        onClose={() => setSettingsPanelOpen(false)}
+      />
 
       {/* Status Menu */}
       <Menu
@@ -481,6 +577,7 @@ export { NodePalette } from './Panels/NodePalette';
 export { NodeConfigPanel } from './Panels/NodeConfigPanel';
 export { EdgeConfigPanel } from './Panels/EdgeConfigPanel';
 export { ExecutionLogsPanel } from './Panels/ExecutionLogsPanel';
+export { WorkflowSettingsPanel } from './Panels/WorkflowSettingsPanel';
 export { DataContextPanel } from './Panels/DataContextPanel';
 export { ConditionBuilder } from './Panels/ConditionBuilder';
 export { BaseNode } from './Nodes/BaseNode';

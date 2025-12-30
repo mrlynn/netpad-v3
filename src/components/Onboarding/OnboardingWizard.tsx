@@ -186,7 +186,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         >
           <Rocket sx={{ fontSize: 48, color: '#00ED64', mb: 1 }} />
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-            Welcome to FormBuilder
+            Welcome to NetPad
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Let's set up your workspace in under a minute
@@ -265,7 +265,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
               {slug && (
                 <Typography variant="caption" color="text.secondary">
-                  Your workspace URL: formbuilder.app/<strong>{slug}</strong>
+                  Your workspace URL: netpad.io/<strong>{slug}</strong>
                 </Typography>
               )}
 

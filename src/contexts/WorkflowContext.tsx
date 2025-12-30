@@ -416,6 +416,14 @@ interface WorkflowContextValue {
   executeWorkflow: (orgId: string, workflowId: string) => Promise<string | null>;
   getExecutionStatus: (executionId: string) => Promise<WorkflowExecution | null>;
 
+  // Settings
+  updateWorkflowSettings: (updates: {
+    name?: string;
+    description?: string;
+    tags?: string[];
+    settings?: WorkflowSettings;
+  }) => void;
+
   // Undo/Redo
   undo: () => void;
   redo: () => void;
@@ -655,6 +663,30 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Update workflow settings (combined metadata + settings)
+  const updateWorkflowSettings = useCallback((updates: {
+    name?: string;
+    description?: string;
+    tags?: string[];
+    settings?: WorkflowSettings;
+  }) => {
+    const { name, description, tags, settings } = updates;
+
+    // Update metadata (name, description, tags)
+    if (name !== undefined || description !== undefined || tags !== undefined) {
+      store.getState().updateMetadata({
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(tags !== undefined && { tags }),
+      });
+    }
+
+    // Update settings
+    if (settings) {
+      store.getState().updateSettings(settings);
+    }
+  }, [store]);
+
   const value: WorkflowContextValue = {
     store,
     loadWorkflow,
@@ -664,6 +696,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     updateStatus,
     executeWorkflow,
     getExecutionStatus,
+    updateWorkflowSettings,
     undo,
     redo,
     canUndo: undoRedoState.canUndo,

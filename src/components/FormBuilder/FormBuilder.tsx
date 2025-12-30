@@ -819,7 +819,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           >
             <MenuItem onClick={() => { setShowLibrary(true); setMoreMenuAnchor(null); }}>
               <ListItemIcon><Folder fontSize="small" /></ListItemIcon>
-              <ListItemText>My Forms</ListItemText>
+              <ListItemText>Forms</ListItemText>
             </MenuItem>
             {currentFormId && (
               <MenuItem onClick={() => { handleNewForm(); setMoreMenuAnchor(null); }}>

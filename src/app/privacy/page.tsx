@@ -67,7 +67,7 @@ export default function PrivacyPolicyPage() {
           {/* Introduction */}
           <Section title="Introduction">
             <Typography variant="body1" color="text.secondary" paragraph>
-              Welcome to MongoDB Tools (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting
+              Welcome to NetPad (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting
               your privacy and ensuring you have a positive experience when using our form builder
               and data management platform.
             </Typography>
@@ -361,8 +361,8 @@ export default function PrivacyPolicyPage() {
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Email:{' '}
-                <a href="mailto:privacy@mongodbtools.com" style={{ color: theme.palette.primary.main }}>
-                  privacy@mongodbtools.com
+                <a href="mailto:privacy@netpad.io" style={{ color: theme.palette.primary.main }}>
+                  privacy@netpad.io
                 </a>
               </Typography>
             </Box>
