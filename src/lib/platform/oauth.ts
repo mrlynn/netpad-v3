@@ -64,7 +64,13 @@ function getConfig(provider: 'google' | 'github'): OAuthConfig {
 }
 
 function getCallbackUrl(provider: 'google' | 'github'): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  // For server-side OAuth, prefer APP_URL (runtime) over NEXT_PUBLIC_APP_URL (build-time)
+  // VERCEL_URL is auto-set by Vercel but doesn't include protocol
+  const baseUrl =
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    'http://localhost:3000';
   return `${baseUrl}/api/auth/oauth/callback/${provider}`;
 }
 

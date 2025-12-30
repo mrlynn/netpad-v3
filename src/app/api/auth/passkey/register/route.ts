@@ -7,7 +7,7 @@ import { sendPasskeyRegisteredEmail } from '@/lib/auth/email';
 import { PasskeyCredential } from '@/types/auth';
 
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const RP_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const RP_ORIGIN = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function POST(req: NextRequest) {
   try {

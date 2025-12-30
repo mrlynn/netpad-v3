@@ -15,12 +15,21 @@ import {
   Tooltip,
   Tabs,
   Tab,
-  Slider,
+  Switch,
+  FormControlLabel,
   alpha,
   Snackbar,
   Alert,
+  Divider,
 } from '@mui/material';
-import { ContentCopy, OpenInNew, Code, Link as LinkIcon } from '@mui/icons-material';
+import {
+  ContentCopy,
+  OpenInNew,
+  Code,
+  Link as LinkIcon,
+  Javascript,
+  DataObject,
+} from '@mui/icons-material';
 
 interface EmbedCodeGeneratorProps {
   formId: string;
@@ -28,7 +37,7 @@ interface EmbedCodeGeneratorProps {
   formName: string;
 }
 
-type EmbedType = 'iframe' | 'link' | 'popup';
+type EmbedType = 'iframe' | 'sdk' | 'link' | 'popup';
 
 interface EmbedSettings {
   width: string;
@@ -36,6 +45,7 @@ interface EmbedSettings {
   theme: 'light' | 'dark' | 'auto';
   hideHeader: boolean;
   hideBranding: boolean;
+  autoResize: boolean;
 }
 
 export function EmbedCodeGenerator({
@@ -47,9 +57,10 @@ export function EmbedCodeGenerator({
   const [settings, setSettings] = useState<EmbedSettings>({
     width: '100%',
     height: '600',
-    theme: 'light',
+    theme: 'auto',
     hideHeader: false,
     hideBranding: false,
+    autoResize: true,
   });
   const [copied, setCopied] = useState(false);
 
@@ -73,6 +84,7 @@ export function EmbedCodeGenerator({
 
   const getEmbedCode = () => {
     const embedUrl = formUrl + buildEmbedParams();
+    const baseUrl = getBaseUrl();
 
     switch (embedType) {
       case 'iframe':
@@ -84,6 +96,23 @@ export function EmbedCodeGenerator({
   style="border: none; border-radius: 8px;"
   title="${formName}"
 ></iframe>`;
+
+      case 'sdk':
+        // JavaScript SDK embed
+        const dataAttrs = [];
+        if (settings.theme !== 'light') dataAttrs.push(`data-theme="${settings.theme}"`);
+        if (settings.hideHeader) dataAttrs.push('data-hide-header="true"');
+        if (settings.hideBranding) dataAttrs.push('data-hide-branding="true"');
+        if (settings.height !== '600') dataAttrs.push(`data-min-height="${settings.height}px"`);
+        if (!settings.autoResize) dataAttrs.push('data-auto-resize="false"');
+
+        const dataAttrsStr = dataAttrs.length > 0 ? '\n  ' + dataAttrs.join('\n  ') : '';
+
+        return `<!-- NetPad Form Embed -->
+<script src="${baseUrl}/embed.js"></script>
+<div
+  data-netpad-form="${formSlug}"${dataAttrsStr}
+></div>`;
 
       case 'link':
         return `<a href="${embedUrl}" target="_blank" rel="noopener noreferrer">
@@ -109,6 +138,39 @@ export function EmbedCodeGenerator({
     }
   };
 
+  const getJsApiExample = () => {
+    const baseUrl = getBaseUrl();
+    return `// Include the SDK script first
+<script src="${baseUrl}/embed.js"></script>
+
+// Then use the JavaScript API
+<script>
+  // Embed form into a container
+  const form = NetPad.embed('container-id', '${formSlug}', {
+    theme: '${settings.theme}',
+    hideHeader: ${settings.hideHeader},
+    hideBranding: ${settings.hideBranding},
+    height: '${settings.height}px',
+
+    // Event callbacks
+    onLoad: function() {
+      console.log('Form loaded');
+    },
+    onSubmit: function(data) {
+      console.log('Form submitted:', data);
+    },
+    onError: function(error) {
+      console.error('Form error:', error);
+    }
+  });
+
+  // Or open as a popup
+  // NetPad.popup('${formSlug}', { width: 600, height: 700 });
+</script>
+
+<div id="container-id"></div>`;
+  };
+
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(getEmbedCode());
@@ -121,6 +183,15 @@ export function EmbedCodeGenerator({
   const copyUrlToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(formUrl);
+      setCopied(true);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const copyJsApiExample = async () => {
+    try {
+      await navigator.clipboard.writeText(getJsApiExample());
       setCopied(true);
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -179,11 +250,19 @@ export function EmbedCodeGenerator({
         value={embedType}
         onChange={(_, v) => setEmbedType(v)}
         sx={{ mb: 2 }}
+        variant="scrollable"
+        scrollButtons="auto"
       >
         <Tab
           value="iframe"
           label="iFrame"
           icon={<Code fontSize="small" />}
+          iconPosition="start"
+        />
+        <Tab
+          value="sdk"
+          label="JavaScript SDK"
+          icon={<Javascript fontSize="small" />}
           iconPosition="start"
         />
         <Tab
@@ -200,45 +279,89 @@ export function EmbedCodeGenerator({
         />
       </Tabs>
 
-      {/* Settings for iFrame */}
-      {embedType === 'iframe' && (
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            label="Width"
-            value={settings.width}
-            onChange={(e) =>
-              setSettings((prev) => ({ ...prev, width: e.target.value }))
-            }
-            sx={{ width: 120 }}
-          />
-          <TextField
-            size="small"
-            label="Height (px)"
-            type="number"
-            value={settings.height}
-            onChange={(e) =>
-              setSettings((prev) => ({ ...prev, height: e.target.value }))
-            }
-            sx={{ width: 120 }}
-          />
-          <FormControl size="small" sx={{ width: 120 }}>
-            <InputLabel>Theme</InputLabel>
-            <Select
-              value={settings.theme}
-              label="Theme"
+      {/* Settings for iFrame and SDK */}
+      {(embedType === 'iframe' || embedType === 'sdk') && (
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+            {embedType === 'iframe' && (
+              <TextField
+                size="small"
+                label="Width"
+                value={settings.width}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, width: e.target.value }))
+                }
+                sx={{ width: 120 }}
+              />
+            )}
+            <TextField
+              size="small"
+              label={embedType === 'sdk' ? 'Min Height (px)' : 'Height (px)'}
+              type="number"
+              value={settings.height}
               onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  theme: e.target.value as any,
-                }))
+                setSettings((prev) => ({ ...prev, height: e.target.value }))
               }
-            >
-              <MenuItem value="light">Light</MenuItem>
-              <MenuItem value="dark">Dark</MenuItem>
-              <MenuItem value="auto">Auto</MenuItem>
-            </Select>
-          </FormControl>
+              sx={{ width: 140 }}
+            />
+            <FormControl size="small" sx={{ width: 120 }}>
+              <InputLabel>Theme</InputLabel>
+              <Select
+                value={settings.theme}
+                label="Theme"
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    theme: e.target.value as any,
+                  }))
+                }
+              >
+                <MenuItem value="light">Light</MenuItem>
+                <MenuItem value="dark">Dark</MenuItem>
+                <MenuItem value="auto">Auto</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={settings.hideHeader}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, hideHeader: e.target.checked }))
+                  }
+                />
+              }
+              label="Hide Header"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={settings.hideBranding}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, hideBranding: e.target.checked }))
+                  }
+                />
+              }
+              label="Hide Branding"
+            />
+            {embedType === 'sdk' && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={settings.autoResize}
+                    onChange={(e) =>
+                      setSettings((prev) => ({ ...prev, autoResize: e.target.checked }))
+                    }
+                  />
+                }
+                label="Auto Resize"
+              />
+            )}
+          </Box>
         </Box>
       )}
 
@@ -283,6 +406,50 @@ export function EmbedCodeGenerator({
           </IconButton>
         </Tooltip>
       </Box>
+
+      {/* JavaScript API Example (only for SDK) */}
+      {embedType === 'sdk' && (
+        <Box sx={{ mt: 3 }}>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DataObject fontSize="small" />
+              JavaScript API Example
+            </Typography>
+            <Tooltip title="Copy API example">
+              <IconButton size="small" onClick={copyJsApiExample}>
+                <ContentCopy fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: '#001E2B',
+              borderRadius: 1,
+            }}
+          >
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                color: '#9CA3AF',
+                fontSize: '0.75rem',
+                fontFamily: 'monospace',
+                overflow: 'auto',
+                maxHeight: 250,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {getJsApiExample()}
+            </Box>
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            The SDK automatically handles form loading, submission events, and iframe resizing.
+          </Typography>
+        </Box>
+      )}
 
       {/* Preview */}
       {embedType === 'iframe' && (

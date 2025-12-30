@@ -13,7 +13,7 @@ const EMAIL_CONFIG = {
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@netpad.io';
 const FROM_NAME = process.env.FROM_NAME || 'NetPad';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 // Create transporter
 let transporter: nodemailer.Transporter | null = null;

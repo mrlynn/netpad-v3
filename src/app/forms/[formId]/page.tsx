@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
@@ -48,6 +48,25 @@ export default function PublicFormPage() {
   const hideHeader = searchParams.get('hideHeader') === 'true';
   const hideBranding = searchParams.get('hideBranding') === 'true';
   const embedTheme = searchParams.get('theme') as 'light' | 'dark' | 'auto' | null;
+  const isEmbedded = searchParams.get('embedded') === 'true';
+
+  /**
+   * Send message to parent window if embedded
+   */
+  const postMessageToParent = useCallback((type: string, payload?: any) => {
+    if (!isEmbedded || typeof window === 'undefined') return;
+
+    try {
+      window.parent.postMessage({
+        source: 'netpad-form',
+        formSlug: formId,
+        type,
+        payload,
+      }, '*');
+    } catch (e) {
+      // Ignore if postMessage fails (e.g., cross-origin restrictions)
+    }
+  }, [isEmbedded, formId]);
 
   const [form, setForm] = useState<FormConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +92,9 @@ export default function PublicFormPage() {
         }
 
         setForm(data.form);
+
+        // Notify parent if embedded
+        postMessageToParent('loaded', { formName: data.form.name });
 
         // Debug: Log theme data received from API
         console.log('[PublicForm] Theme data received:', {
@@ -128,6 +150,12 @@ export default function PublicFormPage() {
       setResponseId(result.responseId || null);
       setSubmitted(true);
 
+      // Notify parent if embedded
+      postMessageToParent('submit', {
+        responseId: result.responseId,
+        data: formData,
+      });
+
       // Handle redirect if configured
       const redirectConfig = form?.hooks?.onSuccess?.redirect;
       if (redirectConfig?.url) {
@@ -143,6 +171,8 @@ export default function PublicFormPage() {
       }
     } catch (err: any) {
       setError(err.message);
+      // Notify parent if embedded
+      postMessageToParent('error', { message: err.message });
     }
   };
 
