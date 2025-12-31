@@ -5,6 +5,7 @@ import { PipelineProvider } from '@/contexts/PipelineContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'NetPad - Build MongoDB Forms & Workflows',
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <OrganizationProvider>
               <PipelineProvider>{children}</PipelineProvider>
               <DevPanelWrapper position="bottom-right" />
+              <Analytics />
             </OrganizationProvider>
           </AuthProvider>
         </ClientLayout>
