@@ -42,4 +42,10 @@ export type HelpTopicId =
   | 'results-viewer'
   | 'document-editing'
   | 'sample-documents'
-  | 'include-in-document';
+  | 'include-in-document'
+  | 'api-overview'
+  | 'api-playground'
+  | 'api-authentication'
+  | 'api-endpoints'
+  | 'api-rate-limiting'
+  | 'api-keys-management';

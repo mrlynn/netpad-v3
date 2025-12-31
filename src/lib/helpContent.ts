@@ -1528,4 +1528,478 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     relatedTopics: ['field-configuration', 'document-preview', 'form-builder'],
     keywords: ['include', 'document', 'storage', 'database', 'persist', 'save'],
   },
+
+  // ============================================
+  // API Documentation Topics
+  // ============================================
+
+  'api-overview': {
+    id: 'api-overview',
+    title: 'Public API Overview',
+    description:
+      'NetPad provides a RESTful API for programmatic access to your forms and submissions. Build integrations, automate workflows, or create custom dashboards.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the NetPad API?',
+      },
+      {
+        type: 'text',
+        content:
+          'The NetPad API allows you to interact with your forms and submissions programmatically. Use it to integrate NetPad into your applications, automate data collection workflows, or build custom reporting dashboards.',
+      },
+      {
+        type: 'heading',
+        content: 'Base URL',
+      },
+      {
+        type: 'code',
+        content: '/api/v1',
+      },
+      {
+        type: 'heading',
+        content: 'Available Resources',
+      },
+      {
+        type: 'list',
+        content: [
+          'Forms: List, create, update, and delete forms',
+          'Submissions: List, create, and delete form submissions',
+          'OpenAPI Spec: Full API specification at /api/v1/openapi.json',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Response Format',
+      },
+      {
+        type: 'text',
+        content:
+          'All API responses are in JSON format with a consistent structure including success status, data, and request ID.',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "success": true,',
+          '  "data": { ... },',
+          '  "requestId": "req_abc123"',
+          '}',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use the API Playground at /api-playground to test API calls directly in your browser, or view the full documentation at /api/docs.',
+      },
+    ],
+    relatedTopics: ['api-playground', 'api-authentication', 'api-endpoints', 'api-keys-management'],
+    keywords: ['api', 'rest', 'integration', 'programmatic', 'developer'],
+  },
+
+  'api-playground': {
+    id: 'api-playground',
+    title: 'API Playground',
+    description:
+      'Test the NetPad API interactively in your browser. Make live API requests, view responses, and explore endpoints without writing code.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the API Playground?',
+      },
+      {
+        type: 'text',
+        content:
+          'The API Playground is an interactive testing tool that lets you make real API requests directly from your browser. It\'s perfect for learning the API, debugging integrations, or quickly testing endpoints.',
+      },
+      {
+        type: 'heading',
+        content: 'Getting Started',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to /api-playground or use the menu: Avatar > API Playground',
+          'Enter your API key (get one from Settings > API Keys)',
+          'Select an endpoint from the dropdown',
+          'Customize the request URL and body if needed',
+          'Click "Send Request" to execute',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Endpoint selector with all available API routes',
+          'Editable request URL for custom parameters',
+          'JSON body editor for POST/PATCH requests',
+          'Response viewer with syntax highlighting',
+          'Headers tab showing all response headers',
+          'Request history to track your session',
+          'Quick example buttons for common operations',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Response Information',
+      },
+      {
+        type: 'text',
+        content:
+          'After sending a request, you\'ll see the HTTP status code, response time, and the full JSON response body. Switch to the Headers tab to view rate limit information and other response headers.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use the "Get OpenAPI Spec" quick example to fetch the full API specification, which you can then import into Postman or other API tools.',
+      },
+      {
+        type: 'warning',
+        content:
+          'The API Playground makes real requests to your account. Creating, updating, or deleting resources will affect your actual data.',
+      },
+    ],
+    relatedTopics: ['api-overview', 'api-authentication', 'api-keys-management'],
+    keywords: ['playground', 'test', 'interactive', 'try', 'debug', 'requests'],
+  },
+
+  'api-authentication': {
+    id: 'api-authentication',
+    title: 'API Authentication',
+    description:
+      'Learn how to authenticate with the NetPad API using API keys. All requests require a valid API key in the Authorization header.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Bearer Token Authentication',
+      },
+      {
+        type: 'text',
+        content:
+          'All API requests must include your API key in the Authorization header using the Bearer scheme.',
+      },
+      {
+        type: 'code',
+        content: 'Authorization: Bearer np_live_your_api_key_here',
+      },
+      {
+        type: 'heading',
+        content: 'API Key Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'Live Keys (np_live_): For production use with published forms',
+          'Test Keys (np_test_): For development and testing (can submit to unpublished forms)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Request',
+      },
+      {
+        type: 'code',
+        content: [
+          'curl -X GET "https://your-domain.com/api/v1/forms" \\',
+          '  -H "Authorization: Bearer np_live_abc123..."',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Permissions',
+      },
+      {
+        type: 'text',
+        content:
+          'Each API key has specific permissions that control what operations it can perform. Common permissions include:',
+      },
+      {
+        type: 'list',
+        content: [
+          'forms:read - View form definitions',
+          'forms:write - Create and update forms',
+          'forms:delete - Delete forms',
+          'submissions:read - View submissions',
+          'submissions:write - Create submissions',
+          'submissions:delete - Delete submissions',
+          'analytics:read - View analytics data',
+          'webhooks:manage - Configure webhooks',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Keep your API keys secure. Never expose them in client-side code, commit them to version control, or share them publicly.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Create separate API keys for different environments (development, staging, production) with appropriate permissions for each.',
+      },
+    ],
+    relatedTopics: ['api-overview', 'api-keys-management', 'api-rate-limiting'],
+    keywords: ['authentication', 'bearer', 'token', 'api key', 'permissions', 'security'],
+  },
+
+  'api-endpoints': {
+    id: 'api-endpoints',
+    title: 'API Endpoints Reference',
+    description:
+      'Complete reference for all available API endpoints including forms and submissions operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Forms Endpoints',
+      },
+      {
+        type: 'code',
+        content: [
+          'GET    /api/v1/forms              # List all forms',
+          'POST   /api/v1/forms              # Create a new form',
+          'GET    /api/v1/forms/:formId      # Get form details',
+          'PATCH  /api/v1/forms/:formId      # Update a form',
+          'DELETE /api/v1/forms/:formId      # Delete a form',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Submissions Endpoints',
+      },
+      {
+        type: 'code',
+        content: [
+          'GET    /api/v1/forms/:formId/submissions              # List submissions',
+          'POST   /api/v1/forms/:formId/submissions              # Create submission',
+          'GET    /api/v1/forms/:formId/submissions/:id          # Get submission',
+          'DELETE /api/v1/forms/:formId/submissions/:id          # Delete submission',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Query Parameters',
+      },
+      {
+        type: 'text',
+        content:
+          'List endpoints support pagination and filtering:',
+      },
+      {
+        type: 'list',
+        content: [
+          'page - Page number (default: 1)',
+          'pageSize - Items per page (default: 20, max: 100)',
+          'status - Filter by status (draft, published)',
+          'startDate/endDate - Filter by date range (submissions)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example: List Forms',
+      },
+      {
+        type: 'code',
+        content: [
+          'curl "https://your-domain.com/api/v1/forms?status=published&page=1" \\',
+          '  -H "Authorization: Bearer np_live_..."',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example: Create Submission',
+      },
+      {
+        type: 'code',
+        content: [
+          'curl -X POST "https://your-domain.com/api/v1/forms/my-form/submissions" \\',
+          '  -H "Authorization: Bearer np_live_..." \\',
+          '  -H "Content-Type: application/json" \\',
+          '  -d \'{"data": {"name": "John", "email": "john@example.com"}}\'',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use the form slug or ID in the URL. Both are supported for flexibility.',
+      },
+    ],
+    relatedTopics: ['api-overview', 'api-authentication', 'api-rate-limiting'],
+    keywords: ['endpoints', 'routes', 'forms', 'submissions', 'crud', 'rest'],
+  },
+
+  'api-rate-limiting': {
+    id: 'api-rate-limiting',
+    title: 'API Rate Limiting',
+    description:
+      'Understand API rate limits and how to handle rate limit errors in your applications.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Default Rate Limits',
+      },
+      {
+        type: 'list',
+        content: [
+          '1,000 requests per hour',
+          '10,000 requests per day',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Rate Limit Headers',
+      },
+      {
+        type: 'text',
+        content:
+          'Every API response includes headers showing your current rate limit status:',
+      },
+      {
+        type: 'code',
+        content: [
+          'X-RateLimit-Limit: 1000        # Maximum requests allowed',
+          'X-RateLimit-Remaining: 999     # Requests remaining',
+          'X-RateLimit-Reset: 1704067200  # Unix timestamp when limit resets',
+          'X-Request-Id: req_abc123       # Unique request identifier',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Rate Limit Exceeded',
+      },
+      {
+        type: 'text',
+        content:
+          'When you exceed the rate limit, the API returns a 429 status code:',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "success": false,',
+          '  "error": {',
+          '    "code": "RATE_LIMIT_EXCEEDED",',
+          '    "message": "Rate limit exceeded. Try again later.",',
+          '    "details": {',
+          '      "retryAfter": 3600',
+          '    }',
+          '  },',
+          '  "requestId": "req_abc123"',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Best Practices',
+      },
+      {
+        type: 'list',
+        content: [
+          'Monitor X-RateLimit-Remaining header to avoid hitting limits',
+          'Implement exponential backoff when receiving 429 responses',
+          'Cache responses where appropriate to reduce API calls',
+          'Use batch operations when available instead of individual requests',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Custom rate limits can be configured per API key. Contact support if you need higher limits for your use case.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Repeatedly hitting rate limits may result in temporary suspension of your API key. Design your applications to respect the limits.',
+      },
+    ],
+    relatedTopics: ['api-overview', 'api-authentication', 'api-endpoints'],
+    keywords: ['rate limit', 'throttling', 'quota', '429', 'requests'],
+  },
+
+  'api-keys-management': {
+    id: 'api-keys-management',
+    title: 'Managing API Keys',
+    description:
+      'Learn how to create, configure, and manage API keys in the NetPad dashboard.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Creating an API Key',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to Settings > API Keys',
+          'Click "Create API Key"',
+          'Enter a descriptive name for the key',
+          'Select the environment (Live or Test)',
+          'Choose the permissions the key should have',
+          'Optionally set an expiration date',
+          'Click Create and copy the key immediately',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Your API key is only shown once when created. Make sure to copy and store it securely. If you lose it, you\'ll need to create a new key.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Naming Best Practices',
+      },
+      {
+        type: 'list',
+        content: [
+          'Use descriptive names: "Production Backend", "Mobile App", "CI/CD Pipeline"',
+          'Include the environment: "Staging API Key", "Dev Testing"',
+          'Identify the purpose: "Analytics Dashboard", "Form Sync Service"',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Revoking API Keys',
+      },
+      {
+        type: 'text',
+        content:
+          'If an API key is compromised or no longer needed, revoke it immediately from the Settings page. Revoked keys cannot be reactivated.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Information',
+      },
+      {
+        type: 'list',
+        content: [
+          'Key Prefix: First 16 characters shown for identification (np_live_abc...)',
+          'Status: Active, Revoked, or Expired',
+          'Last Used: When the key was last used for an API request',
+          'Usage Count: Total number of requests made with this key',
+          'Created/Expires: Key creation and expiration dates',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Security Recommendations',
+      },
+      {
+        type: 'list',
+        content: [
+          'Rotate keys periodically (every 90 days recommended)',
+          'Use separate keys for each application or service',
+          'Grant only the minimum permissions needed',
+          'Set expiration dates for temporary integrations',
+          'Monitor key usage for unusual activity',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Store API keys in environment variables or a secrets manager. Never hardcode them in your application code.',
+      },
+    ],
+    relatedTopics: ['api-overview', 'api-authentication', 'api-rate-limiting'],
+    keywords: ['api keys', 'create', 'manage', 'revoke', 'permissions', 'settings'],
+  },
 };

@@ -29,6 +29,8 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { AppNavBar } from '@/components/Navigation/AppNavBar';
 
 // The three pillars of NetPad
 const pillars = [
@@ -179,8 +181,13 @@ const securityFeatures = [
 ];
 
 export default function LandingPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B' }}>
+      {/* Show AppNavBar for authenticated users */}
+      {!isLoading && isAuthenticated && <AppNavBar />}
+
       {/* Hero Section */}
       <Box
         sx={{

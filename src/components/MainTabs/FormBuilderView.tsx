@@ -3,14 +3,16 @@
 import { Box, CircularProgress, Typography, alpha, Button, Paper } from '@mui/material';
 import { Business } from '@mui/icons-material';
 import { FormBuilder } from '@/components/FormBuilder/FormBuilder';
-import { OnboardingWizard } from '@/components/Onboarding';
+import { OnboardingWizard, WelcomeScreen } from '@/components/Onboarding';
 import { useRequireOrganization, useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormBuilderViewProps {
   initialFormId?: string;
 }
 
 export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { isLoading, needsOrg, needsSelection } = useRequireOrganization();
   const { refreshOrganizations, organizations, selectOrganization } = useOrganization();
 
@@ -36,7 +38,12 @@ export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
     );
   }
 
-  // Show onboarding wizard if user needs to create an org
+  // Show welcome screen if user is not authenticated
+  if (!isAuthenticated && needsOrg) {
+    return <WelcomeScreen />;
+  }
+
+  // Show onboarding wizard if authenticated user needs to create an org
   if (needsOrg) {
     return (
       <Box

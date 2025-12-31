@@ -1,0 +1,152 @@
+# ==============================================
+# Upptime Configuration for NetPad Status Page
+# ==============================================
+#
+# Instructions:
+# 1. Create a new repo from github.com/upptime/upptime/generate
+# 2. Name it "status" or "status.netpad.io"
+# 3. Check "Include all branches"
+# 4. Copy this file to .upptimerc.yml in the root of that repo
+# 5. Create a GH_PAT secret with appropriate permissions
+# 6. Enable GitHub Actions and Pages
+#
+# See full setup guide: docs/STATUS-PAGE-SETUP.md
+
+# GitHub repository configuration
+owner: mrlynn              # Your GitHub username or organization
+repo: status               # Repository name
+
+# ==============================================
+# Sites to Monitor
+# ==============================================
+sites:
+  # Main Application
+  - name: NetPad App
+    url: https://app.netpad.io
+    icon: https://app.netpad.io/favicon.ico
+    maxResponseTime: 5000
+
+  # API Health Check
+  - name: NetPad API
+    url: https://app.netpad.io/api/v1/health
+    expectedStatusCodes:
+      - 200
+    maxResponseTime: 3000
+
+  # Public API Endpoint (simple check)
+  - name: NetPad Public API
+    url: https://app.netpad.io/api/v1/openapi.json
+    expectedStatusCodes:
+      - 200
+
+  # API Documentation
+  - name: API Documentation
+    url: https://app.netpad.io/api/docs
+    expectedStatusCodes:
+      - 200
+
+  # Landing Page (if separate)
+  # - name: NetPad Website
+  #   url: https://netpad.io
+  #   icon: https://netpad.io/favicon.ico
+
+# ==============================================
+# Incident Assignment
+# ==============================================
+assignees:
+  - mrlynn                 # GitHub usernames to assign incidents to
+
+# ==============================================
+# Status Website Configuration
+# ==============================================
+status-website:
+  # Custom domain (add CNAME record pointing to USERNAME.github.io)
+  cname: status.netpad.io
+
+  # Branding
+  name: NetPad Status
+  logoUrl: https://app.netpad.io/logo-250x250-trans.png
+  favicon: https://app.netpad.io/favicon.ico
+
+  # Theme (light, dark, or night)
+  theme: dark
+
+  # Introduction
+  introTitle: "**NetPad** Service Status"
+  introMessage: |
+    Real-time monitoring of NetPad services.
+    Subscribe to updates for incident notifications.
+
+  # Navigation links
+  navbar:
+    - title: Status
+      href: /
+    - title: NetPad App
+      href: https://app.netpad.io
+    - title: API Docs
+      href: https://app.netpad.io/api/docs
+    - title: API Playground
+      href: https://app.netpad.io/api-playground
+
+# ==============================================
+# Internationalization
+# ==============================================
+i18n:
+  activeIncidents: Active Incidents
+  allSystemsOperational: All Systems Operational
+  incidentReport: "Incident Report for $DATE"
+  subscribeBySms: Subscribe via SMS
+  subscribeByEmail: Subscribe via Email
+  incidentDetails: Incident Details
+  incidentFixed: Fixed
+  incidentOngoing: Ongoing
+  incidentResolved: Resolved
+  incidentScheduled: Scheduled
+  incidentSeverityMinor: Minor
+  incidentSeverityMajor: Major
+  incidentSeverityCritical: Critical
+
+# ==============================================
+# Commit Messages
+# ==============================================
+commitMessages:
+  statusChange: "$EMOJI $SITE_NAME is $STATUS"
+  commitAuthorName: "Upptime Bot"
+  commitAuthorEmail: "upptime@netpad.io"
+  templateRecoveredMessage: "$SITE_NAME is back up after $DURATION of downtime"
+  templateDegradedMessage: "$SITE_NAME has degraded performance"
+  templateDownMessage: "$SITE_NAME is down"
+
+# ==============================================
+# Uptime Robot (Optional - if you want additional monitoring)
+# ==============================================
+# uptimeRobot:
+#   apiKey: $UPTIME_ROBOT_API_KEY
+
+# ==============================================
+# Workflow Schedule
+# ==============================================
+# How often to check (in minutes)
+# Default is every 5 minutes
+workflowSchedule:
+  graphs: "0 0 * * *"         # Daily at midnight
+  responseTime: "0 23 * * *"  # Daily at 11 PM
+  staticSite: "0 1 * * *"     # Daily at 1 AM
+  summary: "0 0 * * *"        # Daily at midnight
+  uptime: "*/5 * * * *"       # Every 5 minutes
+
+# ==============================================
+# Notifications (Optional - add as GitHub secrets)
+# ==============================================
+# Add these as repository secrets if you want notifications:
+#
+# NOTIFICATION_SLACK_WEBHOOK - Slack incoming webhook URL
+# NOTIFICATION_DISCORD_WEBHOOK - Discord webhook URL
+# NOTIFICATION_EMAIL - Email address for notifications
+# NOTIFICATION_EMAIL_FROM - Sender email
+# NOTIFICATION_EMAIL_SENDGRID - SendGrid API key
+#
+# Example Slack notification config:
+# notifications:
+#   - type: slack
+#     channel: "#status-alerts"

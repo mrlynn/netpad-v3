@@ -25,6 +25,7 @@ import {
   Skeleton,
   Alert,
   alpha,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add,
@@ -40,8 +41,10 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization, useRequireOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { WelcomeScreen, OnboardingWizard } from '@/components/Onboarding';
 import { WorkflowStatus } from '@/types/workflow';
 
 interface WorkflowListItem {
@@ -74,7 +77,9 @@ const STATUS_CONFIG: Record<WorkflowStatus, { color: string; icon: React.ReactEl
 
 export default function WorkflowsPage() {
   const router = useRouter();
-  const { organization } = useOrganization();
+  const { isAuthenticated } = useAuth();
+  const { isLoading, needsOrg } = useRequireOrganization();
+  const { organization, refreshOrganizations } = useOrganization();
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +205,40 @@ export default function WorkflowsPage() {
 
     setMenuAnchor(null);
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppNavBar />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 64px)' }}>
+          <CircularProgress sx={{ color: '#00ED64' }} />
+        </Box>
+      </Box>
+    );
+  }
+
+  // Show welcome screen if user is not authenticated
+  if (!isAuthenticated && needsOrg) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppNavBar />
+        <WelcomeScreen />
+      </Box>
+    );
+  }
+
+  // Show onboarding wizard if authenticated user needs to create an org
+  if (needsOrg) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppNavBar />
+        <Box sx={{ height: 'calc(100vh - 64px)' }}>
+          <OnboardingWizard onComplete={refreshOrganizations} />
+        </Box>
+      </Box>
+    );
+  }
 
   if (!organization) {
     return (

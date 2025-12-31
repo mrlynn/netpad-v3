@@ -33,6 +33,7 @@ import {
   AccountTree,
   Storage,
   Payments,
+  Api,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -344,6 +345,17 @@ export function AppNavBar() {
                       <Settings sx={{ fontSize: 18 }} />
                     </ListItemIcon>
                     <ListItemText primary="Settings" secondary="Organizations & Connections" />
+                  </MenuItem>
+
+                  <MenuItem
+                    component={Link}
+                    href="/api-playground"
+                    onClick={handleMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Api sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary="API Playground" secondary="Test the public API" />
                   </MenuItem>
 
                   <MenuItem onClick={() => { openSearch(); handleMenuClose(); }}>
