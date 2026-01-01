@@ -22,6 +22,7 @@ const SHORTCUTS: ShortcutItem[] = [
   // Actions
   { keys: ['Cmd', 'S'], description: 'Save form', category: 'actions' },
   { keys: ['Cmd', 'N'], description: 'Add new field', category: 'actions' },
+  { keys: ['Cmd', 'Shift', 'P'], description: 'Preview form', category: 'actions' },
   { keys: ['Cmd', 'Shift', 'A'], description: 'Toggle advanced mode', category: 'actions' },
   // Navigation
   { keys: ['Cmd', ','], description: 'Open settings', category: 'navigation' },
@@ -58,7 +59,7 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
       maxWidth="xs"
       fullWidth
       PaperProps={{
-        sx: { maxHeight: '70vh' },
+        sx: { maxHeight: '80vh' },
       }}
     >
       <DialogTitle

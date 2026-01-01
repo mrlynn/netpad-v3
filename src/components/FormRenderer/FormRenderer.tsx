@@ -32,7 +32,7 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
-import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close, Visibility } from '@mui/icons-material';
 import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft, FormHeader } from '@/types/form';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
 import { evaluateFormula } from '@/utils/computedFields';
@@ -161,6 +161,7 @@ interface FormRendererProps {
   form: FormConfiguration;
   onSubmit: (data: Record<string, any>) => Promise<void>;
   initialData?: Record<string, any>;
+  isPreview?: boolean;
 }
 
 interface LookupOption {
@@ -169,7 +170,7 @@ interface LookupOption {
   raw: any;
 }
 
-export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererProps) {
+export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = false }: FormRendererProps) {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [submitting, setSubmitting] = useState(false);
@@ -3537,15 +3538,21 @@ export function FormRenderer({ form, onSubmit, initialData = {} }: FormRendererP
             variant="contained"
             size="large"
             disabled={submitting}
-            endIcon={submitting ? undefined : <Check />}
+            endIcon={submitting ? undefined : (isPreview ? <Visibility /> : <Check />)}
             sx={{
               flex: 1,
               py: 1.5,
               ...primaryButtonSx,
+              ...(isPreview && {
+                bgcolor: '#FF9800',
+                '&:hover': { bgcolor: '#F57C00' },
+              }),
             }}
           >
             {submitting ? (
               <CircularProgress size={24} sx={{ color: isDarkMode ? '#000' : '#fff' }} />
+            ) : isPreview ? (
+              'Test Submit (Preview)'
             ) : (
               multiPageConfig?.submitButtonLabel || 'Submit'
             )}

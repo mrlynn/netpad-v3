@@ -74,13 +74,17 @@ export async function createAPIKey(
     ? new Date(now.getTime() + request.expiresIn * 24 * 60 * 60 * 1000)
     : undefined;
 
+  const generatedKeyHash = hashAPIKey(fullKey);
+  console.log('[API Key Creation] Creating key with hash:', generatedKeyHash.substring(0, 16) + '...');
+  console.log('[API Key Creation] Key prefix:', getKeyPrefix(fullKey));
+
   const apiKey: APIKey = {
     id: new ObjectId().toString(),
     organizationId,
     name: request.name,
     description: request.description,
     keyPrefix: getKeyPrefix(fullKey),
-    keyHash: hashAPIKey(fullKey),
+    keyHash: generatedKeyHash,
     permissions: request.permissions,
     scopes: request.scopes,
     rateLimit: {
@@ -109,12 +113,25 @@ export async function validateAPIKey(key: string): Promise<APIKey | null> {
 
   const keyHash = hashAPIKey(key);
 
+  console.log('[API Key Validation] Looking for key with hash:', keyHash.substring(0, 16) + '...');
+  console.log('[API Key Validation] Key prefix:', key.substring(0, 16));
+
   const apiKey = await collection.findOne({
     keyHash,
     status: 'active',
   });
 
   if (!apiKey) {
+    // Debug: Check if key exists with any status
+    const anyKey = await collection.findOne({ keyHash });
+    if (anyKey) {
+      console.log('[API Key Validation] Found key but status is:', anyKey.status);
+    } else {
+      console.log('[API Key Validation] No key found with this hash');
+      // List all keys for debugging
+      const count = await collection.countDocuments({});
+      console.log('[API Key Validation] Total keys in collection:', count);
+    }
     return null;
   }
 

@@ -25,6 +25,34 @@ export async function GET(
   try {
     const { formId } = await params;
     const isPublicAccess = request.nextUrl.searchParams.get('public') === 'true';
+    const isPreviewMode = request.nextUrl.searchParams.get('preview') === 'true';
+
+    // Preview mode - allows viewing unpublished forms for the owner
+    if (isPreviewMode) {
+      const session = await getIronSession(await cookies(), sessionOptions);
+      const sessionId = ensureSessionId(session);
+      await session.save();
+
+      // Get form from user's session storage (draft form)
+      const forms = await getForms(sessionId);
+      const form = forms.find(f => f.id === formId || f.slug === formId);
+
+      if (!form) {
+        return NextResponse.json(
+          { success: false, error: 'Form not found' },
+          { status: 404 }
+        );
+      }
+
+      // Don't expose sensitive connection info in preview
+      const { connectionString, ...previewForm } = form;
+
+      return NextResponse.json({
+        success: true,
+        form: previewForm,
+        isPreview: true,
+      });
+    }
 
     // For public access, check published forms first
     if (isPublicAccess) {

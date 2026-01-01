@@ -17,8 +17,9 @@ import {
   Button,
   Divider,
 } from '@mui/material';
-import { Add, Search, Close, Lock, Email, Key, Google, GitHub } from '@mui/icons-material';
+import { Add, Search, Close, Lock, Email, Key, Google, GitHub, TrendingUp, Bolt, AllInclusive } from '@mui/icons-material';
 import { FormConfiguration, FormType, SearchConfig } from '@/types/form';
+import Link from 'next/link';
 import { replaceTemplateVariables, buildRedirectUrl } from '@/types/formHooks';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { SearchFormRenderer } from '@/components/FormRenderer/SearchFormRenderer';
@@ -214,6 +215,84 @@ export default function PublicFormPage() {
   }
 
   if (error) {
+    // Check if this is a limit-exceeded error
+    const isLimitError = error.toLowerCase().includes('limit reached') ||
+                         error.toLowerCase().includes('limit exceeded') ||
+                         error.toLowerCase().includes('upgrade');
+
+    if (isLimitError) {
+      return (
+        <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Bolt sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+              This Form is Temporarily Unavailable
+            </Typography>
+            <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
+              {error}
+            </Alert>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              The organization that created this form has reached their plan limits.
+              Don&apos;t worry - this is usually resolved quickly when the form owner upgrades their plan.
+            </Typography>
+
+            <Divider sx={{ my: 3 }} />
+
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Are you the form owner?
+            </Typography>
+
+            <Box sx={{
+              bgcolor: alpha('#00ED64', 0.05),
+              borderRadius: 2,
+              p: 3,
+              mb: 3,
+              border: `1px solid ${alpha('#00ED64', 0.2)}`
+            }}>
+              <Typography variant="body2" sx={{ mb: 2, fontWeight: 500 }}>
+                Upgrade to unlock:
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <AllInclusive sx={{ fontSize: 18, color: '#00ED64' }} />
+                  <Typography variant="body2">Unlimited form submissions</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TrendingUp sx={{ fontSize: 18, color: '#00ED64' }} />
+                  <Typography variant="body2">More forms, workflows & connections</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Bolt sx={{ fontSize: 18, color: '#00ED64' }} />
+                  <Typography variant="body2">Advanced AI features & automation</Typography>
+                </Box>
+              </Box>
+              <Button
+                component={Link}
+                href="/pricing"
+                variant="contained"
+                fullWidth
+                sx={{
+                  bgcolor: '#00ED64',
+                  color: '#001E2B',
+                  fontWeight: 600,
+                  '&:hover': {
+                    bgcolor: '#00C853',
+                  },
+                }}
+              >
+                View Plans & Pricing
+              </Button>
+            </Box>
+
+            <Typography variant="caption" color="text.secondary">
+              Questions? Contact the form owner or reach out to support.
+            </Typography>
+          </Paper>
+        </Container>
+      );
+    }
+
+    // Default error display for other errors
     return (
       <Container maxWidth="sm" sx={{ py: 8 }}>
         <Paper sx={{ p: 4, textAlign: 'center' }}>

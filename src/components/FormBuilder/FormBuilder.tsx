@@ -18,7 +18,7 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
-import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined } from '@mui/icons-material';
+import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
@@ -176,6 +176,13 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     });
   }, [registerActionHandlers, selectedFieldPath]);
 
+  // Handle preview form - opens in new tab
+  const handlePreviewForm = useCallback(() => {
+    if (currentFormId) {
+      window.open(`/forms/${currentFormId}/preview`, '_blank');
+    }
+  }, [currentFormId]);
+
   // Keyboard shortcuts for power users
   const handleKeyboardShortcuts = useCallback((e: KeyboardEvent) => {
     // Don't trigger if user is typing in an input
@@ -224,7 +231,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
       e.preventDefault();
       setShortcutsHelpOpen(true);
     }
-  }, [fieldConfigs.length, selectedFieldPath, settingsDrawerOpen, showLibrary]);
+    // Cmd/Ctrl + Shift + P: Preview form
+    else if (cmdKey && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      if (currentFormId && fieldConfigs.length > 0) {
+        handlePreviewForm();
+      }
+    }
+  }, [fieldConfigs.length, selectedFieldPath, settingsDrawerOpen, showLibrary, currentFormId, handlePreviewForm]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyboardShortcuts);
@@ -768,6 +782,30 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
             Save
           </Button>
 
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handlePreviewForm}
+            disabled={!currentFormId || fieldConfigs.length === 0}
+            startIcon={<Visibility fontSize="small" />}
+            sx={{
+              minWidth: 'auto',
+              px: 1.5,
+              borderColor: alpha('#FF9800', 0.5),
+              color: '#FF9800',
+              '&:hover': {
+                borderColor: '#FF9800',
+                bgcolor: alpha('#FF9800', 0.08),
+              },
+              '&.Mui-disabled': {
+                borderColor: 'divider',
+                color: 'text.disabled',
+              },
+            }}
+          >
+            Preview
+          </Button>
+
           <QuickPublishButton
             formConfig={{
               id: currentFormId,
@@ -825,6 +863,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               <MenuItem onClick={() => { handleNewForm(); setMoreMenuAnchor(null); }}>
                 <ListItemIcon><NoteAdd fontSize="small" /></ListItemIcon>
                 <ListItemText>New Form</ListItemText>
+              </MenuItem>
+            )}
+            {currentFormId && fieldConfigs.length > 0 && (
+              <MenuItem
+                onClick={() => { handlePreviewForm(); setMoreMenuAnchor(null); }}
+              >
+                <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>
+                <ListItemText>Preview Form</ListItemText>
               </MenuItem>
             )}
             {currentFormIsPublished && currentFormSlug && (
