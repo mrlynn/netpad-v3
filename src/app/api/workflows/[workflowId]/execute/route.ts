@@ -12,6 +12,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from '@/lib/workflow/db';
+import { checkWorkflowExecutionLimit } from '@/lib/platform/billing';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -53,11 +54,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check rate limits
+    // Check subscription-based rate limits first
+    const usageLimit = await checkWorkflowExecutionLimit(orgId);
+    if (!usageLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: usageLimit.reason || 'Monthly workflow execution limit reached',
+          code: 'LIMIT_EXCEEDED',
+          usage: {
+            current: usageLimit.current,
+            limit: usageLimit.limit,
+            remaining: usageLimit.remaining,
+          },
+        },
+        { status: 429 }
+      );
+    }
+
+    // Check pending job queue limits (prevents queue overload)
     const canEnqueue = await canEnqueueJob(orgId, 100);
     if (!canEnqueue) {
       return NextResponse.json(
-        { error: 'Too many pending executions. Please wait for some to complete.' },
+        {
+          error: 'Too many pending executions. Please wait for some to complete.',
+          code: 'QUEUE_FULL',
+        },
         { status: 429 }
       );
     }

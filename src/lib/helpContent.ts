@@ -1,6 +1,89 @@
 import { HelpTopic, HelpTopicId } from '@/types/help';
 
 export const helpTopics: Record<HelpTopicId, HelpTopic> = {
+  'getting-started': {
+    id: 'getting-started',
+    title: 'Getting Started with NetPad',
+    description:
+      'Learn what NetPad is, how it connects to MongoDB, and what you need to get started building forms.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is NetPad?',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad is a visual tool for building data collection forms that save directly to MongoDB. Design forms without writing code, and submissions are automatically stored in your database.',
+      },
+      {
+        type: 'heading',
+        content: 'What is MongoDB?',
+      },
+      {
+        type: 'text',
+        content:
+          'MongoDB is a popular database that stores data in flexible, JSON-like documents. It\'s used by millions of applications worldwide to store and manage data.',
+      },
+      {
+        type: 'heading',
+        content: 'What is a Connection String?',
+      },
+      {
+        type: 'text',
+        content:
+          'A connection string is like a URL to your database. It contains the address of your MongoDB server and the credentials needed to access it securely.',
+      },
+      {
+        type: 'code',
+        content: 'mongodb+srv://username:password@cluster.mongodb.net/database',
+      },
+      {
+        type: 'list',
+        content: [
+          'mongodb+srv:// - The protocol used to connect',
+          'username:password - Your database credentials',
+          'cluster.mongodb.net - The server address',
+          '/database - The specific database to use',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Getting Your Connection String',
+      },
+      {
+        type: 'text',
+        content:
+          'If you have a MongoDB Atlas account, you can find your connection string in the Atlas dashboard under "Connect" > "Connect your application". Don\'t have MongoDB? No problem - NetPad can provision a free MongoDB Atlas cluster for you automatically when you create your workspace.',
+      },
+      {
+        type: 'heading',
+        content: 'Quick Setup',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create a workspace - Give your workspace a name',
+          'Get a database - Use your own MongoDB or let us provision a free one',
+          'Build forms - Use the visual Form Builder to design your forms',
+          'Collect data - Publish forms and start collecting submissions',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'New to MongoDB? Let NetPad provision a free MongoDB Atlas cluster for you. It takes just a minute and requires no configuration.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Keep your connection string secure. It contains credentials to access your database. Never share it publicly or commit it to version control.',
+      },
+    ],
+    relatedTopics: ['mongodb-connection', 'form-builder', 'form-publishing'],
+    keywords: ['getting started', 'introduction', 'connection', 'mongodb', 'database', 'setup', 'begin'],
+  },
+
   'form-builder': {
     id: 'form-builder',
     title: 'Form Builder',
@@ -303,10 +386,63 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
 
   'form-variables': {
     id: 'form-variables',
-    title: 'Form Variables',
+    title: 'Form Variables & References',
     description:
-      'Create variables to manage form state and drive dynamic behavior. Variables can be used in conditional logic and computed fields.',
+      'Learn how to reference field values, use variables, and create dynamic content in forms with template syntax.',
     content: [
+      {
+        type: 'heading',
+        content: 'Field References',
+      },
+      {
+        type: 'text',
+        content:
+          'Reference form field values using their field path. In formulas, use the path directly. In template contexts (like success messages), use double curly braces.',
+      },
+      {
+        type: 'code',
+        content: [
+          '// In formulas (computed fields)',
+          'price * quantity',
+          'firstName + " " + lastName',
+          '',
+          '// In templates (success messages, webhooks)',
+          '{{email}}',
+          '{{user.firstName}}',
+          '{{order.total}}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Where Variables Can Be Used',
+      },
+      {
+        type: 'list',
+        content: [
+          'Computed Fields: Calculate values using formulas with field references',
+          'Success Messages: Include field values in confirmation messages',
+          'Redirect URLs: Pass field values as URL parameters',
+          'Webhook Payloads: Send field data to external services',
+          'Conditional Logic: Compare field values to show/hide fields',
+          'Variable Formulas: Create derived values from other fields',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Syntax',
+      },
+      {
+        type: 'text',
+        content:
+          'Use {{fieldPath}} syntax in templates to insert field values dynamically:',
+      },
+      {
+        type: 'code',
+        content: [
+          'Thank you, {{name}}! Your order #{{responseId}} has been received.',
+          'We will send confirmation to {{email}}.',
+        ],
+      },
       {
         type: 'heading',
         content: 'Variable Types',
@@ -331,9 +467,30 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Static: A fixed default value',
           'Field: Mirrors the value of a form field',
           'Formula: Calculated from other values',
-          'Lookup: Fetched from another collection',
           'URL Parameter: Read from the page URL',
         ],
+      },
+      {
+        type: 'heading',
+        content: 'Available Metadata',
+      },
+      {
+        type: 'list',
+        content: [
+          '{{responseId}}: Unique ID of the submitted response',
+          '{{submittedAt}}: Timestamp when form was submitted',
+          '{{formId}}: ID of the form',
+          '{{formName}}: Name of the form',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Using the Variable Picker',
+      },
+      {
+        type: 'text',
+        content:
+          'Click the {x} icon next to any text field that supports variables to open the picker. Browse available fields, variables, and functions, then click to insert.',
       },
       {
         type: 'example',
@@ -343,11 +500,11 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'tip',
         content:
-          'Variables are useful for complex forms where the same condition needs to be checked in multiple places.',
+          'The variable picker shows all available options based on context. In formula fields, it includes functions. In template fields, it includes metadata like responseId.',
       },
     ],
-    relatedTopics: ['conditional-logic', 'computed-fields'],
-    keywords: ['variable', 'state', 'dynamic', 'parameter'],
+    relatedTopics: ['conditional-logic', 'computed-fields', 'form-lifecycle'],
+    keywords: ['variable', 'state', 'dynamic', 'parameter', 'template', 'reference', 'field'],
   },
 
   'form-lifecycle': {
@@ -2001,5 +2158,183 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     ],
     relatedTopics: ['api-overview', 'api-authentication', 'api-rate-limiting'],
     keywords: ['api keys', 'create', 'manage', 'revoke', 'permissions', 'settings'],
+  },
+
+  'workflow-variables': {
+    id: 'workflow-variables',
+    title: 'Workflow Variables',
+    description: 'Learn how to use variables to pass data between workflow nodes.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Variables?',
+      },
+      {
+        type: 'text',
+        content:
+          'Variables allow you to reference data from previous nodes in your workflow. When a node executes, its output becomes available to all downstream nodes through variable references.',
+      },
+      {
+        type: 'heading',
+        content: 'Variable Syntax',
+      },
+      {
+        type: 'text',
+        content:
+          'Use double curly braces to reference variables in text fields and configuration:',
+      },
+      {
+        type: 'code',
+        content: '{{nodes.formTrigger.data.email}}',
+      },
+      {
+        type: 'heading',
+        content: 'Variable Path Structure',
+      },
+      {
+        type: 'list',
+        content: [
+          'nodes.<nodeId>.<field> - Access output from a specific node',
+          'trigger.payload.<field> - Access the original trigger data',
+          'variables.<name> - Access workflow-level variables',
+        ],
+      },
+      {
+        type: 'example',
+        content:
+          'Example: In an HTTP Request node, set the URL to https://api.example.com/users/{{nodes.formTrigger.data.userId}} to dynamically insert the user ID from a form submission.',
+      },
+      {
+        type: 'heading',
+        content: 'Common Variable Paths',
+      },
+      {
+        type: 'list',
+        content: [
+          '{{nodes.formTrigger.data.*}} - Form submission fields',
+          '{{nodes.formTrigger.respondent.email}} - Submitter email',
+          '{{nodes.httpRequest.data}} - HTTP response body',
+          '{{nodes.httpRequest.status}} - HTTP status code',
+          '{{nodes.mongodbQuery.documents}} - Query results array',
+          '{{nodes.conditional.branch}} - "true" or "false"',
+          '{{nodes.switch.output}} - Matched switch branch name',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Using the Variable Picker',
+      },
+      {
+        type: 'text',
+        content:
+          'Click the {x} icon next to any text or code field to open the variable picker. It shows all available variables from upstream nodes. Click a variable to insert it at your cursor position.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Variables are only available from nodes that execute before the current node. Connect nodes in the correct order to ensure data flows properly.',
+      },
+      {
+        type: 'heading',
+        content: 'Nested Object Access',
+      },
+      {
+        type: 'text',
+        content:
+          'Use dot notation to access nested properties. For arrays, use bracket notation:',
+      },
+      {
+        type: 'code',
+        content: [
+          '{{nodes.httpRequest.data.user.name}}',
+          '{{nodes.mongodbQuery.documents[0].email}}',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'If a variable path does not exist, the template will remain unchanged (e.g., the literal text {{path}} will be used). Always verify your paths are correct.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes'],
+    keywords: ['variables', 'data', 'reference', 'template', 'nodes', 'workflow', 'dynamic'],
+  },
+
+  'workflow-nodes': {
+    id: 'workflow-nodes',
+    title: 'Workflow Node Types',
+    description: 'Overview of available workflow nodes and their outputs.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Trigger Nodes',
+      },
+      {
+        type: 'text',
+        content: 'Triggers start your workflow. Every workflow needs at least one trigger.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form Trigger - Runs when a form is submitted',
+          'Webhook Trigger - Runs when an external HTTP request is received',
+          'Schedule Trigger - Runs on a cron schedule',
+          'Manual Trigger - Runs when manually started by a user',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Logic Nodes',
+      },
+      {
+        type: 'list',
+        content: [
+          'If/Else (Conditional) - Branch based on conditions, outputs true/false branch',
+          'Switch - Route to multiple named branches based on a value',
+          'Delay - Wait for a specified duration before continuing',
+          'Filter - Filter an array based on conditions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Data Nodes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Transform - Modify and reshape data',
+          'MongoDB Query - Query documents from MongoDB (find, findOne, aggregate, count)',
+          'MongoDB Write - Insert, update, or delete documents',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Integration Nodes',
+      },
+      {
+        type: 'list',
+        content: [
+          'HTTP Request - Make API calls to external services',
+          'Send Email - Send email notifications',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Custom Nodes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Code - Execute custom JavaScript with access to input data and helper functions',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Each node type outputs specific data that can be referenced by downstream nodes. Click a node and expand "Available Data" to see what variables it provides.',
+      },
+    ],
+    relatedTopics: ['workflow-variables'],
+    keywords: ['nodes', 'triggers', 'logic', 'data', 'integrations', 'workflow'],
   },
 };

@@ -81,6 +81,10 @@ export async function resetDevUsage(orgId: string): Promise<void> {
         'ai.tokensUsed': 0,
         'submissions.total': 0,
         'submissions.byForm': {},
+        'workflows.executions': 0,
+        'workflows.successfulExecutions': 0,
+        'workflows.failedExecutions': 0,
+        'workflows.byWorkflow': {},
         updatedAt: new Date(),
       },
     }
@@ -99,6 +103,7 @@ export async function setDevUsage(
     agentSessions: number;
     processingRuns: number;
     submissions: number;
+    workflowExecutions: number;
   }>
 ): Promise<void> {
   const collection = await getUsageCollection();
@@ -109,6 +114,7 @@ export async function setDevUsage(
   if (usage.agentSessions !== undefined) update['ai.agentSessions'] = usage.agentSessions;
   if (usage.processingRuns !== undefined) update['ai.processingRuns'] = usage.processingRuns;
   if (usage.submissions !== undefined) update['submissions.total'] = usage.submissions;
+  if (usage.workflowExecutions !== undefined) update['workflows.executions'] = usage.workflowExecutions;
 
   await collection.updateOne(
     { organizationId: orgId, period },
@@ -155,11 +161,16 @@ export async function getDevSubscriptionInfo(orgId: string): Promise<{
       maxSubmissions: tierConfig.limits.maxSubmissionsPerMonth,
       aiGenerations: tierConfig.limits.aiGenerationsPerMonth,
       agentSessions: tierConfig.limits.agentSessionsPerMonth,
+      workflowExecutions: tierConfig.limits.workflowExecutionsPerMonth,
+      maxConnections: tierConfig.limits.maxConnections,
+      maxActiveWorkflows: tierConfig.limits.maxActiveWorkflows,
+      maxFieldsPerForm: tierConfig.limits.maxFieldsPerForm,
     },
     usage: {
       aiGenerations: usage?.ai?.generations || 0,
       agentSessions: usage?.ai?.agentSessions || 0,
       submissions: usage?.submissions?.total || 0,
+      workflowExecutions: usage?.workflows?.executions || 0,
     },
   };
 }

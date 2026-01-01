@@ -42,6 +42,9 @@ import {
   PlayArrow as PlayIcon,
   Stop as StopIcon,
   Schedule as ScheduleIcon,
+  Replay as RetryIcon,
+  Cancel as CancelIcon,
+  HourglassEmpty as WaitingIcon,
 } from '@mui/icons-material';
 import { useWorkflowEditor } from '@/contexts/WorkflowContext';
 
@@ -49,6 +52,21 @@ interface ExecutionLogsPanelProps {
   open: boolean;
   onClose: () => void;
   workflowId: string;
+}
+
+interface JobDetails {
+  jobId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  attempts: number;
+  maxAttempts: number;
+  lastError?: string;
+  runAt?: Date | string;
+  createdAt?: Date | string;
+  completedAt?: Date | string;
+  canRetry: boolean;
+  canCancel: boolean;
+  waitTimeMs?: number | null;
+  isStale?: boolean;
 }
 
 interface ExecutionWithLogs {
@@ -78,6 +96,8 @@ interface ExecutionWithLogs {
     message: string;
     data?: Record<string, unknown>;
   }>;
+  // Job details (fetched separately)
+  job?: JobDetails;
 }
 
 const LOG_LEVEL_ICONS = {
@@ -157,6 +177,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
   const [logLevelFilter, setLogLevelFilter] = useState<string>('all');
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // 'retry' | 'cancel' | null
 
   // Get node label by ID
   const getNodeLabel = useCallback(
@@ -167,6 +188,22 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
     [nodes]
   );
 
+  // Fetch execution details including job info
+  const fetchExecutionDetails = useCallback(async (executionId: string): Promise<JobDetails | undefined> => {
+    try {
+      const response = await fetch(
+        `/api/workflows/${workflowId}/executions/${executionId}`
+      );
+      const data = await response.json();
+      if (data.success && data.job) {
+        return data.job;
+      }
+    } catch (err) {
+      console.error('Error fetching execution details:', err);
+    }
+    return undefined;
+  }, [workflowId]);
+
   // Fetch executions
   const fetchExecutions = useCallback(async () => {
     if (!workflowId) return;
@@ -175,16 +212,17 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
     setError(null);
 
     try {
+      // Fetch executions with job details included (server-side join)
       const response = await fetch(
-        `/api/workflows/${workflowId}/executions?logs=true&limit=10`
+        `/api/workflows/${workflowId}/executions?logs=true&limit=10&includeJobs=true`
       );
       const data = await response.json();
 
       if (data.success) {
         setExecutions(data.executions);
         // Auto-select the first execution if none selected
-        if (data.executions.length > 0 && !selectedExecution) {
-          setSelectedExecution(data.executions[0]._id);
+        if (data.executions.length > 0) {
+          setSelectedExecution((prev) => prev || data.executions[0]._id);
         }
       } else {
         setError(data.error || 'Failed to fetch executions');
@@ -195,7 +233,61 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
     } finally {
       setLoading(false);
     }
-  }, [workflowId, selectedExecution]);
+  }, [workflowId]);
+
+  // Handle retry action
+  const handleRetry = useCallback(async (executionId: string) => {
+    setActionLoading('retry');
+    try {
+      const response = await fetch(
+        `/api/workflows/${workflowId}/executions/${executionId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'retry' }),
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        // Refresh executions to show updated status
+        await fetchExecutions();
+      } else {
+        setError(data.error || 'Failed to retry execution');
+      }
+    } catch (err) {
+      setError('Failed to retry execution');
+      console.error('Error retrying execution:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [workflowId, fetchExecutions]);
+
+  // Handle cancel action
+  const handleCancel = useCallback(async (executionId: string) => {
+    setActionLoading('cancel');
+    try {
+      const response = await fetch(
+        `/api/workflows/${workflowId}/executions/${executionId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cancel' }),
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        // Refresh executions to show updated status
+        await fetchExecutions();
+      } else {
+        setError(data.error || 'Failed to cancel execution');
+      }
+    } catch (err) {
+      setError('Failed to cancel execution');
+      console.error('Error cancelling execution:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [workflowId, fetchExecutions]);
 
   // Fetch on open
   useEffect(() => {
@@ -204,13 +296,21 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
     }
   }, [open, workflowId, fetchExecutions]);
 
-  // Auto-refresh
+  // Auto-refresh - only poll when panel is open and there are pending/running executions
   useEffect(() => {
     if (!autoRefresh || !open) return;
 
-    const interval = setInterval(fetchExecutions, 3000);
+    // Check if we have any pending/running executions that need polling
+    const hasPendingExecutions = executions.some(
+      (exec) => ['pending', 'running'].includes(exec.status)
+    );
+
+    // Use faster polling (5s) when there are active executions, slower (15s) otherwise
+    const pollInterval = hasPendingExecutions ? 5000 : 15000;
+
+    const interval = setInterval(fetchExecutions, pollInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh, open, fetchExecutions]);
+  }, [autoRefresh, open, fetchExecutions, executions]);
 
   // Get the selected execution
   const currentExecution = executions.find((e) => e._id === selectedExecution);
@@ -259,6 +359,34 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
     if (ms < 1000) return `${ms}ms`;
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
     return `${(ms / 60000).toFixed(1)}m`;
+  };
+
+  // Format wait time for pending jobs
+  const formatWaitTime = (ms: number | null | undefined) => {
+    if (!ms || ms <= 0) return 'Ready to run';
+    if (ms < 1000) return 'Running shortly';
+    if (ms < 60000) return `Runs in ${Math.ceil(ms / 1000)}s`;
+    return `Runs in ${Math.ceil(ms / 60000)}m`;
+  };
+
+  // Get job status explanation
+  const getJobStatusExplanation = (job: JobDetails) => {
+    if (job.status === 'pending') {
+      if (job.waitTimeMs && job.waitTimeMs > 0) {
+        return `Waiting for retry backoff (attempt ${job.attempts}/${job.maxAttempts})`;
+      }
+      return 'Queued, waiting for worker to process';
+    }
+    if (job.status === 'processing') {
+      if (job.isStale) {
+        return 'Processing may be stale (worker might have crashed)';
+      }
+      return 'Currently being processed by a worker';
+    }
+    if (job.status === 'failed') {
+      return `Failed after ${job.attempts} attempt(s)`;
+    }
+    return 'Completed successfully';
   };
 
   return (
@@ -438,6 +566,88 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
                     <Typography variant="body2" color="error">
                       {currentExecution.result.error.message}
                     </Typography>
+                  </Box>
+                )}
+
+                {/* Job Status Section */}
+                {currentExecution.job && (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 1.5,
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      borderRadius: 1,
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      {currentExecution.job.status === 'pending' ? (
+                        <WaitingIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+                      ) : currentExecution.job.status === 'processing' ? (
+                        <CircularProgress size={16} />
+                      ) : null}
+                      <Typography variant="subtitle2">
+                        Job: {currentExecution.job.status}
+                      </Typography>
+                      {currentExecution.job.isStale && (
+                        <Chip label="Stale" size="small" color="warning" sx={{ height: 20 }} />
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {getJobStatusExplanation(currentExecution.job)}
+                    </Typography>
+                    {currentExecution.job.status === 'pending' && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {formatWaitTime(currentExecution.job.waitTimeMs)}
+                      </Typography>
+                    )}
+                    {currentExecution.job.lastError && (
+                      <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                        Last error: {currentExecution.job.lastError}
+                      </Typography>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                      {currentExecution.job.canRetry && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
+                          onClick={() => handleRetry(currentExecution._id!)}
+                          disabled={actionLoading !== null}
+                        >
+                          Retry Now
+                        </Button>
+                      )}
+                      {currentExecution.job.canCancel && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={actionLoading === 'cancel' ? <CircularProgress size={14} /> : <CancelIcon />}
+                          onClick={() => handleCancel(currentExecution._id!)}
+                          disabled={actionLoading !== null}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Also show retry for failed executions without job details */}
+                {currentExecution.status === 'failed' && !currentExecution.job && (
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                      startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
+                      onClick={() => handleRetry(currentExecution._id!)}
+                      disabled={actionLoading !== null}
+                    >
+                      Retry Execution
+                    </Button>
                   </Box>
                 )}
               </Paper>

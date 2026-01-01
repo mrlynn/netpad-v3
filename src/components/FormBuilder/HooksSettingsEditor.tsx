@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { FormHooksConfig, PrefillConfig, OnSubmitSuccessConfig, OnSubmitErrorConfig, WebhookConfig, RedirectConfig } from '@/types/formHooks';
 import { FieldConfig } from '@/types/form';
+import { FormVariablePickerButton } from './FormVariablePicker';
 
 interface HooksSettingsEditorProps {
   config?: FormHooksConfig;
@@ -368,9 +369,20 @@ function SuccessSection({ config, onChange, fieldConfigs }: SuccessSectionProps)
   return (
     <Box>
       {/* Custom Success Message */}
-      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
-        Success Message
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+          Success Message
+        </Typography>
+        <FormVariablePickerButton
+          fieldConfigs={fieldConfigs}
+          context="template"
+          useTemplateSyntax
+          onInsert={(value) => {
+            const currentMsg = config?.message || '';
+            updateConfig({ message: currentMsg + value });
+          }}
+        />
+      </Box>
       <TextField
         size="small"
         fullWidth
@@ -379,7 +391,7 @@ function SuccessSection({ config, onChange, fieldConfigs }: SuccessSectionProps)
         placeholder="Thank you, {{name}}! Your response has been recorded."
         value={config?.message || ''}
         onChange={(e) => updateConfig({ message: e.target.value || undefined })}
-        helperText="Use {{fieldPath}} to include field values, e.g., {{name}}, {{email}}"
+        helperText="Use {{fieldPath}} to include field values. Click {x} to browse available fields."
       />
 
       <Divider sx={{ my: 2 }} />

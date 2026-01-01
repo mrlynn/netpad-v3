@@ -45,6 +45,7 @@ import {
   formulaFunctions
 } from '@/utils/computedFields';
 import AIFormulaAssistant from './AIFormulaAssistant';
+import { FormVariablePickerButton } from './FormVariablePicker';
 
 interface ComputedConfigEditorProps {
   config: FieldConfig;
@@ -203,25 +204,37 @@ export function ComputedConfigEditor({
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Formula Input with AI Assistant */}
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <TextField
-                  size="small"
-                  label="Formula"
-                  value={computed.formula}
-                  onChange={(e) => handleUpdate({ formula: e.target.value })}
-                  fullWidth
-                  multiline
-                  rows={2}
-                  placeholder="e.g., price * quantity"
-                  error={!validation.valid}
-                  helperText={
-                    !validation.valid
-                      ? validation.error
-                      : 'Use field names and functions like len(), average(), if(). Click "Show Functions" for full reference.'
-                  }
-                  InputProps={{
-                    sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
-                  }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                  <TextField
+                    size="small"
+                    label="Formula"
+                    value={computed.formula}
+                    onChange={(e) => handleUpdate({ formula: e.target.value })}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    placeholder="e.g., price * quantity"
+                    error={!validation.valid}
+                    helperText={
+                      !validation.valid
+                        ? validation.error
+                        : 'Use field names and functions. Click {x} to browse available fields and functions.'
+                    }
+                    InputProps={{
+                      sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
+                    }}
+                  />
+                  <Box sx={{ pt: 1 }}>
+                    <FormVariablePickerButton
+                      fieldConfigs={allFieldConfigs.filter(f => f.path !== config.path)}
+                      context="formula"
+                      onInsert={(value) => {
+                        const newFormula = computed.formula ? `${computed.formula}${value}` : value;
+                        handleUpdate({ formula: newFormula });
+                      }}
+                    />
+                  </Box>
+                </Box>
                 <AIFormulaAssistant
                   availableFields={allFieldConfigs
                     .filter(f => f.included && f.path !== config.path)

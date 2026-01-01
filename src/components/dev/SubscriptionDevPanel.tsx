@@ -3,6 +3,11 @@
  *
  * Development-only panel for testing subscription tiers and feature gates.
  * Only renders in development mode (NODE_ENV !== 'production').
+ *
+ * Features:
+ * - Compact collapsed state (similar to Vercel/Next.js dev popup)
+ * - User can reposition to any corner
+ * - Position and hidden state persisted in localStorage
  */
 
 'use client';
@@ -23,22 +28,34 @@ import {
   Tooltip,
   alpha,
   useTheme,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
   Zap,
-  Crown,
   Bug,
   X,
+  Move,
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
 } from 'lucide-react';
 import { SubscriptionTier, SUBSCRIPTION_TIERS } from '@/types/platform';
-import { getTierDisplayName, getTierColor } from '@/hooks/useFeatureGate';
+import { getTierColor } from '@/hooks/useFeatureGate';
+
+export type DevPanelPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
 interface SubscriptionDevPanelProps {
   orgId: string;
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  position: DevPanelPosition;
+  onPositionChange: (position: DevPanelPosition) => void;
+  onHide: () => void;
 }
 
 interface DevSubscriptionInfo {
@@ -48,27 +65,36 @@ interface DevSubscriptionInfo {
   usage: Record<string, number>;
 }
 
+const POSITION_CONFIG: Record<DevPanelPosition, { label: string; icon: typeof ArrowUpLeft }> = {
+  'top-left': { label: 'Top Left', icon: ArrowUpLeft },
+  'top-right': { label: 'Top Right', icon: ArrowUpRight },
+  'bottom-left': { label: 'Bottom Left', icon: ArrowDownLeft },
+  'bottom-right': { label: 'Bottom Right', icon: ArrowDownRight },
+};
+
 export function SubscriptionDevPanel({
   orgId,
-  position = 'bottom-right',
+  position,
+  onPositionChange,
+  onHide,
 }: SubscriptionDevPanelProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<DevSubscriptionInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [positionMenuAnchor, setPositionMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Don't render in production
   if (process.env.NODE_ENV === 'production') {
     return null;
   }
 
-  // Position styles - bottom positions raised to avoid overlap with pagination/buttons
+  // Position styles - compact positioning
   const positionStyles = {
-    'bottom-right': { bottom: 80, right: 16 },
-    'bottom-left': { bottom: 80, left: 16 },
+    'bottom-right': { bottom: 16, right: 16 },
+    'bottom-left': { bottom: 16, left: 16 },
     'top-right': { top: 16, right: 16 },
     'top-left': { top: 16, left: 16 },
   };
@@ -155,6 +181,7 @@ export function SubscriptionDevPanel({
             aiGenerations: limits.aiGenerationsPerMonth,
             agentSessions: limits.agentSessionsPerMonth,
             submissions: limits.maxSubmissionsPerMonth,
+            workflowExecutions: limits.workflowExecutionsPerMonth,
           },
         }),
       });
@@ -170,84 +197,101 @@ export function SubscriptionDevPanel({
     }
   };
 
-  if (hidden) {
-    return (
-      <Tooltip title="Show Dev Panel">
-        <IconButton
-          onClick={() => setHidden(false)}
-          sx={{
-            position: 'fixed',
-            ...positionStyles[position],
-            bgcolor: theme.palette.warning.main,
-            color: 'white',
-            '&:hover': { bgcolor: theme.palette.warning.dark },
-            zIndex: 9999,
-          }}
-        >
-          <Bug size={20} />
-        </IconButton>
-      </Tooltip>
-    );
-  }
+  const handlePositionMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setPositionMenuAnchor(event.currentTarget);
+  };
+
+  const handlePositionMenuClose = () => {
+    setPositionMenuAnchor(null);
+  };
+
+  const handlePositionSelect = (newPosition: DevPanelPosition) => {
+    onPositionChange(newPosition);
+    handlePositionMenuClose();
+  };
 
   return (
-    <Paper
-      elevation={8}
-      sx={{
-        position: 'fixed',
-        ...positionStyles[position],
-        width: 320,
-        zIndex: 9999,
-        border: `2px solid ${theme.palette.warning.main}`,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <Box
+    <>
+      <Paper
+        elevation={4}
         sx={{
-          px: 2,
-          py: 1,
-          bgcolor: theme.palette.warning.main,
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'pointer',
+          position: 'fixed',
+          ...positionStyles[position],
+          width: expanded ? 280 : 'auto',
+          zIndex: 9999,
+          border: `1.5px solid ${theme.palette.warning.main}`,
+          overflow: 'hidden',
+          borderRadius: expanded ? 1 : 2,
+          transition: 'width 0.2s ease-in-out',
         }}
-        onClick={() => setExpanded(!expanded)}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Bug size={16} />
-          <Typography variant="subtitle2" fontWeight={600}>
-            DEV: Subscription
-          </Typography>
-          {info && (
-            <Chip
-              label={getTierDisplayName(info.tier)}
-              size="small"
-              sx={{
-                bgcolor: 'white',
-                color: getTierColor(info.tier),
-                fontWeight: 600,
-                height: 20,
-              }}
-            />
-          )}
+        {/* Compact Header */}
+        <Box
+          sx={{
+            px: expanded ? 1.5 : 1,
+            py: 0.5,
+            bgcolor: theme.palette.warning.main,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            gap: 1,
+          }}
+          onClick={() => setExpanded(!expanded)}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Bug size={14} />
+            {expanded && (
+              <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem' }}>
+                DEV
+              </Typography>
+            )}
+            {info && (
+              <Chip
+                label={info.tier.charAt(0).toUpperCase()}
+                size="small"
+                sx={{
+                  bgcolor: 'white',
+                  color: getTierColor(info.tier),
+                  fontWeight: 700,
+                  height: 16,
+                  fontSize: '0.6rem',
+                  '& .MuiChip-label': { px: 0.5 },
+                }}
+              />
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            {expanded && (
+              <>
+                <Tooltip title="Move panel">
+                  <IconButton
+                    size="small"
+                    onClick={handlePositionMenuOpen}
+                    sx={{ color: 'white', p: 0.25 }}
+                  >
+                    <Move size={12} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Hide panel">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHide();
+                    }}
+                    sx={{ color: 'white', p: 0.25 }}
+                  >
+                    <X size={12} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {expanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+          </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              setHidden(true);
-            }}
-            sx={{ color: 'white', mr: 0.5 }}
-          >
-            <X size={14} />
-          </IconButton>
-          {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-        </Box>
-      </Box>
 
       {loading && <LinearProgress color="warning" />}
 
@@ -365,14 +409,56 @@ export function SubscriptionDevPanel({
             fullWidth
             onClick={fetchInfo}
             disabled={loading}
-            sx={{ mt: 2 }}
-            startIcon={<RefreshCw size={14} />}
+            sx={{ mt: 1.5 }}
+            startIcon={<RefreshCw size={12} />}
           >
             Refresh
           </Button>
         </Box>
       </Collapse>
-    </Paper>
+      </Paper>
+
+      {/* Position Menu - opens away from panel edge */}
+      <Menu
+        anchorEl={positionMenuAnchor}
+        open={Boolean(positionMenuAnchor)}
+        onClose={handlePositionMenuClose}
+        anchorOrigin={{
+          vertical: position.startsWith('top') ? 'bottom' : 'top',
+          horizontal: position.endsWith('left') ? 'right' : 'left',
+        }}
+        transformOrigin={{
+          vertical: position.startsWith('top') ? 'top' : 'bottom',
+          horizontal: position.endsWith('left') ? 'left' : 'right',
+        }}
+        sx={{ zIndex: 10001 }}
+        slotProps={{
+          paper: {
+            elevation: 8,
+          },
+        }}
+      >
+        {(Object.keys(POSITION_CONFIG) as DevPanelPosition[]).map((pos) => {
+          const config = POSITION_CONFIG[pos];
+          const Icon = config.icon;
+          return (
+            <MenuItem
+              key={pos}
+              onClick={() => handlePositionSelect(pos)}
+              selected={pos === position}
+              sx={{ fontSize: '0.8rem', py: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <Icon size={14} />
+              </ListItemIcon>
+              <ListItemText primaryTypographyProps={{ fontSize: '0.8rem' }}>
+                {config.label}
+              </ListItemText>
+            </MenuItem>
+          );
+        })}
+      </Menu>
+    </>
   );
 }
 

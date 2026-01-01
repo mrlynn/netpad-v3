@@ -35,6 +35,7 @@ import {
 } from '@/utils/conditionalLogic';
 import { HelpButton } from '@/components/Help';
 import { ConditionalLogicGenerator } from './ConditionalLogicGenerator';
+import { FormVariablePickerButton } from './FormVariablePicker';
 
 interface ConditionalLogicEditorProps {
   config: FieldConfig;
@@ -272,17 +273,26 @@ export function ConditionalLogicEditor({
 
                     {/* Value Input */}
                     {needsValue && (
-                      <TextField
-                        size="small"
-                        label="Value"
-                        value={condition.value || ''}
-                        onChange={(e) =>
-                          handleUpdateCondition(index, { value: e.target.value })
-                        }
-                        sx={{ minWidth: 100, flex: 1 }}
-                        InputProps={{ sx: { fontSize: '0.75rem' } }}
-                        InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
-                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, minWidth: 100 }}>
+                        <TextField
+                          size="small"
+                          label="Value"
+                          value={condition.value || ''}
+                          onChange={(e) =>
+                            handleUpdateCondition(index, { value: e.target.value })
+                          }
+                          sx={{ flex: 1 }}
+                          InputProps={{ sx: { fontSize: '0.75rem' } }}
+                          InputLabelProps={{ sx: { fontSize: '0.75rem' } }}
+                        />
+                        <FormVariablePickerButton
+                          fieldConfigs={availableFields}
+                          context="condition"
+                          onInsert={(value) => {
+                            handleUpdateCondition(index, { value: (condition.value || '') + value });
+                          }}
+                        />
+                      </Box>
                     )}
 
                     {/* Delete Button */}

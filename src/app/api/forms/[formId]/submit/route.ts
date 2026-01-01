@@ -127,6 +127,7 @@ import {
   checkAuthSubmissionLimit,
   getRateLimitHeaders,
 } from '@/lib/platform';
+import { checkSubmissionLimit, incrementSubmissionUsage } from '@/lib/platform/billing';
 
 /**
  * Form Submission API
@@ -242,6 +243,28 @@ export async function POST(
     }
 
     // ============================================
+    // Subscription Submission Limit Check
+    // ============================================
+    if (form.organizationId) {
+      const subscriptionLimit = await checkSubmissionLimit(form.organizationId);
+      if (!subscriptionLimit.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Monthly submission limit reached. Please upgrade your plan.',
+            code: 'SUBSCRIPTION_LIMIT_EXCEEDED',
+            usage: {
+              current: subscriptionLimit.current,
+              limit: subscriptionLimit.limit,
+              remaining: subscriptionLimit.remaining,
+            },
+          },
+          { status: 429 }
+        );
+      }
+    }
+
+    // ============================================
     // Bot Protection Validation
     // ============================================
     if (form.botProtection?.enabled) {
@@ -340,6 +363,9 @@ export async function POST(
             email: authSession.email || undefined,
           }
         );
+
+        // Increment subscription submission usage
+        await incrementSubmissionUsage(form.organizationId, form.id!);
       }
 
       return NextResponse.json({
@@ -431,6 +457,9 @@ export async function POST(
           email: authSession.email || undefined,
         }
       );
+
+      // Increment subscription submission usage
+      await incrementSubmissionUsage(form.organizationId, form.id!);
     }
 
     return NextResponse.json({

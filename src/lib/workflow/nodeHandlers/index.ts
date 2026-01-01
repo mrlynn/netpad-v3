@@ -19,7 +19,27 @@ export {
 
 // Import handlers to trigger registration
 // These must be imported AFTER re-exporting registry functions
+
+// Triggers
 import './formTrigger';
+import './manualTrigger';
+import './webhookTrigger';
+import './scheduleTrigger';
+
+// Data operations
 import './mongodbWrite';
+import './mongodbQuery';
 import './transform';
+import './filter';
+
+// Logic & Flow
+import './conditional';
+import './switch';
 import './delay';
+
+// External integrations
+import './httpRequest';
+import './emailSend';
+
+// Custom code
+import './code';

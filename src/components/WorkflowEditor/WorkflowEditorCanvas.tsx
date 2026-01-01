@@ -23,7 +23,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import { Box, useTheme } from '@mui/material';
+import { Box, useTheme, Fab, Tooltip, alpha } from '@mui/material';
+import { HelpOutline } from '@mui/icons-material';
 import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
@@ -62,6 +63,8 @@ const nodeTypes: NodeTypes = {
   'ai-prompt': BaseNode,
   'ai-classify': BaseNode,
   'ai-extract': BaseNode,
+  // Custom nodes
+  'code': BaseNode,
 };
 
 // Custom edge types (can add custom edges later)
@@ -103,6 +106,34 @@ export function WorkflowEditorCanvas({
 
   // Track the workflow ID to detect when we switch workflows
   const currentWorkflowIdRef = useRef<string | null>(null);
+
+  // Track if the "Build Your Workflow" helper has been dismissed
+  const [helperDismissed, setHelperDismissed] = useState(false);
+
+  // Load helper dismissed state from localStorage when workflow changes
+  useEffect(() => {
+    if (workflow?.id) {
+      const storageKey = `workflow_helper_dismissed_${workflow.id}`;
+      const dismissed = localStorage.getItem(storageKey) === 'true';
+      setHelperDismissed(dismissed);
+    }
+  }, [workflow?.id]);
+
+  // Handle dismissing the helper
+  const handleDismissHelper = useCallback(() => {
+    setHelperDismissed(true);
+    if (workflow?.id) {
+      localStorage.setItem(`workflow_helper_dismissed_${workflow.id}`, 'true');
+    }
+  }, [workflow?.id]);
+
+  // Handle showing the helper again
+  const handleShowHelper = useCallback(() => {
+    setHelperDismissed(false);
+    if (workflow?.id) {
+      localStorage.removeItem(`workflow_helper_dismissed_${workflow.id}`);
+    }
+  }, [workflow?.id]);
 
   // Convert workflow nodes to React Flow format
   const convertToFlowNodes = useCallback((wfNodes: typeof workflowNodes): Node[] => {
@@ -464,6 +495,7 @@ export function WorkflowEditorCanvas({
       'email-send': theme.palette.info.main,
       'transform': theme.palette.primary.main,
       'filter': theme.palette.primary.main,
+      'code': '#795548',
     };
     return colors[node.type || 'default'] || theme.palette.grey[500];
   }, [theme]);
@@ -596,13 +628,36 @@ export function WorkflowEditorCanvas({
         />
       </ReactFlow>
 
-      {/* Empty State Dialog - show when workflow has no nodes */}
-      {workflowNodes.length === 0 && !readOnly && (
+      {/* Empty State Dialog - show when workflow has no nodes and helper not dismissed */}
+      {workflowNodes.length === 0 && !readOnly && !helperDismissed && (
         <EmptyWorkflowState
           onAddNode={handleAddNodeFromEmpty}
           onLoadTemplate={handleLoadTemplate}
           onGenerateWorkflow={handleGenerateWorkflow}
+          onDismiss={handleDismissHelper}
         />
+      )}
+
+      {/* Help button to show the helper again when it's been dismissed */}
+      {workflowNodes.length === 0 && !readOnly && helperDismissed && (
+        <Tooltip title="Show workflow builder helper" placement="left">
+          <Fab
+            size="small"
+            onClick={handleShowHelper}
+            sx={{
+              position: 'absolute',
+              bottom: 16,
+              right: 16,
+              bgcolor: alpha('#9C27B0', 0.9),
+              color: 'white',
+              '&:hover': {
+                bgcolor: '#9C27B0',
+              },
+            }}
+          >
+            <HelpOutline />
+          </Fab>
+        </Tooltip>
       )}
     </Box>
   );

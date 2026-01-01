@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
  * - orgId: string (required)
  * - tier: 'free' | 'pro' | 'team' | 'enterprise' (optional)
  * - resetUsage: boolean (optional)
- * - usage: { aiGenerations?, agentSessions?, submissions? } (optional)
+ * - usage: { aiGenerations?, agentSessions?, submissions?, workflowExecutions? } (optional)
  */
 export async function POST(req: NextRequest) {
   try {

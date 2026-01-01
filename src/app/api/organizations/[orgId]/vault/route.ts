@@ -10,10 +10,12 @@ import { getSession } from '@/lib/auth/session';
 import {
   createConnectionVault,
   listUserVaults,
+  listVaults,
   testConnectionString,
 } from '@/lib/platform/connectionVault';
 import { assertOrgPermission, checkConnectionPermission } from '@/lib/platform/permissions';
 import { repairOrgCreatorMembership } from '@/lib/platform/organizations';
+import { checkConnectionLimit } from '@/lib/platform/billing';
 
 export async function GET(
   request: NextRequest,
@@ -106,6 +108,25 @@ export async function POST(
       return NextResponse.json(
         { error: 'Permission denied' },
         { status: 403 }
+      );
+    }
+
+    // Check connection limit before creating
+    const allVaults = await listVaults(orgId);
+    const activeVaults = allVaults.filter(v => v.status === 'active');
+    const limitCheck = await checkConnectionLimit(orgId, activeVaults.length);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.reason || 'Maximum connections limit reached',
+          code: 'LIMIT_EXCEEDED',
+          usage: {
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            remaining: limitCheck.remaining,
+          },
+        },
+        { status: 429 }
       );
     }
 

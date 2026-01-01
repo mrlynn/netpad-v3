@@ -551,6 +551,8 @@ export default function PricingPage() {
                   { label: 'Team Seats', key: 'maxSeats' },
                   { label: 'AI Generations/month', key: 'aiGenerationsPerMonth' },
                   { label: 'Agent Sessions/month', key: 'agentSessionsPerMonth' },
+                  { label: 'Workflow Executions/month', key: 'workflowExecutionsPerMonth' },
+                  { label: 'Active Workflows', key: 'maxActiveWorkflows' },
                 ].map((row, index) => (
                   <Grid
                     container

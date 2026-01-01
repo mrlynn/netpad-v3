@@ -50,6 +50,7 @@ const NODE_COLORS: Record<string, string> = {
   'ai-prompt': '#E91E63',
   'ai-classify': '#E91E63',
   'ai-extract': '#E91E63',
+  'code': '#795548',
 };
 
 const NODE_ICONS: Record<string, string> = {
@@ -72,6 +73,7 @@ const NODE_ICONS: Record<string, string> = {
   'ai-prompt': '🤖',
   'ai-classify': '🏷️',
   'ai-extract': '📋',
+  'code': '💻',
 };
 
 function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNodeData>) {

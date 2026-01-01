@@ -14,6 +14,7 @@ import {
   createAPIErrorResponse,
 } from '@/lib/api/middleware';
 import { PublicFormSummary } from '@/types/api';
+import { checkFormLimit, checkFieldLimit } from '@/lib/platform/billing';
 
 /**
  * GET /api/v1/forms
@@ -162,6 +163,44 @@ export async function POST(request: NextRequest) {
         context,
         { slug }
       );
+    }
+
+    // Check form limit
+    const currentFormCount = await formsCollection.countDocuments({
+      organizationId: context.organizationId,
+    });
+    const limitCheck = await checkFormLimit(context.organizationId, currentFormCount);
+    if (!limitCheck.allowed) {
+      return createAPIErrorResponse(
+        'LIMIT_EXCEEDED',
+        limitCheck.reason || 'Maximum forms limit reached',
+        429,
+        context,
+        {
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+          remaining: limitCheck.remaining,
+        }
+      );
+    }
+
+    // Check field limit if fields are provided
+    const fields = body.fields || [];
+    if (fields.length > 0) {
+      const fieldLimitCheck = await checkFieldLimit(context.organizationId, fields.length);
+      if (!fieldLimitCheck.allowed) {
+        return createAPIErrorResponse(
+          'FIELD_LIMIT_EXCEEDED',
+          fieldLimitCheck.reason || 'Maximum fields per form limit reached',
+          429,
+          context,
+          {
+            current: fieldLimitCheck.current,
+            limit: fieldLimitCheck.limit,
+            remaining: fieldLimitCheck.remaining,
+          }
+        );
+      }
     }
 
     const now = new Date();

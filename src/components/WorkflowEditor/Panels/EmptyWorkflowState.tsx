@@ -18,6 +18,7 @@ import {
   TextField,
   CircularProgress,
   Alert,
+  IconButton,
 } from '@mui/material';
 import {
   Add,
@@ -41,6 +42,7 @@ import {
   DataObject as ExtractIcon,
   Lightbulb,
   AccountTree,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 import { useAIWorkflowGenerator } from '@/hooks/useAI';
@@ -467,12 +469,14 @@ interface EmptyWorkflowStateProps {
   onAddNode: (nodeType: string) => void;
   onLoadTemplate: (template: WorkflowTemplate) => void;
   onGenerateWorkflow?: (workflow: GeneratedWorkflow) => void;
+  onDismiss?: () => void;
 }
 
 export function EmptyWorkflowState({
   onAddNode,
   onLoadTemplate,
   onGenerateWorkflow,
+  onDismiss,
 }: EmptyWorkflowStateProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -548,8 +552,30 @@ export function EmptyWorkflowState({
             background: `linear-gradient(135deg, ${alpha('#9C27B0', 0.1)} 0%, ${alpha('#9C27B0', 0.02)} 100%)`,
             borderBottom: '1px solid',
             borderColor: 'divider',
+            position: 'relative',
           }}
         >
+          {/* Close Button */}
+          {onDismiss && (
+            <Tooltip title="Close (drag nodes from palette to start)">
+              <IconButton
+                onClick={onDismiss}
+                size="small"
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'text.primary',
+                    bgcolor: alpha('#000', 0.05),
+                  },
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <AccountTree sx={{ fontSize: 48, color: '#9C27B0', mb: 1 }} />
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
             Build Your Workflow

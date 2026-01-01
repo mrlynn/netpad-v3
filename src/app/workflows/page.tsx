@@ -44,7 +44,8 @@ import { useRouter } from 'next/navigation';
 import { useOrganization, useRequireOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
-import { WelcomeScreen, OnboardingWizard } from '@/components/Onboarding';
+import { WelcomeScreen, OnboardingWizard, WelcomeModal } from '@/components/Onboarding';
+import { useWelcomeModal } from '@/hooks/useWelcomeModal';
 import { WorkflowStatus } from '@/types/workflow';
 
 interface WorkflowListItem {
@@ -80,6 +81,7 @@ export default function WorkflowsPage() {
   const { isAuthenticated } = useAuth();
   const { isLoading, needsOrg } = useRequireOrganization();
   const { organization, refreshOrganizations } = useOrganization();
+  const { showWelcome, dismissWelcome } = useWelcomeModal();
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +236,8 @@ export default function WorkflowsPage() {
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <AppNavBar />
         <Box sx={{ height: 'calc(100vh - 64px)' }}>
+          {/* Show welcome modal for first-time users */}
+          <WelcomeModal open={showWelcome} onContinue={dismissWelcome} />
           <OnboardingWizard onComplete={refreshOrganizations} />
         </Box>
       </Box>

@@ -21,6 +21,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  InputAdornment,
   Tabs,
   Tab,
   ToggleButton,
@@ -43,6 +44,7 @@ import { WorkflowNode, RetryPolicy } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
 import { DataContextPanel } from './DataContextPanel';
 import { ConditionBuilder, ConditionGroup, conditionGroupToExpression } from './ConditionBuilder';
+import { VariablePickerButton } from '../VariablePicker';
 
 interface NodeConfigPanelProps {
   open: boolean;
@@ -68,6 +70,16 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   ],
   'conditional': [
     { key: 'condition', label: 'Condition', type: 'condition-builder', description: 'Define conditions for branching' },
+  ],
+  'switch': [
+    { key: 'field', label: 'Field to Match', type: 'text', description: 'Data path to evaluate (e.g., "status", "user.role")' },
+    { key: 'matchMode', label: 'Match Mode', type: 'select', options: ['exact', 'contains', 'regex', 'range'], description: 'How to compare values' },
+    { key: 'cases', label: 'Cases', type: 'code', description: 'Array of cases: [{ "value": "active", "output": "active-branch" }, ...]' },
+    { key: 'defaultOutput', label: 'Default Output', type: 'text', description: 'Output branch when no case matches (default: "default")' },
+  ],
+  'code': [
+    { key: 'code', label: 'JavaScript Code', type: 'code', description: 'Code to execute. Use "input" for node inputs, "return" to output data.' },
+    { key: 'timeout', label: 'Timeout (ms)', type: 'number', description: 'Max execution time (default: 5000, max: 30000)' },
   ],
   'loop': [
     { key: 'iterateOver', label: 'Iterate Over', type: 'text', description: 'Path to array to iterate (e.g., nodes.formTrigger.data.items)' },
@@ -111,7 +123,9 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'expression', label: 'Transform Expression', type: 'code', description: 'JavaScript expression to transform data' },
   ],
   'filter': [
-    { key: 'condition', label: 'Filter Condition', type: 'code', description: 'JavaScript expression that returns true to keep item' },
+    { key: 'inputField', label: 'Input Array Field', type: 'text', description: 'Path to array to filter (default: "items")' },
+    { key: 'conditions', label: 'Filter Conditions', type: 'code', description: 'Array of conditions: [{ "field": "status", "operator": "equals", "value": "active" }]' },
+    { key: 'combineWith', label: 'Combine With', type: 'select', options: ['and', 'or'], description: 'How to combine multiple conditions' },
   ],
   'ai-prompt': [
     { key: 'prompt', label: 'Prompt', type: 'code', description: 'The prompt to send (use {{variables}} for dynamic content)' },
@@ -390,6 +404,19 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
             onChange={(e) => handleConfigChange(field.key, e.target.value)}
             helperText={field.description}
             sx={{ mb: 2 }}
+            InputProps={{
+              endAdornment: field.type !== 'password' && (
+                <InputAdornment position="end">
+                  <VariablePickerButton
+                    nodeId={selectedNode.id}
+                    onInsert={(variable) => {
+                      const currentValue = (value as string) || '';
+                      handleConfigChange(field.key, currentValue + variable);
+                    }}
+                  />
+                </InputAdornment>
+              ),
+            }}
           />
         );
       case 'number':
@@ -619,9 +646,18 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
       case 'code':
         return (
           <Box key={field.key} sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
-              {field.label}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {field.label}
+              </Typography>
+              <VariablePickerButton
+                nodeId={selectedNode.id}
+                onInsert={(variable) => {
+                  const currentValue = typeof value === 'string' ? value : JSON.stringify(value, null, 2) || '';
+                  handleConfigChange(field.key, currentValue + variable);
+                }}
+              />
+            </Box>
             <TextField
               fullWidth
               multiline
@@ -639,6 +675,7 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
                 }
               }}
               helperText={field.description}
+              placeholder="Use {{nodes.nodeId.field}} to reference data from other nodes"
               sx={{
                 '& .MuiInputBase-input': {
                   fontFamily: 'monospace',

@@ -12,6 +12,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from './db';
+import { checkWorkflowExecutionLimit } from '@/lib/platform/billing';
 
 interface TriggerPayload {
   type: TriggerType;
@@ -91,7 +92,16 @@ export async function executeWorkflow(
       };
     }
 
-    // Check rate limits
+    // Check subscription-based rate limits first
+    const usageLimit = await checkWorkflowExecutionLimit(orgId);
+    if (!usageLimit.allowed) {
+      return {
+        success: false,
+        error: usageLimit.reason || 'Monthly workflow execution limit reached. Please upgrade your plan.',
+      };
+    }
+
+    // Check pending job queue limits (prevents queue overload)
     const canEnqueue = await canEnqueueJob(orgId, 100);
     if (!canEnqueue) {
       return {

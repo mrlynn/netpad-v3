@@ -553,6 +553,10 @@ export interface TierLimits {
   agentSessionsPerMonth: number;      // Autonomous agent activations
   responseProcessingPerMonth: number; // Response processing agent runs
 
+  // Workflow limits
+  workflowExecutionsPerMonth: number; // Workflow executions per month
+  maxActiveWorkflows: number;         // Max active workflows (-1 = unlimited)
+
   // Auto-provisioned cluster limits (M0 free tier)
   autoProvisionedCluster?: boolean;   // Whether tier gets auto-provisioned M0 cluster
   clusterStorageMb?: number;          // 512 for M0
@@ -578,6 +582,9 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       aiGenerationsPerMonth: 10,
       agentSessionsPerMonth: 0,
       responseProcessingPerMonth: 0,
+      // Workflow limits - basic for free tier
+      workflowExecutionsPerMonth: 50,
+      maxActiveWorkflows: 1,
       // Auto-provisioned M0 cluster
       autoProvisionedCluster: true,
       clusterStorageMb: 512,
@@ -602,6 +609,9 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       aiGenerationsPerMonth: 100,
       agentSessionsPerMonth: 20,
       responseProcessingPerMonth: 500,
+      // Workflow limits - generous for pro tier
+      workflowExecutionsPerMonth: 500,
+      maxActiveWorkflows: 5,
     },
     aiFeatures: [
       'ai_inline_suggestions',
@@ -632,6 +642,9 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       aiGenerationsPerMonth: 500,
       agentSessionsPerMonth: 100,
       responseProcessingPerMonth: 5000,
+      // Workflow limits - high volume for team tier
+      workflowExecutionsPerMonth: 5000,
+      maxActiveWorkflows: 25,
     },
     aiFeatures: [
       'ai_inline_suggestions',
@@ -669,6 +682,9 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       aiGenerationsPerMonth: -1,
       agentSessionsPerMonth: -1,
       responseProcessingPerMonth: -1,
+      // Workflow limits - unlimited for enterprise
+      workflowExecutionsPerMonth: -1,
+      maxActiveWorkflows: -1,
     },
     aiFeatures: [
       'ai_inline_suggestions',
@@ -770,6 +786,14 @@ export interface OrganizationUsage {
     agentSessions: number;            // Autonomous agent activations
     processingRuns: number;           // Response processing agent runs
     tokensUsed: number;               // For cost tracking
+  };
+
+  // Workflow usage
+  workflows: {
+    executions: number;               // Total workflow executions this period
+    byWorkflow: Record<string, number>; // Executions per workflow
+    successfulExecutions: number;     // Count of successful executions
+    failedExecutions: number;         // Count of failed executions
   };
 
   // Timestamps

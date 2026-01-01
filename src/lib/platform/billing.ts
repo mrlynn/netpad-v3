@@ -528,6 +528,7 @@ export async function getOrCreateUsage(orgId: string): Promise<WithId<Organizati
       submissions: { total: 0, byForm: {} },
       storage: { filesBytes: 0, responsesBytes: 0 },
       ai: { generations: 0, agentSessions: 0, processingRuns: 0, tokensUsed: 0 },
+      workflows: { executions: 0, byWorkflow: {}, successfulExecutions: 0, failedExecutions: 0 },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -925,6 +926,224 @@ function getCurrentPeriod(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// ============================================
+// Workflow Usage & Rate Limiting
+// ============================================
+
+export interface WorkflowUsageResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * Check if a workflow execution is allowed (without incrementing)
+ */
+export async function checkWorkflowExecutionLimit(
+  orgId: string
+): Promise<WorkflowUsageResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limits = SUBSCRIPTION_TIERS[tier].limits;
+  const limit = limits.workflowExecutionsPerMonth;
+
+  const usage = await getOrCreateUsage(orgId);
+  const current = usage.workflows?.executions || 0;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = current < limit;
+  const remaining = Math.max(0, limit - current);
+
+  return {
+    allowed,
+    current,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Monthly workflow execution limit reached (${limit})`,
+  };
+}
+
+/**
+ * Check if organization can have more active workflows
+ */
+export async function checkActiveWorkflowLimit(
+  orgId: string,
+  currentActiveCount: number
+): Promise<WorkflowUsageResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limits = SUBSCRIPTION_TIERS[tier].limits;
+  const limit = limits.maxActiveWorkflows;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current: currentActiveCount,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = currentActiveCount < limit;
+  const remaining = Math.max(0, limit - currentActiveCount);
+
+  return {
+    allowed,
+    current: currentActiveCount,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Maximum active workflows limit reached (${limit})`,
+  };
+}
+
+/**
+ * Increment workflow execution count
+ * Returns usage result with updated counts
+ */
+export async function incrementWorkflowExecution(
+  orgId: string,
+  workflowId: string,
+  success: boolean
+): Promise<WorkflowUsageResult> {
+  const collection = await getUsageCollection();
+  const period = getCurrentPeriod();
+
+  // First check if allowed
+  const check = await checkWorkflowExecutionLimit(orgId);
+  if (!check.allowed) {
+    return check;
+  }
+
+  // Increment usage
+  const update: Record<string, number> = {
+    'workflows.executions': 1,
+    [`workflows.byWorkflow.${workflowId}`]: 1,
+  };
+
+  if (success) {
+    update['workflows.successfulExecutions'] = 1;
+  } else {
+    update['workflows.failedExecutions'] = 1;
+  }
+
+  await collection.updateOne(
+    { organizationId: orgId, period },
+    {
+      $inc: update,
+      $set: { updatedAt: new Date() },
+      $setOnInsert: {
+        createdAt: new Date(),
+        'forms.created': 0,
+        'forms.active': 0,
+        'submissions.total': 0,
+        'submissions.byForm': {},
+        'storage.filesBytes': 0,
+        'storage.responsesBytes': 0,
+        'ai.generations': 0,
+        'ai.agentSessions': 0,
+        'ai.processingRuns': 0,
+        'ai.tokensUsed': 0,
+      },
+    },
+    { upsert: true }
+  );
+
+  return {
+    allowed: true,
+    current: check.current + 1,
+    limit: check.limit,
+    remaining: check.limit === -1 ? -1 : Math.max(0, check.limit - check.current - 1),
+  };
+}
+
+/**
+ * Get workflow usage summary for an organization
+ */
+export async function getWorkflowUsageSummary(orgId: string): Promise<{
+  executions: {
+    current: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+    isUnlimited: boolean;
+  };
+  activeWorkflows: {
+    limit: number;
+    isUnlimited: boolean;
+  };
+  successRate: number;
+  topWorkflows: Array<{ workflowId: string; executions: number }>;
+}> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    throw new Error('Organization not found');
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limits = SUBSCRIPTION_TIERS[tier].limits;
+  const usage = await getOrCreateUsage(orgId);
+
+  const executionsLimit = limits.workflowExecutionsPerMonth;
+  const current = usage.workflows?.executions || 0;
+  const successfulExecutions = usage.workflows?.successfulExecutions || 0;
+  const totalExecutions = current;
+
+  // Calculate top workflows
+  const byWorkflow = usage.workflows?.byWorkflow || {};
+  const topWorkflows = Object.entries(byWorkflow)
+    .map(([workflowId, executions]) => ({ workflowId, executions }))
+    .sort((a, b) => b.executions - a.executions)
+    .slice(0, 5);
+
+  return {
+    executions: {
+      current,
+      limit: executionsLimit,
+      remaining: executionsLimit === -1 ? -1 : Math.max(0, executionsLimit - current),
+      percentUsed: executionsLimit === -1 ? 0 : (current / executionsLimit) * 100,
+      isUnlimited: executionsLimit === -1,
+    },
+    activeWorkflows: {
+      limit: limits.maxActiveWorkflows,
+      isUnlimited: limits.maxActiveWorkflows === -1,
+    },
+    successRate: totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 100,
+    topWorkflows,
+  };
+}
+
 async function logBillingEvent(event: Omit<AuditLogEntry, '_id'>): Promise<void> {
   try {
     const collection = await getPlatformAuditCollection();
@@ -932,6 +1151,227 @@ async function logBillingEvent(event: Omit<AuditLogEntry, '_id'>): Promise<void>
   } catch (error) {
     console.error('[Billing Audit] Failed to log event:', error);
   }
+}
+
+// ============================================
+// Form Limit Checking
+// ============================================
+
+export interface FormLimitResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * Check if organization can create more forms
+ */
+export async function checkFormLimit(
+  orgId: string,
+  currentFormCount: number
+): Promise<FormLimitResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limit = SUBSCRIPTION_TIERS[tier].limits.maxForms;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current: currentFormCount,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = currentFormCount < limit;
+  const remaining = Math.max(0, limit - currentFormCount);
+
+  return {
+    allowed,
+    current: currentFormCount,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Maximum forms limit reached (${limit})`,
+  };
+}
+
+// ============================================
+// Connection Limit Checking
+// ============================================
+
+export interface ConnectionLimitResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * Check if organization can create more connections
+ */
+export async function checkConnectionLimit(
+  orgId: string,
+  currentConnectionCount: number
+): Promise<ConnectionLimitResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limit = SUBSCRIPTION_TIERS[tier].limits.maxConnections;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current: currentConnectionCount,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = currentConnectionCount < limit;
+  const remaining = Math.max(0, limit - currentConnectionCount);
+
+  return {
+    allowed,
+    current: currentConnectionCount,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Maximum connections limit reached (${limit})`,
+  };
+}
+
+// ============================================
+// Submission Limit Checking (pre-check without increment)
+// ============================================
+
+export interface SubmissionLimitResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * Check if a submission is allowed (without incrementing)
+ */
+export async function checkSubmissionLimit(
+  orgId: string
+): Promise<SubmissionLimitResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limit = SUBSCRIPTION_TIERS[tier].limits.maxSubmissionsPerMonth;
+  const usage = await getOrCreateUsage(orgId);
+  const current = usage.submissions.total;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = current < limit;
+  const remaining = Math.max(0, limit - current);
+
+  return {
+    allowed,
+    current,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Monthly submission limit reached (${limit})`,
+  };
+}
+
+// ============================================
+// Field Limit Checking
+// ============================================
+
+export interface FieldLimitResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * Check if a form can have more fields
+ */
+export async function checkFieldLimit(
+  orgId: string,
+  currentFieldCount: number
+): Promise<FieldLimitResult> {
+  const org = await (await getOrganizationsCollection()).findOne({ orgId });
+  if (!org) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      remaining: 0,
+      reason: 'Organization not found',
+    };
+  }
+
+  const tier = org.subscription?.tier || 'free';
+  const limit = SUBSCRIPTION_TIERS[tier].limits.maxFieldsPerForm;
+
+  // Unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      current: currentFieldCount,
+      limit: -1,
+      remaining: -1,
+    };
+  }
+
+  const allowed = currentFieldCount < limit;
+  const remaining = Math.max(0, limit - currentFieldCount);
+
+  return {
+    allowed,
+    current: currentFieldCount,
+    limit,
+    remaining,
+    reason: allowed ? undefined : `Maximum fields per form limit reached (${limit})`,
+  };
 }
 
 // ============================================

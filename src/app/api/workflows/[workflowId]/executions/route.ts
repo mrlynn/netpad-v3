@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { listExecutions, getExecutionLogs } from '@/lib/workflow/db';
+import { listExecutions, getExecutionLogs, getJobByExecutionId } from '@/lib/workflow/db';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -14,7 +14,7 @@ interface RouteParams {
 
 /**
  * GET /api/workflows/[workflowId]/executions
- * List executions for a workflow with optional logs
+ * List executions for a workflow with optional logs and job details
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const includeLogs = searchParams.get('logs') === 'true';
+    const includeJobs = searchParams.get('includeJobs') === 'true';
 
     // Get executions
     const executions = await listExecutions(workflowId, {
@@ -38,32 +39,56 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       offset,
     });
 
-    // Optionally include logs for each execution
-    let executionsWithLogs;
-    if (includeLogs) {
-      executionsWithLogs = await Promise.all(
-        executions.map(async (exec) => {
-          const logs = await getExecutionLogs(exec._id!.toString(), { limit: 100 });
-          return {
-            ...exec,
-            _id: exec._id?.toString(),
-            logs: logs.map((log) => ({
-              ...log,
-              _id: log._id?.toString(),
-            })),
-          };
-        })
-      );
-    } else {
-      executionsWithLogs = executions.map((exec) => ({
-        ...exec,
-        _id: exec._id?.toString(),
-      }));
-    }
+    // Build enriched executions with logs and/or job details
+    const enrichedExecutions = await Promise.all(
+      executions.map(async (exec) => {
+        const executionId = exec._id!.toString();
+        const result: Record<string, unknown> = {
+          ...exec,
+          _id: executionId,
+        };
+
+        // Include logs if requested
+        if (includeLogs) {
+          const logs = await getExecutionLogs(executionId, { limit: 100 });
+          result.logs = logs.map((log) => ({
+            ...log,
+            _id: log._id?.toString(),
+          }));
+        }
+
+        // Include job details for pending/running executions if requested
+        if (includeJobs && ['pending', 'running'].includes(exec.status)) {
+          const job = await getJobByExecutionId(executionId);
+          if (job) {
+            result.job = {
+              jobId: job._id?.toString(),
+              status: job.status,
+              attempts: job.attempts,
+              maxAttempts: job.maxAttempts,
+              lastError: job.lastError,
+              runAt: job.runAt,
+              createdAt: job.createdAt,
+              completedAt: job.completedAt,
+              canRetry: ['failed', 'pending', 'processing'].includes(job.status),
+              canCancel: ['pending', 'processing'].includes(job.status),
+              waitTimeMs: job.status === 'pending' && job.runAt
+                ? Math.max(0, job.runAt.getTime() - Date.now())
+                : null,
+              isStale: job.status === 'processing' && job.lockedAt
+                ? Date.now() - job.lockedAt.getTime() > 5 * 60 * 1000
+                : false,
+            };
+          }
+        }
+
+        return result;
+      })
+    );
 
     return NextResponse.json({
       success: true,
-      executions: executionsWithLogs,
+      executions: enrichedExecutions,
       pagination: {
         limit,
         offset,

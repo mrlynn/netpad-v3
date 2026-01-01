@@ -1,0 +1,16 @@
+<!-- netpad-lockup-light.svg (reference) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="256" viewBox="0 0 640 256" fill="none">
+  <!-- Icon group -->
+  <g transform="translate(0,0)">
+    <rect x="66" y="36" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <rect x="53" y="45" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <rect x="40" y="54" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <path d="M92 152C92 132 108 116 128 116H162C176 116 188 104 188 90C188 74 175 62 160 62H118C104 62 92 74 92 88"
+          stroke="#000000" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="128" cy="152" r="14" fill="#000000"/>
+    <circle cx="162" cy="116" r="14" fill="#000000"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="300" y="150" font-family="Inter, system-ui, -apple-system" font-size="96" font-weight="600" fill="#000000">NetPad</text>
+</svg>

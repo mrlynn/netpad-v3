@@ -114,16 +114,24 @@ function getNodeOutputSchema(node: WorkflowNode): ContextVariable[] {
 
     case 'http-request':
       return [
-        { path: `${prefix}.response`, name: 'Response', type: 'object', source: nodeLabel, sourceNodeId: node.id },
-        { path: `${prefix}.response.data`, name: 'Response Data', type: 'any', source: nodeLabel, sourceNodeId: node.id },
-        { path: `${prefix}.response.status`, name: 'Status Code', type: 'number', source: nodeLabel, sourceNodeId: node.id },
-        { path: `${prefix}.response.headers`, name: 'Response Headers', type: 'object', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.data`, name: 'Response Data', type: 'any', source: nodeLabel, sourceNodeId: node.id, description: 'Parsed response body (JSON or text)' },
+        { path: `${prefix}.status`, name: 'Status Code', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.statusText`, name: 'Status Text', type: 'string', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.headers`, name: 'Response Headers', type: 'object', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.ok`, name: 'Is OK (2xx)', type: 'boolean', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.url`, name: 'Final URL', type: 'string', source: nodeLabel, sourceNodeId: node.id, description: 'URL after redirects' },
       ];
 
     case 'mongodb-query':
       return [
-        { path: `${prefix}.result`, name: 'Query Result', type: 'array', source: nodeLabel, sourceNodeId: node.id },
-        { path: `${prefix}.count`, name: 'Result Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.documents`, name: 'Documents', type: 'array', source: nodeLabel, sourceNodeId: node.id, description: 'Array of matched documents (find/aggregate)' },
+        { path: `${prefix}.document`, name: 'Document', type: 'object', source: nodeLabel, sourceNodeId: node.id, description: 'Single document (findOne)' },
+        { path: `${prefix}.count`, name: 'Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.found`, name: 'Found', type: 'boolean', source: nodeLabel, sourceNodeId: node.id, description: 'Whether document was found (findOne)' },
+        { path: `${prefix}.values`, name: 'Distinct Values', type: 'array', source: nodeLabel, sourceNodeId: node.id, description: 'Array of distinct values' },
+        { path: `${prefix}.metadata.collection`, name: 'Collection', type: 'string', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.metadata.operation`, name: 'Operation', type: 'string', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.metadata.executionTimeMs`, name: 'Query Time (ms)', type: 'number', source: nodeLabel, sourceNodeId: node.id },
       ];
 
     case 'mongodb-write':
@@ -140,8 +148,15 @@ function getNodeOutputSchema(node: WorkflowNode): ContextVariable[] {
 
     case 'filter':
       return [
-        { path: `${prefix}.result`, name: 'Filtered Items', type: 'array', source: nodeLabel, sourceNodeId: node.id },
-        { path: `${prefix}.count`, name: 'Result Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.filtered`, name: 'Filtered Items', type: 'array', source: nodeLabel, sourceNodeId: node.id, description: 'Items that passed the filter' },
+        { path: `${prefix}.removed`, name: 'Removed Items', type: 'array', source: nodeLabel, sourceNodeId: node.id, description: 'Items that were filtered out' },
+        { path: `${prefix}.counts.total`, name: 'Total Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.counts.passed`, name: 'Passed Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.counts.removed`, name: 'Removed Count', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.counts.passRate`, name: 'Pass Rate (%)', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.first`, name: 'First Item', type: 'any', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.last`, name: 'Last Item', type: 'any', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.isEmpty`, name: 'Is Empty', type: 'boolean', source: nodeLabel, sourceNodeId: node.id },
       ];
 
     case 'ai-prompt':
@@ -158,7 +173,26 @@ function getNodeOutputSchema(node: WorkflowNode): ContextVariable[] {
 
     case 'conditional':
       return [
+        { path: `${prefix}.result`, name: 'Condition Result', type: 'boolean', source: nodeLabel, sourceNodeId: node.id, description: 'true if conditions passed' },
         { path: `${prefix}.branch`, name: 'Chosen Branch', type: 'string', source: nodeLabel, sourceNodeId: node.id, description: '"true" or "false"' },
+        { path: `${prefix}.data`, name: 'Pass-through Data', type: 'object', source: nodeLabel, sourceNodeId: node.id, description: 'Input data passed through' },
+        { path: `${prefix}.evaluatedConditions`, name: 'Evaluated Conditions', type: 'array', source: nodeLabel, sourceNodeId: node.id, description: 'Details of each condition evaluation' },
+      ];
+
+    case 'switch':
+      return [
+        { path: `${prefix}.output`, name: 'Output Branch', type: 'string', source: nodeLabel, sourceNodeId: node.id, description: 'Name of matched output branch' },
+        { path: `${prefix}.matchedCase`, name: 'Matched Case', type: 'any', source: nodeLabel, sourceNodeId: node.id, description: 'Value that matched, or "default"' },
+        { path: `${prefix}.matchedIndex`, name: 'Matched Index', type: 'number', source: nodeLabel, sourceNodeId: node.id, description: 'Index of matched case (-1 for default)' },
+        { path: `${prefix}.isDefault`, name: 'Is Default', type: 'boolean', source: nodeLabel, sourceNodeId: node.id, description: 'True if default branch was taken' },
+        { path: `${prefix}.fieldValue`, name: 'Field Value', type: 'any', source: nodeLabel, sourceNodeId: node.id, description: 'The value that was evaluated' },
+        { path: `${prefix}.data`, name: 'Pass-through Data', type: 'object', source: nodeLabel, sourceNodeId: node.id, description: 'Input data passed through' },
+      ];
+
+    case 'code':
+      return [
+        { path: `${prefix}`, name: 'Code Output', type: 'object', source: nodeLabel, sourceNodeId: node.id, description: 'Whatever the code returns' },
+        { path: `${prefix}._execution.durationMs`, name: 'Execution Time', type: 'number', source: nodeLabel, sourceNodeId: node.id, description: 'How long the code took to run (ms)' },
       ];
 
     case 'loop':
@@ -166,6 +200,20 @@ function getNodeOutputSchema(node: WorkflowNode): ContextVariable[] {
         { path: `${prefix}.currentItem`, name: 'Current Item', type: 'any', source: nodeLabel, sourceNodeId: node.id },
         { path: `${prefix}.index`, name: 'Current Index', type: 'number', source: nodeLabel, sourceNodeId: node.id },
         { path: `${prefix}.results`, name: 'Loop Results', type: 'array', source: nodeLabel, sourceNodeId: node.id },
+      ];
+
+    case 'delay':
+      return [
+        { path: `${prefix}.delayedUntil`, name: 'Delayed Until', type: 'date', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.actualDelayMs`, name: 'Actual Delay (ms)', type: 'number', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.data`, name: 'Pass-through Data', type: 'object', source: nodeLabel, sourceNodeId: node.id },
+      ];
+
+    case 'email-send':
+      return [
+        { path: `${prefix}.success`, name: 'Success', type: 'boolean', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.messageId`, name: 'Message ID', type: 'string', source: nodeLabel, sourceNodeId: node.id },
+        { path: `${prefix}.to`, name: 'Recipient', type: 'string', source: nodeLabel, sourceNodeId: node.id },
       ];
 
     default:

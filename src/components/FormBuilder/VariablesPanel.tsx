@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { FormVariable, FieldConfig } from '@/types/form';
 import { HelpButton } from '@/components/Help';
+import { FormVariablePickerButton } from './FormVariablePicker';
 
 interface VariablesPanelProps {
   variables: FormVariable[];
@@ -371,27 +372,46 @@ export function VariablesPanel({
                         )}
 
                         {variable.valueSource?.type === 'formula' && (
-                          <TextField
-                            size="small"
-                            label="Formula"
-                            value={variable.valueSource.formula || ''}
-                            onChange={(e) =>
-                              updateVariable(index, {
-                                valueSource: {
-                                  ...variable.valueSource,
-                                  type: 'formula',
-                                  formula: e.target.value
-                                }
-                              })
-                            }
-                            fullWidth
-                            multiline
-                            rows={2}
-                            placeholder="e.g., price * quantity"
-                            InputProps={{
-                              sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
-                            }}
-                          />
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                            <TextField
+                              size="small"
+                              label="Formula"
+                              value={variable.valueSource.formula || ''}
+                              onChange={(e) =>
+                                updateVariable(index, {
+                                  valueSource: {
+                                    ...variable.valueSource,
+                                    type: 'formula',
+                                    formula: e.target.value
+                                  }
+                                })
+                              }
+                              fullWidth
+                              multiline
+                              rows={2}
+                              placeholder="e.g., price * quantity"
+                              InputProps={{
+                                sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
+                              }}
+                            />
+                            <Box sx={{ pt: 1 }}>
+                              <FormVariablePickerButton
+                                fieldConfigs={fieldConfigs}
+                                variables={variables.filter((_, i) => i !== index)}
+                                context="formula"
+                                onInsert={(value) => {
+                                  const currentFormula = variable.valueSource?.formula || '';
+                                  updateVariable(index, {
+                                    valueSource: {
+                                      ...variable.valueSource,
+                                      type: 'formula',
+                                      formula: currentFormula + value
+                                    }
+                                  });
+                                }}
+                              />
+                            </Box>
+                          </Box>
                         )}
 
                         {/* Default/Current Value */}

@@ -5,6 +5,7 @@ import { sessionOptions, ensureSessionId, SavedForm } from '@/lib/session';
 import { FormConfiguration, FormVersion } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { getForms, saveForm, publishForm, getPublishedFormById, getVersionsForForm, addFormVersion } from '@/lib/storage';
+import { checkFieldLimit } from '@/lib/platform/billing';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,6 +39,27 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Form configuration with name is required' },
         { status: 400 }
       );
+    }
+
+    // Check field limit if form has organization context
+    const fieldCount = formConfig.fieldConfigs?.length || 0;
+    if (formConfig.organizationId && fieldCount > 0) {
+      const fieldLimitCheck = await checkFieldLimit(formConfig.organizationId, fieldCount);
+      if (!fieldLimitCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: fieldLimitCheck.reason || 'Maximum fields per form limit reached',
+            code: 'FIELD_LIMIT_EXCEEDED',
+            usage: {
+              current: fieldLimitCheck.current,
+              limit: fieldLimitCheck.limit,
+              remaining: fieldLimitCheck.remaining,
+            },
+          },
+          { status: 429 }
+        );
+      }
     }
 
     // Validate data destination before publishing

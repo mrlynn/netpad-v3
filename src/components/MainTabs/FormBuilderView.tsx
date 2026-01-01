@@ -3,9 +3,10 @@
 import { Box, CircularProgress, Typography, alpha, Button, Paper } from '@mui/material';
 import { Business } from '@mui/icons-material';
 import { FormBuilder } from '@/components/FormBuilder/FormBuilder';
-import { OnboardingWizard, WelcomeScreen } from '@/components/Onboarding';
+import { OnboardingWizard, WelcomeScreen, WelcomeModal } from '@/components/Onboarding';
 import { useRequireOrganization, useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWelcomeModal } from '@/hooks/useWelcomeModal';
 
 interface FormBuilderViewProps {
   initialFormId?: string;
@@ -15,6 +16,7 @@ export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { isLoading, needsOrg, needsSelection } = useRequireOrganization();
   const { refreshOrganizations, organizations, selectOrganization } = useOrganization();
+  const { showWelcome, dismissWelcome } = useWelcomeModal();
 
   // Show loading state while checking org status
   if (isLoading) {
@@ -53,6 +55,8 @@ export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
           bgcolor: alpha('#00ED64', 0.02),
         }}
       >
+        {/* Show welcome modal for first-time users */}
+        <WelcomeModal open={showWelcome} onContinue={dismissWelcome} />
         <OnboardingWizard onComplete={refreshOrganizations} />
       </Box>
     );

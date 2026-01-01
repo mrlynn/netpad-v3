@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth/session';
 import { assertOrgPermission } from '@/lib/platform/permissions';
 import { getOrgDb } from '@/lib/platform/db';
 import { ObjectId } from 'mongodb';
+import { checkFormLimit } from '@/lib/platform/billing';
 
 // Helper functions for generating realistic analytics data
 function randomDevice(): 'mobile' | 'desktop' | 'tablet' {
@@ -509,6 +510,24 @@ export async function POST(
       return NextResponse.json(
         { error: 'Organization database not found' },
         { status: 404 }
+      );
+    }
+
+    // Check form limit before creating
+    const currentFormCount = await db.collection('forms').countDocuments({ organizationId: orgId });
+    const limitCheck = await checkFormLimit(orgId, currentFormCount);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.reason || 'Maximum forms limit reached',
+          code: 'LIMIT_EXCEEDED',
+          usage: {
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            remaining: limitCheck.remaining,
+          },
+        },
+        { status: 429 }
       );
     }
 

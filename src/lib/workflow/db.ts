@@ -616,6 +616,144 @@ export async function canEnqueueJob(
   return count < maxPending;
 }
 
+/**
+ * Get job by ID
+ */
+export async function getJobById(jobId: string): Promise<WorkflowJob | null> {
+  const collection = await getJobsCollection();
+  return collection.findOne({ _id: new ObjectId(jobId) });
+}
+
+/**
+ * Get job by execution ID
+ */
+export async function getJobByExecutionId(executionId: string): Promise<WorkflowJob | null> {
+  const collection = await getJobsCollection();
+  return collection.findOne({ executionId });
+}
+
+/**
+ * Retry a failed or stuck job immediately
+ * Resets the job to pending status with runAt set to now
+ */
+export async function retryJob(jobId: string): Promise<WorkflowJob | null> {
+  const collection = await getJobsCollection();
+  const id = new ObjectId(jobId);
+
+  const job = await collection.findOne({ _id: id });
+  if (!job) return null;
+
+  // Only allow retry for failed, pending (stuck), or processing (stale) jobs
+  if (!['failed', 'pending', 'processing'].includes(job.status)) {
+    return null;
+  }
+
+  const result = await collection.findOneAndUpdate(
+    { _id: id },
+    {
+      $set: {
+        status: 'pending',
+        runAt: new Date(),
+        lastError: job.lastError ? `Manually retried. Previous error: ${job.lastError}` : undefined,
+      },
+      $unset: { lockedAt: 1, lockedBy: 1 },
+    },
+    { returnDocument: 'after' }
+  );
+
+  return result;
+}
+
+/**
+ * Cancel a pending or processing job
+ */
+export async function cancelJob(jobId: string): Promise<WorkflowJob | null> {
+  const collection = await getJobsCollection();
+  const id = new ObjectId(jobId);
+
+  const job = await collection.findOne({ _id: id });
+  if (!job) return null;
+
+  // Only allow cancel for pending or processing jobs
+  if (!['pending', 'processing'].includes(job.status)) {
+    return null;
+  }
+
+  const result = await collection.findOneAndUpdate(
+    { _id: id },
+    {
+      $set: {
+        status: 'failed',
+        lastError: 'Cancelled by user',
+        completedAt: new Date(),
+      },
+      $unset: { lockedAt: 1, lockedBy: 1 },
+    },
+    { returnDocument: 'after' }
+  );
+
+  // Also update the execution status
+  if (result) {
+    await updateExecutionStatus(job.executionId, {
+      status: 'failed',
+      completedAt: new Date(),
+      result: {
+        success: false,
+        error: {
+          nodeId: 'system',
+          code: 'CANCELLED',
+          message: 'Cancelled by user',
+          timestamp: new Date(),
+        },
+      },
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Get job queue status for an organization
+ */
+export async function getJobQueueStatus(orgId: string): Promise<{
+  pending: number;
+  processing: number;
+  failed: number;
+  completed: number;
+  oldestPendingAt: Date | null;
+}> {
+  const collection = await getJobsCollection();
+
+  const [counts, oldestPending] = await Promise.all([
+    collection.aggregate([
+      { $match: { orgId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]).toArray(),
+    collection.findOne(
+      { orgId, status: 'pending' },
+      { sort: { createdAt: 1 } }
+    ),
+  ]);
+
+  const statusCounts = {
+    pending: 0,
+    processing: 0,
+    failed: 0,
+    completed: 0,
+  };
+
+  for (const item of counts) {
+    if (item._id in statusCounts) {
+      statusCounts[item._id as keyof typeof statusCounts] = item.count;
+    }
+  }
+
+  return {
+    ...statusCounts,
+    oldestPendingAt: oldestPending?.createdAt || null,
+  };
+}
+
 // ============================================
 // WORKFLOW STATS UPDATES
 // ============================================

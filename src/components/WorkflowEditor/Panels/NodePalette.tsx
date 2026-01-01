@@ -38,6 +38,7 @@ import {
   SmartToy as AiIcon,
   Category as CategoryIcon,
   DataObject as ExtractIcon,
+  Code as CodeIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 
@@ -92,6 +93,14 @@ const PALETTE_NODES: PaletteNode[] = [
     type: 'conditional',
     label: 'If/Else',
     description: 'Branch based on conditions',
+    icon: <ConditionalIcon />,
+    color: '#9C27B0',
+    category: 'logic',
+  },
+  {
+    type: 'switch',
+    label: 'Switch',
+    description: 'Route to multiple paths based on value',
     icon: <ConditionalIcon />,
     color: '#9C27B0',
     category: 'logic',
@@ -207,6 +216,16 @@ const PALETTE_NODES: PaletteNode[] = [
     icon: <ExtractIcon />,
     color: '#E91E63',
     category: 'ai',
+  },
+
+  // Custom
+  {
+    type: 'code',
+    label: 'Code',
+    description: 'Execute custom JavaScript code',
+    icon: <CodeIcon />,
+    color: '#795548',
+    category: 'custom',
   },
 ];
 

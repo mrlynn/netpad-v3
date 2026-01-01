@@ -16,6 +16,7 @@ export interface HelpContent {
 
 // Pre-defined help topic IDs for type safety
 export type HelpTopicId =
+  | 'getting-started'
   | 'form-builder'
   | 'field-configuration'
   | 'conditional-logic'
@@ -48,4 +49,6 @@ export type HelpTopicId =
   | 'api-authentication'
   | 'api-endpoints'
   | 'api-rate-limiting'
-  | 'api-keys-management';
+  | 'api-keys-management'
+  | 'workflow-variables'
+  | 'workflow-nodes';

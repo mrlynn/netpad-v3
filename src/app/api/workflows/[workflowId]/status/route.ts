@@ -6,8 +6,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { getWorkflowById, updateWorkflowStatus } from '@/lib/workflow/db';
+import { getWorkflowById, updateWorkflowStatus, listWorkflows } from '@/lib/workflow/db';
 import { WorkflowStatus } from '@/types/workflow';
+import { checkActiveWorkflowLimit } from '@/lib/platform/billing';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -71,6 +72,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           { error: 'Workflow must have at least one trigger node to be activated' },
           { status: 400 }
         );
+      }
+
+      // Check active workflow limit (only if workflow is not already active)
+      if (existing.status !== 'active') {
+        const { workflows: activeWorkflows } = await listWorkflows(orgId, { status: 'active' });
+        const activeCount = activeWorkflows.length;
+
+        const limitCheck = await checkActiveWorkflowLimit(orgId, activeCount);
+        if (!limitCheck.allowed) {
+          return NextResponse.json(
+            {
+              error: limitCheck.reason || 'Maximum active workflows limit reached',
+              code: 'LIMIT_EXCEEDED',
+              usage: {
+                current: limitCheck.current,
+                limit: limitCheck.limit,
+                remaining: limitCheck.remaining,
+              },
+            },
+            { status: 429 }
+          );
+        }
       }
     }
 
