@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -61,9 +61,12 @@ import {
 // Types
 // ============================================
 
-interface BillingSettingsProps {
+interface Organization {
   orgId: string;
-  orgName: string;
+  name: string;
+  slug: string;
+  plan: string;
+  role: string;
 }
 
 interface PlanCardProps {
@@ -78,7 +81,66 @@ interface PlanCardProps {
 // Main Component
 // ============================================
 
-export function BillingSettings({ orgId, orgName }: BillingSettingsProps) {
+export function BillingSettings() {
+  const theme = useTheme();
+
+  // Fetch user's organizations
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [orgsLoading, setOrgsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const response = await fetch('/api/organizations');
+        if (response.ok) {
+          const data = await response.json();
+          setOrganizations(data.organizations || []);
+          // Select the first organization by default
+          if (data.organizations?.length > 0) {
+            setSelectedOrg(data.organizations[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch organizations:', err);
+      } finally {
+        setOrgsLoading(false);
+      }
+    };
+    fetchOrganizations();
+  }, []);
+
+  // Show loading while fetching orgs
+  if (orgsLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show message if no org
+  if (!selectedOrg) {
+    return (
+      <Box sx={{ py: 4 }}>
+        <Alert severity="info">
+          No organization found. Please create an organization first in the Organizations tab.
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Render the billing content with the selected org
+  return (
+    <BillingSettingsContent
+      orgId={selectedOrg.orgId}
+      orgName={selectedOrg.name}
+    />
+  );
+}
+
+// Inner component that only renders when we have a valid orgId
+function BillingSettingsContent({ orgId, orgName }: { orgId: string; orgName: string }) {
   const theme = useTheme();
   const { tier, loading: subscriptionLoading, usage, refresh } = useSubscription(orgId);
   const { limits, loading: usageLoading, refresh: refreshUsage } = useAllUsageLimits(orgId);
@@ -455,6 +517,8 @@ function PlanCard({ tier, currentTier, interval, onSelect, loading }: PlanCardPr
         flexDirection: 'column',
         border: isCurrent ? `2px solid ${tierColor}` : undefined,
         position: 'relative',
+        mt: isCurrent ? 2 : 0, // Add margin top when current to make room for chip
+        overflow: 'visible', // Allow chip to overflow
       }}
     >
       {isCurrent && (
@@ -463,11 +527,13 @@ function PlanCard({ tier, currentTier, interval, onSelect, loading }: PlanCardPr
           size="small"
           sx={{
             position: 'absolute',
-            top: -12,
+            top: -14,
             left: '50%',
             transform: 'translateX(-50%)',
             bgcolor: tierColor,
             color: 'white',
+            fontWeight: 600,
+            zIndex: 1,
           }}
         />
       )}

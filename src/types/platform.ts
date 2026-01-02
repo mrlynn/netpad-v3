@@ -425,6 +425,12 @@ export interface OAuthState {
   redirectTo?: string;                // Where to redirect after auth
   createdAt: Date;
   expiresAt: Date;                    // TTL: 10 minutes
+
+  // Integration OAuth fields (for connecting external services like Google Sheets)
+  integrationType?: string;           // e.g., 'google_sheets', 'google_drive'
+  userId?: string;                    // User initiating the connection
+  orgId?: string;                     // Organization for the credential
+  credentialName?: string;            // User-provided name for the credential
 }
 
 // ============================================
@@ -878,4 +884,171 @@ export interface ProvisionedClusterInfo {
   createdAt: Date;
   provisioningStartedAt: Date;
   provisioningCompletedAt?: Date;
+}
+
+// ============================================
+// Integration Credentials (OAuth, API Keys)
+// ============================================
+
+/**
+ * Supported integration providers
+ */
+export type IntegrationProvider =
+  | 'google_sheets'
+  | 'google_drive'
+  | 'google_calendar'
+  | 'slack'
+  | 'notion'
+  | 'airtable'
+  | 'hubspot'
+  | 'salesforce'
+  | 'stripe'
+  | 'twilio'
+  | 'sendgrid'
+  | 'mailchimp'
+  | 'zapier'
+  | 'custom_oauth2'
+  | 'custom_api_key';
+
+/**
+ * Authentication type for integration
+ */
+export type IntegrationAuthType =
+  | 'oauth2'
+  | 'service_account'
+  | 'api_key'
+  | 'basic_auth';
+
+/**
+ * Status of integration credential
+ */
+export type IntegrationCredentialStatus =
+  | 'active'
+  | 'expired'
+  | 'revoked'
+  | 'error'
+  | 'disabled';
+
+/**
+ * OAuth2 tokens stored in the vault
+ */
+export interface OAuth2Tokens {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string;
+  expiresAt?: Date;
+  scope?: string;
+}
+
+/**
+ * Service account credentials (e.g., Google Service Account JSON)
+ */
+export interface ServiceAccountCredentials {
+  type: 'service_account';
+  projectId: string;
+  privateKeyId?: string;
+  privateKey: string;
+  clientEmail: string;
+  clientId?: string;
+  authUri?: string;
+  tokenUri?: string;
+}
+
+/**
+ * API Key credentials
+ */
+export interface ApiKeyCredentials {
+  apiKey: string;
+  apiSecret?: string;
+}
+
+/**
+ * Basic Auth credentials
+ */
+export interface BasicAuthCredentials {
+  username: string;
+  password: string;
+}
+
+/**
+ * Integration credential stored in vault
+ */
+export interface IntegrationCredential {
+  _id?: ObjectId;
+  credentialId: string;           // "intcred_abc123"
+  organizationId: string;
+  createdBy: string;
+
+  // Integration info
+  provider: IntegrationProvider;
+  name: string;                   // User-friendly name
+  description?: string;
+
+  // Authentication
+  authType: IntegrationAuthType;
+  encryptedCredentials: string;   // Encrypted JSON of credentials
+  encryptionKeyId: string;
+
+  // Status & Monitoring
+  status: IntegrationCredentialStatus;
+  lastUsedAt?: Date;
+  lastValidatedAt?: Date;
+  usageCount: number;
+
+  // OAuth-specific metadata (not encrypted, for display)
+  oauthMetadata?: {
+    connectedEmail?: string;
+    connectedAccount?: string;
+    scopes?: string[];
+    expiresAt?: Date;
+  };
+
+  // Service account metadata (not encrypted)
+  serviceAccountMetadata?: {
+    clientEmail?: string;
+    projectId?: string;
+  };
+
+  // Permissions within org
+  permissions: ConnectionPermission[];
+
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Google-specific OAuth scopes
+ */
+export const GOOGLE_OAUTH_SCOPES = {
+  sheets: [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive.file',
+  ],
+  drive: [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/drive.file',
+  ],
+  calendar: [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+  ],
+} as const;
+
+/**
+ * Integration provider configuration
+ */
+export interface IntegrationProviderConfig {
+  provider: IntegrationProvider;
+  name: string;
+  description: string;
+  icon: string;
+  supportedAuthTypes: IntegrationAuthType[];
+  requiredScopes?: string[];
+  oauthConfig?: {
+    authorizationUrl: string;
+    tokenUrl: string;
+    clientId: string;
+    // clientSecret is stored server-side
+  };
 }

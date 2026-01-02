@@ -12,7 +12,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from './db';
-import { checkWorkflowExecutionLimit } from '@/lib/platform/billing';
+import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
 
 interface TriggerPayload {
   type: TriggerType;
@@ -92,21 +92,22 @@ export async function executeWorkflow(
       };
     }
 
-    // Check subscription-based rate limits first
-    const usageLimit = await checkWorkflowExecutionLimit(orgId);
-    if (!usageLimit.allowed) {
-      return {
-        success: false,
-        error: usageLimit.reason || 'Monthly workflow execution limit reached. Please upgrade your plan.',
-      };
-    }
-
     // Check pending job queue limits (prevents queue overload)
     const canEnqueue = await canEnqueueJob(orgId, 100);
     if (!canEnqueue) {
       return {
         success: false,
         error: 'Too many pending executions. Please wait for some to complete.',
+      };
+    }
+
+    // Increment usage at queue time to enforce limits immediately
+    // This prevents race conditions where multiple requests pass limit checks
+    const usageLimit = await incrementWorkflowExecutionAtQueue(orgId, workflowId);
+    if (!usageLimit.allowed) {
+      return {
+        success: false,
+        error: usageLimit.reason || 'Monthly workflow execution limit reached. Please upgrade your plan.',
       };
     }
 

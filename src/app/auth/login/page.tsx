@@ -45,6 +45,8 @@ function LoginContent() {
 
   // Get returnUrl from query params (for form access flow)
   const returnUrl = searchParams.get('returnUrl');
+  // Check if coming from signup flow
+  const isSignupMode = searchParams.get('mode') === 'signup';
 
   const [step, setStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
@@ -57,11 +59,16 @@ function LoginContent() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
+      // If coming from signup flow, redirect to billing settings for upgrade
+      if (isSignupMode) {
+        router.push('/settings?tab=billing');
+        return;
+      }
       // Redirect to returnUrl if provided, otherwise to builder
       const destination = returnUrl ? decodeURIComponent(returnUrl) : '/builder';
       router.push(destination);
     }
-  }, [isAuthenticated, isLoading, router, returnUrl]);
+  }, [isAuthenticated, isLoading, router, returnUrl, isSignupMode]);
 
   // Check if passkeys are available on this device
   useEffect(() => {
@@ -226,12 +233,14 @@ function LoginContent() {
               <Key sx={{ fontSize: 32, color: '#00ED64' }} />
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: textColor, mb: 1 }}>
-              {step === 'magic-link-sent' ? 'Check Your Email' : 'Welcome'}
+              {step === 'magic-link-sent' ? 'Check Your Email' : isSignupMode ? 'Get Started' : 'Welcome Back'}
             </Typography>
             <Typography sx={{ color: textSecondary }}>
               {step === 'magic-link-sent'
-                ? `We sent a login link to ${email}`
-                : 'Sign in to NetPad'}
+                ? `We sent a ${isSignupMode ? 'signup' : 'login'} link to ${email}`
+                : isSignupMode
+                  ? 'Create your free NetPad account'
+                  : 'Sign in to NetPad'}
             </Typography>
           </Box>
 
@@ -522,9 +531,29 @@ function LoginContent() {
           <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: borderColor }}>
             <Typography
               variant="caption"
-              sx={{ color: textMuted, display: 'block', textAlign: 'center' }}
+              sx={{ color: textMuted, display: 'block', textAlign: 'center', mb: 2 }}
             >
               No password required. We use secure magic links and passkeys for authentication.
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: textSecondary, textAlign: 'center' }}
+            >
+              {isSignupMode ? (
+                <>
+                  Already have an account?{' '}
+                  <Link href="/auth/login" style={{ color: '#00ED64', textDecoration: 'none', fontWeight: 600 }}>
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <Link href="/signup" style={{ color: '#00ED64', textDecoration: 'none', fontWeight: 600 }}>
+                    Sign up free
+                  </Link>
+                </>
+              )}
             </Typography>
           </Box>
         </Paper>

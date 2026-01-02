@@ -36,7 +36,7 @@ import {
   buildSubstitutionContext,
   SubstitutionContext,
 } from './variableSubstitution';
-import { incrementWorkflowExecution } from '@/lib/platform/billing';
+import { updateWorkflowExecutionResult } from '@/lib/platform/billing';
 
 /**
  * Execute a workflow job
@@ -97,8 +97,8 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
       // Update workflow stats
       await updateWorkflowStats(orgId, workflow.id, true, durationMs);
 
-      // Track usage for billing (increment successful execution count)
-      await incrementWorkflowExecution(orgId, workflow.id, true);
+      // Update execution result for analytics (usage was already incremented at queue time)
+      await updateWorkflowExecutionResult(orgId, workflow.id, true);
 
       // Complete the job
       await completeJob(job._id!, result.output);
@@ -131,8 +131,8 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
       // Update workflow stats
       await updateWorkflowStats(orgId, workflow.id, false, durationMs);
 
-      // Track usage for billing (increment failed execution count)
-      await incrementWorkflowExecution(orgId, workflow.id, false);
+      // Update execution result for analytics (usage was already incremented at queue time)
+      await updateWorkflowExecutionResult(orgId, workflow.id, false);
 
       // Fail the job (with retry if retryable)
       await failJob(job._id!, result.errorMessage || 'Execution failed', result.retryable);
@@ -158,6 +158,13 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
         },
       },
     });
+
+    // Update workflow stats
+    const durationMs = Date.now() - startTime;
+    await updateWorkflowStats(orgId, job.workflowId, false, durationMs);
+
+    // Update execution result for analytics (usage was already incremented at queue time)
+    await updateWorkflowExecutionResult(orgId, job.workflowId, false);
 
     // Fail the job with retry
     await failJob(job._id!, errorMessage, true);

@@ -187,6 +187,14 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await auditLogs.createIndex({ userId: 1 });
     await auditLogs.createIndex({ timestamp: -1 });
 
+    // Integration credentials collection
+    const integrationCreds = db.collection('integration_credentials');
+    await integrationCreds.createIndex({ credentialId: 1 }, { unique: true });
+    await integrationCreds.createIndex({ provider: 1 });
+    await integrationCreds.createIndex({ createdBy: 1 });
+    await integrationCreds.createIndex({ status: 1 });
+    await integrationCreds.createIndex({ 'permissions.userId': 1 });
+
     console.log(`[Org DB] Indexes created for ${db.databaseName}`);
   } catch (error) {
     console.log(`[Org DB] Index creation completed for ${db.databaseName}`);
@@ -246,7 +254,7 @@ export async function getAtlasInvitationsCollection(): Promise<Collection<AtlasI
 // Collection Accessors - Organization
 // ============================================
 
-import { ConnectionVault, PlatformFormSubmission } from '@/types/platform';
+import { ConnectionVault, PlatformFormSubmission, IntegrationCredential } from '@/types/platform';
 
 export async function getConnectionVaultCollection(orgId: string): Promise<Collection<ConnectionVault>> {
   const db = await getOrgDb(orgId);
@@ -266,6 +274,11 @@ export async function getOrgSubmissionsCollection(orgId: string): Promise<Collec
 export async function getOrgAuditCollection(orgId: string): Promise<Collection<AuditLogEntry>> {
   const db = await getOrgDb(orgId);
   return db.collection<AuditLogEntry>('org_audit_logs');
+}
+
+export async function getIntegrationCredentialsCollection(orgId: string): Promise<Collection<IntegrationCredential>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<IntegrationCredential>('integration_credentials');
 }
 
 // ============================================

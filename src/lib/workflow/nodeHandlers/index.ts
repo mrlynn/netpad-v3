@@ -40,6 +40,7 @@ import './delay';
 // External integrations
 import './httpRequest';
 import './emailSend';
+import './googleSheets';
 
 // Custom code
 import './code';

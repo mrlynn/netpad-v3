@@ -17,6 +17,8 @@ import {
   Person,
   PrivacyTip,
   Key,
+  Extension,
+  CreditCard,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +27,8 @@ import { ConnectionVaultSettings } from '@/components/Settings/ConnectionVaultSe
 import { ProfileSettings } from '@/components/Settings/ProfileSettings';
 import { PrivacySettings } from '@/components/Settings/PrivacySettings';
 import { APIKeySettings } from '@/components/Settings/APIKeySettings';
+import { IntegrationCredentialsSettings } from '@/components/Settings/IntegrationCredentialsSettings';
+import { BillingSettings } from '@/components/Settings/BillingSettings';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface TabPanelProps {
@@ -60,15 +64,17 @@ function SettingsContent() {
     const tab = searchParams.get('tab');
     if (tab === 'organizations') setTabValue(0);
     else if (tab === 'connections') setTabValue(1);
-    else if (tab === 'api-keys') setTabValue(2);
-    else if (tab === 'profile') setTabValue(3);
-    else if (tab === 'privacy') setTabValue(4);
+    else if (tab === 'integrations') setTabValue(2);
+    else if (tab === 'api-keys') setTabValue(3);
+    else if (tab === 'billing') setTabValue(4);
+    else if (tab === 'profile') setTabValue(5);
+    else if (tab === 'privacy') setTabValue(6);
   }, [searchParams]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Update URL
-    const tabs = ['organizations', 'connections', 'api-keys', 'profile', 'privacy'];
+    const tabs = ['organizations', 'connections', 'integrations', 'api-keys', 'billing', 'profile', 'privacy'];
     router.push(`/settings?tab=${tabs[newValue]}`, { scroll: false });
   };
 
@@ -148,9 +154,19 @@ function SettingsContent() {
               label="Connections"
             />
             <Tab
+              icon={<Extension sx={{ fontSize: 20 }} />}
+              iconPosition="start"
+              label="Integrations"
+            />
+            <Tab
               icon={<Key sx={{ fontSize: 20 }} />}
               iconPosition="start"
               label="API Keys"
+            />
+            <Tab
+              icon={<CreditCard sx={{ fontSize: 20 }} />}
+              iconPosition="start"
+              label="Billing"
             />
             <Tab
               icon={<Person sx={{ fontSize: 20 }} />}
@@ -173,12 +189,18 @@ function SettingsContent() {
             <ConnectionVaultSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
-            <APIKeySettings />
+            <IntegrationCredentialsSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={3}>
-            <ProfileSettings />
+            <APIKeySettings />
           </TabPanel>
           <TabPanel value={tabValue} index={4}>
+            <BillingSettings />
+          </TabPanel>
+          <TabPanel value={tabValue} index={5}>
+            <ProfileSettings />
+          </TabPanel>
+          <TabPanel value={tabValue} index={6}>
             <PrivacySettings />
           </TabPanel>
         </Box>

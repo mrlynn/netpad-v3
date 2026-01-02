@@ -11,6 +11,8 @@ import {
   syncSubscriptionFromStripe,
   recordBillingEvent,
   markEventProcessed,
+  getStripeWebhookSecret,
+  isStripeTestMode,
 } from '@/lib/platform/billing';
 import { getOrganizationsCollection } from '@/lib/platform/db';
 
@@ -18,11 +20,16 @@ import { getOrganizationsCollection } from '@/lib/platform/db';
 let stripeClient: Stripe | null = null;
 
 function getStripe(): Stripe | null {
-  if (!process.env.STRIPE_SECRET_KEY) {
+  // Use test or live key based on mode
+  const secretKey = isStripeTestMode()
+    ? (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY)
+    : (process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY);
+
+  if (!secretKey) {
     return null;
   }
   if (!stripeClient) {
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    stripeClient = new Stripe(secretKey, {
       apiVersion: '2025-12-15.clover',
     });
   }
@@ -30,13 +37,14 @@ function getStripe(): Stripe | null {
 }
 
 export async function POST(req: NextRequest) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = getStripeWebhookSecret();
   const stripe = getStripe();
+  const mode = isStripeTestMode() ? 'test' : 'live';
 
   if (!stripe || !webhookSecret) {
-    console.error('[Webhook] Stripe or webhook secret not configured');
+    console.error(`[Webhook] Stripe or webhook secret not configured for ${mode} mode`);
     return NextResponse.json(
-      { error: 'Webhook not configured' },
+      { error: `Webhook not configured for ${mode} mode` },
       { status: 500 }
     );
   }

@@ -113,6 +113,16 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'document', label: 'Document/Update', type: 'code', description: 'Document to insert, or update operators ($set, $inc, etc.)' },
     { key: 'options', label: 'Options', type: 'code', description: 'Write options (upsert, etc.) as JSON' },
   ],
+  'google-sheets': [
+    { key: 'connectionId', label: 'Google Credentials', type: 'connection-select', description: 'Select Google credentials from the vault' },
+    { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'text', description: 'Google Sheets spreadsheet ID (from the URL)' },
+    { key: 'action', label: 'Action', type: 'select', options: ['append_row', 'read_range', 'update_range', 'clear_range', 'get_spreadsheet_info'], description: 'Operation to perform' },
+    { key: 'range', label: 'Range', type: 'text', description: 'Sheet range (e.g., "Sheet1!A1:D10" or just "Sheet1")' },
+    { key: 'values', label: 'Values', type: 'code', description: 'Data to write (for append/update). Use {{variable}} for dynamic values' },
+    { key: 'valueInputOption', label: 'Value Input Option', type: 'select', options: ['USER_ENTERED', 'RAW'], description: 'How values are interpreted (USER_ENTERED parses formulas)' },
+    { key: 'insertDataOption', label: 'Insert Data Option', type: 'select', options: ['INSERT_ROWS', 'OVERWRITE'], description: 'How new data is inserted (for append)' },
+    { key: 'majorDimension', label: 'Major Dimension', type: 'select', options: ['ROWS', 'COLUMNS'], description: 'How values are organized (default: ROWS)' },
+  ],
   'email-send': [
     { key: 'to', label: 'To', type: 'text', description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)' },
     { key: 'subject', label: 'Subject', type: 'text', description: 'Email subject (supports {{variables}})' },
@@ -231,9 +241,9 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
     }
   }, [open, selectedNode?.type]);
 
-  // Fetch available connections when panel opens for mongodb nodes
+  // Fetch available connections when panel opens for nodes that need them
   useEffect(() => {
-    if (open && (selectedNode?.type === 'mongodb-write' || selectedNode?.type === 'mongodb-query')) {
+    if (open && (selectedNode?.type === 'mongodb-write' || selectedNode?.type === 'mongodb-query' || selectedNode?.type === 'google-sheets')) {
       const fetchConnections = async () => {
         setConnectionsLoading(true);
         try {
@@ -293,6 +303,13 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
             upstream.push(
               { path: `${prefix}.result`, label: `${nodeLabel}: Query Result`, type: 'array' },
               { path: `${prefix}.count`, label: `${nodeLabel}: Count`, type: 'number' },
+            );
+          } else if (sourceNode.type === 'google-sheets') {
+            upstream.push(
+              { path: `${prefix}.values`, label: `${nodeLabel}: Cell Values`, type: 'array' },
+              { path: `${prefix}.range`, label: `${nodeLabel}: Range`, type: 'string' },
+              { path: `${prefix}.spreadsheetId`, label: `${nodeLabel}: Spreadsheet ID`, type: 'string' },
+              { path: `${prefix}.title`, label: `${nodeLabel}: Sheet Title`, type: 'string' },
             );
           }
 

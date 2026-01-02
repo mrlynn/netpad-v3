@@ -39,6 +39,7 @@ import {
   Category as CategoryIcon,
   DataObject as ExtractIcon,
   Code as CodeIcon,
+  TableChart as SheetsIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 
@@ -145,6 +146,14 @@ const PALETTE_NODES: PaletteNode[] = [
     description: 'Insert/Update MongoDB documents',
     icon: <MongoIcon />,
     color: '#00897B',
+    category: 'integrations',
+  },
+  {
+    type: 'google-sheets',
+    label: 'Google Sheets',
+    description: 'Read and write data to Google Sheets',
+    icon: <SheetsIcon />,
+    color: '#0F9D58',
     category: 'integrations',
   },
 

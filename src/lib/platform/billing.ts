@@ -30,16 +30,49 @@ import {
 } from '@/types/platform';
 
 // ============================================
-// Stripe Client
+// Stripe Client & Environment Configuration
 // ============================================
 
 let stripeClient: Stripe | null = null;
 
 /**
+ * Determine if we're using Stripe test mode
+ * Priority: STRIPE_MODE env > NODE_ENV detection > default to test
+ */
+export function isStripeTestMode(): boolean {
+  const stripeMode = process.env.STRIPE_MODE;
+  if (stripeMode) {
+    return stripeMode === 'test';
+  }
+  // Default to test mode in development, live in production
+  return process.env.NODE_ENV !== 'production';
+}
+
+/**
+ * Get the appropriate Stripe secret key based on mode
+ */
+function getStripeSecretKey(): string | undefined {
+  if (isStripeTestMode()) {
+    return process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY;
+  }
+  return process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY;
+}
+
+/**
+ * Get the appropriate Stripe webhook secret based on mode
+ */
+export function getStripeWebhookSecret(): string | undefined {
+  if (isStripeTestMode()) {
+    return process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET;
+  }
+  return process.env.STRIPE_WEBHOOK_SECRET_LIVE || process.env.STRIPE_WEBHOOK_SECRET;
+}
+
+/**
  * Check if Stripe is configured
  */
 export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY;
+  return !!getStripeSecretKey();
 }
 
 /**
@@ -47,9 +80,11 @@ export function isStripeConfigured(): boolean {
  */
 function getStripe(): Stripe {
   if (!stripeClient) {
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const secretKey = getStripeSecretKey();
     if (!secretKey) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is not set. Use dev endpoints for local testing.');
+      throw new Error(
+        `Stripe not configured. Set STRIPE_SECRET_KEY_${isStripeTestMode() ? 'TEST' : 'LIVE'} environment variable.`
+      );
     }
     stripeClient = new Stripe(secretKey, {
       apiVersion: '2025-12-15.clover',
@@ -60,10 +95,17 @@ function getStripe(): Stripe {
 }
 
 /**
+ * Reset Stripe client (useful when switching modes)
+ */
+export function resetStripeClient(): void {
+  stripeClient = null;
+}
+
+/**
  * Get Stripe client if configured, null otherwise
  */
 function getStripeOptional(): Stripe | null {
-  if (!process.env.STRIPE_SECRET_KEY) {
+  if (!getStripeSecretKey()) {
     return null;
   }
   return getStripe();
@@ -78,19 +120,28 @@ export interface StripePriceConfig {
   yearly: string;
 }
 
-// These should be set in environment variables or fetched from Stripe
-export const STRIPE_PRICES: Record<SubscriptionTier, StripePriceConfig | null> = {
-  free: null,
-  pro: {
-    monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
-    yearly: process.env.STRIPE_PRICE_PRO_YEARLY || '',
-  },
-  team: {
-    monthly: process.env.STRIPE_PRICE_TEAM_MONTHLY || '',
-    yearly: process.env.STRIPE_PRICE_TEAM_YEARLY || '',
-  },
-  enterprise: null, // Custom pricing
-};
+/**
+ * Get price IDs based on current Stripe mode (test/live)
+ */
+function getStripePrices(): Record<SubscriptionTier, StripePriceConfig | null> {
+  const suffix = isStripeTestMode() ? '_TEST' : '';
+
+  return {
+    free: null,
+    pro: {
+      monthly: process.env[`STRIPE_PRICE_PRO_MONTHLY${suffix}`] || process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+      yearly: process.env[`STRIPE_PRICE_PRO_YEARLY${suffix}`] || process.env.STRIPE_PRICE_PRO_YEARLY || '',
+    },
+    team: {
+      monthly: process.env[`STRIPE_PRICE_TEAM_MONTHLY${suffix}`] || process.env.STRIPE_PRICE_TEAM_MONTHLY || '',
+      yearly: process.env[`STRIPE_PRICE_TEAM_YEARLY${suffix}`] || process.env.STRIPE_PRICE_TEAM_YEARLY || '',
+    },
+    enterprise: null, // Custom pricing
+  };
+}
+
+// Legacy export for backwards compatibility (now dynamically computed)
+export const STRIPE_PRICES: Record<SubscriptionTier, StripePriceConfig | null> = getStripePrices();
 
 // ============================================
 // Customer Management
@@ -198,15 +249,17 @@ export async function createCheckoutSession(
     throw new Error('Organization not found');
   }
 
-  // Get price ID for tier
-  const prices = STRIPE_PRICES[tier];
+  // Get price ID for tier (dynamically based on test/live mode)
+  const stripePrices = getStripePrices();
+  const prices = stripePrices[tier];
   if (!prices) {
     throw new Error(`No Stripe price configured for tier: ${tier}`);
   }
 
   const priceId = interval === 'year' ? prices.yearly : prices.monthly;
   if (!priceId) {
-    throw new Error(`No ${interval}ly price configured for tier: ${tier}`);
+    const mode = isStripeTestMode() ? 'test' : 'live';
+    throw new Error(`No ${interval}ly price configured for tier: ${tier} in ${mode} mode`);
   }
 
   // Ensure customer exists
@@ -1029,13 +1082,13 @@ export async function checkActiveWorkflowLimit(
 }
 
 /**
- * Increment workflow execution count
+ * Increment workflow execution count when queuing execution
+ * This enforces limits at queue time, preventing race conditions
  * Returns usage result with updated counts
  */
-export async function incrementWorkflowExecution(
+export async function incrementWorkflowExecutionAtQueue(
   orgId: string,
-  workflowId: string,
-  success: boolean
+  workflowId: string
 ): Promise<WorkflowUsageResult> {
   const collection = await getUsageCollection();
   const period = getCurrentPeriod();
@@ -1046,17 +1099,12 @@ export async function incrementWorkflowExecution(
     return check;
   }
 
-  // Increment usage
+  // Increment total executions counter (for limit enforcement)
+  // Success/failure counters are updated separately when execution completes
   const update: Record<string, number> = {
     'workflows.executions': 1,
     [`workflows.byWorkflow.${workflowId}`]: 1,
   };
-
-  if (success) {
-    update['workflows.successfulExecutions'] = 1;
-  } else {
-    update['workflows.failedExecutions'] = 1;
-  }
 
   await collection.updateOne(
     { organizationId: orgId, period },
@@ -1075,6 +1123,8 @@ export async function incrementWorkflowExecution(
         'ai.agentSessions': 0,
         'ai.processingRuns': 0,
         'ai.tokensUsed': 0,
+        'workflows.successfulExecutions': 0,
+        'workflows.failedExecutions': 0,
       },
     },
     { upsert: true }
@@ -1086,6 +1136,56 @@ export async function incrementWorkflowExecution(
     limit: check.limit,
     remaining: check.limit === -1 ? -1 : Math.max(0, check.limit - check.current - 1),
   };
+}
+
+/**
+ * Update workflow execution success/failure counters when execution completes
+ * The total execution count was already incremented at queue time for limit enforcement
+ */
+export async function updateWorkflowExecutionResult(
+  orgId: string,
+  workflowId: string,
+  success: boolean
+): Promise<void> {
+  const collection = await getUsageCollection();
+  const period = getCurrentPeriod();
+
+  const update: Record<string, number> = {};
+  if (success) {
+    update['workflows.successfulExecutions'] = 1;
+  } else {
+    update['workflows.failedExecutions'] = 1;
+  }
+
+  if (Object.keys(update).length > 0) {
+    await collection.updateOne(
+      { organizationId: orgId, period },
+      {
+        $inc: update,
+        $set: { updatedAt: new Date() },
+      }
+    );
+  }
+}
+
+/**
+ * Increment workflow execution count
+ * DEPRECATED: Use incrementWorkflowExecutionAtQueue() and updateWorkflowExecutionResult() instead
+ * Kept for backward compatibility during migration
+ * @deprecated
+ */
+export async function incrementWorkflowExecution(
+  orgId: string,
+  workflowId: string,
+  success: boolean
+): Promise<WorkflowUsageResult> {
+  // For backward compatibility, increment at queue time if not already done
+  // In practice, this should now only be used for tracking completion
+  const queueResult = await incrementWorkflowExecutionAtQueue(orgId, workflowId);
+  if (queueResult.allowed) {
+    await updateWorkflowExecutionResult(orgId, workflowId, success);
+  }
+  return queueResult;
 }
 
 /**
