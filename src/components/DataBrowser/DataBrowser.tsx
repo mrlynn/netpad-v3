@@ -504,7 +504,12 @@ function DocumentEditDrawer({
   );
 }
 
-export function DataBrowser() {
+interface DataBrowserProps {
+  showConnectionPanel?: boolean;
+  onNeedConnection?: () => void;
+}
+
+export function DataBrowser({ showConnectionPanel: showSidebar = true, onNeedConnection }: DataBrowserProps) {
   const { connectionString, databaseName, collection, activeVaultId } = usePipeline();
   const { currentOrgId } = useOrganization();
   const router = useRouter();
@@ -822,6 +827,61 @@ export function DataBrowser() {
 
   // If not connected, show connection panel in sidebar with empty main content
   if (!hasConnection) {
+    // If sidebar is disabled, show centered empty state with button to go to connections
+    if (!showSidebar) {
+      return (
+        <Box
+          sx={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 4,
+            bgcolor: 'background.default',
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              maxWidth: 450,
+              width: '100%',
+              textAlign: 'center',
+              border: '2px dashed',
+              borderColor: alpha('#00ED64', 0.3),
+              borderRadius: 3,
+              bgcolor: alpha('#00ED64', 0.02),
+            }}
+          >
+            <Storage sx={{ fontSize: 56, color: '#00ED64', mb: 2 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+              No Connection Selected
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              Connect to a MongoDB database to browse and manage your data.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={onNeedConnection}
+              sx={{
+                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                color: '#001E2B',
+                fontWeight: 600,
+                px: 4,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+                },
+              }}
+            >
+              Go to Connections
+            </Button>
+          </Paper>
+        </Box>
+      );
+    }
+
+    // Original sidebar view
     return (
       <Box sx={{ height: '100%', display: 'flex' }}>
         {/* Connection Panel Sidebar - Always visible when not connected */}

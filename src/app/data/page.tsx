@@ -2,7 +2,7 @@
 
 import { Box, CircularProgress } from '@mui/material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
-import { DataBrowser } from '@/components/DataBrowser/DataBrowser';
+import { DataPageTabs } from '@/components/DataBrowser/DataPageTabs';
 import { WelcomeScreen, OnboardingWizard, WelcomeModal } from '@/components/Onboarding';
 import { useRequireOrganization, useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,7 +54,7 @@ export default function DataPage() {
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <AppNavBar />
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <DataBrowser />
+        <DataPageTabs />
       </Box>
     </Box>
   );

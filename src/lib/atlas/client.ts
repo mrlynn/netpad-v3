@@ -19,6 +19,8 @@ import {
   AtlasIpAccessListEntry,
   AtlasApiError,
   AtlasApiResponse,
+  AtlasProjectRole,
+  AtlasInvitation,
 } from './types';
 
 // ============================================
@@ -639,6 +641,76 @@ export class AtlasApiClient {
     return this.request<any>(
       'GET',
       `/groups/${projectId}/sampleDatasetLoad/${sampleDatasetId}`
+    );
+  }
+
+  // ============================================
+  // Organization Invitations
+  // ============================================
+
+  /**
+   * Invite a user to the Atlas organization with project-scoped roles
+   * The user will receive an email from MongoDB Atlas to accept the invitation.
+   * Once accepted, they can log into cloud.mongodb.com and see only the specified project.
+   *
+   * @param orgId - The Atlas organization ID (ATLAS_ORG_ID)
+   * @param email - The email address of the user to invite
+   * @param projectId - The Atlas project ID to grant access to
+   * @param roles - Project-level roles to assign (default: GROUP_DATA_ACCESS_READ_WRITE)
+   *
+   * @see https://www.mongodb.com/docs/atlas/reference/api-resources-spec/v2/#tag/Organizations/operation/createOrganizationInvitation
+   */
+  async inviteUserToProject(
+    orgId: string,
+    email: string,
+    projectId: string,
+    roles: AtlasProjectRole[] = ['GROUP_DATA_ACCESS_READ_WRITE']
+  ): Promise<AtlasApiResponse<AtlasInvitation>> {
+    return this.request<AtlasInvitation>('POST', `/orgs/${orgId}/invitations`, {
+      username: email,
+      roles: [],  // No org-level roles - project-scoped only
+      groupRoleAssignments: [{
+        groupId: projectId,
+        roles: roles,
+      }],
+    });
+  }
+
+  /**
+   * Get all pending invitations for an organization
+   */
+  async getOrgInvitations(
+    orgId: string
+  ): Promise<AtlasApiResponse<{ results: AtlasInvitation[] }>> {
+    return this.request<{ results: AtlasInvitation[] }>(
+      'GET',
+      `/orgs/${orgId}/invitations`
+    );
+  }
+
+  /**
+   * Get a specific invitation by ID
+   */
+  async getOrgInvitation(
+    orgId: string,
+    invitationId: string
+  ): Promise<AtlasApiResponse<AtlasInvitation>> {
+    return this.request<AtlasInvitation>(
+      'GET',
+      `/orgs/${orgId}/invitations/${invitationId}`
+    );
+  }
+
+  /**
+   * Delete/cancel a pending invitation
+   */
+  async deleteOrgInvitation(
+    orgId: string,
+    invitationId: string
+  ): Promise<AtlasApiResponse<void>> {
+    return this.request<void>(
+      'DELETE',
+      `/orgs/${orgId}/invitations/${invitationId}`
     );
   }
 }

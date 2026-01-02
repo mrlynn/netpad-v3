@@ -42,6 +42,8 @@
     "tests/**/*",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "scripts/**/*"
+    "scripts/**/*",
+    "packages/**/*",
+    "examples/**/*"
   ]
 }

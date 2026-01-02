@@ -26,6 +26,11 @@ import {
   Description,
   Search,
   TableChart,
+  CompareArrows,
+  Terminal,
+  ContentCopy,
+  RocketLaunch,
+  School,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -178,6 +183,22 @@ const securityFeatures = [
   { icon: <Fingerprint />, title: 'Passkey Login', description: 'WebAuthn/FIDO2 biometric authentication' },
   { icon: <Security />, title: 'Bot Protection', description: 'Turnstile CAPTCHA integration' },
   { icon: <Person />, title: 'Access Control', description: 'Role-based permissions per form' },
+];
+
+// NPM Package features
+const npmPackageFeatures = [
+  { title: '28+ Field Types', description: 'Text, email, date, select, rating, file upload, and more' },
+  { title: 'Multi-page Wizards', description: 'Progress tracking, page navigation, step validation' },
+  { title: 'Conditional Logic', description: 'Show/hide fields based on user input' },
+  { title: 'TypeScript', description: 'Full type safety with exported types' },
+];
+
+// Workflows API features
+const workflowsApiFeatures = [
+  { title: 'Execute Workflows', description: 'Trigger workflows programmatically with custom payloads' },
+  { title: 'Wait for Completion', description: 'Built-in polling with waitForExecution helper' },
+  { title: 'Lifecycle Control', description: 'Activate, pause, archive workflows via API' },
+  { title: 'TypeScript', description: 'Full type safety with comprehensive type exports' },
 ];
 
 export default function LandingPage() {
@@ -885,6 +906,483 @@ export default function LandingPage() {
         </Container>
       </Box>
 
+      {/* NPM Package Section */}
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Chip
+                label="npm package"
+                icon={<Terminal sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#CB3837', 0.1),
+                  color: '#CB3837',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#CB3837' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Use NetPad Forms in
+                <br />Your Own Apps
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Install <code style={{ color: '#00ED64', background: alpha('#00ED64', 0.1), padding: '2px 6px', borderRadius: 4 }}>@netpad/forms</code> and
+                render sophisticated multi-page wizards with validation, conditional logic, and nested data — all from JSON configuration.
+              </Typography>
+
+              {/* Install command */}
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography sx={{ color: '#d4d4d4', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#00ED64' }}>$</span> npm install @netpad/forms
+                </Typography>
+                <ContentCopy sx={{ color: alpha('#fff', 0.4), fontSize: 18, cursor: 'pointer', '&:hover': { color: '#fff' } }} />
+              </Paper>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://www.npmjs.com/package/@netpad/forms"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Terminal />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #CB3837 0%, #A32B2A 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #E04241 0%, #CB3837 100%)',
+                    }
+                  }}
+                >
+                  View on npm
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/packages/forms"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<GitHub />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  Documentation
+                </Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                {npmPackageFeatures.map((feature, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Example App Section */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
+              {/* Code preview */}
+              <Paper
+                sx={{
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ bgcolor: '#00ED64', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#001E2B', fontWeight: 'bold' }}>
+                    Employee Onboarding Demo
+                  </Typography>
+                  <Chip label="~300 lines" size="small" sx={{ bgcolor: 'rgba(0,30,43,0.2)', color: '#001E2B', fontSize: '0.7rem' }} />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto', maxHeight: 200 }}>
+{`// Complete 3-page wizard with:
+// ✓ Progress tracking
+// ✓ Conditional fields
+// ✓ Nested data (emergencyContact.name)
+// ✓ Validation
+
+const onboardingForm: FormConfiguration = {
+  name: 'Employee Onboarding',
+  fieldConfigs: [
+    { path: 'firstName', type: 'short_text', required: true },
+    { path: 'email', type: 'email', required: true },
+    { path: 'department', type: 'dropdown', options: [...] },
+    { path: 'officeLocation', type: 'dropdown',
+      conditionalLogic: {
+        action: 'show',
+        conditions: [{ field: 'workType', operator: 'equals', value: 'hybrid' }]
+      }
+    },
+  ],
+  multiPage: {
+    enabled: true,
+    pages: [...]
+  },
+};`}
+                  </pre>
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ order: { xs: 1, md: 2 } }}>
+              <Chip
+                label="Example App"
+                icon={<School sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#9C27B0', 0.1),
+                  color: '#9C27B0',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#9C27B0' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Start with a
+                <br />Working Example
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Clone the Employee Onboarding Demo to see how to build a complete multi-page form wizard.
+                What would take 2-4 weeks from scratch takes under 300 lines with @netpad/forms.
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip label="3-Page Wizard" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Conditional Fields" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Nested Data" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Form Validation" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/examples/employee-onboarding-demo"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<RocketLaunch />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
+                    }
+                  }}
+                >
+                  View Example
+                </Button>
+                <Button
+                  component={Link}
+                  href="/why-netpad"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<CompareArrows />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  See Code Comparison
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Workflows API Section */}
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Chip
+                label="npm package"
+                icon={<Terminal sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#9C27B0', 0.1),
+                  color: '#9C27B0',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#9C27B0' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Automate Workflows
+                <br />From Your Code
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Use <code style={{ color: '#9C27B0', background: alpha('#9C27B0', 0.1), padding: '2px 6px', borderRadius: 4 }}>@netpad/workflows</code> to
+                trigger workflow executions, poll for completion, and manage workflows programmatically from your backend services.
+              </Typography>
+
+              {/* Install command */}
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography sx={{ color: '#d4d4d4', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#9C27B0' }}>$</span> npm install @netpad/workflows
+                </Typography>
+                <ContentCopy sx={{ color: alpha('#fff', 0.4), fontSize: 18, cursor: 'pointer', '&:hover': { color: '#fff' } }} />
+              </Paper>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://www.npmjs.com/package/@netpad/workflows"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Terminal />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
+                    }
+                  }}
+                >
+                  View on npm
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/packages/workflows"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<GitHub />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  Documentation
+                </Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                {workflowsApiFeatures.map((feature, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Workflow Integration Demo Section */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
+              {/* Code preview */}
+              <Paper
+                sx={{
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ bgcolor: '#9C27B0', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                    Workflow Integration Demo
+                  </Typography>
+                  <Chip label="Interactive" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto', maxHeight: 200 }}>
+{`import { createNetPadWorkflowClient } from '@netpad/workflows';
+
+const client = createNetPadWorkflowClient({
+  baseUrl: 'https://your-netpad.com',
+  apiKey: 'np_live_xxx',
+  organizationId: 'org_123',
+});
+
+// Execute a workflow
+const { executionId } = await client.executeWorkflow(
+  'order-processing',
+  { payload: { orderId, customerId } }
+);
+
+// Wait for completion
+const result = await client.waitForExecution(executionId, {
+  timeoutMs: 60000,
+  intervalMs: 2000,
+});
+
+console.log('Status:', result.execution.status);
+console.log('Output:', result.execution.result?.output);`}
+                  </pre>
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ order: { xs: 1, md: 2 } }}>
+              <Chip
+                label="Example App"
+                icon={<School sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#9C27B0', 0.1),
+                  color: '#9C27B0',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#9C27B0' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Try the Interactive
+                <br />Workflow Demo
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Explore the Workflow Integration Demo to see how to connect to NetPad, trigger executions,
+                and monitor workflow status from your own applications.
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip label="Live Connection" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
+                <Chip label="Execute & Monitor" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
+                <Chip label="Code Examples" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
+                <Chip label="Error Handling" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/examples/workflow-integration-demo"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<RocketLaunch />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
+                    }
+                  }}
+                >
+                  View Demo
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/blob/main/packages/workflows/README.md"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Code />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  API Reference
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Developer Section */}
       <Box sx={{ py: { xs: 5, md: 6 } }}>
         <Container maxWidth="md">
@@ -897,6 +1395,18 @@ export default function LandingPage() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Chip
+              icon={<Terminal sx={{ fontSize: 14 }} />}
+              label="@netpad/forms"
+              size="small"
+              sx={{ bgcolor: alpha('#CB3837', 0.2), color: '#fff', fontWeight: 600 }}
+            />
+            <Chip
+              icon={<AccountTree sx={{ fontSize: 14 }} />}
+              label="@netpad/workflows"
+              size="small"
+              sx={{ bgcolor: alpha('#9C27B0', 0.2), color: '#fff', fontWeight: 600 }}
+            />
             <Chip
               icon={<Code sx={{ fontSize: 14 }} />}
               label="100+ API Endpoints"
@@ -1046,6 +1556,18 @@ export default function LandingPage() {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 3 }}>
+              <Typography
+                component={Link}
+                href="/why-netpad"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Why NetPad?
+              </Typography>
               <Typography
                 component={Link}
                 href="/pricing"

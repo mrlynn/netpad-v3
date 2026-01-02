@@ -92,6 +92,16 @@ const SAMPLE_DATASETS = [
     tags: ['hr', 'recruiting'],
     analyticsHighlight: '22% drop-off rate, 78% completion',
   },
+  {
+    id: 'nps-survey',
+    name: 'NPS Survey',
+    description: 'Net Promoter Score survey with 0-10 rating, follow-up questions, and segmentation',
+    icon: <TrendingUp />,
+    submissionCount: 250,
+    fields: ['nps_score', 'feedback', 'improvement', 'customer_segment', 'product', 'follow_up'],
+    tags: ['nps', 'loyalty', 'customer experience'],
+    analyticsHighlight: 'NPS: +42, 8% drop-off rate',
+  },
 ];
 
 export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoaderProps) {
@@ -165,19 +175,20 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <DataObject sx={{ fontSize: 48, color: '#00ED64', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
-            Load Sample Data
+            Try Demo Forms
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Explore the platform with realistic sample form submissions.
-            <br />
-            Perfect for testing analytics and understanding capabilities.
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Create a sample form with realistic submissions to explore analytics features.
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            Demo data is stored in your workspace&apos;s database alongside your real forms.
           </Typography>
           <Button
             variant="outlined"
             startIcon={<PlayArrow />}
             sx={{ borderColor: '#00ED64', color: '#00ED64' }}
           >
-            Browse Sample Datasets
+            Browse Demo Forms
           </Button>
         </CardContent>
       </Card>
@@ -187,7 +198,7 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <DataObject sx={{ color: '#00ED64' }} />
-            Load Sample Data
+            Create Demo Form
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -195,12 +206,12 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <CheckCircle sx={{ fontSize: 64, color: '#00ED64', mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Sample Data Loaded!
+                Demo Form Created!
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                The sample form and submissions have been added to your organization.
+                A sample form with realistic submissions has been added to your workspace.
                 <br />
-                Explore the analytics dashboard to see the power of the platform.
+                Find it in your Forms list to explore the analytics dashboard.
               </Typography>
 
               <Box sx={{
@@ -236,13 +247,15 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
           ) : (
             <>
               <Typography variant="body2" color="text.secondary" paragraph>
-                Choose a sample dataset to load. This will create a form and populate it
-                with realistic sample submissions for you to explore.
+                Choose a demo form template. This creates a real form in your workspace with
+                pre-populated submissions so you can explore our analytics features.
               </Typography>
 
               <Alert severity="info" icon={<Lightbulb />} sx={{ mb: 2 }}>
-                Sample data includes rich analytics metadata: device types, browsers,
-                completion times, and field-level interaction tracking for drop-off analysis.
+                <Typography variant="body2">
+                  <strong>Where does this data go?</strong> Demo forms are stored in your workspace&apos;s
+                  MongoDB database (the same place as your real forms). You can delete them anytime.
+                </Typography>
               </Alert>
 
               <Box sx={{
@@ -326,8 +339,8 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>
                             {dataset.name}
                           </Typography>
                           {selectedDataset === dataset.id && (
@@ -335,12 +348,13 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
                           )}
                         </Box>
                       }
+                      secondaryTypographyProps={{ component: 'div' }}
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             {dataset.description}
                           </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                          <Box component="div" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                             <Chip
                               label={`${dataset.submissionCount} submissions`}
                               size="small"
@@ -352,6 +366,7 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
                           </Box>
                           <Typography
                             variant="caption"
+                            component="span"
                             sx={{
                               display: 'flex',
                               alignItems: 'center',
@@ -384,7 +399,7 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
               startIcon={loading ? <CircularProgress size={16} /> : <PlayArrow />}
               sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
             >
-              {loading ? 'Loading...' : 'Load Sample Data'}
+              {loading ? 'Creating...' : 'Create Demo Form'}
             </Button>
           )}
         </DialogActions>

@@ -41,6 +41,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 
 interface NavItem {
   href: string;
@@ -236,6 +237,9 @@ export function AppNavBar() {
         >
           New Form
         </Button>
+
+        {/* Cluster Status - only show when authenticated */}
+        {isAuthenticated && <ClusterStatusIndicator />}
 
         {/* Theme Toggle */}
         <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>

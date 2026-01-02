@@ -1,8 +1,9 @@
 /**
  * Organization Cluster API
  *
- * GET  /api/organizations/[orgId]/cluster - Get provisioning status
- * POST /api/organizations/[orgId]/cluster - Manually trigger provisioning
+ * GET    /api/organizations/[orgId]/cluster - Get provisioning status
+ * POST   /api/organizations/[orgId]/cluster - Manually trigger provisioning
+ * DELETE /api/organizations/[orgId]/cluster - Delete cluster and all resources
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +12,7 @@ import {
   getProvisionedClusterForOrg,
   getProvisioningStatus,
   provisionM0Cluster,
+  deleteProvisionedCluster,
   isAutoProvisioningAvailable,
 } from '@/lib/atlas';
 import { checkOrgPermission } from '@/lib/platform/organizations';
@@ -163,6 +165,90 @@ export async function POST(
     console.error('[Cluster API] POST error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to provision cluster' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE - Delete cluster and all associated resources
+ *
+ * This will:
+ * - Cancel any pending Atlas console invitations
+ * - Delete the M0 cluster from Atlas
+ * - Delete the Atlas project
+ * - Delete the connection vault
+ * - Mark the cluster record as deleted
+ *
+ * After deletion, POST can be called again to re-provision a new cluster.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ orgId: string }> }
+) {
+  try {
+    const session = await getSession();
+    const { orgId } = await params;
+
+    if (!session.userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Only org owners can delete clusters (destructive action)
+    const canManage = await checkOrgPermission(session.userId, orgId, 'manage_org');
+    if (!canManage) {
+      return NextResponse.json(
+        { error: 'Only organization owners and admins can delete clusters' },
+        { status: 403 }
+      );
+    }
+
+    // Check if cluster exists
+    const existingCluster = await getProvisionedClusterForOrg(orgId);
+    if (!existingCluster) {
+      return NextResponse.json(
+        { error: 'No cluster found for this organization' },
+        { status: 404 }
+      );
+    }
+
+    // Don't allow deletion while still provisioning
+    if (['pending', 'creating_project', 'creating_cluster', 'creating_user', 'configuring_network'].includes(existingCluster.status)) {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete cluster while provisioning is in progress',
+          status: existingCluster.status,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete the cluster and all associated resources
+    console.log(`[Cluster API] User ${session.userId} deleting cluster for org ${orgId}`);
+    const result = await deleteProvisionedCluster(orgId, session.userId);
+
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        message: 'Cluster and all associated resources have been deleted',
+        warning: result.error, // May contain warnings even on success
+      });
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Failed to delete cluster',
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('[Cluster API] DELETE error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete cluster' },
       { status: 500 }
     );
   }

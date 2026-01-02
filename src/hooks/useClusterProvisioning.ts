@@ -24,6 +24,7 @@ interface UseClusterProvisioningResult {
     region?: string;
     databaseName?: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  deleteCluster: () => Promise<{ success: boolean; error?: string; warning?: string }>;
 }
 
 export function useClusterProvisioning(orgId: string | undefined): UseClusterProvisioningResult {
@@ -83,6 +84,30 @@ export function useClusterProvisioning(orgId: string | undefined): UseClusterPro
     }
   }, [orgId, fetchStatus]);
 
+  const deleteCluster = useCallback(async (): Promise<{ success: boolean; error?: string; warning?: string }> => {
+    if (!orgId) {
+      return { success: false, error: 'No organization selected' };
+    }
+
+    try {
+      const response = await fetch(`/api/organizations/${orgId}/cluster`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Refetch status after successful deletion
+        await fetchStatus();
+        return { success: true, warning: data.warning };
+      } else {
+        return { success: false, error: data.error || 'Failed to delete cluster' };
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to connect to server' };
+    }
+  }, [orgId, fetchStatus]);
+
   // Fetch status on mount and when orgId changes
   useEffect(() => {
     if (orgId) {
@@ -114,5 +139,6 @@ export function useClusterProvisioning(orgId: string | undefined): UseClusterPro
     error,
     refetch: fetchStatus,
     triggerProvisioning,
+    deleteCluster,
   };
 }

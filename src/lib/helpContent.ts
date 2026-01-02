@@ -2337,4 +2337,230 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     relatedTopics: ['workflow-variables'],
     keywords: ['nodes', 'triggers', 'logic', 'data', 'integrations', 'workflow'],
   },
+
+  // ============================================
+  // Employee Onboarding Portal
+  // ============================================
+
+  'employee-onboarding': {
+    id: 'employee-onboarding',
+    title: 'Employee Onboarding Portal',
+    description:
+      'A standalone application showcasing NetPad\'s multi-page wizard/form capabilities with full MongoDB persistence, admin dashboard, and customizable branding.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Employee Onboarding Portal is a complete, production-ready application that demonstrates how to build sophisticated data collection workflows using NetPad\'s form builder capabilities.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Features',
+      },
+      {
+        type: 'list',
+        content: [
+          '8-page wizard form with step-by-step progress tracking',
+          'Full MongoDB persistence for all submissions',
+          'Protected admin dashboard with password authentication',
+          'Real-time analytics with charts and metrics',
+          'Customizable branding (colors, logos, messaging)',
+          'Export functionality (CSV/JSON)',
+          'Responsive design for all devices',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Public-Facing Routes',
+      },
+      {
+        type: 'list',
+        content: [
+          '/onboarding - Landing page with customizable welcome message and "Start Onboarding" button',
+          '/onboarding/form - The 8-page wizard form with progress indicator',
+          '/onboarding/success/[id] - Confirmation page with reference number and confetti animation',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Admin Dashboard Routes',
+      },
+      {
+        type: 'list',
+        content: [
+          '/onboarding/admin - Dashboard overview with stats (total submissions, pending, approved, rejected)',
+          '/onboarding/admin/submissions - Paginated list of all submissions with search and filter',
+          '/onboarding/admin/submissions/[id] - Detailed view of individual submission with status management',
+          '/onboarding/admin/analytics - Charts showing submission trends, device breakdown, and completion metrics',
+          '/onboarding/admin/settings - Branding customization (company name, colors, welcome/success messages)',
+          '/onboarding/admin/login - Password-protected admin access',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Form Pages',
+      },
+      {
+        type: 'text',
+        content:
+          'The employee onboarding wizard collects comprehensive information across 8 organized pages:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Page 1: Personal Information - Full name, preferred name, email, phone, date of birth',
+          'Page 2: Home Address - Street address, city, state/province, postal code, country',
+          'Page 3: Employment Details - Job title, department, start date, manager name, employment type',
+          'Page 4: Emergency Contact - Contact name, relationship, phone, email',
+          'Page 5: Tax Information - SSN/Tax ID, tax filing status, withholding allowances',
+          'Page 6: Direct Deposit - Bank name, account type, routing number, account number',
+          'Page 7: Equipment Needs - Laptop preference, monitor size, additional equipment',
+          'Page 8: Review & Submit - Review all entered information before final submission',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Submission Workflow',
+      },
+      {
+        type: 'list',
+        content: [
+          'submitted - Initial state when employee completes the form',
+          'under_review - Admin has started reviewing the submission',
+          'approved - Submission approved and employee cleared for onboarding',
+          'rejected - Submission rejected with reason (can be resubmitted)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Analytics Dashboard',
+      },
+      {
+        type: 'text',
+        content:
+          'The analytics page provides real-time insights into your onboarding process:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Total submissions with status breakdown',
+          'Submission trends over time (line chart)',
+          'Status distribution (pie chart)',
+          'Device type breakdown (desktop, mobile, tablet)',
+          'Average completion time',
+          'Pending review count',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Branding Customization',
+      },
+      {
+        type: 'text',
+        content:
+          'Customize the portal to match your company branding:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Company name - Displayed in headers and messages',
+          'Logo URL - Your company logo',
+          'Primary color - Main accent color for buttons and highlights',
+          'Secondary color - Text and secondary elements',
+          'Welcome title and message - Landing page content (supports Markdown)',
+          'Success title and message - Confirmation page content (supports Markdown)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Data Export',
+      },
+      {
+        type: 'text',
+        content:
+          'Export submission data for further processing:',
+      },
+      {
+        type: 'list',
+        content: [
+          'CSV format - For spreadsheet applications (Excel, Google Sheets)',
+          'JSON format - For data processing and integration with other systems',
+          'Filter by status, date range, or search term before export',
+          'Include or exclude metadata (IP address, user agent, timestamps)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'API Endpoints',
+      },
+      {
+        type: 'code',
+        content: [
+          'POST /api/onboarding/submit - Submit new onboarding form',
+          'GET  /api/onboarding/submissions - List submissions (paginated)',
+          'GET  /api/onboarding/submissions/[id] - Get submission details',
+          'PATCH /api/onboarding/submissions/[id] - Update status/notes',
+          'DELETE /api/onboarding/submissions/[id] - Delete submission',
+          'GET  /api/onboarding/analytics - Get analytics data',
+          'GET  /api/onboarding/settings - Get branding settings',
+          'PUT  /api/onboarding/settings - Update branding settings',
+          'GET  /api/onboarding/export - Export submissions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Admin Authentication',
+      },
+      {
+        type: 'text',
+        content:
+          'The admin dashboard is protected with password authentication. Set the ONBOARDING_ADMIN_PASSWORD environment variable to configure the admin password. Sessions are managed using iron-session for secure, encrypted cookies.',
+      },
+      {
+        type: 'heading',
+        content: 'MongoDB Collections',
+      },
+      {
+        type: 'list',
+        content: [
+          'onboarding_submissions - Stores all form submissions with status tracking',
+          'onboarding_branding - Stores branding configuration',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use this application as a reference implementation for building your own multi-page forms with NetPad. The architecture demonstrates best practices for form wizards, admin dashboards, and MongoDB persistence.',
+      },
+      {
+        type: 'example',
+        content:
+          'To access the admin dashboard, navigate to /onboarding/admin/login and enter the password set in your ONBOARDING_ADMIN_PASSWORD environment variable. From there, you can manage submissions, view analytics, and customize branding.',
+      },
+      {
+        type: 'warning',
+        content:
+          'The onboarding form collects sensitive information like SSN and bank account details. In production, ensure you have proper security measures in place including HTTPS, secure session management, and data encryption.',
+      },
+    ],
+    relatedTopics: ['multi-page-forms', 'form-builder', 'form-analytics', 'response-management'],
+    keywords: [
+      'onboarding',
+      'employee',
+      'wizard',
+      'multi-page',
+      'admin',
+      'dashboard',
+      'branding',
+      'analytics',
+      'submissions',
+      'hr',
+      'human resources',
+      'new hire',
+    ],
+  },
 };

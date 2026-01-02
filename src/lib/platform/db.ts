@@ -16,6 +16,7 @@ import {
   AuditLogEntry,
   OrganizationUsage,
   BillingEvent,
+  AtlasInvitationRecord,
 } from '@/types/platform';
 
 // Connection pool
@@ -138,6 +139,14 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await billingEvents.createIndex({ type: 1 });
     await billingEvents.createIndex({ createdAt: -1 });
 
+    // Atlas invitations collection (tracks user invitations to Atlas console)
+    const atlasInvitations = db.collection('atlas_invitations');
+    await atlasInvitations.createIndex({ invitationId: 1 }, { unique: true });
+    await atlasInvitations.createIndex({ atlasInvitationId: 1 });
+    await atlasInvitations.createIndex({ organizationId: 1, email: 1 });
+    await atlasInvitations.createIndex({ userId: 1 });
+    await atlasInvitations.createIndex({ status: 1 });
+
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
     // Indexes may already exist
@@ -226,6 +235,11 @@ export async function getUsageCollection(): Promise<Collection<OrganizationUsage
 export async function getBillingEventsCollection(): Promise<Collection<BillingEvent>> {
   const db = await getPlatformDb();
   return db.collection<BillingEvent>('billing_events');
+}
+
+export async function getAtlasInvitationsCollection(): Promise<Collection<AtlasInvitationRecord>> {
+  const db = await getPlatformDb();
+  return db.collection<AtlasInvitationRecord>('atlas_invitations');
 }
 
 // ============================================

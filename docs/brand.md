@@ -110,6 +110,31 @@ If the logo does not read clearly at the intended size, do not use that variant.
 
 ---
 
+## Wordmark system
+
+NetPad’s wordmark is designed to pair cleanly with the icon mark in both light and dark modes.
+
+### Typeface
+- Primary: **Inter**
+- Weight: **600 (Semibold)**
+- Case: **Title case** (NetPad)
+
+### Spacing + alignment
+- Icon-to-wordmark gap: **0.35× icon width**
+- Baseline: align the wordmark baseline to the optical midline of the icon (not the geometric center)
+- Recommended lockups:
+  - Horizontal (default)
+  - Stacked (icon above wordmark) for square avatars
+
+### Color
+- Default: monochrome wordmark matching the icon (black on light, white on dark)
+- Optional accent: color only **“Pad”** with a single accent color (see Color System)
+
+### Don’t
+- Don’t outline the wordmark.
+- Don’t use gradients in the wordmark.
+- Don’t change letterforms (no pseudo-customization) unless we explicitly approve a custom drawn wordmark later.
+
 ## Typography
 
 ### Primary Typeface
@@ -205,13 +230,147 @@ NetPad doesn’t hype. It executes.
 
 ---
 
-## Asset Structure (Recommended)
+## SVG geometric specs (v1.0)
 
-```text
-assets/
-  logo/
-    netpad-logo-light.svg
-    netpad-logo-dark.svg
-    netpad-icon.svg
-    netpad-logo-light.png
-    netpad-logo-dark.png
+These specs define the icon’s geometry so it can be recreated consistently (SVG, canvas, print, UI).
+
+### Coordinate system
+- **Artboard:** 256×256
+- **ViewBox:** `0 0 256 256`
+- **Stroke-based icon:** no fills for the document outlines (monochrome), internal path may be stroke-only.
+
+### Key measurements
+- **Corner radius (documents):** 32
+- **Stroke width (documents + path):** 20
+- **Node (dot) radius:** 14
+- **Document offsets (stack):**
+  - Back doc: +26px x, -18px y (relative to front)
+  - Mid doc: +13px x, -9px y
+  - Front doc: base
+
+### Geometry
+- Three rounded rectangles (documents) are stacked with consistent offsets.
+- The internal “flow” is a single continuous rounded path with two terminal nodes.
+- The internal flow must never touch the outer document outline (leave at least **12px** breathing room).
+
+### Reference SVG (icon only, light mode)
+
+```svg
+<!-- netpad-icon-light.svg (reference) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Back document -->
+  <rect x="66" y="36" width="156" height="156" rx="32" stroke="#000000" stroke-width="20" stroke-linejoin="round"/>
+  <!-- Middle document -->
+  <rect x="53" y="45" width="156" height="156" rx="32" stroke="#000000" stroke-width="20" stroke-linejoin="round"/>
+  <!-- Front document -->
+  <rect x="40" y="54" width="156" height="156" rx="32" stroke="#000000" stroke-width="20" stroke-linejoin="round"/>
+
+  <!-- Internal flow path -->
+  <path d="M92 152C92 132 108 116 128 116H162C176 116 188 104 188 90C188 74 175 62 160 62H118C104 62 92 74 92 88" 
+        stroke="#000000" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Nodes -->
+  <circle cx="128" cy="152" r="14" fill="#000000"/>
+  <circle cx="162" cy="116" r="14" fill="#000000"/>
+</svg>
+```
+
+### Reference SVG (icon only, dark mode)
+
+```svg
+<!-- netpad-icon-dark.svg (reference) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <rect x="66" y="36" width="156" height="156" rx="32" stroke="#FFFFFF" stroke-width="20" stroke-linejoin="round"/>
+  <rect x="53" y="45" width="156" height="156" rx="32" stroke="#FFFFFF" stroke-width="20" stroke-linejoin="round"/>
+  <rect x="40" y="54" width="156" height="156" rx="32" stroke="#FFFFFF" stroke-width="20" stroke-linejoin="round"/>
+
+  <path d="M92 152C92 132 108 116 128 116H162C176 116 188 104 188 90C188 74 175 62 160 62H118C104 62 92 74 92 88" 
+        stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="128" cy="152" r="14" fill="#FFFFFF"/>
+  <circle cx="162" cy="116" r="14" fill="#FFFFFF"/>
+</svg>
+```
+
+> Note: these are **reference** SVGs. If we decide to tweak optical balance (stroke taper, offsets, node placement), update the specs here and re-export.
+
+## Wordmark lockup (reference)
+
+The lockup pairs the NetPad icon with the wordmark while preserving hierarchy and negative space.
+
+### Horizontal lockup (default)
+
+```svg
+<!-- netpad-lockup-light.svg (reference) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="256" viewBox="0 0 640 256" fill="none">
+  <!-- Icon group -->
+  <g transform="translate(0,0)">
+    <rect x="66" y="36" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <rect x="53" y="45" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <rect x="40" y="54" width="156" height="156" rx="32" stroke="#000000" stroke-width="20"/>
+    <path d="M92 152C92 132 108 116 128 116H162C176 116 188 104 188 90C188 74 175 62 160 62H118C104 62 92 74 92 88"
+          stroke="#000000" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="128" cy="152" r="14" fill="#000000"/>
+    <circle cx="162" cy="116" r="14" fill="#000000"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="300" y="150" font-family="Inter, system-ui, -apple-system" font-size="96" font-weight="600" fill="#000000">NetPad</text>
+</svg>
+```
+
+**Rules**
+- The icon always comes first.
+- Do not shrink the icon to match text height; text scales to the icon.
+- Maintain the icon-to-wordmark spacing defined earlier (≈ 0.35× icon width).
+
+---
+
+## SVG animation reference (product-ready)
+
+This example shows a **pure SVG path-draw animation** suitable for inline use in React/Next.js.
+
+```svg
+<!-- netpad-icon-animated.svg (reference) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <rect x="40" y="54" width="156" height="156" rx="32" stroke="currentColor" stroke-width="20"/>
+
+  <path id="flowPath"
+        d="M92 152C92 132 108 116 128 116H162C176 116 188 104 188 90C188 74 175 62 160 62H118C104 62 92 74 92 88"
+        stroke="currentColor"
+        stroke-width="20"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        pathLength="1"
+        stroke-dasharray="1"
+        stroke-dashoffset="1">
+    <animate attributeName="stroke-dashoffset"
+             from="1" to="0"
+             dur="1.2s"
+             fill="freeze" />
+  </path>
+
+  <circle r="6" fill="currentColor">
+    <animateMotion dur="1.2s" fill="freeze" rotate="auto">
+      <mpath href="#flowPath" />
+    </animateMotion>
+  </circle>
+</svg>
+```
+
+### React usage (example)
+
+```jsx
+export function NetPadIconAnimated() {
+  return (
+    <div style={{ color: '#000' }}>
+      {/* inline SVG here so currentColor works */}
+    </div>
+  );
+}
+```
+
+**Notes**
+- Use `currentColor` so the icon inherits theme color.
+- For repeated loops, remove `fill="freeze"` and add `repeatCount="indefinite"`.
+- For more control, replace SVG `<animate>` with GSAP.

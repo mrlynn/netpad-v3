@@ -5,12 +5,15 @@
 
 import { SampleDatabase, SampleCollection } from '@/types/dataImport';
 import { retailDatabase } from './retailDatabase';
+import { npsDatabase } from './npsDatabase';
 
 export { retailDatabase } from './retailDatabase';
+export { npsDatabase } from './npsDatabase';
 
 // All available sample databases
 export const sampleDatabases: SampleDatabase[] = [
   retailDatabase,
+  npsDatabase,
 ];
 
 /**

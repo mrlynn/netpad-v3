@@ -51,4 +51,5 @@ export type HelpTopicId =
   | 'api-rate-limiting'
   | 'api-keys-management'
   | 'workflow-variables'
-  | 'workflow-nodes';
+  | 'workflow-nodes'
+  | 'employee-onboarding';

@@ -120,11 +120,14 @@ const STATUS_CONFIG: Record<ProvisioningStatusType, {
 };
 
 export function ClusterManagement({ organizationId }: ClusterManagementProps) {
-  const { status, loading, error, refetch, triggerProvisioning } = useClusterProvisioning(organizationId);
+  const { status, loading, error, refetch, triggerProvisioning, deleteCluster } = useClusterProvisioning(organizationId);
   const [provisioning, setProvisioning] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showConnectionString, setShowConnectionString] = useState(false);
 
   const handleProvision = async () => {
@@ -138,6 +141,21 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
     }
 
     setProvisioning(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+
+    const result = await deleteCluster();
+
+    if (result.success) {
+      setDeleteDialogOpen(false);
+    } else {
+      setDeleteError(result.error || 'Failed to delete cluster');
+    }
+
+    setDeleting(false);
   };
 
   if (loading && !status) {
@@ -345,6 +363,14 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
                   >
                     Transfer Ownership
                   </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Delete />}
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    Delete Cluster
+                  </Button>
                 </Box>
               </>
             )}
@@ -501,6 +527,19 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
         open={transferDialogOpen}
         onClose={() => setTransferDialogOpen(false)}
         organizationId={organizationId}
+        cluster={status?.cluster}
+      />
+
+      {/* Delete Cluster Confirmation Dialog */}
+      <DeleteClusterDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeleteError(null);
+        }}
+        onConfirm={handleDelete}
+        deleting={deleting}
+        error={deleteError}
         cluster={status?.cluster}
       />
     </Box>
@@ -757,6 +796,130 @@ function TransferOwnershipDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// Delete Cluster Confirmation Dialog Component
+function DeleteClusterDialog({
+  open,
+  onClose,
+  onConfirm,
+  deleting,
+  error,
+  cluster
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  deleting: boolean;
+  error: string | null;
+  cluster?: any;
+}) {
+  const [confirmText, setConfirmText] = useState('');
+  const confirmPhrase = 'DELETE';
+  const canDelete = confirmText === confirmPhrase;
+
+  const handleClose = () => {
+    setConfirmText('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Delete sx={{ color: '#f44336' }} />
+        Delete Cluster
+      </DialogTitle>
+      <DialogContent>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            This action cannot be undone!
+          </Typography>
+          <Typography variant="body2">
+            Deleting this cluster will permanently remove:
+          </Typography>
+          <List dense sx={{ py: 0, pl: 2 }}>
+            <ListItem sx={{ py: 0.25, px: 0 }}>
+              <ListItemText primary="• Your MongoDB Atlas M0 cluster" />
+            </ListItem>
+            <ListItem sx={{ py: 0.25, px: 0 }}>
+              <ListItemText primary="• All stored form submissions and data" />
+            </ListItem>
+            <ListItem sx={{ py: 0.25, px: 0 }}>
+              <ListItemText primary="• Database credentials and connection strings" />
+            </ListItem>
+            <ListItem sx={{ py: 0.25, px: 0 }}>
+              <ListItemText primary="• Any pending Atlas console invitations" />
+            </ListItem>
+          </List>
+        </Alert>
+
+        {cluster && (
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'action.hover' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Cluster to be deleted:
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Provider: <strong>{cluster.provider}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Region: <strong>{cluster.region?.replace(/_/g, ' ')}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Tier: <strong>{cluster.instanceSize}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Storage: <strong>{cluster.storageLimitMb} MB</strong>
+              </Typography>
+            </Box>
+          </Paper>
+        )}
+
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          To confirm deletion, type <strong>{confirmPhrase}</strong> below:
+        </Typography>
+
+        <TextField
+          fullWidth
+          size="small"
+          placeholder={`Type "${confirmPhrase}" to confirm`}
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+          error={!!error}
+          helperText={error}
+          disabled={deleting}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: canDelete ? '#f44336' : undefined,
+              },
+            },
+          }}
+        />
+
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            <strong>Tip:</strong> Export your data before deleting if you want to keep a backup.
+            You can provision a new cluster after deletion.
+          </Typography>
+        </Alert>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={handleClose} disabled={deleting}>
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={onConfirm}
+          disabled={!canDelete || deleting}
+          startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <Delete />}
+        >
+          {deleting ? 'Deleting...' : 'Delete Cluster'}
+        </Button>
       </DialogActions>
     </Dialog>
   );

@@ -471,6 +471,148 @@ const SAMPLE_DATASETS: Record<string, {
       return { submissions, interactions };
     },
   },
+  'nps-survey': {
+    form: {
+      title: 'NPS Survey',
+      description: 'How likely are you to recommend us to a friend or colleague?',
+      status: 'published',
+      fields: [
+        { fieldId: 'nps_score', type: 'number', label: 'On a scale of 0-10, how likely are you to recommend us?', required: true, min: 0, max: 10 },
+        { fieldId: 'feedback', type: 'textarea', label: 'What is the primary reason for your score?', required: false },
+        { fieldId: 'improvement', type: 'textarea', label: 'What could we do to improve your experience?', required: false },
+        { fieldId: 'customer_segment', type: 'select', label: 'Which best describes you?', required: true, options: ['Enterprise', 'SMB', 'Startup', 'Individual', 'Government'] },
+        { fieldId: 'product_used', type: 'select', label: 'Which product/service are you rating?', required: true, options: ['Core Platform', 'Analytics Suite', 'API Services', 'Mobile App', 'Support Experience', 'Overall Experience'] },
+        { fieldId: 'touchpoint', type: 'select', label: 'What prompted this survey?', required: true, options: ['Post-Purchase', 'Support Interaction', 'Quarterly Check-in', 'After Onboarding', 'Renewal', 'Feature Launch'] },
+        { fieldId: 'follow_up_ok', type: 'boolean', label: 'May we follow up with you about your feedback?', required: false },
+        { fieldId: 'email', type: 'email', label: 'Email (optional)', required: false },
+      ],
+    },
+    generateSubmissions: (formId: string, fields: any[]) => {
+      // NPS distribution: realistic spread with slight positive skew
+      // Promoters (9-10): ~50%, Passives (7-8): ~30%, Detractors (0-6): ~20%
+      const generateNpsScore = (): number => {
+        const rand = Math.random();
+        if (rand < 0.20) {
+          // Detractors: 0-6 (weighted towards 5-6)
+          return Math.floor(Math.random() * 4) + 3; // 3-6 mostly
+        } else if (rand < 0.50) {
+          // Passives: 7-8
+          return Math.random() > 0.5 ? 7 : 8;
+        } else {
+          // Promoters: 9-10
+          return Math.random() > 0.4 ? 10 : 9;
+        }
+      };
+
+      const getNpsCategory = (score: number): string => {
+        if (score >= 9) return 'Promoter';
+        if (score >= 7) return 'Passive';
+        return 'Detractor';
+      };
+
+      const segments = ['Enterprise', 'SMB', 'Startup', 'Individual', 'Government'];
+      const products = ['Core Platform', 'Analytics Suite', 'API Services', 'Mobile App', 'Support Experience', 'Overall Experience'];
+      const touchpoints = ['Post-Purchase', 'Support Interaction', 'Quarterly Check-in', 'After Onboarding', 'Renewal', 'Feature Launch'];
+
+      // Feedback based on score
+      const promoterFeedback = [
+        'Excellent product! Has transformed how our team works.',
+        'The support team is incredibly responsive and helpful.',
+        'Best in class solution. We recommend it to everyone.',
+        'Intuitive interface, powerful features, great value.',
+        'Been using for 2 years and it keeps getting better.',
+        'Exceeded all our expectations. A game changer.',
+        '',
+      ];
+
+      const passiveFeedback = [
+        'Good product overall, does what we need.',
+        'Solid solution but could use some improvements.',
+        'Works well but the learning curve was steep.',
+        'Decent value for the price point.',
+        'Meets our basic requirements.',
+        '',
+        '',
+      ];
+
+      const detractorFeedback = [
+        'Had reliability issues recently.',
+        'Support response times need improvement.',
+        'Price increase was unexpected.',
+        'Missing key features our team needs.',
+        'Performance has been inconsistent.',
+        'Documentation could be much better.',
+        '',
+      ];
+
+      const improvements = [
+        'More integrations with third-party tools.',
+        'Better mobile app experience.',
+        'Faster loading times.',
+        'More customization options.',
+        'Improved onboarding documentation.',
+        'Lower pricing for small teams.',
+        'More frequent feature updates.',
+        'Better reporting and analytics.',
+        '',
+        '',
+        '',
+      ];
+
+      const submissionCount = 250;
+      const dates = generateDateSpread(60, submissionCount);
+
+      const submissions = dates.map((date, i) => {
+        const npsScore = generateNpsScore();
+        const category = getNpsCategory(npsScore);
+        const device = randomDevice();
+        const startTime = new Date(date.getTime() - generateCompletionTime(fields.length, true) * 1000);
+
+        // Select appropriate feedback based on score
+        const feedbackPool = category === 'Promoter' ? promoterFeedback :
+                            category === 'Passive' ? passiveFeedback : detractorFeedback;
+
+        // Detractors more likely to want follow-up (to resolve issues)
+        const followUpOk = category === 'Detractor' ? Math.random() > 0.3 :
+                          category === 'Passive' ? Math.random() > 0.6 :
+                          Math.random() > 0.7;
+
+        return {
+          submissionId: `sub_${new ObjectId().toHexString()}`,
+          formId,
+          formVersion: 1,
+          status: 'submitted',
+          data: {
+            nps_score: npsScore,
+            respondent_category: category, // Computed field for analytics
+            feedback: feedbackPool[Math.floor(Math.random() * feedbackPool.length)],
+            improvement: category !== 'Promoter' ? improvements[Math.floor(Math.random() * improvements.length)] : (Math.random() > 0.7 ? improvements[Math.floor(Math.random() * improvements.length)] : ''),
+            customer_segment: segments[Math.floor(Math.random() * segments.length)],
+            product_used: products[Math.floor(Math.random() * products.length)],
+            touchpoint: touchpoints[Math.floor(Math.random() * touchpoints.length)],
+            follow_up_ok: followUpOk,
+            email: followUpOk ? `respondent${i + 1}@example.com` : '',
+          },
+          submittedAt: date,
+          startedAt: startTime,
+          completedAt: date,
+          completionTime: Math.floor((date.getTime() - startTime.getTime()) / 1000),
+          metadata: {
+            source: 'sample-data',
+            deviceType: device,
+            browser: randomBrowser(device),
+            os: randomOS(device),
+            npsCategory: category, // Extra metadata for NPS analytics
+          },
+        };
+      });
+
+      // NPS surveys have low abandonment (simple, quick to complete)
+      const interactions = generateFieldInteractions(formId, fields, submissionCount, 0.08);
+
+      return { submissions, interactions };
+    },
+  },
 };
 
 export async function POST(

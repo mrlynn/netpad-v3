@@ -17,7 +17,9 @@
       "Bash(cat:*)",
       "Bash(lsof:*)",
       "Bash(xargs:*)",
-      "Bash(timeout 15s npm run dev)"
+      "Bash(timeout 15s npm run dev)",
+      "Bash(timeout 180 npm run build:*)",
+      "Bash(npm run test:coverage:*)"
     ]
   }
 }

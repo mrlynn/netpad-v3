@@ -212,6 +212,9 @@ export interface ProvisionedCluster {
   // Connection details (stored encrypted via vault)
   vaultId?: string;                     // Reference to connection vault
 
+  // Atlas console access
+  atlasInvitationId?: string;           // Reference to our atlas_invitations record
+
   // Configuration
   provider: ClusterBackingProvider;
   region: M0Region;
@@ -274,4 +277,62 @@ export interface ProvisioningResult {
   connectionString?: string;
   error?: string;
   status: ProvisioningStatus;
+}
+
+// ============================================
+// Organization Invitations
+// ============================================
+
+/**
+ * Atlas organization-level roles
+ * @see https://www.mongodb.com/docs/atlas/reference/user-roles/#organization-roles
+ */
+export type AtlasOrgRole =
+  | 'ORG_OWNER'
+  | 'ORG_GROUP_CREATOR'
+  | 'ORG_BILLING_ADMIN'
+  | 'ORG_BILLING_READ_ONLY'
+  | 'ORG_READ_ONLY'
+  | 'ORG_MEMBER';
+
+/**
+ * Atlas project-level roles
+ * @see https://www.mongodb.com/docs/atlas/reference/user-roles/#project-roles
+ */
+export type AtlasProjectRole =
+  | 'GROUP_CLUSTER_MANAGER'
+  | 'GROUP_DATA_ACCESS_ADMIN'
+  | 'GROUP_DATA_ACCESS_READ_WRITE'
+  | 'GROUP_DATA_ACCESS_READ_ONLY'
+  | 'GROUP_READ_ONLY'
+  | 'GROUP_OWNER';
+
+/**
+ * Project role assignment for an invitation
+ */
+export interface AtlasGroupRoleAssignment {
+  groupId: string;  // Atlas project ID
+  roles: AtlasProjectRole[];
+}
+
+/**
+ * Input for creating an Atlas organization invitation
+ */
+export interface CreateAtlasInvitationInput {
+  username: string;  // Email address of invitee
+  roles?: AtlasOrgRole[];  // Org-level roles (empty for project-only access)
+  groupRoleAssignments: AtlasGroupRoleAssignment[];
+}
+
+/**
+ * Atlas invitation as returned by the API
+ */
+export interface AtlasInvitation {
+  id: string;
+  groupRoleAssignments: AtlasGroupRoleAssignment[];
+  createdAt: string;
+  expiresAt: string;
+  inviterUsername: string;
+  username: string;  // Invitee email
+  roles: AtlasOrgRole[];
 }

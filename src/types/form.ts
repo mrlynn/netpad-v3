@@ -1107,14 +1107,95 @@ export interface FormVersion {
 }
 
 // ============================================
-// Multi-Page Forms
+// Multi-Page Forms & Wizards
 // ============================================
+
+/**
+ * Page types for multi-step forms and wizards:
+ * - form: Standard form page with data collection fields
+ * - info: Informational/instructional page (welcome, guidance, explanations)
+ * - summary: Review page showing collected data before submission
+ * - complete: Success/completion page after submission
+ */
+export type PageType = 'form' | 'info' | 'summary' | 'complete';
+
+/**
+ * Callout/highlight box for informational pages
+ */
+export interface PageCallout {
+  type: 'info' | 'tip' | 'warning' | 'success';
+  title?: string;
+  text: string;
+  icon?: string;
+}
+
+/**
+ * Content configuration for informational pages
+ */
+export interface PageContent {
+  body?: string;                 // Main content (markdown/rich text)
+  contentType?: 'text' | 'markdown' | 'html';
+  // Media
+  imageUrl?: string;             // Hero/feature image
+  imagePosition?: 'top' | 'left' | 'right' | 'background';
+  imageAlt?: string;
+  videoUrl?: string;             // Embedded video (YouTube, Vimeo, or direct URL)
+  videoAspectRatio?: '16:9' | '4:3' | '1:1';
+  // Callouts/highlights
+  callouts?: PageCallout[];
+  // Layout
+  alignment?: 'left' | 'center' | 'right';
+  maxWidth?: number;
+}
+
+/**
+ * Summary page configuration - shows collected data for review
+ */
+export interface SummaryPageConfig {
+  showAllFields?: boolean;       // Show all collected data
+  showFields?: string[];         // Or specific fields only
+  groupByPage?: boolean;         // Group fields by their source page
+  allowEdit?: boolean;           // Let user go back to edit specific fields
+  editMode?: 'jump-to-page' | 'inline';  // How editing works
+  confirmLabel?: string;         // Custom submit button label (e.g., "Confirm & Submit")
+  excludeEmptyFields?: boolean;  // Hide fields with no value
+}
+
+/**
+ * Action button for completion pages
+ */
+export interface CompletionAction {
+  id: string;
+  label: string;
+  action: 'navigate' | 'close' | 'restart' | 'custom';
+  url?: string;                  // For navigate action
+  variant?: 'primary' | 'secondary' | 'text';
+  icon?: string;
+}
+
+/**
+ * Completion page configuration - success/finish screen
+ */
+export interface CompletionPageConfig {
+  heading?: string;              // Main heading (e.g., "You're all set!")
+  message?: string;              // Success message (supports markdown)
+  icon?: 'checkmark' | 'celebration' | 'thumbsUp' | 'custom' | 'none';
+  customIconUrl?: string;        // For custom icon
+  showConfetti?: boolean;        // Fun celebration animation
+  actions?: CompletionAction[];  // Action buttons
+  autoRedirect?: {               // Optional auto-redirect
+    url: string;
+    delay: number;               // Seconds before redirect
+    showCountdown?: boolean;
+  };
+}
 
 export interface FormPage {
   id: string;
   title: string;
   description?: string;
-  fields: string[];              // Array of field paths that belong to this page
+  pageType?: PageType;           // Default 'form' for backward compatibility
+  fields: string[];              // Array of field paths (for 'form' pages)
   order: number;
   // Navigation settings
   showInNavigation?: boolean;    // Show in step indicator
@@ -1123,6 +1204,17 @@ export interface FormPage {
   // Custom navigation button labels
   nextLabel?: string;
   prevLabel?: string;
+  // Skip submit on this page (for info pages that should just advance)
+  skipValidation?: boolean;
+
+  // Wizard page content (for 'info' pages)
+  content?: PageContent;
+
+  // Summary page config (for 'summary' pages)
+  summaryConfig?: SummaryPageConfig;
+
+  // Completion page config (for 'complete' pages)
+  completionConfig?: CompletionPageConfig;
 }
 
 export interface MultiPageConfig {

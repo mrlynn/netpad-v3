@@ -119,7 +119,7 @@ async function executeWebhookRequest(
       method,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'MongoDB-FormBuilder-Webhook/1.0',
+        'User-Agent': 'MongoDB-NetPad-Webhook/1.0',
         ...headers,
       },
       body: JSON.stringify(payload),

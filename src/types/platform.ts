@@ -251,9 +251,9 @@ export const CONNECTION_ROLE_CAPABILITIES: Record<ConnectionRole, string[]> = {
 };
 
 export const ORG_ROLE_CAPABILITIES: Record<OrgRole, string[]> = {
-  owner: ['manage_org', 'delete_org', 'manage_billing', 'manage_members', 'manage_all_forms', 'manage_all_connections'],
-  admin: ['manage_members', 'manage_all_forms', 'manage_all_connections'],
-  member: ['create_forms', 'use_connections'],
+  owner: ['manage_org', 'delete_org', 'manage_billing', 'manage_members', 'manage_all_forms', 'manage_all_connections', 'create_forms', 'use_connections', 'view_forms', 'view_responses'],
+  admin: ['manage_members', 'manage_all_forms', 'manage_all_connections', 'create_forms', 'use_connections', 'view_forms', 'view_responses'],
+  member: ['create_forms', 'use_connections', 'view_forms', 'view_responses'],
   viewer: ['view_forms', 'view_responses'],
 };
 
@@ -824,6 +824,32 @@ export interface BillingEvent {
   data: Record<string, unknown>;
   processedAt?: Date;
   createdAt: Date;
+}
+
+// ============================================
+// Atlas User Invitations (Console Access)
+// ============================================
+
+export type AtlasInvitationStatus = 'pending' | 'accepted' | 'expired' | 'cancelled';
+
+/**
+ * Tracks Atlas console invitations sent to users
+ * so they can view their cluster in cloud.mongodb.com
+ */
+export interface AtlasInvitationRecord {
+  _id?: ObjectId;
+  invitationId: string;           // Our internal ID: "atlasinv_abc123"
+  atlasInvitationId: string;      // Atlas API invitation ID
+  organizationId: string;         // Our org ID
+  atlasProjectId: string;         // Atlas project they're invited to
+  userId?: string;                // Our user ID (if known at invite time)
+  email: string;                  // Invitee email
+  atlasRole: string;              // e.g., "GROUP_DATA_ACCESS_READ_WRITE"
+  status: AtlasInvitationStatus;
+  createdAt: Date;
+  expiresAt: Date;
+  acceptedAt?: Date;
+  lastCheckedAt?: Date;           // When we last synced status with Atlas
 }
 
 // ============================================

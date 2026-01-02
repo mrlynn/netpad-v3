@@ -19,8 +19,9 @@ import {
   ClusterBackingProvider,
   M0Region,
 } from './types';
-import { createConnectionVault } from '../platform/connectionVault';
-import { getPlatformDb, getOrgDb } from '../platform/db';
+import { createConnectionVault, deleteVault } from '../platform/connectionVault';
+import { getPlatformDb, getOrgDb, getUsersCollection, getAtlasInvitationsCollection } from '../platform/db';
+import { inviteUserToAtlasProject, cancelAtlasInvitation } from './invitations';
 
 // ============================================
 // Configuration
@@ -67,7 +68,7 @@ function generateClusterName(orgId: string): string {
  */
 function generateDbUsername(orgId: string): string {
   const suffix = orgId.slice(-8);
-  return `formbuilder-${suffix}`;
+  return `netpad-${suffix}`;
 }
 
 /**
@@ -228,7 +229,7 @@ export async function provisionM0Cluster(
   }
 
   // Create initial tracking record
-  const projectName = `formbuilder-${organizationId.slice(-8)}`;
+  const projectName = `netpad-${organizationId.slice(-8)}`;
   const clusterRecord = await createProvisionedClusterRecord({
     organizationId,
     atlasProjectId: '',
@@ -382,9 +383,43 @@ export async function provisionM0Cluster(
       allowedCollections: [], // Allow all collections
     });
 
-    // Step 7: Mark as ready
+    // Step 7: Invite user to Atlas console
+    // This allows them to log into cloud.mongodb.com and see their cluster
+    console.log('[Provisioning] Inviting user to Atlas console');
+    let atlasInvitationId: string | undefined;
+
+    try {
+      const usersCollection = await getUsersCollection();
+      const user = await usersCollection.findOne({ userId });
+
+      if (user?.email) {
+        const inviteResult = await inviteUserToAtlasProject({
+          organizationId,
+          atlasProjectId,
+          email: user.email,
+          userId,
+          role: 'GROUP_DATA_ACCESS_READ_WRITE',
+        });
+
+        if (inviteResult.success) {
+          atlasInvitationId = inviteResult.invitationId;
+          console.log(`[Provisioning] Atlas invitation sent to ${user.email}`);
+        } else {
+          // Don't fail provisioning if invite fails - just log warning
+          console.warn(`[Provisioning] Failed to invite user to Atlas: ${inviteResult.error}`);
+        }
+      } else {
+        console.warn('[Provisioning] Could not invite user to Atlas - no email found');
+      }
+    } catch (inviteError: any) {
+      // Don't fail provisioning if invitation fails
+      console.warn('[Provisioning] Error sending Atlas invitation:', inviteError.message);
+    }
+
+    // Step 8: Mark as ready
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'ready', {
       vaultId: vault.vaultId,
+      atlasInvitationId,
       provisioningCompletedAt: new Date(),
     });
 
@@ -488,7 +523,14 @@ export function isAutoProvisioningAvailable(): boolean {
 }
 
 /**
- * Delete a provisioned cluster (cleanup)
+ * Delete a provisioned cluster and all associated resources
+ *
+ * This will:
+ * 1. Cancel any pending Atlas console invitations
+ * 2. Delete the cluster from Atlas
+ * 3. Delete the Atlas project
+ * 4. Delete the connection vault
+ * 5. Mark the provisioned cluster record as deleted
  */
 export async function deleteProvisionedCluster(
   organizationId: string,
@@ -500,27 +542,105 @@ export async function deleteProvisionedCluster(
     return { success: false, error: 'No provisioned cluster found' };
   }
 
+  console.log(`[Provisioning] Deleting cluster ${cluster.clusterId} for org ${organizationId}`);
+
   const client = getAtlasClient();
+  const errors: string[] = [];
 
   try {
-    // Delete the cluster from Atlas
+    // Step 1: Cancel any pending Atlas console invitations
+    console.log('[Provisioning] Cancelling Atlas invitations...');
+    try {
+      const invitationsCollection = await getAtlasInvitationsCollection();
+      const pendingInvitations = await invitationsCollection
+        .find({ organizationId, status: 'pending' })
+        .toArray();
+
+      for (const invitation of pendingInvitations) {
+        try {
+          await cancelAtlasInvitation(invitation.invitationId);
+          console.log(`[Provisioning] Cancelled invitation ${invitation.invitationId}`);
+        } catch (inviteError: any) {
+          console.warn(`[Provisioning] Failed to cancel invitation ${invitation.invitationId}:`, inviteError.message);
+          // Continue with other cleanup even if invitation cancellation fails
+        }
+      }
+    } catch (inviteError: any) {
+      console.warn('[Provisioning] Error cancelling invitations:', inviteError.message);
+      errors.push(`Failed to cancel invitations: ${inviteError.message}`);
+    }
+
+    // Step 2: Delete the cluster from Atlas
     if (cluster.atlasProjectId && cluster.atlasClusterName) {
-      await client.deleteCluster(cluster.atlasProjectId, cluster.atlasClusterName);
+      console.log(`[Provisioning] Deleting Atlas cluster ${cluster.atlasClusterName}...`);
+      try {
+        const deleteResult = await client.deleteCluster(cluster.atlasProjectId, cluster.atlasClusterName);
+        if (!deleteResult.success && deleteResult.error?.error !== 404) {
+          errors.push(`Failed to delete cluster: ${deleteResult.error?.detail}`);
+        }
+      } catch (clusterError: any) {
+        console.warn('[Provisioning] Error deleting cluster:', clusterError.message);
+        errors.push(`Failed to delete cluster: ${clusterError.message}`);
+      }
     }
 
-    // Delete the project
+    // Step 3: Wait a moment for cluster deletion to register, then delete the project
     if (cluster.atlasProjectId) {
-      await client.deleteProject(cluster.atlasProjectId);
+      console.log(`[Provisioning] Deleting Atlas project ${cluster.atlasProjectId}...`);
+      // Wait briefly for cluster deletion to propagate
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      try {
+        const deleteProjectResult = await client.deleteProject(cluster.atlasProjectId);
+        if (!deleteProjectResult.success && deleteProjectResult.error?.error !== 404) {
+          errors.push(`Failed to delete project: ${deleteProjectResult.error?.detail}`);
+        }
+      } catch (projectError: any) {
+        console.warn('[Provisioning] Error deleting project:', projectError.message);
+        errors.push(`Failed to delete project: ${projectError.message}`);
+      }
     }
 
-    // Mark as deleted
+    // Step 4: Delete the connection vault
+    if (cluster.vaultId) {
+      console.log(`[Provisioning] Deleting connection vault ${cluster.vaultId}...`);
+      try {
+        await deleteVault(organizationId, cluster.vaultId, deletedBy);
+      } catch (vaultError: any) {
+        console.warn('[Provisioning] Error deleting vault:', vaultError.message);
+        errors.push(`Failed to delete vault: ${vaultError.message}`);
+      }
+    }
+
+    // Step 5: Mark the provisioned cluster record as deleted
     await updateProvisionedClusterStatus(cluster.clusterId, 'deleted', {
       deletedAt: new Date(),
+      statusMessage: errors.length > 0 ? `Deleted with warnings: ${errors.join('; ')}` : 'Deleted successfully',
     });
+
+    console.log(`[Provisioning] Cluster ${cluster.clusterId} deleted`);
+
+    if (errors.length > 0) {
+      return {
+        success: true,
+        error: `Cluster deleted with some warnings: ${errors.join('; ')}`
+      };
+    }
 
     return { success: true };
   } catch (error: any) {
     console.error('[Provisioning] Error deleting cluster:', error);
+
+    // Still try to mark as deleted even if cleanup failed
+    try {
+      await updateProvisionedClusterStatus(cluster.clusterId, 'deleted', {
+        deletedAt: new Date(),
+        statusMessage: `Deletion failed: ${error.message}`,
+      });
+    } catch (updateError) {
+      console.error('[Provisioning] Failed to update cluster status:', updateError);
+    }
+
     return { success: false, error: error.message };
   }
 }

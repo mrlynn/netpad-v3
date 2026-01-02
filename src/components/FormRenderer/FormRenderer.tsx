@@ -32,8 +32,8 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
-import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close, Visibility } from '@mui/icons-material';
-import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft, FormHeader } from '@/types/form';
+import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close, Visibility, Info, Lightbulb, Warning, CheckCircle, Celebration, ThumbUp, Edit as EditIcon, Refresh, OpenInNew } from '@mui/icons-material';
+import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft, FormHeader, PageType, PageContent, PageCallout, SummaryPageConfig, CompletionPageConfig } from '@/types/form';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
 import { evaluateFormula } from '@/utils/computedFields';
 import { getResolvedTheme } from '@/lib/formThemes';
@@ -247,14 +247,18 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
       .sort((a, b) => a.order - b.order);
   }, [isMultiPage, pages, formData]);
 
-  // Get fields for current page
+  // Get fields for current page (preserving page.fields order)
   const currentPageFields = useMemo(() => {
     if (!isMultiPage || visiblePages.length === 0) {
       return fieldConfigs;
     }
     const page = visiblePages[currentPage];
     if (!page) return [];
-    return fieldConfigs.filter((f) => page.fields.includes(f.path));
+    // Map page.fields to their configs, preserving the order defined in page.fields
+    const fieldConfigMap = new Map(fieldConfigs.map(f => [f.path, f]));
+    return page.fields
+      .map(fieldPath => fieldConfigMap.get(fieldPath))
+      .filter((f): f is FieldConfig => f !== undefined);
   }, [isMultiPage, visiblePages, currentPage, fieldConfigs]);
 
   // Ensure currentPage stays within bounds when visiblePages changes
@@ -723,8 +727,16 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
   const validatePage = (pageIndex: number): string[] => {
     const errors: string[] = [];
-    const pageFields = isMultiPage && visiblePages[pageIndex]
-      ? fieldConfigs.filter((f) => visiblePages[pageIndex].fields.includes(f.path))
+    const page = isMultiPage ? visiblePages[pageIndex] : null;
+
+    // Skip validation for info and complete pages
+    const pageType = page?.pageType || 'form';
+    if (pageType === 'info' || pageType === 'complete' || page?.skipValidation) {
+      return errors;
+    }
+
+    const pageFields = isMultiPage && page
+      ? fieldConfigs.filter((f) => page.fields.includes(f.path))
       : fieldConfigs;
 
     for (const field of pageFields) {
@@ -3279,6 +3291,355 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
     },
   };
 
+  // Get the current page type (default to 'form' for backward compatibility)
+  const currentPageType: PageType = currentPageData?.pageType || 'form';
+
+  // Render callout boxes for informational pages
+  const renderCallout = (callout: PageCallout, index: number) => {
+    const calloutStyles = {
+      info: { bgcolor: alpha('#2196F3', 0.1), borderColor: '#2196F3', icon: <Info sx={{ color: '#2196F3' }} /> },
+      tip: { bgcolor: alpha('#4CAF50', 0.1), borderColor: '#4CAF50', icon: <Lightbulb sx={{ color: '#4CAF50' }} /> },
+      warning: { bgcolor: alpha('#FF9800', 0.1), borderColor: '#FF9800', icon: <Warning sx={{ color: '#FF9800' }} /> },
+      success: { bgcolor: alpha('#00ED64', 0.1), borderColor: '#00ED64', icon: <CheckCircle sx={{ color: '#00ED64' }} /> },
+    };
+    const style = calloutStyles[callout.type];
+
+    return (
+      <Paper
+        key={index}
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 2,
+          bgcolor: style.bgcolor,
+          border: `1px solid ${style.borderColor}`,
+          borderRadius: `${theme.borderRadius || 8}px`,
+          display: 'flex',
+          gap: 2,
+          alignItems: 'flex-start',
+        }}
+      >
+        {style.icon}
+        <Box sx={{ flex: 1 }}>
+          {callout.title && (
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: style.borderColor }}>
+              {callout.title}
+            </Typography>
+          )}
+          <Typography variant="body2" sx={{ color: theme.textColor }}>
+            {callout.text}
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  };
+
+  // Render informational page content
+  const renderInfoPage = (content: PageContent) => {
+    const alignment = content.alignment || 'left';
+    const textAlign = alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left';
+
+    return (
+      <Box sx={{ textAlign, maxWidth: content.maxWidth || '100%', mx: alignment === 'center' ? 'auto' : 0 }}>
+        {/* Hero image at top */}
+        {content.imageUrl && content.imagePosition === 'top' && (
+          <Box
+            component="img"
+            src={content.imageUrl}
+            alt={content.imageAlt || ''}
+            sx={{
+              width: '100%',
+              maxHeight: 300,
+              objectFit: 'cover',
+              borderRadius: `${theme.borderRadius || 8}px`,
+              mb: 3,
+            }}
+          />
+        )}
+
+        {/* Video embed */}
+        {content.videoUrl && (
+          <Box
+            sx={{
+              position: 'relative',
+              width: '100%',
+              paddingBottom: content.videoAspectRatio === '4:3' ? '75%' : content.videoAspectRatio === '1:1' ? '100%' : '56.25%',
+              mb: 3,
+              borderRadius: `${theme.borderRadius || 8}px`,
+              overflow: 'hidden',
+            }}
+          >
+            <iframe
+              src={content.videoUrl}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                border: 'none',
+              }}
+              allowFullScreen
+              title="Embedded video"
+            />
+          </Box>
+        )}
+
+        {/* Main body content */}
+        {content.body && (
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              lineHeight: 1.8,
+              color: theme.textColor,
+              whiteSpace: 'pre-wrap',
+              '& p': { mb: 2 },
+            }}
+            dangerouslySetInnerHTML={
+              content.contentType === 'html' ? { __html: content.body } : undefined
+            }
+          >
+            {content.contentType !== 'html' ? content.body : undefined}
+          </Typography>
+        )}
+
+        {/* Callouts */}
+        {content.callouts && content.callouts.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            {content.callouts.map((callout, index) => renderCallout(callout, index))}
+          </Box>
+        )}
+
+        {/* Side image layout */}
+        {content.imageUrl && (content.imagePosition === 'left' || content.imagePosition === 'right') && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: content.imagePosition === 'left' ? 'row' : 'row-reverse',
+              gap: 3,
+              alignItems: 'center',
+              mt: 3,
+            }}
+          >
+            <Box
+              component="img"
+              src={content.imageUrl}
+              alt={content.imageAlt || ''}
+              sx={{
+                width: '40%',
+                maxHeight: 250,
+                objectFit: 'cover',
+                borderRadius: `${theme.borderRadius || 8}px`,
+              }}
+            />
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
+  // Render summary page showing collected data
+  const renderSummaryPage = (config: SummaryPageConfig) => {
+    const fieldsToShow = config.showAllFields
+      ? fieldConfigs.filter(f => !f.layout && f.included)
+      : fieldConfigs.filter(f => config.showFields?.includes(f.path));
+
+    // Group by page if requested
+    const groupedFields = config.groupByPage && isMultiPage
+      ? visiblePages.reduce((acc, page) => {
+          const pageFields = fieldsToShow.filter(f => page.fields.includes(f.path));
+          if (pageFields.length > 0) {
+            acc.push({ pageTitle: page.title, fields: pageFields });
+          }
+          return acc;
+        }, [] as Array<{ pageTitle: string; fields: FieldConfig[] }>)
+      : [{ pageTitle: '', fields: fieldsToShow }];
+
+    const handleEditField = (fieldPath: string) => {
+      if (!config.allowEdit) return;
+      // Find the page containing this field and jump to it
+      const pageIndex = visiblePages.findIndex(p => p.fields.includes(fieldPath));
+      if (pageIndex >= 0) {
+        setCurrentPage(pageIndex);
+      }
+    };
+
+    return (
+      <Box>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: theme.textColor }}>
+          Review Your Information
+        </Typography>
+
+        {groupedFields.map((group, groupIndex) => (
+          <Box key={groupIndex} sx={{ mb: 3 }}>
+            {group.pageTitle && (
+              <Typography variant="subtitle2" sx={{ mb: 2, color: theme.textSecondaryColor, fontWeight: 600 }}>
+                {group.pageTitle}
+              </Typography>
+            )}
+            <Paper
+              elevation={0}
+              sx={{
+                border: `1px solid ${theme.surfaceColor || '#e0e0e0'}`,
+                borderRadius: `${theme.borderRadius || 8}px`,
+                overflow: 'hidden',
+              }}
+            >
+              {group.fields.map((field, fieldIndex) => {
+                const value = getFieldValue(field.path);
+                // Skip empty fields if configured
+                if (config.excludeEmptyFields && (value === undefined || value === null || value === '')) {
+                  return null;
+                }
+
+                // Format display value
+                let displayValue: React.ReactNode = value;
+                if (Array.isArray(value)) {
+                  displayValue = value.join(', ');
+                } else if (typeof value === 'boolean') {
+                  displayValue = value ? 'Yes' : 'No';
+                } else if (typeof value === 'object' && value !== null) {
+                  displayValue = JSON.stringify(value);
+                } else if (value === undefined || value === null || value === '') {
+                  displayValue = <Typography component="span" sx={{ fontStyle: 'italic', color: theme.textSecondaryColor }}>Not provided</Typography>;
+                }
+
+                return (
+                  <Box
+                    key={field.path}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 2,
+                      borderBottom: fieldIndex < group.fields.length - 1 ? `1px solid ${theme.surfaceColor || '#e0e0e0'}` : 'none',
+                      '&:hover': config.allowEdit ? { bgcolor: alpha(theme.primaryColor || '#00ED64', 0.05) } : {},
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ color: theme.textSecondaryColor, display: 'block' }}>
+                        {field.label}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: theme.textColor, fontWeight: 500 }}>
+                        {displayValue}
+                      </Typography>
+                    </Box>
+                    {config.allowEdit && config.editMode === 'jump-to-page' && (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon fontSize="small" />}
+                        onClick={() => handleEditField(field.path)}
+                        sx={{ color: theme.primaryColor, minWidth: 'auto' }}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </Box>
+                );
+              })}
+            </Paper>
+          </Box>
+        ))}
+      </Box>
+    );
+  };
+
+  // Render completion page after successful submission
+  const renderCompletionPage = (config: CompletionPageConfig) => {
+    const iconMap = {
+      checkmark: <CheckCircle sx={{ fontSize: 80, color: theme.primaryColor || '#00ED64' }} />,
+      celebration: <Celebration sx={{ fontSize: 80, color: theme.primaryColor || '#00ED64' }} />,
+      thumbsUp: <ThumbUp sx={{ fontSize: 80, color: theme.primaryColor || '#00ED64' }} />,
+      custom: config.customIconUrl ? (
+        <Box component="img" src={config.customIconUrl} alt="" sx={{ width: 80, height: 80 }} />
+      ) : null,
+      none: null,
+    };
+
+    const icon = config.icon ? iconMap[config.icon] : iconMap.checkmark;
+
+    return (
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        {/* Icon */}
+        {icon && <Box sx={{ mb: 3 }}>{icon}</Box>}
+
+        {/* Heading */}
+        <Typography variant="h4" sx={{ mb: 2, fontWeight: 700, color: theme.textColor }}>
+          {config.heading || "You're all set!"}
+        </Typography>
+
+        {/* Message */}
+        {config.message && (
+          <Typography variant="body1" sx={{ mb: 4, color: theme.textSecondaryColor, maxWidth: 500, mx: 'auto' }}>
+            {config.message}
+          </Typography>
+        )}
+
+        {/* Action buttons */}
+        {config.actions && config.actions.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {config.actions.map((action) => {
+              const handleAction = () => {
+                switch (action.action) {
+                  case 'navigate':
+                    if (action.url) window.location.href = action.url;
+                    break;
+                  case 'close':
+                    window.close();
+                    break;
+                  case 'restart':
+                    window.location.reload();
+                    break;
+                }
+              };
+
+              const variant = action.variant === 'primary' ? 'contained' : action.variant === 'text' ? 'text' : 'outlined';
+              const actionIcons = {
+                navigate: <OpenInNew fontSize="small" />,
+                restart: <Refresh fontSize="small" />,
+                close: <Close fontSize="small" />,
+                custom: null,
+              };
+
+              return (
+                <Button
+                  key={action.id}
+                  variant={variant}
+                  onClick={handleAction}
+                  endIcon={actionIcons[action.action]}
+                  sx={{
+                    borderRadius: `${theme.buttonBorderRadius || theme.borderRadius || 8}px`,
+                    ...(variant === 'contained' && primaryButtonSx),
+                    ...(variant === 'outlined' && {
+                      borderColor: theme.primaryColor,
+                      color: theme.primaryColor,
+                    }),
+                  }}
+                >
+                  {action.label}
+                </Button>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* Auto redirect countdown */}
+        {config.autoRedirect && config.autoRedirect.showCountdown && (
+          <Typography variant="caption" sx={{ display: 'block', mt: 3, color: theme.textSecondaryColor }}>
+            Redirecting in {config.autoRedirect.delay} seconds...
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
+  // Check if we're on a wizard page type
+  const isInfoPage = currentPageType === 'info';
+  const isSummaryPage = currentPageType === 'summary';
+  const isCompletePage = currentPageType === 'complete';
+  const isFormPage = currentPageType === 'form';
+
   // Get header from theme config
   const headerConfig = form.theme?.header;
   const showFormHeader = headerConfig && headerConfig.type !== 'none';
@@ -3425,140 +3786,153 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         </Box>
       )}
 
-      {/* Form Fields - 12-column grid layout */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(12, 1fr)',
-          gap: getSpacing(),
-          alignItems: 'start',
-        }}
-      >
-        {currentPageFields.map((config) => {
-          const isVisible = evaluateConditionalLogic(config.conditionalLogic, formData);
-          const isEncrypted = config.encryption?.enabled;
+      {/* Page Content - Conditional based on page type */}
+      {isInfoPage && currentPageData?.content && renderInfoPage(currentPageData.content)}
 
-          // Map fieldWidth to grid column span
-          const getGridColumn = () => {
-            switch (config.fieldWidth) {
-              case 'quarter': return 'span 3';
-              case 'third': return 'span 4';
-              case 'half': return 'span 6';
-              case 'full':
-              default: return 'span 12';
-            }
-          };
+      {isSummaryPage && currentPageData?.summaryConfig && renderSummaryPage(currentPageData.summaryConfig)}
 
-          return (
-            <Collapse
-              key={config.path}
-              in={isVisible}
-              unmountOnExit
-              sx={{ gridColumn: getGridColumn() }}
-            >
-              <Box sx={inputSx}>
-                {/* Encryption indicator for sensitive fields */}
-                {isEncrypted && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      mb: 0.5,
-                    }}
-                  >
-                    <Lock sx={{ fontSize: 14, color: 'success.main' }} />
-                    <Typography
-                      variant="caption"
+      {isCompletePage && currentPageData?.completionConfig && renderCompletionPage(currentPageData.completionConfig)}
+
+      {/* Form Fields - 12-column grid layout (only for form pages) */}
+      {isFormPage && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(12, 1fr)',
+            gap: getSpacing(),
+            alignItems: 'start',
+          }}
+        >
+          {currentPageFields.map((config) => {
+            const isVisible = evaluateConditionalLogic(config.conditionalLogic, formData);
+            const isEncrypted = config.encryption?.enabled;
+
+            // Map fieldWidth to grid column span
+            const getGridColumn = () => {
+              switch (config.fieldWidth) {
+                case 'quarter': return 'span 3';
+                case 'third': return 'span 4';
+                case 'half': return 'span 6';
+                case 'full':
+                default: return 'span 12';
+              }
+            };
+
+            return (
+              <Collapse
+                key={config.path}
+                in={isVisible}
+                unmountOnExit
+                sx={{ gridColumn: getGridColumn() }}
+              >
+                <Box sx={inputSx}>
+                  {/* Encryption indicator for sensitive fields */}
+                  {isEncrypted && (
+                    <Box
                       sx={{
-                        color: 'success.main',
-                        fontWeight: 500,
-                        fontSize: '0.7rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        mb: 0.5,
                       }}
                     >
-                      Encrypted field
-                    </Typography>
-                  </Box>
-                )}
-                {renderField(config)}
-              </Box>
-            </Collapse>
-          );
-        })}
-      </Box>
+                      <Lock sx={{ fontSize: 14, color: 'success.main' }} />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'success.main',
+                          fontWeight: 500,
+                          fontSize: '0.7rem',
+                        }}
+                      >
+                        Encrypted field
+                      </Typography>
+                    </Box>
+                  )}
+                  {renderField(config)}
+                </Box>
+              </Collapse>
+            );
+          })}
+        </Box>
+      )}
 
-      {/* Navigation Buttons */}
-      <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'space-between' }}>
-        {isMultiPage && !isFirstPage ? (
-          <Button
-            key="prev-button"
-            type="button"
-            variant="outlined"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePrevPage();
-            }}
-            startIcon={<ArrowBack />}
-            sx={{
-              flex: 1,
-              borderRadius: `${theme.buttonBorderRadius || theme.borderRadius || 8}px`,
-              borderColor: theme.primaryColor,
-              color: theme.primaryColor,
-            }}
-          >
-            {currentPageData?.prevLabel || 'Previous'}
-          </Button>
-        ) : (
-          <Box sx={{ flex: 1 }} />
-        )}
+      {/* Navigation Buttons - Hidden on completion pages */}
+      {!isCompletePage && (
+        <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'space-between' }}>
+          {isMultiPage && !isFirstPage ? (
+            <Button
+              key="prev-button"
+              type="button"
+              variant="outlined"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePrevPage();
+              }}
+              startIcon={<ArrowBack />}
+              sx={{
+                flex: 1,
+                borderRadius: `${theme.buttonBorderRadius || theme.borderRadius || 8}px`,
+                borderColor: theme.primaryColor,
+                color: theme.primaryColor,
+              }}
+            >
+              {currentPageData?.prevLabel || 'Previous'}
+            </Button>
+          ) : (
+            <Box sx={{ flex: 1 }} />
+          )}
 
-        {isMultiPage && !isLastPage ? (
-          <Button
-            key="next-button"
-            type="button"
-            variant="contained"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleNextPage();
-            }}
-            endIcon={<ArrowForward />}
-            sx={{
-              flex: 1,
-              ...primaryButtonSx,
-            }}
-          >
-            {currentPageData?.nextLabel || 'Next'}
-          </Button>
-        ) : (
-          <Button
-            key="submit-button"
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={submitting}
-            endIcon={submitting ? undefined : (isPreview ? <Visibility /> : <Check />)}
-            sx={{
-              flex: 1,
-              py: 1.5,
-              ...primaryButtonSx,
-              ...(isPreview && {
-                bgcolor: '#FF9800',
-                '&:hover': { bgcolor: '#F57C00' },
-              }),
-            }}
-          >
-            {submitting ? (
-              <CircularProgress size={24} sx={{ color: isDarkMode ? '#000' : '#fff' }} />
-            ) : isPreview ? (
-              'Test Submit (Preview)'
-            ) : (
-              multiPageConfig?.submitButtonLabel || 'Submit'
-            )}
-          </Button>
-        )}
-      </Box>
+          {isMultiPage && !isLastPage ? (
+            <Button
+              key="next-button"
+              type="button"
+              variant="contained"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNextPage();
+              }}
+              endIcon={<ArrowForward />}
+              sx={{
+                flex: 1,
+                ...primaryButtonSx,
+              }}
+            >
+              {currentPageData?.nextLabel || (isInfoPage ? 'Continue' : 'Next')}
+            </Button>
+          ) : (
+            <Button
+              key="submit-button"
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={submitting}
+              endIcon={submitting ? undefined : (isPreview ? <Visibility /> : <Check />)}
+              sx={{
+                flex: 1,
+                py: 1.5,
+                ...primaryButtonSx,
+                ...(isPreview && {
+                  bgcolor: '#FF9800',
+                  '&:hover': { bgcolor: '#F57C00' },
+                }),
+              }}
+            >
+              {submitting ? (
+                <CircularProgress size={24} sx={{ color: isDarkMode ? '#000' : '#fff' }} />
+              ) : isPreview ? (
+                'Test Submit (Preview)'
+              ) : isSummaryPage && currentPageData?.summaryConfig?.confirmLabel ? (
+                currentPageData.summaryConfig.confirmLabel
+              ) : (
+                multiPageConfig?.submitButtonLabel || 'Submit'
+              )}
+            </Button>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }
