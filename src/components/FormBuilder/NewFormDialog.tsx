@@ -142,24 +142,38 @@ export function NewFormDialog({
               borderColor: alpha('#00ED64', 0.2),
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
               <Storage sx={{ fontSize: 18, color: '#00ED64' }} />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Data will be stored in:
+                Data will be stored in your MongoDB database:
               </Typography>
             </Box>
-            <Chip
-              label={collectionName}
-              size="small"
-              sx={{
-                fontFamily: 'monospace',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Each form submission creates a document in this collection
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Chip
+                label="forms"
+                size="small"
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.7rem',
+                  bgcolor: alpha('#2196f3', 0.1),
+                  color: '#2196f3',
+                  height: 22,
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">→</Typography>
+              <Chip
+                label={collectionName}
+                size="small"
+                sx={{
+                  fontFamily: 'monospace',
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+              Each form submission creates a document in this collection. You can browse your data anytime in the Data tab.
             </Typography>
           </Box>
         )}

@@ -390,6 +390,87 @@ export type ExecutionLogEvent =
   | 'custom';
 
 // ============================================
+// WORKFLOW VERSIONING TYPES
+// ============================================
+
+/**
+ * Immutable snapshot of a workflow version
+ * Created when a workflow is published, enabling:
+ * - Rollback to previous versions
+ * - Execution against a specific version
+ * - Audit trail of changes
+ */
+export interface WorkflowVersion {
+  _id?: ObjectId;
+
+  // References
+  workflowId: string;
+  orgId: string;
+  version: number;
+
+  // Immutable snapshot of workflow state at publish time
+  snapshot: {
+    name: string;
+    description?: string;
+    canvas: WorkflowCanvas;
+    settings: WorkflowSettings;
+    variables: WorkflowVariable[];
+    inputSchema?: JSONSchemaDefinition;
+    outputSchema?: JSONSchemaDefinition;
+  };
+
+  // Publish metadata
+  publishedAt: Date;
+  publishedBy: string;
+  publishNote?: string;
+
+  // Change tracking
+  changesSummary?: {
+    nodesAdded: number;
+    nodesRemoved: number;
+    nodesModified: number;
+    edgesAdded: number;
+    edgesRemoved: number;
+  };
+
+  // Execution stats for this version
+  stats: {
+    totalExecutions: number;
+    successfulExecutions: number;
+    failedExecutions: number;
+  };
+
+  // Lifecycle
+  isActive: boolean;              // Currently the published version
+  deprecatedAt?: Date;            // When replaced by newer version
+  deprecatedBy?: string;          // User who published newer version
+}
+
+/**
+ * Request to publish a workflow version
+ */
+export interface PublishWorkflowRequest {
+  publishNote?: string;
+}
+
+/**
+ * Response after publishing a workflow
+ */
+export interface PublishWorkflowResponse {
+  version: number;
+  publishedAt: Date;
+  changesSummary: WorkflowVersion['changesSummary'];
+}
+
+/**
+ * Request to rollback to a previous version
+ */
+export interface RollbackWorkflowRequest {
+  targetVersion: number;
+  publishNote?: string;
+}
+
+// ============================================
 // JOB QUEUE TYPES (MongoDB-based)
 // ============================================
 

@@ -492,31 +492,38 @@ function getLimitAndUsage(
   key: UsageLimitKey,
   data: CachedSubscriptionData
 ): { limit: number; current: number } {
+  // Safely access nested usage properties with defaults
+  const usage = data.usage || {};
+  const ai = usage.ai || { generations: 0, agentSessions: 0, processingRuns: 0 };
+  const forms = usage.forms || { active: 0, created: 0 };
+  const submissions = usage.submissions || { total: 0 };
+  const storage = usage.storage || { filesBytes: 0, responsesBytes: 0 };
+
   switch (key) {
     case 'aiGenerations':
       return {
         limit: data.limits.aiGenerationsPerMonth,
-        current: data.usage.ai.generations,
+        current: ai.generations || 0,
       };
     case 'agentSessions':
       return {
         limit: data.limits.agentSessionsPerMonth,
-        current: data.usage.ai.agentSessions,
+        current: ai.agentSessions || 0,
       };
     case 'responseProcessing':
       return {
         limit: data.limits.responseProcessingPerMonth,
-        current: data.usage.ai.processingRuns,
+        current: ai.processingRuns || 0,
       };
     case 'submissions':
       return {
         limit: data.limits.maxSubmissionsPerMonth,
-        current: data.usage.submissions.total,
+        current: submissions.total || 0,
       };
     case 'forms':
       return {
         limit: data.limits.maxForms,
-        current: data.usage.forms.active,
+        current: forms.active || 0,
       };
     case 'connections':
       return {
@@ -526,11 +533,122 @@ function getLimitAndUsage(
     case 'storage':
       return {
         limit: data.limits.maxFileStorageMb * 1024 * 1024, // Convert to bytes
-        current: data.usage.storage.filesBytes + data.usage.storage.responsesBytes,
+        current: (storage.filesBytes || 0) + (storage.responsesBytes || 0),
       };
     default:
       return { limit: 0, current: 0 };
   }
+}
+
+// ============================================
+// Workflow Limit Hooks
+// ============================================
+
+/**
+ * Workflow Limits Design Philosophy: "Limits That Map to Value"
+ *
+ * Draft workflows are FREE and unlimited, encouraging experimentation.
+ * Only PUBLISHED/ACTIVE workflows count against tier limits.
+ *
+ * This allows users to:
+ * - Experiment freely with workflow designs
+ * - Build and test workflows before committing
+ * - Only pay for workflows they actually activate
+ *
+ * The limit enforced is `maxActiveWorkflows` - active workflows that can run.
+ * Workflow executions are separately limited by `workflowExecutionsPerMonth`.
+ */
+
+export interface WorkflowLimitsResult {
+  // Active workflows (published, running)
+  activeWorkflows: {
+    allowed: boolean;       // Can activate more workflows?
+    current: number;        // Current active count
+    limit: number;          // Max active (-1 = unlimited)
+    remaining: number;      // How many more can be activated
+    isUnlimited: boolean;
+  };
+  // Monthly executions
+  executions: {
+    allowed: boolean;       // Can run more executions?
+    current: number;        // This month's executions
+    limit: number;          // Max per month (-1 = unlimited)
+    remaining: number;      // Remaining this month
+    percentage: number;     // Percentage used
+    isUnlimited: boolean;
+  };
+  loading: boolean;
+  refresh: () => void;
+}
+
+/**
+ * Get workflow-specific limits for an organization
+ */
+export function useWorkflowLimits(orgId?: string, activeWorkflowCount?: number): WorkflowLimitsResult {
+  const [result, setResult] = useState<WorkflowLimitsResult>({
+    activeWorkflows: { allowed: false, current: 0, limit: 0, remaining: 0, isUnlimited: false },
+    executions: { allowed: false, current: 0, limit: 0, remaining: 0, percentage: 0, isUnlimited: false },
+    loading: true,
+    refresh: () => {},
+  });
+
+  const refresh = useCallback(async () => {
+    if (!orgId) {
+      setResult((prev) => ({ ...prev, loading: false }));
+      return;
+    }
+
+    setResult((prev) => ({ ...prev, loading: true }));
+    invalidateCache();
+
+    const data = await fetchSubscriptionData(orgId);
+
+    if (!data) {
+      setResult((prev) => ({ ...prev, loading: false }));
+      return;
+    }
+
+    const workflows = data.usage.workflows || { executions: 0 };
+
+    // Active workflows limit
+    const activeLimit = data.limits.maxActiveWorkflows;
+    const activeCurrent = activeWorkflowCount ?? 0;
+    const activeUnlimited = activeLimit === -1;
+    const activeRemaining = activeUnlimited ? -1 : Math.max(0, activeLimit - activeCurrent);
+
+    // Executions limit
+    const execLimit = data.limits.workflowExecutionsPerMonth;
+    const execCurrent = workflows.executions || 0;
+    const execUnlimited = execLimit === -1;
+    const execRemaining = execUnlimited ? -1 : Math.max(0, execLimit - execCurrent);
+    const execPercentage = execUnlimited ? 0 : Math.min(100, (execCurrent / execLimit) * 100);
+
+    setResult({
+      activeWorkflows: {
+        allowed: activeUnlimited || activeCurrent < activeLimit,
+        current: activeCurrent,
+        limit: activeLimit,
+        remaining: activeRemaining,
+        isUnlimited: activeUnlimited,
+      },
+      executions: {
+        allowed: execUnlimited || execCurrent < execLimit,
+        current: execCurrent,
+        limit: execLimit,
+        remaining: execRemaining,
+        percentage: execPercentage,
+        isUnlimited: execUnlimited,
+      },
+      loading: false,
+      refresh,
+    });
+  }, [orgId, activeWorkflowCount]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return result;
 }
 
 // ============================================

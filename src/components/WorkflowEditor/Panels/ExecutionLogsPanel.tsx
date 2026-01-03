@@ -45,13 +45,29 @@ import {
   Replay as RetryIcon,
   Cancel as CancelIcon,
   HourglassEmpty as WaitingIcon,
+  ContentCopy as CopyIcon,
+  Input as InputIcon,
+  Output as OutputIcon,
 } from '@mui/icons-material';
 import { useWorkflowEditor } from '@/contexts/WorkflowContext';
+
+// Log data with typed fields for I/O inspection
+interface LogData {
+  inputs?: Record<string, unknown>;
+  output?: unknown;
+  error?: unknown;
+  config?: unknown;
+  trigger?: unknown;
+  nodeType?: string;
+  nodeLabel?: string;
+  [key: string]: unknown;
+}
 
 interface ExecutionLogsPanelProps {
   open: boolean;
   onClose: () => void;
   workflowId: string;
+  orgId?: string;
 }
 
 interface JobDetails {
@@ -94,7 +110,7 @@ interface ExecutionWithLogs {
     level: 'debug' | 'info' | 'warn' | 'error';
     event: string;
     message: string;
-    data?: Record<string, unknown>;
+    data?: LogData;
   }>;
   // Job details (fetched separately)
   job?: JobDetails;
@@ -166,9 +182,10 @@ const getStatusChipColor = (status: string | undefined): 'default' | 'info' | 'w
   return 'default';
 };
 
-export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsPanelProps) {
+export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: ExecutionLogsPanelProps) {
   const theme = useTheme();
-  const { nodes } = useWorkflowEditor();
+  const { nodes, workflow } = useWorkflowEditor();
+  const effectiveOrgId = orgId || workflow?.orgId;
 
   const [executions, setExecutions] = useState<ExecutionWithLogs[]>([]);
   const [loading, setLoading] = useState(false);
@@ -288,6 +305,89 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
       setActionLoading(null);
     }
   }, [workflowId, fetchExecutions]);
+
+  // Handle replay action - re-run with same input for determinism testing
+  const handleReplay = useCallback(async (executionId: string) => {
+    if (!effectiveOrgId) {
+      setError('Organization ID not available');
+      return;
+    }
+    setActionLoading('replay');
+    try {
+      const response = await fetch(
+        `/api/workflows/${workflowId}/executions/${executionId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'replay', orgId: effectiveOrgId }),
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        // Refresh executions to show the new execution
+        await fetchExecutions();
+        // Select the new execution
+        if (data.replay?.newExecutionId) {
+          setSelectedExecution(data.replay.newExecutionId);
+        }
+      } else {
+        setError(data.error || 'Failed to replay execution');
+      }
+    } catch (err) {
+      setError('Failed to replay execution');
+      console.error('Error replaying execution:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [workflowId, effectiveOrgId, fetchExecutions]);
+
+  // Copy data to clipboard
+  const handleCopyData = useCallback((data: unknown) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+  }, []);
+
+  // Render a data section with header and copy button
+  const renderDataSection = (
+    data: unknown,
+    label: string,
+    icon: React.ReactNode,
+    colorKey: 'info' | 'success' | 'error' | 'secondary' | 'grey'
+  ) => {
+    if (!data) return null;
+    const colorMain = colorKey === 'grey' ? theme.palette.grey[500] : theme.palette[colorKey].main;
+    return (
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {icon}
+            <Typography variant="caption" sx={{ color: colorMain, fontWeight: 600 }}>
+              {label}
+            </Typography>
+          </Box>
+          <Tooltip title={`Copy ${label.toLowerCase()} to clipboard`}>
+            <IconButton size="small" onClick={() => handleCopyData(data)}>
+              <CopyIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <pre
+          style={{
+            margin: 0,
+            padding: '12px',
+            backgroundColor: alpha(colorMain, 0.05),
+            border: colorKey !== 'grey' ? `1px solid ${alpha(colorMain, 0.2)}` : undefined,
+            borderRadius: '4px',
+            overflow: 'auto',
+            maxHeight: '200px',
+            fontSize: '0.75rem',
+            fontFamily: 'monospace',
+          }}
+        >
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </Box>
+    );
+  };
 
   // Fetch on open
   useEffect(() => {
@@ -606,7 +706,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
                         Last error: {currentExecution.job.lastError}
                       </Typography>
                     )}
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
                       {currentExecution.job.canRetry && (
                         <Button
                           size="small"
@@ -631,23 +731,49 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
                           Cancel
                         </Button>
                       )}
+                      <Tooltip title="Create a new execution with the same trigger payload (for testing determinism)">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="secondary"
+                          startIcon={actionLoading === 'replay' ? <CircularProgress size={14} /> : <PlayIcon />}
+                          onClick={() => handleReplay(currentExecution._id!)}
+                          disabled={actionLoading !== null}
+                        >
+                          Replay
+                        </Button>
+                      </Tooltip>
                     </Box>
                   </Box>
                 )}
 
-                {/* Also show retry for failed executions without job details */}
-                {currentExecution.status === 'failed' && !currentExecution.job && (
-                  <Box sx={{ mt: 2 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
-                      onClick={() => handleRetry(currentExecution._id!)}
-                      disabled={actionLoading !== null}
-                    >
-                      Retry Execution
-                    </Button>
+                {/* Show replay button for completed/failed executions without job details */}
+                {(currentExecution.status === 'completed' || currentExecution.status === 'failed') && !currentExecution.job && (
+                  <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {currentExecution.status === 'failed' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
+                        onClick={() => handleRetry(currentExecution._id!)}
+                        disabled={actionLoading !== null}
+                      >
+                        Retry Execution
+                      </Button>
+                    )}
+                    <Tooltip title="Create a new execution with the same trigger payload (for testing determinism)">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="secondary"
+                        startIcon={actionLoading === 'replay' ? <CircularProgress size={14} /> : <PlayIcon />}
+                        onClick={() => handleReplay(currentExecution._id!)}
+                        disabled={actionLoading !== null}
+                      >
+                        Replay
+                      </Button>
+                    </Tooltip>
                   </Box>
                 )}
               </Paper>
@@ -756,7 +882,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
                         )}
                       </ListItem>
 
-                      {/* Expandable Data */}
+                      {/* Expandable Data with I/O Tabs */}
                       <Collapse in={isExpanded}>
                         <Box
                           sx={{
@@ -766,28 +892,40 @@ export function ExecutionLogsPanel({ open, onClose, workflowId }: ExecutionLogsP
                             borderTop: `1px solid ${theme.palette.divider}`,
                           }}
                         >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', mb: 1 }}
-                          >
-                            Data:
-                          </Typography>
-                          <Box
-                            component="pre"
-                            sx={{
-                              m: 0,
-                              p: 1.5,
-                              bgcolor: alpha(theme.palette.grey[900], 0.05),
-                              borderRadius: 1,
-                              overflow: 'auto',
-                              maxHeight: 300,
-                              fontSize: '0.75rem',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            {JSON.stringify(log.data, null, 2)}
-                          </Box>
+                          {renderDataSection(
+                            log.data?.inputs,
+                            'Inputs',
+                            <InputIcon sx={{ fontSize: 16, color: 'info.main' }} />,
+                            'info'
+                          )}
+                          {renderDataSection(
+                            log.data?.output,
+                            'Output',
+                            <OutputIcon sx={{ fontSize: 16, color: 'success.main' }} />,
+                            'success'
+                          )}
+                          {renderDataSection(
+                            log.data?.error,
+                            'Error Details',
+                            <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />,
+                            'error'
+                          )}
+                          {renderDataSection(
+                            log.data?.trigger,
+                            'Trigger Payload',
+                            <PlayIcon sx={{ fontSize: 16, color: 'secondary.main' }} />,
+                            'secondary'
+                          )}
+                          {renderDataSection(
+                            log.data?.config,
+                            'Node Config',
+                            null,
+                            'grey'
+                          )}
+                          {/* Show raw data if no structured fields present */}
+                          {log.data && !log.data.inputs && !log.data.output && !log.data.error && !log.data.config && !log.data.trigger && (
+                            renderDataSection(log.data, 'Data', null, 'grey')
+                          )}
                         </Box>
                       </Collapse>
                     </Paper>

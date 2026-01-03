@@ -42,5 +42,9 @@ import './httpRequest';
 import './emailSend';
 import './googleSheets';
 
+// MongoDB Atlas integrations
+import './atlasCluster';
+import './atlasDataApi';
+
 // Custom code
 import './code';

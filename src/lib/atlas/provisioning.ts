@@ -9,7 +9,7 @@
  * 5. Store connection in vault
  */
 
-import { ObjectId } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { getAtlasClient } from './client';
 import {
   ProvisionClusterOptions,
@@ -167,6 +167,99 @@ export async function getAllProvisionedClusters(): Promise<ProvisionedCluster[]>
 }
 
 // ============================================
+// Database Initialization
+// ============================================
+
+/**
+ * Default collections to create in a newly provisioned database
+ * These provide immediate value and show users where their data will go
+ */
+interface CollectionIndex {
+  key: Record<string, 1 | -1>;
+  name: string;
+  unique?: boolean;
+  sparse?: boolean;
+}
+
+interface DefaultCollection {
+  name: string;
+  description: string;
+  indexes: CollectionIndex[];
+}
+
+const DEFAULT_COLLECTIONS: DefaultCollection[] = [
+  {
+    name: 'form_responses',
+    description: 'Stores all form submission responses',
+    indexes: [
+      { key: { formId: 1, submittedAt: -1 }, name: 'formId_submittedAt' },
+      { key: { submittedAt: -1 }, name: 'submittedAt' },
+    ],
+  },
+  {
+    name: 'contacts',
+    description: 'Store contact information collected from forms',
+    indexes: [
+      { key: { email: 1 }, name: 'email', unique: true, sparse: true },
+      { key: { createdAt: -1 }, name: 'createdAt' },
+    ],
+  },
+  {
+    name: 'workflow_data',
+    description: 'Data produced by workflow executions',
+    indexes: [
+      { key: { workflowId: 1, createdAt: -1 }, name: 'workflowId_createdAt' },
+    ],
+  },
+];
+
+/**
+ * Initialize a newly provisioned database with default collections
+ * This helps users understand where their data will be stored
+ */
+async function initializeDefaultCollections(
+  connectionString: string,
+  databaseName: string
+): Promise<void> {
+  const client = new MongoClient(connectionString);
+
+  try {
+    await client.connect();
+    const db = client.db(databaseName);
+
+    for (const collectionDef of DEFAULT_COLLECTIONS) {
+      try {
+        // Create collection (this is idempotent - won't fail if exists)
+        const collection = await db.createCollection(collectionDef.name);
+
+        // Create indexes
+        for (const indexDef of collectionDef.indexes) {
+          const { key, name, ...options } = indexDef;
+          await collection.createIndex(key, { name, ...options });
+        }
+
+        // Insert a welcome document to make the collection visible
+        await collection.insertOne({
+          _netpad_init: true,
+          _description: collectionDef.description,
+          _createdAt: new Date(),
+          _message: `This collection was automatically created for you. You can delete this document once you start adding real data.`,
+        });
+
+        console.log(`[Provisioning] Created collection: ${collectionDef.name}`);
+      } catch (collError: any) {
+        // Collection might already exist, that's fine
+        if (collError.code !== 48) { // 48 = NamespaceExists
+          console.warn(`[Provisioning] Warning creating ${collectionDef.name}:`, collError.message);
+        }
+      }
+    }
+  } finally {
+    await client.close();
+  }
+}
+
+// ============================================
 // Main Provisioning Function
 // ============================================
 
@@ -246,78 +339,129 @@ export async function provisionM0Cluster(
   });
 
   try {
-    // Step 1: Create Atlas Project
-    console.log(`[Provisioning] Creating Atlas project: ${projectName}`);
+    // Step 1: Create or reuse Atlas Project
+    console.log(`[Provisioning] Setting up Atlas project: ${projectName}`);
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_project');
 
-    const projectResult = await client.createProject({
-      name: projectName,
-      orgId: ATLAS_ORG_ID,
-    });
+    let atlasProjectId: string;
 
-    console.log('[Provisioning] Project creation result:', JSON.stringify(projectResult, null, 2));
-    if (!projectResult.success) {
-      throw new Error(projectResult.error?.detail || 'Failed to create Atlas project');
+    // First, check if a project with this name already exists (e.g., from a previous deleted cluster)
+    const existingProjectResult = await client.getProjectByName(ATLAS_ORG_ID, projectName);
+
+    if (existingProjectResult.success && existingProjectResult.data) {
+      // Reuse existing project
+      atlasProjectId = existingProjectResult.data.id || (existingProjectResult.data as any).groupId;
+      console.log(`[Provisioning] Found existing Atlas project: ${projectName} (${atlasProjectId}), reusing it`);
+    } else {
+      // Create new project
+      console.log(`[Provisioning] Creating new Atlas project: ${projectName}`);
+      const projectResult = await client.createProject({
+        name: projectName,
+        orgId: ATLAS_ORG_ID,
+      });
+
+      console.log('[Provisioning] Project creation result:', JSON.stringify(projectResult, null, 2));
+      if (!projectResult.success) {
+        throw new Error(projectResult.error?.detail || 'Failed to create Atlas project');
+      }
+
+      if (!projectResult.data) {
+        throw new Error('Atlas API returned success but no project data');
+      }
+
+      // Atlas API may return 'id' or 'groupId' for the project ID
+      atlasProjectId = projectResult.data.id || (projectResult.data as any).groupId;
+      if (!atlasProjectId) {
+        console.error('[Provisioning] Project data missing ID:', projectResult.data);
+        throw new Error('Atlas project created but no project ID returned');
+      }
+
+      console.log('[Provisioning] Created Atlas project with ID:', atlasProjectId);
     }
 
-    if (!projectResult.data) {
-      throw new Error('Atlas API returned success but no project data');
-    }
-
-    // Atlas API may return 'id' or 'groupId' for the project ID
-    const atlasProjectId = projectResult.data.id || (projectResult.data as any).groupId;
-    if (!atlasProjectId) {
-      console.error('[Provisioning] Project data missing ID:', projectResult.data);
-      throw new Error('Atlas project created but no project ID returned');
-    }
-
-    console.log('[Provisioning] Created Atlas project with ID:', atlasProjectId);
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_project', {
       atlasProjectId,
     });
 
-    // Step 2: Create M0 Cluster
-    console.log(`[Provisioning] Creating M0 cluster: ${clusterName}`);
+    // Step 2: Create or reuse M0 Cluster
+    console.log(`[Provisioning] Setting up M0 cluster: ${clusterName}`);
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_cluster');
 
-    // M0 free tier clusters use the providerSettings format (not replicationSpecs)
-    const clusterInput = {
-      name: clusterName,
-      providerSettings: {
-        providerName: 'TENANT' as const,
-        backingProviderName: provider,
-        regionName: region,
-        instanceSizeName: 'M0' as const,
-      },
-    };
-    console.log('[Provisioning] Cluster creation input:', JSON.stringify(clusterInput, null, 2));
+    let connectionStringSrv: string;
+    let atlasClusterId: string | undefined;
+    let actualClusterName = clusterName;
 
-    const clusterResult = await client.createM0Cluster(atlasProjectId, clusterInput);
+    // First, check if any cluster already exists in this project (Atlas allows only 1 M0 per project)
+    const existingClustersResult = await client.listClusters(atlasProjectId);
 
-    if (!clusterResult.success || !clusterResult.data) {
-      throw new Error(clusterResult.error?.detail || 'Failed to create M0 cluster');
+    if (existingClustersResult.success && existingClustersResult.data && existingClustersResult.data.length > 0) {
+      // Reuse existing cluster
+      const existingCluster = existingClustersResult.data[0];
+      actualClusterName = existingCluster.name;
+      atlasClusterId = existingCluster.id;
+      console.log(`[Provisioning] Found existing cluster: ${actualClusterName} (${atlasClusterId}), reusing it`);
+
+      // Update the cluster record with the actual cluster name
+      await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_cluster', {
+        atlasClusterName: actualClusterName,
+        atlasClusterId,
+      });
+
+      // Wait for cluster to be ready (in case it's still initializing)
+      if (existingCluster.stateName !== 'IDLE') {
+        console.log(`[Provisioning] Existing cluster state: ${existingCluster.stateName}, waiting for ready...`);
+        const readyResult = await client.waitForClusterReady(atlasProjectId, actualClusterName, 120000);
+        if (!readyResult.success || !readyResult.data) {
+          throw new Error(readyResult.error?.detail || 'Existing cluster did not become ready');
+        }
+        connectionStringSrv = readyResult.data.connectionStrings?.standardSrv || '';
+      } else {
+        connectionStringSrv = existingCluster.connectionStrings?.standardSrv || '';
+      }
+    } else {
+      // Create new cluster
+      console.log(`[Provisioning] Creating new M0 cluster: ${clusterName}`);
+
+      // M0 free tier clusters use the providerSettings format (not replicationSpecs)
+      const clusterInput = {
+        name: clusterName,
+        providerSettings: {
+          providerName: 'TENANT' as const,
+          backingProviderName: provider,
+          regionName: region,
+          instanceSizeName: 'M0' as const,
+        },
+      };
+      console.log('[Provisioning] Cluster creation input:', JSON.stringify(clusterInput, null, 2));
+
+      const clusterResult = await client.createM0Cluster(atlasProjectId, clusterInput);
+
+      if (!clusterResult.success || !clusterResult.data) {
+        throw new Error(clusterResult.error?.detail || 'Failed to create M0 cluster');
+      }
+
+      atlasClusterId = clusterResult.data.id;
+      await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_cluster', {
+        atlasClusterId,
+      });
+
+      // Wait for cluster to be ready
+      console.log('[Provisioning] Waiting for cluster to be ready...');
+      const readyResult = await client.waitForClusterReady(atlasProjectId, clusterName, 120000);
+
+      if (!readyResult.success || !readyResult.data) {
+        throw new Error(readyResult.error?.detail || 'Cluster did not become ready');
+      }
+
+      connectionStringSrv = readyResult.data.connectionStrings?.standardSrv || '';
     }
 
-    const atlasClusterId = clusterResult.data.id;
-    await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_cluster', {
-      atlasClusterId,
-    });
-
-    // Step 3: Wait for cluster to be ready
-    console.log('[Provisioning] Waiting for cluster to be ready...');
-    const readyResult = await client.waitForClusterReady(atlasProjectId, clusterName, 120000);
-
-    if (!readyResult.success || !readyResult.data) {
-      throw new Error(readyResult.error?.detail || 'Cluster did not become ready');
-    }
-
-    const connectionStringSrv = readyResult.data.connectionStrings?.standardSrv;
     if (!connectionStringSrv) {
       throw new Error('Cluster ready but no connection string available');
     }
 
-    // Step 4: Create Database User
-    console.log('[Provisioning] Creating database user');
+    // Step 4: Create or update Database User
+    console.log('[Provisioning] Setting up database user');
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_user');
 
     const dbUsername = generateDbUsername(organizationId);
@@ -334,14 +478,39 @@ export async function provisionM0Cluster(
       ],
       scopes: [
         {
-          name: clusterName,
+          name: actualClusterName,
           type: 'CLUSTER',
         },
       ],
     });
 
     if (!userResult.success) {
-      throw new Error(userResult.error?.detail || 'Failed to create database user');
+      // Check if user already exists (from a previous deleted cluster)
+      if (userResult.error?.errorCode === 'USER_ALREADY_EXISTS') {
+        console.log(`[Provisioning] User ${dbUsername} already exists, updating password and roles`);
+        const updateResult = await client.updateDatabaseUser(atlasProjectId, 'admin', dbUsername, {
+          password: dbPassword,
+          roles: [
+            {
+              roleName: 'readWrite',
+              databaseName: databaseName,
+            },
+          ],
+          scopes: [
+            {
+              name: actualClusterName,
+              type: 'CLUSTER',
+            },
+          ],
+        });
+
+        if (!updateResult.success) {
+          throw new Error(updateResult.error?.detail || 'Failed to update existing database user');
+        }
+        console.log(`[Provisioning] Successfully updated existing user ${dbUsername}`);
+      } else {
+        throw new Error(userResult.error?.detail || 'Failed to create database user');
+      }
     }
 
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'creating_user', {
@@ -416,7 +585,17 @@ export async function provisionM0Cluster(
       console.warn('[Provisioning] Error sending Atlas invitation:', inviteError.message);
     }
 
-    // Step 8: Mark as ready
+    // Step 8: Initialize database with default collections
+    console.log('[Provisioning] Initializing database with default collections');
+    try {
+      await initializeDefaultCollections(connectionString, databaseName);
+      console.log('[Provisioning] Default collections created');
+    } catch (initError: any) {
+      // Don't fail provisioning if collection initialization fails
+      console.warn('[Provisioning] Warning: Failed to initialize collections:', initError.message);
+    }
+
+    // Step 9: Mark as ready
     await updateProvisionedClusterStatus(clusterRecord.clusterId, 'ready', {
       vaultId: vault.vaultId,
       atlasInvitationId,
@@ -520,6 +699,186 @@ export async function getProvisioningStatus(
 export function isAutoProvisioningAvailable(): boolean {
   const client = getAtlasClient();
   return client.isConfigured() && !!ATLAS_ORG_ID;
+}
+
+/**
+ * Initialize database for an existing cluster that doesn't have a vault
+ *
+ * This is a repair function for clusters that were provisioned but:
+ * - Don't have a vaultId set
+ * - Don't have default collections created
+ *
+ * It will:
+ * 1. Get the cluster connection details from Atlas
+ * 2. Create a new vault entry
+ * 3. Initialize default collections
+ * 4. Update the cluster record with the vaultId
+ */
+export async function initializeClusterDatabase(
+  organizationId: string,
+  userId: string
+): Promise<{
+  success: boolean;
+  vaultId?: string;
+  collectionsCreated?: string[];
+  error?: string;
+}> {
+  console.log(`[Provisioning] Initializing database for org ${organizationId}`);
+
+  const cluster = await getProvisionedClusterForOrg(organizationId);
+  if (!cluster) {
+    return { success: false, error: 'No cluster found' };
+  }
+
+  if (cluster.status !== 'ready') {
+    return { success: false, error: `Cluster not ready: ${cluster.status}` };
+  }
+
+  // If already has a vault, verify it exists and works
+  if (cluster.vaultId) {
+    console.log(`[Provisioning] Cluster has vault ${cluster.vaultId}, verifying...`);
+    // Check if the vault actually exists and has a working connection
+    try {
+      const db = await getPlatformDb();
+      const vaultsCollection = db.collection('connection_vaults');
+      const existingVault = await vaultsCollection.findOne({
+        vaultId: cluster.vaultId,
+        organizationId,
+        status: 'active',
+      });
+
+      if (existingVault) {
+        console.log(`[Provisioning] Vault ${cluster.vaultId} is valid`);
+        return { success: true, vaultId: cluster.vaultId, collectionsCreated: [] };
+      }
+
+      console.log(`[Provisioning] Vault ${cluster.vaultId} not found or inactive, will create new one`);
+      // Clear the stale vaultId so we create a new one
+    } catch (vaultCheckError: any) {
+      console.warn(`[Provisioning] Error checking vault: ${vaultCheckError.message}, will create new one`);
+    }
+  }
+
+  const client = getAtlasClient();
+  if (!client.isConfigured()) {
+    return { success: false, error: 'Atlas API not configured' };
+  }
+
+  try {
+    // We need to get the connection string from Atlas
+    // First get the cluster details
+    if (!cluster.atlasProjectId || !cluster.atlasClusterName) {
+      return { success: false, error: 'Cluster missing Atlas project or cluster name' };
+    }
+
+    // Get cluster from Atlas to get connection string
+    const clusterResult = await client.getCluster(cluster.atlasProjectId, cluster.atlasClusterName);
+    if (!clusterResult.success || !clusterResult.data) {
+      return { success: false, error: 'Failed to get cluster from Atlas' };
+    }
+
+    const connectionStringSrv = clusterResult.data.connectionStrings?.standardSrv;
+    if (!connectionStringSrv) {
+      return { success: false, error: 'No connection string available from Atlas' };
+    }
+
+    // Create a new database user (since we don't have the password from the old one)
+    const dbUsername = generateDbUsername(organizationId);
+    const dbPassword = generateSecurePassword();
+    const databaseName = 'forms';
+
+    console.log(`[Provisioning] Creating new database user: ${dbUsername}`);
+
+    const userResult = await client.createDatabaseUser(cluster.atlasProjectId, {
+      username: dbUsername,
+      password: dbPassword,
+      roles: [
+        {
+          roleName: 'readWrite',
+          databaseName: databaseName,
+        },
+      ],
+      scopes: [
+        {
+          name: cluster.atlasClusterName,
+          type: 'CLUSTER',
+        },
+      ],
+    });
+
+    if (!userResult.success) {
+      // User might already exist, try with a different name
+      const altUsername = `${dbUsername}_${Date.now().toString(36)}`;
+      console.log(`[Provisioning] User might exist, trying: ${altUsername}`);
+
+      const altUserResult = await client.createDatabaseUser(cluster.atlasProjectId, {
+        username: altUsername,
+        password: dbPassword,
+        roles: [{ roleName: 'readWrite', databaseName }],
+        scopes: [{ name: cluster.atlasClusterName, type: 'CLUSTER' }],
+      });
+
+      if (!altUserResult.success) {
+        return { success: false, error: 'Failed to create database user' };
+      }
+    }
+
+    const finalUsername = userResult.success ? dbUsername : `${dbUsername}_${Date.now().toString(36)}`;
+
+    // Build connection string
+    const connectionString = buildConnectionString(
+      connectionStringSrv,
+      finalUsername,
+      dbPassword,
+      databaseName
+    );
+
+    // Create vault entry
+    console.log(`[Provisioning] Creating vault entry for org ${organizationId}`);
+    const vault = await createConnectionVault({
+      organizationId,
+      createdBy: userId,
+      name: 'Default Database (Auto-provisioned)',
+      description: `M0 cluster database initialized on ${new Date().toLocaleDateString()}`,
+      connectionString,
+      database: databaseName,
+      allowedCollections: [],
+    });
+
+    // Initialize default collections
+    console.log(`[Provisioning] Initializing default collections`);
+    const collectionsCreated: string[] = [];
+    try {
+      await initializeDefaultCollections(connectionString, databaseName);
+      collectionsCreated.push('form_responses', 'contacts', 'workflow_data');
+    } catch (collError: any) {
+      console.warn(`[Provisioning] Warning: Could not create collections: ${collError.message}`);
+    }
+
+    // Update cluster record with vaultId
+    const collection = await getProvisionedClustersCollection();
+    await collection.updateOne(
+      { clusterId: cluster.clusterId },
+      {
+        $set: {
+          vaultId: vault.vaultId,
+          databaseUsername: finalUsername,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    console.log(`[Provisioning] Database initialized successfully for org ${organizationId}`);
+
+    return {
+      success: true,
+      vaultId: vault.vaultId,
+      collectionsCreated,
+    };
+  } catch (error: any) {
+    console.error(`[Provisioning] Error initializing database:`, error);
+    return { success: false, error: error.message };
+  }
 }
 
 /**

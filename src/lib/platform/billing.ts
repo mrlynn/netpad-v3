@@ -1039,6 +1039,21 @@ export async function checkWorkflowExecutionLimit(
 
 /**
  * Check if organization can have more active workflows
+ *
+ * DESIGN: "Limits That Map to Value"
+ * ==================================
+ * This limit ONLY counts ACTIVE/PUBLISHED workflows, NOT draft workflows.
+ *
+ * Draft workflows are FREE and unlimited, allowing users to:
+ * - Experiment freely with workflow designs
+ * - Build and test workflows before committing
+ * - Only pay for workflows they actually publish/activate
+ *
+ * The limit is enforced when:
+ * - Changing a workflow status from 'draft' to 'active'
+ * - Publishing a workflow for the first time
+ *
+ * This encourages experimentation and reduces friction for new users.
  */
 export async function checkActiveWorkflowLimit(
   orgId: string,

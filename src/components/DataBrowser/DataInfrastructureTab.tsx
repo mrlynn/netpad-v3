@@ -21,6 +21,7 @@ import {
   TextField,
   InputAdornment,
   Snackbar,
+  Collapse,
 } from '@mui/material';
 import {
   Storage,
@@ -34,9 +35,19 @@ import {
   Visibility,
   VisibilityOff,
   VpnKey,
+  TableChart,
+  Person,
+  AccountTree,
+  ArrowForward,
+  Info,
+  BugReport,
+  ExpandMore,
+  ExpandLess,
+  Add,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { ClusterManagement } from '@/components/Settings/ClusterManagement';
+import { AddConnectionDialog } from '@/components/Settings/AddConnectionDialog';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
 
@@ -49,7 +60,7 @@ interface ConnectionInfo {
 
 export function DataInfrastructureTab() {
   const { currentOrgId, organization } = useOrganization();
-  const { status, loading } = useClusterProvisioning(currentOrgId || undefined);
+  const { status, loading, refetch } = useClusterProvisioning(currentOrgId || undefined);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [connectionCount, setConnectionCount] = useState<number>(0);
 
@@ -59,6 +70,88 @@ export function DataInfrastructureTab() {
   const [loadingConnectionString, setLoadingConnectionString] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Database initialization state
+  const [initializingDb, setInitializingDb] = useState(false);
+
+  // Admin debug panel state
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // Add connection dialog state
+  const [addConnectionDialogOpen, setAddConnectionDialogOpen] = useState(false);
+
+  // Initialize database for clusters without vault
+  const handleInitializeDatabase = async () => {
+    if (!currentOrgId) return;
+
+    setInitializingDb(true);
+    try {
+      const response = await fetch(`/api/organizations/${currentOrgId}/cluster/initialize`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      console.log('[Infrastructure] Initialize response:', data);
+
+      if (response.ok && data.success) {
+        setSnackbarMessage(data.alreadyInitialized
+          ? 'Database already initialized!'
+          : 'Database initialized successfully!');
+        setSnackbarOpen(true);
+
+        // Wait a moment for backend to settle, then refresh everything
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // Refetch cluster status to get the new vaultId
+        await refetch();
+
+        // Fetch connection info directly
+        const vaultResponse = await fetch(`/api/organizations/${currentOrgId}/vault`);
+        const vaultData = await vaultResponse.json();
+        console.log('[Infrastructure] Vault response:', vaultData);
+
+        if (vaultResponse.ok && vaultData.connections && vaultData.connections.length > 0) {
+          setConnectionCount(vaultData.connections.length);
+
+          // Find the connection by vaultId from the initialize response
+          let conn = vaultData.connections.find((c: ConnectionInfo) => c.vaultId === data.vaultId);
+          console.log('[Infrastructure] Looking for vaultId:', data.vaultId, 'Found:', !!conn);
+
+          // If not found by exact vaultId, try to find by name pattern (auto-provisioned)
+          if (!conn) {
+            conn = vaultData.connections.find((c: ConnectionInfo) =>
+              c.name?.includes('Auto-provisioned') || c.name?.includes('Default Database')
+            );
+            console.log('[Infrastructure] Fallback by name, Found:', !!conn);
+          }
+
+          // If still not found, just use the first connection
+          if (!conn && vaultData.connections.length > 0) {
+            conn = vaultData.connections[0];
+            console.log('[Infrastructure] Using first connection');
+          }
+
+          if (conn) {
+            setConnectionInfo(conn);
+            console.log('[Infrastructure] Set connection info:', conn.vaultId, conn.name);
+          } else {
+            console.log('[Infrastructure] No connection found to set');
+          }
+        } else {
+          console.log('[Infrastructure] No connections returned from vault API');
+        }
+      } else {
+        setSnackbarMessage(data.error || 'Failed to initialize database');
+        setSnackbarOpen(true);
+      }
+    } catch (err: any) {
+      console.error('[Infrastructure] Initialize error:', err);
+      setSnackbarMessage(err.message || 'Failed to initialize database');
+      setSnackbarOpen(true);
+    } finally {
+      setInitializingDb(false);
+    }
+  };
 
   // Fetch connection info when cluster is ready
   useEffect(() => {
@@ -72,21 +165,31 @@ export function DataInfrastructureTab() {
         if (response.ok && data.connections) {
           setConnectionCount(data.connections.length);
 
-          // Only show connection info for the auto-provisioned cluster
-          // Do NOT fall back to other connections - this tab is specifically
-          // for the M0 cluster provisioned by the platform
+          // Try to find connection for the auto-provisioned cluster
           if (status?.vaultId) {
+            // Match by vaultId from cluster status
             const conn = data.connections.find(
               (c: ConnectionInfo) => c.vaultId === status.vaultId
             );
             if (conn) {
               setConnectionInfo(conn);
-            } else {
-              // Clear connection info if no match found
-              setConnectionInfo(null);
+              return;
             }
-          } else {
-            // No provisioned cluster vault ID - don't show any connection
+          }
+
+          // Fallback: Look for auto-provisioned connection by name
+          const autoProvisionedConn = data.connections.find(
+            (c: ConnectionInfo) =>
+              c.name?.includes('Auto-provisioned') || c.name?.includes('Default Database')
+          );
+          if (autoProvisionedConn) {
+            setConnectionInfo(autoProvisionedConn);
+            return;
+          }
+
+          // No matching connection found
+          // Only clear if we have no connections at all - preserve any manually set connection
+          if (data.connections.length === 0) {
             setConnectionInfo(null);
           }
         }
@@ -318,17 +421,196 @@ export function DataInfrastructureTab() {
             </Typography>
             <Box sx={{ mt: 2 }}>
               <Button
-                component={Link}
-                href="/data?tab=connections"
                 size="small"
+                startIcon={<Add sx={{ fontSize: 16 }} />}
+                onClick={() => setAddConnectionDialogOpen(true)}
                 sx={{ color: '#00ED64' }}
               >
-                Manage Connections
+                Add External Connection
               </Button>
             </Box>
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Database Initialization Prompt - Show when cluster is ready but no connection info */}
+      {isReady && !connectionInfo && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            mb: 4,
+            border: '2px solid',
+            borderColor: '#ff9800',
+            bgcolor: alpha('#ff9800', 0.05),
+            borderRadius: 2,
+            textAlign: 'center',
+          }}
+        >
+          <Storage sx={{ fontSize: 48, color: '#ff9800', mb: 2 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Your Cluster is Ready!
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+            Your MongoDB cluster has been deployed but needs a database connection set up.
+            Click below to create your database with default collections and a secure connection.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleInitializeDatabase}
+            disabled={initializingDb}
+            startIcon={initializingDb ? <CircularProgress size={20} color="inherit" /> : <Storage />}
+            sx={{
+              bgcolor: '#00ED64',
+              color: 'black',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              '&:hover': { bgcolor: '#00c853' },
+            }}
+          >
+            {initializingDb ? 'Initializing...' : 'Initialize Database'}
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+            This will create a database connection and default collections for your forms, contacts, and workflows.
+          </Typography>
+        </Paper>
+      )}
+
+      {/* Getting Started Guide - Show when cluster is ready and has connection */}
+      {isReady && connectionInfo && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 4,
+            border: '1px solid',
+            borderColor: alpha('#00ED64', 0.3),
+            bgcolor: alpha('#00ED64', 0.02),
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Info sx={{ color: '#00ED64' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Your Database is Ready!
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            We&apos;ve set up your MongoDB database with default collections. Here&apos;s where your data will be stored:
+          </Typography>
+
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {/* form_responses collection */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <TableChart sx={{ color: '#2196f3', fontSize: 20 }} />
+                  <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                    form_responses
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  All form submissions are automatically saved here. Each response includes the form data and metadata.
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* contacts collection */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Person sx={{ color: '#9c27b0', fontSize: 20 }} />
+                  <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                    contacts
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  Store contact information from your forms. Great for building email lists or CRM data.
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* workflow_data collection */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <AccountTree sx={{ color: '#ff9800', fontSize: 20 }} />
+                  <Typography variant="subtitle2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                    workflow_data
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  Data produced by workflow executions. Use workflows to process and transform your data.
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button
+              component={Link}
+              href="/data?tab=browse"
+              variant="contained"
+              size="small"
+              endIcon={<ArrowForward />}
+              sx={{
+                bgcolor: '#00ED64',
+                color: 'black',
+                '&:hover': { bgcolor: '#00c853' },
+              }}
+            >
+              Browse Your Data
+            </Button>
+            <Button
+              component={Link}
+              href="/builder"
+              variant="outlined"
+              size="small"
+              sx={{ borderColor: '#00ED64', color: '#00ED64' }}
+            >
+              Create a Form
+            </Button>
+            <Button
+              component={Link}
+              href="/workflows"
+              variant="outlined"
+              size="small"
+              sx={{ borderColor: '#ff9800', color: '#ff9800' }}
+            >
+              Build a Workflow
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {/* Connection String Section */}
       {connectionInfo && isReady && (
@@ -426,6 +708,175 @@ export function DataInfrastructureTab() {
         </Typography>
         <ClusterManagement organizationId={currentOrgId} />
       </Box>
+
+      {/* Admin Debug Panel - Collapsible */}
+      {status?.cluster && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 4,
+            border: '1px solid',
+            borderColor: alpha('#ff9800', 0.3),
+            bgcolor: alpha('#ff9800', 0.02),
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}
+        >
+          <Box
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            sx={{
+              p: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: alpha('#ff9800', 0.05) },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BugReport sx={{ color: '#ff9800', fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Admin Troubleshooting
+              </Typography>
+              <Chip
+                label="Debug Info"
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: '0.65rem',
+                  bgcolor: alpha('#ff9800', 0.1),
+                  color: '#ff9800',
+                }}
+              />
+            </Box>
+            {showDebugPanel ? <ExpandLess /> : <ExpandMore />}
+          </Box>
+
+          <Collapse in={showDebugPanel}>
+            <Divider />
+            <Box sx={{ p: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Use this information to troubleshoot cluster issues in the MongoDB Atlas console.
+              </Typography>
+
+              <Grid container spacing={2}>
+                {/* Atlas Project */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Atlas Project ID
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                      {status.cluster.atlasProjectId || 'Not available'}
+                    </Typography>
+                    {status.cluster.atlasProjectId && (
+                      <Tooltip title="Copy">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(status.cluster!.atlasProjectId!);
+                            setSnackbarMessage('Copied to clipboard');
+                            setSnackbarOpen(true);
+                          }}
+                        >
+                          <ContentCopy sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                </Grid>
+
+                {/* Atlas Project Name */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Atlas Project Name
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {status.cluster.atlasProjectName || 'Not available'}
+                  </Typography>
+                </Grid>
+
+                {/* Cluster Name */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Cluster Name
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {status.cluster.atlasClusterName || 'Not available'}
+                  </Typography>
+                </Grid>
+
+                {/* Database User */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Database User
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {status.cluster.databaseUsername || 'Not available'}
+                  </Typography>
+                </Grid>
+
+                {/* Vault ID */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Vault ID
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {status.vaultId || 'No vault connected'}
+                  </Typography>
+                </Grid>
+
+                {/* Internal Cluster ID */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Internal Cluster ID
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {status.cluster.clusterId}
+                  </Typography>
+                </Grid>
+
+                {/* Status Message */}
+                {status.cluster.statusMessage && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      Status Message
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#f44336' }}>
+                      {status.cluster.statusMessage}
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+
+              {/* Atlas Console Link */}
+              {status.cluster.atlasProjectId && (
+                <Box sx={{ mt: 3 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={`https://cloud.mongodb.com/v2/${status.cluster.atlasProjectId}#/clusters`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+                    sx={{
+                      borderColor: '#ff9800',
+                      color: '#ff9800',
+                      '&:hover': {
+                        borderColor: '#ff9800',
+                        bgcolor: alpha('#ff9800', 0.1),
+                      },
+                    }}
+                  >
+                    Open in Atlas Console
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </Collapse>
+        </Paper>
+      )}
 
       {/* Info Section */}
       <Divider sx={{ my: 4 }} />
@@ -530,6 +981,30 @@ export function DataInfrastructureTab() {
         onClose={() => setSnackbarOpen(false)}
         message={snackbarMessage}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+
+      {/* Add External Connection Dialog */}
+      <AddConnectionDialog
+        open={addConnectionDialogOpen}
+        onClose={() => setAddConnectionDialogOpen(false)}
+        organizationId={currentOrgId || ''}
+        organizationName={organization?.name}
+        onSuccess={() => {
+          setAddConnectionDialogOpen(false);
+          // Refresh connection count
+          if (currentOrgId) {
+            fetch(`/api/organizations/${currentOrgId}/vault`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.connections) {
+                  setConnectionCount(data.connections.length);
+                }
+              })
+              .catch(console.error);
+          }
+          setSnackbarMessage('Connection added successfully!');
+          setSnackbarOpen(true);
+        }}
       />
     </Container>
   );

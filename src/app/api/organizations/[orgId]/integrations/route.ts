@@ -57,6 +57,7 @@ export async function GET(
         usageCount: c.usageCount,
         oauthMetadata: c.oauthMetadata,
         serviceAccountMetadata: c.serviceAccountMetadata,
+        atlasMetadata: c.atlasMetadata,
         createdAt: c.createdAt,
       })),
     });
@@ -101,12 +102,14 @@ export async function POST(
       description,
       authType,
       credentials,
+      atlasMetadata,
     } = body as {
       provider: IntegrationProvider;
       name: string;
       description?: string;
       authType: IntegrationAuthType;
       credentials: Record<string, unknown>;
+      atlasMetadata?: { atlasOrgId?: string; atlasOrgName?: string };
     };
 
     // Validate required fields
@@ -174,20 +177,57 @@ export async function POST(
         expiresAt: expiresAt ? new Date(expiresAt) : undefined,
       };
     } else if (authType === 'api_key') {
-      // Validate API key credentials
-      const apiKey = credentials.apiKey as string | undefined;
-      const apiSecret = credentials.apiSecret as string | undefined;
+      // Handle different API key provider types
+      if (provider === 'mongodb_atlas') {
+        // MongoDB Atlas Admin API credentials
+        const publicKey = credentials.publicKey as string | undefined;
+        const privateKey = credentials.privateKey as string | undefined;
+        const atlasOrgId = credentials.atlasOrgId as string | undefined;
 
-      if (!apiKey) {
-        return NextResponse.json(
-          { error: 'API key authentication requires apiKey' },
-          { status: 400 }
-        );
+        if (!publicKey || !privateKey || !atlasOrgId) {
+          return NextResponse.json(
+            { error: 'MongoDB Atlas requires publicKey, privateKey, and atlasOrgId' },
+            { status: 400 }
+          );
+        }
+
+        credentialData = {
+          publicKey,
+          privateKey,
+          atlasOrgId,
+        } as any; // AtlasApiKeyCredentials
+      } else if (provider === 'mongodb_atlas_data_api') {
+        // MongoDB Atlas Data API credentials
+        const appId = credentials.appId as string | undefined;
+        const apiKey = credentials.apiKey as string | undefined;
+
+        if (!appId || !apiKey) {
+          return NextResponse.json(
+            { error: 'MongoDB Atlas Data API requires appId and apiKey' },
+            { status: 400 }
+          );
+        }
+
+        credentialData = {
+          appId,
+          apiKey,
+        } as any; // AtlasDataApiCredentials
+      } else {
+        // Generic API key credentials
+        const apiKey = credentials.apiKey as string | undefined;
+        const apiSecret = credentials.apiSecret as string | undefined;
+
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: 'API key authentication requires apiKey' },
+            { status: 400 }
+          );
+        }
+        credentialData = {
+          apiKey: apiKey,
+          apiSecret: apiSecret,
+        };
       }
-      credentialData = {
-        apiKey: apiKey,
-        apiSecret: apiSecret,
-      };
     } else {
       return NextResponse.json(
         { error: 'Unsupported auth type' },
@@ -206,6 +246,9 @@ export async function POST(
       credentials: credentialData,
       oauthMetadata,
       serviceAccountMetadata,
+      atlasMetadata: provider === 'mongodb_atlas' && atlasMetadata?.atlasOrgId
+        ? { atlasOrgId: atlasMetadata.atlasOrgId, atlasOrgName: atlasMetadata.atlasOrgName }
+        : undefined,
     });
 
     return NextResponse.json({

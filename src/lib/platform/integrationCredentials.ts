@@ -30,11 +30,30 @@ import {
 // Types
 // ============================================
 
+/**
+ * MongoDB Atlas Admin API credentials
+ */
+export interface AtlasApiKeyCredentials {
+  publicKey: string;
+  privateKey: string;
+  atlasOrgId: string;
+}
+
+/**
+ * MongoDB Atlas Data API credentials
+ */
+export interface AtlasDataApiCredentials {
+  appId: string;
+  apiKey: string;
+}
+
 export type CredentialData =
   | OAuth2Tokens
   | ServiceAccountCredentials
   | ApiKeyCredentials
-  | BasicAuthCredentials;
+  | BasicAuthCredentials
+  | AtlasApiKeyCredentials
+  | AtlasDataApiCredentials;
 
 export interface CreateIntegrationCredentialInput {
   organizationId: string;
@@ -46,6 +65,7 @@ export interface CreateIntegrationCredentialInput {
   credentials: CredentialData;
   oauthMetadata?: IntegrationCredential['oauthMetadata'];
   serviceAccountMetadata?: IntegrationCredential['serviceAccountMetadata'];
+  atlasMetadata?: IntegrationCredential['atlasMetadata'];
 }
 
 // ============================================
@@ -77,6 +97,7 @@ export async function createIntegrationCredential(
     usageCount: 0,
     oauthMetadata: input.oauthMetadata,
     serviceAccountMetadata: input.serviceAccountMetadata,
+    atlasMetadata: input.atlasMetadata,
     permissions: [
       {
         userId: input.createdBy,
@@ -602,4 +623,103 @@ export async function getGoogleSheetsCredentials(
   }
 
   return null;
+}
+
+// ============================================
+// MongoDB Atlas Helpers
+// ============================================
+
+/**
+ * Get credentials formatted for MongoDB Atlas Admin API
+ */
+export async function getAtlasCredentials(
+  organizationId: string,
+  credentialId: string
+): Promise<{
+  publicKey: string;
+  privateKey: string;
+  atlasOrgId: string;
+} | null> {
+  const credData = await getDecryptedCredentials(organizationId, credentialId);
+
+  if (!credData || credData.authType !== 'api_key') {
+    return null;
+  }
+
+  const creds = credData.credentials as AtlasApiKeyCredentials;
+
+  if (!creds.publicKey || !creds.privateKey || !creds.atlasOrgId) {
+    console.warn(`[IntegrationCreds] Atlas credentials missing required fields for ${credentialId}`);
+    return null;
+  }
+
+  return {
+    publicKey: creds.publicKey,
+    privateKey: creds.privateKey,
+    atlasOrgId: creds.atlasOrgId,
+  };
+}
+
+/**
+ * Get credentials formatted for MongoDB Atlas Data API
+ */
+export async function getAtlasDataApiCredentials(
+  organizationId: string,
+  credentialId: string
+): Promise<{
+  appId: string;
+  apiKey: string;
+} | null> {
+  const credData = await getDecryptedCredentials(organizationId, credentialId);
+
+  if (!credData || credData.authType !== 'api_key') {
+    return null;
+  }
+
+  const creds = credData.credentials as AtlasDataApiCredentials;
+
+  if (!creds.appId || !creds.apiKey) {
+    console.warn(`[IntegrationCreds] Atlas Data API credentials missing required fields for ${credentialId}`);
+    return null;
+  }
+
+  return {
+    appId: creds.appId,
+    apiKey: creds.apiKey,
+  };
+}
+
+/**
+ * Validate MongoDB Atlas Admin API credentials by making a test API call
+ */
+export async function validateAtlasCredentials(
+  publicKey: string,
+  privateKey: string,
+  atlasOrgId: string
+): Promise<{ valid: boolean; error?: string; orgName?: string }> {
+  try {
+    // Import the Atlas client dynamically to avoid circular dependencies
+    const { AtlasApiClient } = await import('@/lib/atlas/client');
+
+    const client = new AtlasApiClient({ publicKey, privateKey });
+
+    // Try to list projects in the org to verify credentials work
+    const result = await client.getProjectByName(atlasOrgId, '__test__');
+
+    // getProjectByName returns success even if project not found (just null data)
+    // An auth error would return success: false
+    if (!result.success && result.error) {
+      return {
+        valid: false,
+        error: String(result.error.detail || result.error.error || 'Authentication failed'),
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
 }

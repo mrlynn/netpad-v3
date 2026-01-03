@@ -35,6 +35,8 @@ import {
   Edit as DraftIcon,
   ExpandMore as ExpandMoreIcon,
   History as LogsIcon,
+  Publish as PublishIcon,
+  FiberManualRecord as DotIcon,
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
@@ -78,6 +80,7 @@ function WorkflowEditorInner({
     saveWorkflow,
     executeWorkflow,
     updateStatus,
+    publishWorkflow,
     undo,
     redo,
     canUndo,
@@ -186,6 +189,9 @@ function WorkflowEditorInner({
   // Status menu state
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null);
 
+  // Publishing state
+  const [isPublishing, setIsPublishing] = useState(false);
+
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
     if (selectedNodeId) {
@@ -291,6 +297,47 @@ function WorkflowEditorInner({
     }
   };
 
+  // Handle publish
+  const handlePublish = async () => {
+    if (!workflow) return;
+
+    // Save first if dirty
+    if (isDirty) {
+      const saved = await saveWorkflow(orgId);
+      if (!saved) {
+        setSnackbar({
+          open: true,
+          message: 'Please save workflow before publishing',
+          severity: 'error',
+        });
+        return;
+      }
+    }
+
+    setIsPublishing(true);
+    const success = await publishWorkflow(orgId, workflow.id);
+    setIsPublishing(false);
+
+    if (success) {
+      setSnackbar({
+        open: true,
+        message: `Workflow published as version ${workflow.version}`,
+        severity: 'success',
+      });
+    } else {
+      setSnackbar({
+        open: true,
+        message: 'Failed to publish workflow',
+        severity: 'error',
+      });
+    }
+  };
+
+  // Check if workflow has unpublished changes
+  const hasUnpublishedChanges = workflow && (
+    !workflow.publishedVersion || workflow.version > workflow.publishedVersion
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -379,6 +426,35 @@ function WorkflowEditorInner({
             />
           )}
 
+          {/* Version indicator */}
+          {workflow && (
+            <Tooltip
+              title={
+                workflow.publishedVersion
+                  ? `Published: v${workflow.publishedVersion}${hasUnpublishedChanges ? ' (changes pending)' : ''}`
+                  : 'Not yet published'
+              }
+            >
+              <Chip
+                icon={hasUnpublishedChanges ? <DotIcon sx={{ fontSize: 10 }} /> : undefined}
+                label={workflow.publishedVersion ? `v${workflow.publishedVersion}` : 'Draft'}
+                size="small"
+                variant="outlined"
+                sx={{
+                  ml: 1,
+                  height: 24,
+                  fontSize: '0.75rem',
+                  borderColor: hasUnpublishedChanges ? theme.palette.warning.main : theme.palette.divider,
+                  color: hasUnpublishedChanges ? theme.palette.warning.main : theme.palette.text.secondary,
+                  '& .MuiChip-icon': {
+                    color: theme.palette.warning.main,
+                    ml: 0.5,
+                  },
+                }}
+              />
+            </Tooltip>
+          )}
+
           <Box sx={{ flex: 1 }} />
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
@@ -417,8 +493,23 @@ function WorkflowEditorInner({
             Save
           </Button>
 
+          <Tooltip title={hasUnpublishedChanges ? 'Publish changes to make them active' : 'No changes to publish'}>
+            <span>
+              <Button
+                variant={hasUnpublishedChanges ? 'contained' : 'outlined'}
+                size="small"
+                color={hasUnpublishedChanges ? 'primary' : 'inherit'}
+                startIcon={isPublishing ? <CircularProgress size={16} /> : <PublishIcon />}
+                onClick={handlePublish}
+                disabled={!workflow || workflow.canvas.nodes.length === 0 || isPublishing || !hasUnpublishedChanges}
+              >
+                Publish
+              </Button>
+            </span>
+          </Tooltip>
+
           <Button
-            variant="contained"
+            variant="outlined"
             size="small"
             startIcon={<RunIcon />}
             onClick={handleRun}

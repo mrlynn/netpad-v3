@@ -67,6 +67,8 @@ const PROVIDER_CONFIG: Record<string, { name: string; icon: React.ReactNode; col
   google_calendar: { name: 'Google Calendar', icon: <ScheduleIcon />, color: '#4285F4' },
   slack: { name: 'Slack', icon: <CloudIcon />, color: '#4A154B' },
   notion: { name: 'Notion', icon: <DatabaseIcon />, color: '#000000' },
+  mongodb_atlas: { name: 'MongoDB Atlas Admin API', icon: <DatabaseIcon />, color: '#00684A' },
+  mongodb_atlas_data_api: { name: 'MongoDB Atlas Data API', icon: <DatabaseIcon />, color: '#00684A' },
   custom_api_key: { name: 'API Key', icon: <KeyIcon />, color: '#607D8B' },
 };
 
@@ -107,6 +109,15 @@ export function IntegrationCredentialsSettings() {
   const [formAuthType, setFormAuthType] = useState('oauth2'); // Default to OAuth for Google
   const [formServiceAccountJson, setFormServiceAccountJson] = useState('');
   const [formApiKey, setFormApiKey] = useState('');
+
+  // MongoDB Atlas form state
+  const [formAtlasOrgId, setFormAtlasOrgId] = useState('');
+  const [formAtlasPublicKey, setFormAtlasPublicKey] = useState('');
+  const [formAtlasPrivateKey, setFormAtlasPrivateKey] = useState('');
+  const [formAtlasAppId, setFormAtlasAppId] = useState('');
+  const [formAtlasDataApiKey, setFormAtlasDataApiKey] = useState('');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Fetch credentials
   useEffect(() => {
@@ -168,10 +179,29 @@ export function IntegrationCredentialsSettings() {
           return;
         }
       } else if (formAuthType === 'api_key') {
-        credentialsPayload = {
-          apiKey: formApiKey,
-        };
+        // Handle different API key types based on provider
+        if (formProvider === 'mongodb_atlas') {
+          credentialsPayload = {
+            publicKey: formAtlasPublicKey,
+            privateKey: formAtlasPrivateKey,
+            atlasOrgId: formAtlasOrgId,
+          };
+        } else if (formProvider === 'mongodb_atlas_data_api') {
+          credentialsPayload = {
+            appId: formAtlasAppId,
+            apiKey: formAtlasDataApiKey,
+          };
+        } else {
+          credentialsPayload = {
+            apiKey: formApiKey,
+          };
+        }
       }
+
+      // Add Atlas metadata if applicable
+      const atlasMetadata = formProvider === 'mongodb_atlas' ? {
+        atlasOrgId: formAtlasOrgId,
+      } : undefined;
 
       const response = await fetch(
         `/api/organizations/${organization.orgId}/integrations`,
@@ -184,6 +214,7 @@ export function IntegrationCredentialsSettings() {
             description: formDescription,
             authType: formAuthType,
             credentials: credentialsPayload,
+            ...(atlasMetadata && { atlasMetadata }),
           }),
         }
       );
@@ -239,6 +270,57 @@ export function IntegrationCredentialsSettings() {
     setFormAuthType('oauth2'); // Default to OAuth for Google
     setFormServiceAccountJson('');
     setFormApiKey('');
+    // Reset Atlas fields
+    setFormAtlasOrgId('');
+    setFormAtlasPublicKey('');
+    setFormAtlasPrivateKey('');
+    setFormAtlasAppId('');
+    setFormAtlasDataApiKey('');
+    setConnectionTestResult(null);
+  };
+
+  // Test Atlas connection
+  const handleTestAtlasConnection = async () => {
+    if (!organization?.orgId) return;
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${organization.orgId}/integrations/test-atlas`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publicKey: formAtlasPublicKey,
+            privateKey: formAtlasPrivateKey,
+            atlasOrgId: formAtlasOrgId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConnectionTestResult({
+          success: true,
+          message: 'Successfully connected to MongoDB Atlas!',
+        });
+      } else {
+        setConnectionTestResult({
+          success: false,
+          message: data.error || 'Failed to connect to Atlas',
+        });
+      }
+    } catch (err) {
+      setConnectionTestResult({
+        success: false,
+        message: 'Failed to test connection',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -451,9 +533,12 @@ export function IntegrationCredentialsSettings() {
                 onChange={(e) => {
                   const newProvider = e.target.value;
                   setFormProvider(newProvider);
-                  // Default to OAuth for Google providers
+                  setConnectionTestResult(null);
+                  // Default auth type based on provider
                   if (newProvider.startsWith('google_')) {
                     setFormAuthType('oauth2');
+                  } else if (newProvider.startsWith('mongodb_atlas')) {
+                    setFormAuthType('api_key');
                   } else {
                     setFormAuthType('api_key');
                   }
@@ -464,6 +549,8 @@ export function IntegrationCredentialsSettings() {
                 <MenuItem value="google_calendar">Google Calendar</MenuItem>
                 <MenuItem value="slack">Slack</MenuItem>
                 <MenuItem value="notion">Notion</MenuItem>
+                <MenuItem value="mongodb_atlas">MongoDB Atlas (Admin API)</MenuItem>
+                <MenuItem value="mongodb_atlas_data_api">MongoDB Atlas (Data API)</MenuItem>
                 <MenuItem value="custom_api_key">Custom API Key</MenuItem>
               </Select>
             </FormControl>
@@ -486,8 +573,8 @@ export function IntegrationCredentialsSettings() {
               placeholder="e.g., For syncing form responses"
             />
 
-            {/* Show OAuth option for Google providers */}
-            {formProvider.startsWith('google_') ? (
+            {/* Provider-specific configuration */}
+            {formProvider.startsWith('google_') && (
               <>
                 <FormControl fullWidth size="small">
                   <InputLabel>Authentication Type</InputLabel>
@@ -582,7 +669,105 @@ export function IntegrationCredentialsSettings() {
                   </>
                 )}
               </>
-            ) : (
+            )}
+
+            {/* MongoDB Atlas Admin API Configuration */}
+            {formProvider === 'mongodb_atlas' && (
+              <>
+                <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
+                  <strong>MongoDB Atlas Admin API Setup:</strong>
+                  <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    <li>Go to <a href="https://cloud.mongodb.com" target="_blank" rel="noopener noreferrer">MongoDB Atlas</a></li>
+                    <li>Navigate to Organization Settings → API Keys</li>
+                    <li>Create an API Key with &quot;Organization Project Creator&quot; role (or higher)</li>
+                    <li>Copy your Organization ID from the URL or settings</li>
+                    <li>Save the Public and Private keys (Private key is shown only once)</li>
+                  </ol>
+                </Alert>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Atlas Organization ID"
+                  value={formAtlasOrgId}
+                  onChange={(e) => setFormAtlasOrgId(e.target.value)}
+                  placeholder="e.g., 5f1234567890abcdef123456"
+                  helperText="Found in Organization Settings or the URL"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Public Key"
+                  value={formAtlasPublicKey}
+                  onChange={(e) => setFormAtlasPublicKey(e.target.value)}
+                  placeholder="e.g., abcdefgh"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Private Key"
+                  type="password"
+                  value={formAtlasPrivateKey}
+                  onChange={(e) => setFormAtlasPrivateKey(e.target.value)}
+                  placeholder="Enter your private key"
+                  helperText="The private key is only shown once when you create the API key"
+                />
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleTestAtlasConnection}
+                    disabled={!formAtlasOrgId || !formAtlasPublicKey || !formAtlasPrivateKey || testingConnection}
+                    startIcon={testingConnection ? <CircularProgress size={16} /> : null}
+                  >
+                    {testingConnection ? 'Testing...' : 'Test Connection'}
+                  </Button>
+                  {connectionTestResult && (
+                    <Alert
+                      severity={connectionTestResult.success ? 'success' : 'error'}
+                      sx={{ flex: 1, py: 0 }}
+                    >
+                      {connectionTestResult.message}
+                    </Alert>
+                  )}
+                </Box>
+              </>
+            )}
+
+            {/* MongoDB Atlas Data API Configuration */}
+            {formProvider === 'mongodb_atlas_data_api' && (
+              <>
+                <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
+                  <strong>MongoDB Atlas Data API Setup:</strong>
+                  <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    <li>Go to <a href="https://cloud.mongodb.com" target="_blank" rel="noopener noreferrer">MongoDB Atlas</a></li>
+                    <li>Navigate to your Project → App Services</li>
+                    <li>Create or select a Data API application</li>
+                    <li>Enable the Data API and create an API key</li>
+                    <li>Copy the App ID and API Key</li>
+                  </ol>
+                </Alert>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Data API App ID"
+                  value={formAtlasAppId}
+                  onChange={(e) => setFormAtlasAppId(e.target.value)}
+                  placeholder="e.g., data-abcde"
+                  helperText="Found in your App Services configuration"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Data API Key"
+                  type="password"
+                  value={formAtlasDataApiKey}
+                  onChange={(e) => setFormAtlasDataApiKey(e.target.value)}
+                  placeholder="Enter your Data API key"
+                />
+              </>
+            )}
+
+            {/* Generic API Key providers */}
+            {!formProvider.startsWith('google_') && !formProvider.startsWith('mongodb_atlas') && (
               <>
                 <FormControl fullWidth size="small">
                   <InputLabel>Authentication Type</InputLabel>
@@ -594,21 +779,17 @@ export function IntegrationCredentialsSettings() {
                     <MenuItem value="api_key">API Key</MenuItem>
                   </Select>
                 </FormControl>
-
                 <Divider />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="API Key"
+                  type="password"
+                  value={formApiKey}
+                  onChange={(e) => setFormApiKey(e.target.value)}
+                  placeholder="Enter your API key"
+                />
               </>
-            )}
-
-            {formAuthType === 'api_key' && (
-              <TextField
-                fullWidth
-                size="small"
-                label="API Key"
-                type="password"
-                value={formApiKey}
-                onChange={(e) => setFormApiKey(e.target.value)}
-                placeholder="Enter your API key"
-              />
             )}
           </Box>
         </DialogContent>
@@ -617,7 +798,14 @@ export function IntegrationCredentialsSettings() {
           <Button
             variant="contained"
             onClick={handleCreate}
-            disabled={saving || !formName || (formAuthType === 'service_account' && !formServiceAccountJson) || (formAuthType === 'api_key' && !formApiKey)}
+            disabled={
+              saving ||
+              !formName ||
+              (formAuthType === 'service_account' && !formServiceAccountJson) ||
+              (formProvider === 'mongodb_atlas' && (!formAtlasOrgId || !formAtlasPublicKey || !formAtlasPrivateKey)) ||
+              (formProvider === 'mongodb_atlas_data_api' && (!formAtlasAppId || !formAtlasDataApiKey)) ||
+              (formAuthType === 'api_key' && !formProvider.startsWith('mongodb_atlas') && !formApiKey)
+            }
             sx={{
               bgcolor: '#00ED64',
               color: '#001E2B',

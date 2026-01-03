@@ -68,6 +68,13 @@ export async function GET(
         createdAt: cluster.createdAt,
         provisioningStartedAt: cluster.provisioningStartedAt,
         provisioningCompletedAt: cluster.provisioningCompletedAt,
+        // Admin/troubleshooting details
+        atlasProjectId: cluster.atlasProjectId,
+        atlasProjectName: cluster.atlasProjectName,
+        atlasClusterName: cluster.atlasClusterName,
+        atlasClusterId: cluster.atlasClusterId,
+        databaseUsername: cluster.databaseUsername,
+        statusMessage: cluster.statusMessage,
       } : null,
     });
   } catch (error: any) {

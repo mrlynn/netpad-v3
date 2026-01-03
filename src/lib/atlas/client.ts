@@ -274,6 +274,27 @@ export class AtlasApiClient {
   }
 
   /**
+   * Get a project by name within an organization
+   */
+  async getProjectByName(orgId: string, projectName: string): Promise<AtlasApiResponse<AtlasProject | null>> {
+    // Atlas API: GET /orgs/{orgId}/groups returns all projects in the org
+    const result = await this.request<{ results: AtlasProject[] }>('GET', `/orgs/${orgId}/groups`);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    const project = result.data?.results?.find(p => p.name === projectName);
+    return {
+      success: true,
+      data: project || null,
+    };
+  }
+
+  /**
    * Delete a project
    */
   async deleteProject(projectId: string): Promise<AtlasApiResponse<void>> {
@@ -292,6 +313,17 @@ export class AtlasApiClient {
     input: CreateM0ClusterInput
   ): Promise<AtlasApiResponse<AtlasCluster>> {
     return this.request<AtlasCluster>('POST', `/groups/${projectId}/clusters`, input);
+  }
+
+  /**
+   * List all clusters in a project
+   */
+  async listClusters(projectId: string): Promise<AtlasApiResponse<AtlasCluster[]>> {
+    const result = await this.request<{ results: AtlasCluster[] }>('GET', `/groups/${projectId}/clusters`);
+    if (result.success && result.data) {
+      return { success: true, data: result.data.results || [] };
+    }
+    return { success: false, error: result.error };
   }
 
   /**
@@ -393,6 +425,22 @@ export class AtlasApiClient {
     return this.request<AtlasDatabaseUser>(
       'GET',
       `/groups/${projectId}/databaseUsers/${databaseName}/${username}`
+    );
+  }
+
+  /**
+   * Update a database user (e.g., change password, roles)
+   */
+  async updateDatabaseUser(
+    projectId: string,
+    databaseName: string,
+    username: string,
+    input: Partial<CreateDatabaseUserInput>
+  ): Promise<AtlasApiResponse<AtlasDatabaseUser>> {
+    return this.request<AtlasDatabaseUser>(
+      'PATCH',
+      `/groups/${projectId}/databaseUsers/${databaseName}/${username}`,
+      input
     );
   }
 
@@ -736,4 +784,36 @@ export function getAtlasClient(): AtlasApiClient {
  */
 export function createAtlasClient(config: AtlasApiConfig): AtlasApiClient {
   return new AtlasApiClient(config);
+}
+
+/**
+ * Create an Atlas API client from stored integration credentials
+ *
+ * @param organizationId - The NetPad organization ID
+ * @param credentialId - The integration credential ID
+ * @returns The Atlas client and Atlas org ID, or null if credentials not found
+ */
+export async function createAtlasClientFromCredential(
+  organizationId: string,
+  credentialId: string
+): Promise<{ client: AtlasApiClient; atlasOrgId: string } | null> {
+  // Import dynamically to avoid circular dependencies
+  const { getAtlasCredentials } = await import('@/lib/platform/integrationCredentials');
+
+  const creds = await getAtlasCredentials(organizationId, credentialId);
+
+  if (!creds) {
+    console.warn(`[AtlasClient] Could not retrieve credentials for ${credentialId}`);
+    return null;
+  }
+
+  const client = new AtlasApiClient({
+    publicKey: creds.publicKey,
+    privateKey: creds.privateKey,
+  });
+
+  return {
+    client,
+    atlasOrgId: creds.atlasOrgId,
+  };
 }

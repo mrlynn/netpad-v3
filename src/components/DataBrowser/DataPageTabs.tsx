@@ -5,18 +5,15 @@ import {
   Box,
   Tabs,
   Tab,
-  alpha,
   CircularProgress,
   Badge,
 } from '@mui/material';
 import {
   TableChart,
-  VpnKey,
   CloudQueue,
 } from '@mui/icons-material';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataBrowser } from './DataBrowser';
-import { DataConnectionsTab } from './DataConnectionsTab';
 import { DataInfrastructureTab } from './DataInfrastructureTab';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
@@ -59,14 +56,18 @@ function DataPageTabsContent() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab === 'browse') setTabValue(0);
-    else if (tab === 'connections') setTabValue(1);
-    else if (tab === 'infrastructure') setTabValue(2);
-  }, [searchParams]);
+    else if (tab === 'infrastructure') setTabValue(1);
+    // Legacy: redirect old connections tab to infrastructure
+    else if (tab === 'connections') {
+      setTabValue(1);
+      router.replace('/data?tab=infrastructure', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Update URL
-    const tabs = ['browse', 'connections', 'infrastructure'];
+    const tabs = ['browse', 'infrastructure'];
     router.push(`/data?tab=${tabs[newValue]}`, { scroll: false });
   };
 
@@ -74,12 +75,6 @@ function DataPageTabsContent() {
   const isProvisioning = clusterStatus?.status && [
     'pending', 'creating_project', 'creating_cluster', 'creating_user', 'configuring_network'
   ].includes(clusterStatus.status);
-
-  // Handler for switching to Browse tab after connecting
-  const handleSwitchToBrowse = () => {
-    setTabValue(0);
-    router.push('/data?tab=browse', { scroll: false });
-  };
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -120,13 +115,6 @@ function DataPageTabsContent() {
             aria-controls="data-tabpanel-0"
           />
           <Tab
-            icon={<VpnKey sx={{ fontSize: 18 }} />}
-            iconPosition="start"
-            label="Connections"
-            id="data-tab-1"
-            aria-controls="data-tabpanel-1"
-          />
-          <Tab
             icon={
               isProvisioning ? (
                 <Badge
@@ -151,8 +139,8 @@ function DataPageTabsContent() {
             }
             iconPosition="start"
             label="Infrastructure"
-            id="data-tab-2"
-            aria-controls="data-tabpanel-2"
+            id="data-tab-1"
+            aria-controls="data-tabpanel-1"
           />
         </Tabs>
       </Box>
@@ -163,9 +151,6 @@ function DataPageTabsContent() {
           <DataBrowser showConnectionPanel={false} onNeedConnection={() => setTabValue(1)} />
         </TabPanel>
         <TabPanel value={tabValue} index={1}>
-          <DataConnectionsTab onConnectAndBrowse={handleSwitchToBrowse} />
-        </TabPanel>
-        <TabPanel value={tabValue} index={2}>
           <DataInfrastructureTab />
         </TabPanel>
       </Box>

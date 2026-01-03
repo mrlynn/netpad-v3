@@ -401,6 +401,26 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
 // CONTEXT (for API operations)
 // ============================================
 
+interface VersionInfo {
+  version: number;
+  publishedAt: Date;
+  publishedBy: string;
+  publishNote?: string;
+  changesSummary?: {
+    nodesAdded: number;
+    nodesRemoved: number;
+    nodesModified: number;
+    edgesAdded: number;
+    edgesRemoved: number;
+  };
+  stats: {
+    totalExecutions: number;
+    successfulExecutions: number;
+    failedExecutions: number;
+  };
+  isActive: boolean;
+}
+
 interface WorkflowContextValue {
   // Store access
   store: typeof useWorkflowStore;
@@ -411,6 +431,11 @@ interface WorkflowContextValue {
   createWorkflow: (orgId: string, name: string, description?: string) => Promise<string | null>;
   deleteWorkflow: (orgId: string, workflowId: string) => Promise<boolean>;
   updateStatus: (orgId: string, workflowId: string, status: WorkflowStatus) => Promise<boolean>;
+
+  // Versioning
+  publishWorkflow: (orgId: string, workflowId: string, publishNote?: string) => Promise<boolean>;
+  getVersionHistory: (orgId: string, workflowId: string) => Promise<{ versions: VersionInfo[]; total: number; hasUnpublishedChanges: boolean } | null>;
+  rollbackToVersion: (orgId: string, workflowId: string, targetVersion: number, publishNote?: string) => Promise<boolean>;
 
   // Execution
   executeWorkflow: (orgId: string, workflowId: string) => Promise<string | null>;
@@ -663,6 +688,89 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Publish workflow version
+  const publishWorkflow = useCallback(async (
+    orgId: string,
+    workflowId: string,
+    publishNote?: string
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, publishNote }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to publish workflow');
+      }
+
+      // Reload workflow to get updated state
+      await loadWorkflow(orgId, workflowId);
+
+      return true;
+    } catch (error) {
+      store.getState().setError(error instanceof Error ? error.message : 'Failed to publish workflow');
+      return false;
+    }
+  }, [store, loadWorkflow]);
+
+  // Get version history
+  const getVersionHistory = useCallback(async (
+    orgId: string,
+    workflowId: string
+  ): Promise<{ versions: VersionInfo[]; total: number; hasUnpublishedChanges: boolean } | null> => {
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/versions?orgId=${orgId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get version history');
+      }
+
+      return {
+        versions: data.versions,
+        total: data.total,
+        hasUnpublishedChanges: data.hasUnpublishedChanges,
+      };
+    } catch (error) {
+      console.error('Failed to get version history:', error);
+      return null;
+    }
+  }, []);
+
+  // Rollback to a previous version
+  const rollbackToVersion = useCallback(async (
+    orgId: string,
+    workflowId: string,
+    targetVersion: number,
+    publishNote?: string
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, targetVersion, publishNote }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to rollback workflow');
+      }
+
+      // Reload workflow to get updated state
+      await loadWorkflow(orgId, workflowId);
+
+      return true;
+    } catch (error) {
+      store.getState().setError(error instanceof Error ? error.message : 'Failed to rollback workflow');
+      return false;
+    }
+  }, [store, loadWorkflow]);
+
   // Update workflow settings (combined metadata + settings)
   const updateWorkflowSettings = useCallback((updates: {
     name?: string;
@@ -694,6 +802,9 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     createWorkflow,
     deleteWorkflow,
     updateStatus,
+    publishWorkflow,
+    getVersionHistory,
+    rollbackToVersion,
     executeWorkflow,
     getExecutionStatus,
     updateWorkflowSettings,

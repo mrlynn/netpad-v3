@@ -156,6 +156,22 @@ const PALETTE_NODES: PaletteNode[] = [
     color: '#0F9D58',
     category: 'integrations',
   },
+  {
+    type: 'atlas-cluster',
+    label: 'Atlas Cluster',
+    description: 'Manage MongoDB Atlas clusters',
+    icon: <MongoIcon />,
+    color: '#00684A',
+    category: 'integrations',
+  },
+  {
+    type: 'atlas-data-api',
+    label: 'Atlas Data API',
+    description: 'Query MongoDB Atlas via Data API',
+    icon: <MongoIcon />,
+    color: '#00684A',
+    category: 'integrations',
+  },
 
   // Actions
   {

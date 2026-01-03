@@ -884,6 +884,13 @@ export interface ProvisionedClusterInfo {
   createdAt: Date;
   provisioningStartedAt: Date;
   provisioningCompletedAt?: Date;
+  // Admin/troubleshooting details
+  atlasProjectId?: string;
+  atlasProjectName?: string;
+  atlasClusterName?: string;
+  atlasClusterId?: string;
+  databaseUsername?: string;
+  statusMessage?: string;
 }
 
 // ============================================
@@ -907,6 +914,8 @@ export type IntegrationProvider =
   | 'sendgrid'
   | 'mailchimp'
   | 'zapier'
+  | 'mongodb_atlas'
+  | 'mongodb_atlas_data_api'
   | 'custom_oauth2'
   | 'custom_api_key';
 
@@ -1015,6 +1024,28 @@ export interface IntegrationCredential {
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
+
+  // MongoDB Atlas-specific metadata (not encrypted)
+  atlasMetadata?: AtlasIntegrationMetadata;
+}
+
+/**
+ * MongoDB Atlas integration metadata (for Admin API credentials)
+ */
+export interface AtlasIntegrationMetadata {
+  atlasOrgId: string;               // Atlas Organization ID
+  atlasOrgName?: string;            // Human-readable org name
+  connectedProjectsCount?: number;  // Number of projects accessible
+  lastSyncedAt?: Date;              // When metadata was last refreshed
+}
+
+/**
+ * MongoDB Atlas Data API metadata (for Data API credentials)
+ */
+export interface AtlasDataApiMetadata {
+  appId: string;                    // Data API App ID
+  dataSource?: string;              // Default data source (cluster name)
+  defaultDatabase?: string;         // Default database name
 }
 
 /**

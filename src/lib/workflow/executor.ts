@@ -26,7 +26,9 @@ import {
   completeJob,
   failJob,
   updateWorkflowStats,
+  updateVersionStats,
   getExecutionById,
+  getActiveWorkflowVersion,
 } from './db';
 import { getHandler, NodeErrorCodes } from './nodeHandlers';
 import { ExtendedNodeContext } from './nodeHandlers/types';
@@ -41,6 +43,12 @@ import { updateWorkflowExecutionResult } from '@/lib/platform/billing';
 /**
  * Execute a workflow job
  * Main entry point for the executor
+ *
+ * IMPORTANT: Executions run against the PUBLISHED version snapshot,
+ * not the live editable workflow. This ensures:
+ * - Deterministic execution (same version = same behavior)
+ * - Safe editing (changes don't affect running workflows)
+ * - Audit trail (execution tied to specific version)
  */
 export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
   const startTime = Date.now();
@@ -50,12 +58,40 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
   console.log(`[Executor] Starting job for workflow ${job.workflowId}, execution ${executionId}`);
 
   try {
-    // Load the workflow
+    // Load the workflow (for metadata and stats)
     const workflow = await getWorkflowById(orgId, job.workflowId);
     if (!workflow) {
       console.error(`[Executor] Workflow not found: ${job.workflowId}`);
       await failJob(job._id!, 'Workflow not found', false);
       return false;
+    }
+
+    // Get the published version to execute against
+    // This ensures we run the immutable snapshot, not the live editable canvas
+    const publishedVersion = await getActiveWorkflowVersion(orgId, job.workflowId);
+
+    // Build the execution workflow document from the published version or fall back to live
+    // If no published version exists, use the live workflow (for backwards compatibility)
+    const executionWorkflow: WorkflowDocument = publishedVersion
+      ? {
+          ...workflow,
+          // Override with published snapshot
+          name: publishedVersion.snapshot.name,
+          description: publishedVersion.snapshot.description,
+          canvas: publishedVersion.snapshot.canvas,
+          settings: publishedVersion.snapshot.settings,
+          variables: publishedVersion.snapshot.variables,
+          inputSchema: publishedVersion.snapshot.inputSchema,
+          outputSchema: publishedVersion.snapshot.outputSchema,
+        }
+      : workflow;
+
+    const executedVersion = publishedVersion?.version || workflow.version;
+
+    if (publishedVersion) {
+      console.log(`[Executor] Using published version ${executedVersion} for workflow ${job.workflowId}`);
+    } else {
+      console.log(`[Executor] No published version found, using live workflow for ${job.workflowId}`);
     }
 
     // Get the execution record
@@ -66,14 +102,15 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
       return false;
     }
 
-    // Mark execution as running
+    // Mark execution as running with the version being executed
     await updateExecutionStatus(executionId, {
       status: 'running',
       startedAt: new Date(),
+      workflowVersion: executedVersion,
     });
 
-    // Execute the workflow
-    const result = await executeWorkflow(workflow, execution, job);
+    // Execute the workflow using the published version snapshot
+    const result = await executeWorkflow(executionWorkflow, execution, job);
 
     const durationMs = Date.now() - startTime;
 
@@ -97,13 +134,18 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
       // Update workflow stats
       await updateWorkflowStats(orgId, workflow.id, true, durationMs);
 
+      // Update version-specific stats if using published version
+      if (publishedVersion) {
+        await updateVersionStats(orgId, workflow.id, executedVersion, true);
+      }
+
       // Update execution result for analytics (usage was already incremented at queue time)
       await updateWorkflowExecutionResult(orgId, workflow.id, true);
 
       // Complete the job
       await completeJob(job._id!, result.output);
 
-      console.log(`[Executor] Workflow ${job.workflowId} completed successfully in ${durationMs}ms`);
+      console.log(`[Executor] Workflow ${job.workflowId} v${executedVersion} completed successfully in ${durationMs}ms`);
       return true;
     } else {
       // Mark execution as failed
@@ -131,13 +173,18 @@ export async function executeWorkflowJob(job: WorkflowJob): Promise<boolean> {
       // Update workflow stats
       await updateWorkflowStats(orgId, workflow.id, false, durationMs);
 
+      // Update version-specific stats if using published version
+      if (publishedVersion) {
+        await updateVersionStats(orgId, workflow.id, executedVersion, false);
+      }
+
       // Update execution result for analytics (usage was already incremented at queue time)
       await updateWorkflowExecutionResult(orgId, workflow.id, false);
 
       // Fail the job (with retry if retryable)
       await failJob(job._id!, result.errorMessage || 'Execution failed', result.retryable);
 
-      console.error(`[Executor] Workflow ${job.workflowId} failed: ${result.errorMessage}`);
+      console.error(`[Executor] Workflow ${job.workflowId} v${executedVersion} failed: ${result.errorMessage}`);
       return false;
     }
   } catch (error) {
@@ -300,14 +347,21 @@ async function executeWorkflow(
 
     // Execute the handler
     try {
-      // Log node start
+      // Log node start with full input data for transparency
       await addExecutionLog(
         execution._id!.toString(),
         node.id,
         'info',
         'node_start',
         `Starting node: ${node.type}`,
-        { config: resolvedConfig }
+        {
+          nodeType: node.type,
+          nodeLabel: node.label,
+          config: resolvedConfig,
+          inputs: inputs,
+          // Include trigger data for trigger nodes
+          trigger: node.type.includes('trigger') ? job.trigger : undefined,
+        }
       );
 
       const result = await handler(context);
@@ -324,14 +378,20 @@ async function executeWorkflow(
         nodeOutputs[node.id] = result.data;
         completedNodes.push(node.id);
 
-        // Log success
+        // Log success with full output data for transparency
         await addExecutionLog(
           execution._id!.toString(),
           node.id,
           'info',
           'node_complete',
           `Node completed successfully`,
-          { output: result.data, durationMs: nodeDuration }
+          {
+            nodeType: node.type,
+            nodeLabel: node.label,
+            output: result.data,
+            outputSize: JSON.stringify(result.data).length,
+            durationMs: nodeDuration,
+          }
         );
 
         console.log(`[Executor] Node ${node.id} completed in ${nodeDuration}ms`);
@@ -345,14 +405,21 @@ async function executeWorkflow(
           timestamp: new Date(),
         });
 
-        // Log failure
+        // Log failure with context for debugging
         await addExecutionLog(
           execution._id!.toString(),
           node.id,
           'error',
           'node_error',
           result.error?.message || 'Node execution failed',
-          { error: result.error }
+          {
+            nodeType: node.type,
+            nodeLabel: node.label,
+            error: result.error,
+            inputs: inputs, // Include inputs for debugging
+            config: resolvedConfig, // Include config for debugging
+            durationMs: Date.now() - nodeStartTime,
+          }
         );
 
         console.error(`[Executor] Node ${node.id} failed: ${result.error?.message}`);

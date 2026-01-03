@@ -152,6 +152,26 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'schema', label: 'Output Schema', type: 'code', description: 'JSON schema for extracted data structure' },
     { key: 'model', label: 'Model', type: 'select', options: ['gpt-4', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'], description: 'AI model to use' },
   ],
+  'atlas-cluster': [
+    { key: 'credentialId', label: 'Atlas Credentials', type: 'connection-select', description: 'Select Atlas Admin API credentials from integrations' },
+    { key: 'operation', label: 'Operation', type: 'select', options: ['list', 'get_status', 'create', 'delete', 'list_projects'], description: 'Cluster operation to perform' },
+    { key: 'projectId', label: 'Atlas Project ID', type: 'text', description: 'The Atlas project ID (required for cluster operations)' },
+    { key: 'clusterName', label: 'Cluster Name', type: 'text', description: 'Target cluster name (required for single cluster operations)' },
+    { key: 'clusterConfig', label: 'Cluster Config (JSON)', type: 'code', description: 'Configuration for create: { "provider": "AWS", "region": "US_EAST_1" }' },
+  ],
+  'atlas-data-api': [
+    { key: 'credentialId', label: 'Data API Credentials', type: 'connection-select', description: 'Select Atlas Data API credentials from integrations' },
+    { key: 'dataSource', label: 'Data Source', type: 'text', description: 'Cluster name or data source identifier' },
+    { key: 'database', label: 'Database', type: 'text', description: 'Database name' },
+    { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
+    { key: 'operation', label: 'Operation', type: 'select', options: ['find', 'findOne', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'aggregate'], description: 'Data operation to perform' },
+    { key: 'filter', label: 'Filter (JSON)', type: 'code', description: 'Query filter for find/update/delete operations' },
+    { key: 'document', label: 'Document (JSON)', type: 'code', description: 'Document for insertOne operation' },
+    { key: 'documents', label: 'Documents (JSON Array)', type: 'code', description: 'Documents array for insertMany operation' },
+    { key: 'update', label: 'Update (JSON)', type: 'code', description: 'Update operations for updateOne/updateMany (e.g., { "$set": {...} })' },
+    { key: 'pipeline', label: 'Pipeline (JSON Array)', type: 'code', description: 'Aggregation pipeline for aggregate operation' },
+    { key: 'options', label: 'Options (JSON)', type: 'code', description: 'Additional options: { "sort": {...}, "limit": 10, "projection": {...}, "upsert": true }' },
+  ],
 };
 
 interface ConfigField {

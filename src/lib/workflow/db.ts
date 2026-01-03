@@ -12,6 +12,8 @@ import {
   ExecutionLog,
   WorkflowJob,
   NodeDefinition,
+  WorkflowVersion,
+  WorkflowCanvas,
 } from '@/types/workflow';
 
 // ============================================
@@ -56,6 +58,15 @@ export async function getJobsCollection(): Promise<Collection<WorkflowJob>> {
 export async function getNodeDefinitionsCollection(): Promise<Collection<NodeDefinition>> {
   const db = await getPlatformDb();
   return db.collection<NodeDefinition>('node_definitions');
+}
+
+/**
+ * Get workflow versions collection for an organization
+ * Stores immutable snapshots of published workflow versions
+ */
+export async function getWorkflowVersionsCollection(orgId: string): Promise<Collection<WorkflowVersion>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<WorkflowVersion>('workflow_versions');
 }
 
 // ============================================
@@ -116,6 +127,13 @@ export async function createOrgWorkflowIndexes(orgId: string): Promise<void> {
     await workflows.createIndex({ tags: 1 });
     await workflows.createIndex({ updatedAt: -1 });
     await workflows.createIndex({ createdBy: 1 });
+
+    // Workflow versions collection
+    const versions = db.collection('workflow_versions');
+    await versions.createIndex({ workflowId: 1, version: 1 }, { unique: true });
+    await versions.createIndex({ workflowId: 1, isActive: 1 });
+    await versions.createIndex({ workflowId: 1, publishedAt: -1 });
+    await versions.createIndex({ publishedBy: 1 });
 
     console.log(`[Workflow DB] Org indexes created for ${orgId}`);
   } catch (error) {
@@ -788,4 +806,300 @@ export async function updateWorkflowStats(
       },
     }
   );
+}
+
+// ============================================
+// WORKFLOW VERSIONING OPERATIONS
+// ============================================
+
+/**
+ * Calculate changes between two workflow canvases
+ */
+function calculateChangesSummary(
+  oldCanvas: WorkflowCanvas | undefined,
+  newCanvas: WorkflowCanvas
+): WorkflowVersion['changesSummary'] {
+  if (!oldCanvas) {
+    return {
+      nodesAdded: newCanvas.nodes.length,
+      nodesRemoved: 0,
+      nodesModified: 0,
+      edgesAdded: newCanvas.edges.length,
+      edgesRemoved: 0,
+    };
+  }
+
+  const oldNodeIds = new Set(oldCanvas.nodes.map(n => n.id));
+  const newNodeIds = new Set(newCanvas.nodes.map(n => n.id));
+  const oldEdgeIds = new Set(oldCanvas.edges.map(e => e.id));
+  const newEdgeIds = new Set(newCanvas.edges.map(e => e.id));
+
+  const nodesAdded = newCanvas.nodes.filter(n => !oldNodeIds.has(n.id)).length;
+  const nodesRemoved = oldCanvas.nodes.filter(n => !newNodeIds.has(n.id)).length;
+
+  // Check for modified nodes (same ID but different config/position)
+  let nodesModified = 0;
+  for (const newNode of newCanvas.nodes) {
+    if (oldNodeIds.has(newNode.id)) {
+      const oldNode = oldCanvas.nodes.find(n => n.id === newNode.id);
+      if (oldNode && JSON.stringify(oldNode) !== JSON.stringify(newNode)) {
+        nodesModified++;
+      }
+    }
+  }
+
+  const edgesAdded = newCanvas.edges.filter(e => !oldEdgeIds.has(e.id)).length;
+  const edgesRemoved = oldCanvas.edges.filter(e => !newEdgeIds.has(e.id)).length;
+
+  return {
+    nodesAdded,
+    nodesRemoved,
+    nodesModified,
+    edgesAdded,
+    edgesRemoved,
+  };
+}
+
+/**
+ * Publish a workflow version
+ * Creates an immutable snapshot and marks it as the active version
+ */
+export async function publishWorkflowVersion(
+  orgId: string,
+  workflowId: string,
+  userId: string,
+  publishNote?: string
+): Promise<WorkflowVersion> {
+  const workflowsCollection = await getWorkflowsCollection(orgId);
+  const versionsCollection = await getWorkflowVersionsCollection(orgId);
+
+  // Get current workflow
+  const workflow = await workflowsCollection.findOne({ id: workflowId });
+  if (!workflow) {
+    throw new Error(`Workflow ${workflowId} not found`);
+  }
+
+  const now = new Date();
+  const newVersionNumber = workflow.version;
+
+  // Get previous active version for change comparison
+  const previousVersion = await versionsCollection.findOne(
+    { workflowId, isActive: true }
+  );
+
+  // Calculate changes from previous version
+  const changesSummary = calculateChangesSummary(
+    previousVersion?.snapshot.canvas,
+    workflow.canvas
+  );
+
+  // Mark previous active version as deprecated
+  if (previousVersion) {
+    await versionsCollection.updateOne(
+      { _id: previousVersion._id },
+      {
+        $set: {
+          isActive: false,
+          deprecatedAt: now,
+          deprecatedBy: userId,
+        },
+      }
+    );
+  }
+
+  // Create new version snapshot
+  const newVersion: WorkflowVersion = {
+    workflowId,
+    orgId,
+    version: newVersionNumber,
+    snapshot: {
+      name: workflow.name,
+      description: workflow.description,
+      canvas: workflow.canvas,
+      settings: workflow.settings,
+      variables: workflow.variables,
+      inputSchema: workflow.inputSchema,
+      outputSchema: workflow.outputSchema,
+    },
+    publishedAt: now,
+    publishedBy: userId,
+    publishNote,
+    changesSummary,
+    stats: {
+      totalExecutions: 0,
+      successfulExecutions: 0,
+      failedExecutions: 0,
+    },
+    isActive: true,
+  };
+
+  await versionsCollection.insertOne(newVersion);
+
+  // Update workflow to reference published version and set status to active
+  await workflowsCollection.updateOne(
+    { id: workflowId },
+    {
+      $set: {
+        publishedVersion: newVersionNumber,
+        status: 'active',
+        updatedAt: now,
+        lastModifiedBy: userId,
+      },
+      $inc: { version: 1 }, // Increment draft version for future edits
+    }
+  );
+
+  return newVersion;
+}
+
+/**
+ * Get version history for a workflow
+ */
+export async function getWorkflowVersionHistory(
+  orgId: string,
+  workflowId: string,
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<{ versions: WorkflowVersion[]; total: number }> {
+  const collection = await getWorkflowVersionsCollection(orgId);
+  const { limit = 20, offset = 0 } = options;
+
+  const [versions, total] = await Promise.all([
+    collection
+      .find({ workflowId })
+      .sort({ version: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray(),
+    collection.countDocuments({ workflowId }),
+  ]);
+
+  return { versions, total };
+}
+
+/**
+ * Get a specific workflow version
+ */
+export async function getWorkflowVersion(
+  orgId: string,
+  workflowId: string,
+  version: number
+): Promise<WorkflowVersion | null> {
+  const collection = await getWorkflowVersionsCollection(orgId);
+  return collection.findOne({ workflowId, version });
+}
+
+/**
+ * Get the active (published) version of a workflow
+ */
+export async function getActiveWorkflowVersion(
+  orgId: string,
+  workflowId: string
+): Promise<WorkflowVersion | null> {
+  const collection = await getWorkflowVersionsCollection(orgId);
+  return collection.findOne({ workflowId, isActive: true });
+}
+
+/**
+ * Rollback to a previous workflow version
+ * Creates a new version based on the target version's snapshot
+ */
+export async function rollbackWorkflowVersion(
+  orgId: string,
+  workflowId: string,
+  targetVersion: number,
+  userId: string,
+  publishNote?: string
+): Promise<WorkflowVersion> {
+  const workflowsCollection = await getWorkflowsCollection(orgId);
+  const versionsCollection = await getWorkflowVersionsCollection(orgId);
+
+  // Get target version
+  const targetVersionDoc = await versionsCollection.findOne({
+    workflowId,
+    version: targetVersion,
+  });
+
+  if (!targetVersionDoc) {
+    throw new Error(`Version ${targetVersion} not found for workflow ${workflowId}`);
+  }
+
+  // Get current workflow
+  const workflow = await workflowsCollection.findOne({ id: workflowId });
+  if (!workflow) {
+    throw new Error(`Workflow ${workflowId} not found`);
+  }
+
+  // Update workflow canvas to match target version
+  await workflowsCollection.updateOne(
+    { id: workflowId },
+    {
+      $set: {
+        canvas: targetVersionDoc.snapshot.canvas,
+        settings: targetVersionDoc.snapshot.settings,
+        variables: targetVersionDoc.snapshot.variables,
+        inputSchema: targetVersionDoc.snapshot.inputSchema,
+        outputSchema: targetVersionDoc.snapshot.outputSchema,
+        updatedAt: new Date(),
+        lastModifiedBy: userId,
+      },
+      $inc: { version: 1 },
+    }
+  );
+
+  // Publish the rollback as a new version
+  const rollbackNote = publishNote || `Rollback to version ${targetVersion}`;
+  return publishWorkflowVersion(orgId, workflowId, userId, rollbackNote);
+}
+
+/**
+ * Update version stats after execution
+ */
+export async function updateVersionStats(
+  orgId: string,
+  workflowId: string,
+  version: number,
+  success: boolean
+): Promise<void> {
+  const collection = await getWorkflowVersionsCollection(orgId);
+
+  await collection.updateOne(
+    { workflowId, version },
+    {
+      $inc: {
+        'stats.totalExecutions': 1,
+        'stats.successfulExecutions': success ? 1 : 0,
+        'stats.failedExecutions': success ? 0 : 1,
+      },
+    }
+  );
+}
+
+/**
+ * Check if workflow has unpublished changes
+ */
+export async function hasUnpublishedChanges(
+  orgId: string,
+  workflowId: string
+): Promise<boolean> {
+  const workflowsCollection = await getWorkflowsCollection(orgId);
+  const versionsCollection = await getWorkflowVersionsCollection(orgId);
+
+  const workflow = await workflowsCollection.findOne({ id: workflowId });
+  if (!workflow) return false;
+
+  // If no published version exists, there are unpublished changes
+  if (!workflow.publishedVersion) return true;
+
+  const activeVersion = await versionsCollection.findOne({
+    workflowId,
+    isActive: true,
+  });
+
+  if (!activeVersion) return true;
+
+  // Compare current canvas with published version
+  return JSON.stringify(workflow.canvas) !== JSON.stringify(activeVersion.snapshot.canvas);
 }
