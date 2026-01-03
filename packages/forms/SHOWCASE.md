@@ -257,7 +257,7 @@ export default function ContactPage() {
 - **[Package Documentation](./README.md)** — API reference and examples
 - **[Architecture Guide](./ARCHITECTURE.md)** — How it works under the hood
 - **[Example Applications](../examples/)** — Production-ready demos
-- **[GitHub Issues](https://github.com/mongodb/netpad/issues)** — Report bugs, request features
+- **[GitHub Issues](https://github.com/mrlynn/netpad-v3/issues)** — Report bugs, request features
 
 ## License
 

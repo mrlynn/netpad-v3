@@ -276,4 +276,4 @@ Apache-2.0
 
 ---
 
-**Questions?** [Open an issue](https://github.com/mongodb/netpad/issues) or check the [documentation](./ARCHITECTURE.md).
+**Questions?** [Open an issue](https://github.com/mrlynn/netpad-v3/issues) or check the [documentation](./ARCHITECTURE.md).

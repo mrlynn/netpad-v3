@@ -372,4 +372,4 @@ Apache-2.0
 
 ---
 
-**Questions?** [Open an issue](https://github.com/mongodb/netpad/issues) or check the [Architecture Guide](./ARCHITECTURE.md).
+**Questions?** [Open an issue](hhttps://github.com/mrlynn/netpad-v3/issues) or check the [Architecture Guide](./ARCHITECTURE.md).
