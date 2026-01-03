@@ -1,0 +1,58 @@
+{
+  "name": "NetPad",
+  "slug": "netpad",
+  "logo": "https://netpad.io/logo-250x250-trans.png",
+  "description": "MongoDB-connected forms, workflows, and data explorer. Build professional data collection forms, automate with visual workflows, and explore your data - all without writing code.",
+  "website": "https://netpad.io",
+  "categories": ["database", "storage", "forms", "automation", "developer-tools"],
+  "crons": [
+    {
+      "path": "/api/workflows/process?count=5",
+      "schedule": "* * * * *"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "env": {
+    "MONGODB_URI": {
+      "description": "MongoDB connection string (mongodb+srv://...)",
+      "required": true,
+      "sensitive": true
+    },
+    "SESSION_SECRET": {
+      "description": "Secret for session encryption (min 32 characters)",
+      "required": true,
+      "sensitive": true
+    },
+    "VAULT_ENCRYPTION_KEY": {
+      "description": "Base64-encoded key for vault encryption",
+      "required": true,
+      "sensitive": true
+    },
+    "MONGODB_DATABASE": {
+      "description": "MongoDB database name",
+      "required": false,
+      "default": "forms"
+    },
+    "NEXT_PUBLIC_APP_URL": {
+      "description": "Public URL of your app",
+      "required": false,
+      "default": "${VERCEL_URL}"
+    },
+    "APP_URL": {
+      "description": "Server-side URL for callbacks",
+      "required": false,
+      "default": "${VERCEL_URL}"
+    },
+    "OPENAI_API_KEY": {
+      "description": "OpenAI API key for AI features",
+      "required": false,
+      "sensitive": true
+    }
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "maxDuration": 60
+  }
+}

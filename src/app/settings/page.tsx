@@ -10,6 +10,7 @@ import {
   Tab,
   alpha,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Business,
@@ -19,6 +20,7 @@ import {
   Key,
   Extension,
   CreditCard,
+  Cloud,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +31,7 @@ import { PrivacySettings } from '@/components/Settings/PrivacySettings';
 import { APIKeySettings } from '@/components/Settings/APIKeySettings';
 import { IntegrationCredentialsSettings } from '@/components/Settings/IntegrationCredentialsSettings';
 import { BillingSettings } from '@/components/Settings/BillingSettings';
+import { DeployToVercelButton } from '@/components/Deploy';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface TabPanelProps {
@@ -99,19 +102,52 @@ function SettingsContent() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography
-        variant="h4"
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Settings
+        </Typography>
+        <DeployToVercelButton variant="outlined" size="small" />
+      </Box>
+
+      {/* Self-hosting banner */}
+      <Paper
+        elevation={0}
         sx={{
-          fontWeight: 700,
-          mb: 4,
-          background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
+          p: 2,
+          mb: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2,
+          bgcolor: alpha('#000', 0.02),
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
         }}
       >
-        Settings
-      </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Cloud sx={{ color: 'text.secondary' }} />
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Self-host NetPad
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Deploy your own instance with your existing database configuration
+            </Typography>
+          </Box>
+        </Box>
+        <DeployToVercelButton variant="contained" size="small" />
+      </Paper>
 
       <Paper
         elevation={0}

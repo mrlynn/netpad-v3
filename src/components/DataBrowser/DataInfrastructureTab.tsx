@@ -48,6 +48,7 @@ import {
 import Link from 'next/link';
 import { ClusterManagement } from '@/components/Settings/ClusterManagement';
 import { AddConnectionDialog } from '@/components/Settings/AddConnectionDialog';
+import { DeployToVercelButton } from '@/components/Deploy';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
 
@@ -279,13 +280,24 @@ export function DataInfrastructureTab() {
   ].includes(status.status);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+      <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 600,
+            fontSize: { xs: '1.5rem', sm: '1.75rem' },
+            wordBreak: 'break-word',
+          }}
+        >
           Database Infrastructure
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography 
+          variant="body2" 
+          color="text.secondary"
+          sx={{ mt: 0.5, wordBreak: 'break-word' }}
+        >
           View and manage your MongoDB Atlas cluster and database resources
         </Typography>
       </Box>
@@ -937,7 +949,7 @@ export function DataInfrastructureTab() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               You have full control over your data:
             </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+            <Box component="ul" sx={{ m: 0, pl: 2, mb: 2 }}>
               <Typography component="li" variant="body2" color="text.secondary">
                 Export your data anytime
               </Typography>
@@ -951,6 +963,11 @@ export function DataInfrastructureTab() {
                 Delete all data on request
               </Typography>
             </Box>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Want complete control? Deploy your own NetPad instance:
+            </Typography>
+            <DeployToVercelButton variant="contained" size="small" />
           </Paper>
         </Grid>
       </Grid>

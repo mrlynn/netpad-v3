@@ -262,14 +262,31 @@ export default function WorkflowsPage() {
       {/* Global Navigation */}
       <AppNavBar />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 } }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          justifyContent: 'space-between', 
+          mb: { xs: 3, sm: 4 },
+          gap: { xs: 2, sm: 0 },
+        }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: { xs: '1.75rem', sm: '2.125rem' },
+              }}
+            >
               Workflows
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ wordBreak: 'break-word' }}
+            >
               Automate tasks with visual workflows
             </Typography>
           </Box>
@@ -277,6 +294,7 @@ export default function WorkflowsPage() {
             variant="contained"
             startIcon={<Add />}
             onClick={() => setCreateDialogOpen(true)}
+            fullWidth={false}
             sx={{
               bgcolor: '#00ED64',
               color: '#001E2B',

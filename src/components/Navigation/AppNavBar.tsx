@@ -17,6 +17,12 @@ import {
   ListItemText,
   Divider,
   Avatar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   GitHub,
@@ -34,13 +40,14 @@ import {
   Storage,
   Payments,
   Api,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 
 interface NavItem {
@@ -77,10 +84,13 @@ export function AppNavBar() {
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, logout, registerPasskey } = useAuth();
   const { openSearch } = useHelp();
-  const { mode, toggleTheme } = useTheme();
+  const { mode, toggleTheme } = useAppTheme();
+  const muiTheme = useTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check if a nav item is active based on current path
   const isNavItemActive = (item: NavItem): boolean => {
@@ -95,6 +105,14 @@ export function AppNavBar() {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleMobileMenuOpen = () => {
+    setMobileMenuOpen(true);
+  };
+
+  const handleMobileMenuClose = () => {
+    setMobileMenuOpen(false);
   };
 
   const handleLogout = async () => {
@@ -181,65 +199,87 @@ export function AppNavBar() {
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Navigation Items */}
-        {NAV_ITEMS.map((item) => {
-          const isActive = isNavItemActive(item);
-          return (
+        {/* Desktop Navigation - hide on mobile */}
+        {!isMobile && (
+          <>
+            {/* Navigation Items */}
+            {NAV_ITEMS.map((item) => {
+              const isActive = isNavItemActive(item);
+              return (
+                <Button
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
+                  startIcon={item.icon}
+                  size="small"
+                  sx={{
+                    minWidth: 'auto',
+                    px: 1.5,
+                    py: 0.5,
+                    color: isActive ? item.color : 'text.secondary',
+                    bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
+                    borderRadius: 1,
+                    textTransform: 'none',
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: '0.8125rem',
+                    '&:hover': {
+                      bgcolor: alpha(item.color, 0.15),
+                      color: item.color
+                    },
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {item.label}
+                </Button>
+              );
+            })}
+
+            {/* New Form Button */}
             <Button
-              key={item.href}
               component={Link}
-              href={item.href}
-              startIcon={item.icon}
+              href="/builder"
+              startIcon={<Add sx={{ fontSize: 18 }} />}
               size="small"
               sx={{
                 minWidth: 'auto',
                 px: 1.5,
                 py: 0.5,
-                color: isActive ? item.color : 'text.secondary',
-                bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
+                color: '#00ED64',
+                bgcolor: alpha('#00ED64', 0.1),
                 borderRadius: 1,
                 textTransform: 'none',
-                fontWeight: isActive ? 600 : 500,
+                fontWeight: 600,
                 fontSize: '0.8125rem',
                 '&:hover': {
-                  bgcolor: alpha(item.color, 0.15),
-                  color: item.color
+                  bgcolor: alpha('#00ED64', 0.2)
                 },
                 transition: 'all 0.15s ease'
               }}
             >
-              {item.label}
+              New Form
             </Button>
-          );
-        })}
+          </>
+        )}
 
-        {/* New Form Button */}
-        <Button
-          component={Link}
-          href="/builder"
-          startIcon={<Add sx={{ fontSize: 18 }} />}
-          size="small"
-          sx={{
-            minWidth: 'auto',
-            px: 1.5,
-            py: 0.5,
-            color: '#00ED64',
-            bgcolor: alpha('#00ED64', 0.1),
-            borderRadius: 1,
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.8125rem',
-            '&:hover': {
-              bgcolor: alpha('#00ED64', 0.2)
-            },
-            transition: 'all 0.15s ease'
-          }}
-        >
-          New Form
-        </Button>
+        {/* Mobile Menu Button */}
+        {isMobile && (
+          <IconButton
+            onClick={handleMobileMenuOpen}
+            size="small"
+            sx={{
+              color: 'text.secondary',
+              '&:hover': {
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64'
+              }
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
 
-        {/* Cluster Status - only show when authenticated */}
-        {isAuthenticated && <ClusterStatusIndicator />}
+        {/* Cluster Status - only show when authenticated, hide on mobile */}
+        {isAuthenticated && !isMobile && <ClusterStatusIndicator />}
 
         {/* Theme Toggle */}
         <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
@@ -428,6 +468,143 @@ export function AppNavBar() {
           </>
         )}
       </Toolbar>
+
+      {/* Mobile Navigation Drawer */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={handleMobileMenuClose}
+        PaperProps={{
+          sx: {
+            width: 280,
+            bgcolor: 'background.paper',
+          }
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Navigation
+          </Typography>
+          <List>
+            {NAV_ITEMS.map((item) => {
+              const isActive = isNavItemActive(item);
+              return (
+                <ListItem key={item.href} disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={item.href}
+                    onClick={handleMobileMenuClose}
+                    sx={{
+                      color: isActive ? item.color : 'text.primary',
+                      bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
+                      borderRadius: 1,
+                      mb: 0.5,
+                      '&:hover': {
+                        bgcolor: alpha(item.color, 0.15),
+                      }
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: isActive ? item.color : 'inherit', minWidth: 40 }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                href="/builder"
+                onClick={handleMobileMenuClose}
+                sx={{
+                  color: '#00ED64',
+                  bgcolor: alpha('#00ED64', 0.1),
+                  borderRadius: 1,
+                  mb: 0.5,
+                  '&:hover': {
+                    bgcolor: alpha('#00ED64', 0.2),
+                  }
+                }}
+              >
+                <ListItemIcon sx={{ color: '#00ED64', minWidth: 40 }}>
+                  <Add />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="New Form"
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          </List>
+
+          {isAuthenticated && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ px: 2, py: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  Infrastructure
+                </Typography>
+                <ClusterStatusIndicator />
+              </Box>
+            </>
+          )}
+
+          <Divider sx={{ my: 2 }} />
+
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  toggleTheme();
+                  handleMobileMenuClose();
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {mode === 'dark' ? <LightMode /> : <DarkMode />}
+                </ListItemIcon>
+                <ListItemText primary={mode === 'dark' ? 'Light Mode' : 'Dark Mode'} />
+              </ListItemButton>
+            </ListItem>
+            {isAuthenticated && user && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href="/settings"
+                    onClick={handleMobileMenuClose}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <Settings />
+                    </ListItemIcon>
+                    <ListItemText primary="Settings" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => {
+                      openSearch();
+                      handleMobileMenuClose();
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <HelpOutline />
+                    </ListItemIcon>
+                    <ListItemText primary="Help" />
+                  </ListItemButton>
+                </ListItem>
+              </>
+            )}
+          </List>
+        </Box>
+      </Drawer>
     </AppBar>
   );
 }

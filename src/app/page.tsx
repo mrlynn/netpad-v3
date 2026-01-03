@@ -31,11 +31,13 @@ import {
   ContentCopy,
   RocketLaunch,
   School,
+  Cloud,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { DeployToVercelButton } from '@/components/Deploy';
 
 // The three pillars of NetPad
 const pillars = [
@@ -1394,7 +1396,7 @@ console.log('Output:', result.execution.result?.output);`}
               Full REST API, webhooks, and JSON export. Self-host or use our managed service.
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
             <Chip
               icon={<Terminal sx={{ fontSize: 14 }} />}
               label="@netpad/forms"
@@ -1431,6 +1433,31 @@ console.log('Output:', result.execution.result?.output);`}
               size="small"
               sx={{ bgcolor: alpha('#fff', 0.1), color: '#fff' }}
             />
+          </Box>
+
+          {/* Self-hosting deployment options */}
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <DeployToVercelButton variant="contained" size="small" />
+            <Button
+              component="a"
+              href="https://github.com/mrlynn/netpad-v3"
+              target="_blank"
+              variant="outlined"
+              size="small"
+              startIcon={<GitHub />}
+              sx={{
+                borderColor: alpha('#fff', 0.3),
+                color: '#fff',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#fff',
+                  bgcolor: alpha('#fff', 0.1),
+                }
+              }}
+            >
+              View on GitHub
+            </Button>
           </Box>
         </Container>
       </Box>
@@ -1517,6 +1544,26 @@ console.log('Output:', result.execution.result?.output);`}
               >
                 Explore Data
               </Button>
+            </Box>
+
+            {/* Deploy to Vercel - Self-hosting option */}
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.4), display: 'block', mb: 1.5 }}>
+                Or deploy your own instance
+              </Typography>
+              <DeployToVercelButton
+                variant="outlined"
+                size="small"
+                sx={{
+                  px: 2.5,
+                  borderColor: alpha('#fff', 0.3),
+                  color: '#fff',
+                  '&:hover': {
+                    borderColor: '#fff',
+                    bgcolor: alpha('#fff', 0.1)
+                  }
+                }}
+              />
             </Box>
           </Paper>
         </Container>
@@ -1616,6 +1663,19 @@ console.log('Output:', result.execution.result?.output);`}
                 }}
               >
                 GitHub
+              </Typography>
+              <Typography
+                component="a"
+                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmrlynn%2Fnetpad-v3&env=MONGODB_URI,SESSION_SECRET,VAULT_ENCRYPTION_KEY&envDescription=Required%20environment%20variables%20for%20NetPad&envLink=https%3A%2F%2Fgithub.com%2Fmrlynn%2Fnetpad-v3%2Fblob%2Fmain%2Fdocs%2FDEPLOY.md&project-name=my-netpad&repository-name=my-netpad"
+                target="_blank"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Deploy
               </Typography>
               <Typography
                 component="a"

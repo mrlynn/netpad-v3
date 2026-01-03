@@ -359,12 +359,30 @@ export default function MyFormsPage() {
         }}
       >
         <Container maxWidth="lg">
-          <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
+          <Box sx={{ 
+            py: { xs: 2, sm: 3 }, 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'flex-start', sm: 'center' }, 
+            justifyContent: 'space-between',
+            gap: { xs: 2, sm: 0 },
+          }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'text.primary',
+                  fontSize: { xs: '1.75rem', sm: '2.125rem' },
+                }}
+              >
                 Forms
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ wordBreak: 'break-word' }}
+              >
                 Manage and access your saved forms
               </Typography>
             </Box>
@@ -373,6 +391,7 @@ export default function MyFormsPage() {
               href="/builder"
               variant="contained"
               startIcon={<Add />}
+              fullWidth={false}
               sx={{
                 bgcolor: theme.palette.primary.main,
                 color: theme.palette.primary.contrastText,

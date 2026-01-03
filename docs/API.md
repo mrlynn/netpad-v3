@@ -693,6 +693,166 @@ You can use this specification with:
 
 ---
 
+## Vercel Integration API
+
+These endpoints support the Vercel Integration for automated deployment and configuration.
+
+### Get Environment Variables Template
+
+Retrieve the environment variables needed for deployment, optionally pre-filled with organization data.
+
+```
+GET /api/integrations/vercel/env
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `organizationId` | string | No | Organization ID to get pre-filled values |
+
+**Example Request (Template Only):**
+
+```bash
+curl -X GET "https://your-domain.com/api/integrations/vercel/env" \
+  -H "Authorization: Bearer your_session_token"
+```
+
+**Example Response:**
+
+```json
+{
+  "success": true,
+  "envVars": {
+    "MONGODB_URI": {
+      "value": "",
+      "description": "MongoDB connection string. Get from MongoDB Atlas.",
+      "required": true
+    },
+    "MONGODB_DATABASE": {
+      "value": "forms",
+      "description": "Database name for NetPad data.",
+      "required": true
+    },
+    "SESSION_SECRET": {
+      "value": "auto-generated-64-char-hex",
+      "description": "Secret key for session encryption. Auto-generated.",
+      "required": true
+    },
+    "VAULT_ENCRYPTION_KEY": {
+      "value": "auto-generated-base64-key",
+      "description": "Key for vault encryption. Auto-generated.",
+      "required": true
+    },
+    "NEXT_PUBLIC_APP_URL": {
+      "value": "${VERCEL_URL}",
+      "description": "Public URL of your app. Use ${VERCEL_URL} for auto-detection.",
+      "required": true
+    }
+  }
+}
+```
+
+---
+
+### Push Environment Variables to Vercel Project
+
+Push environment variables to a connected Vercel project.
+
+```
+POST /api/integrations/vercel/env
+```
+
+**Required:** Session authentication and Vercel integration installed
+
+**Request Body:**
+
+```json
+{
+  "installationId": "oac_xxx",
+  "projectId": "prj_xxx",
+  "organizationId": "org_xxx"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "success": true,
+  "message": "Environment variables configured successfully",
+  "envVarsSet": [
+    "MONGODB_URI",
+    "MONGODB_DATABASE",
+    "SESSION_SECRET",
+    "VAULT_ENCRYPTION_KEY",
+    "NEXT_PUBLIC_APP_URL",
+    "APP_URL"
+  ]
+}
+```
+
+---
+
+### Vercel OAuth Callback
+
+Handle OAuth callback from Vercel Integration installation.
+
+```
+GET /api/integrations/vercel/callback
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `code` | string | OAuth authorization code from Vercel |
+| `configurationId` | string | Vercel configuration ID |
+| `teamId` | string | Optional Vercel team ID |
+| `next` | string | Redirect URL after installation |
+
+This endpoint is called automatically by Vercel during integration installation.
+
+---
+
+### Provision MongoDB Atlas Cluster
+
+Provision a new MongoDB Atlas M0 cluster for Vercel deployments.
+
+```
+POST /api/integrations/vercel/provision
+```
+
+**Required:** Session authentication
+
+**Request Body:**
+
+```json
+{
+  "installationId": "oac_xxx",
+  "organizationId": "org_xxx"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "success": true,
+  "message": "MongoDB cluster provisioned successfully",
+  "clusterName": "netpad-cluster-abc123",
+  "database": "forms",
+  "envVars": {
+    "MONGODB_URI": "mongodb+srv://...",
+    "MONGODB_DATABASE": "forms",
+    "SESSION_SECRET": "auto-generated",
+    "VAULT_ENCRYPTION_KEY": "auto-generated"
+  }
+}
+```
+
+---
+
 ## Webhooks (Coming Soon)
 
 Configure webhooks to receive real-time notifications when events occur:

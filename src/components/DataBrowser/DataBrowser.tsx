@@ -843,7 +843,7 @@ export function DataBrowser({ showConnectionPanel: showSidebar = true, onNeedCon
           <Paper
             elevation={0}
             sx={{
-              p: 4,
+              p: { xs: 3, sm: 4 },
               maxWidth: 450,
               width: '100%',
               textAlign: 'center',
@@ -851,19 +851,29 @@ export function DataBrowser({ showConnectionPanel: showSidebar = true, onNeedCon
               borderColor: alpha('#00ED64', 0.3),
               borderRadius: 3,
               bgcolor: alpha('#00ED64', 0.02),
+              mx: 'auto',
             }}
           >
-            <Storage sx={{ fontSize: 56, color: '#00ED64', mb: 2 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+            <Storage sx={{ fontSize: { xs: 48, sm: 56 }, color: '#00ED64', mb: 2 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, fontSize: { xs: '1.5rem', sm: '1.75rem' } }}>
               No Connection Selected
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography 
+              variant="body1" 
+              color="text.secondary" 
+              sx={{ 
+                mb: 3,
+                px: { xs: 1, sm: 0 },
+                wordBreak: 'break-word',
+              }}
+            >
               Connect to a MongoDB database to browse and manage your data.
             </Typography>
             <Button
               variant="contained"
               size="large"
               onClick={onNeedConnection}
+              fullWidth
               sx={{
                 background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
                 color: '#001E2B',
