@@ -1,0 +1,23 @@
+# Source files
+src/
+tsconfig.json
+tsup.config.ts
+
+# Development files
+.git
+.gitignore
+.DS_Store
+*.log
+
+# Test files
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts that shouldn't be published
+*.tsbuildinfo

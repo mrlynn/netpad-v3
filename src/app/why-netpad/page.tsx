@@ -35,6 +35,7 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SchoolIcon from '@mui/icons-material/School';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 
 const CodeBlock = ({ title, lines, color }: { title: string; lines: number; color: string }) => (
   <Box
@@ -918,6 +919,148 @@ export default function WhyNetPadPage() {
                   >
                     View Example
                   </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* MCP Server Card */}
+            <Grid item xs={12}>
+              <Card
+                sx={{
+                  bgcolor: alpha('#fff', 0.03),
+                  border: '1px solid',
+                  borderColor: alpha('#FF6B35', 0.3),
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: alpha('#FF6B35', 0.5),
+                    bgcolor: alpha('#FF6B35', 0.05),
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Grid container spacing={4} alignItems="center">
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                        <Box
+                          sx={{
+                            bgcolor: alpha('#FF6B35', 0.2),
+                            color: '#FF6B35',
+                            p: 1.5,
+                            borderRadius: 2,
+                            display: 'flex',
+                          }}
+                        >
+                          <SmartToyIcon />
+                        </Box>
+                        <Box>
+                          <Chip
+                            label="ai assistant"
+                            size="small"
+                            sx={{ bgcolor: alpha('#FF6B35', 0.2), color: '#FF6B35', mb: 0.5 }}
+                          />
+                          <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
+                            @netpad/mcp-server
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Typography variant="body1" sx={{ color: alpha('#fff', 0.7), mb: 3 }}>
+                        Build forms with AI assistance. Use Claude, Cursor, or any MCP-compatible AI
+                        to generate forms, scaffold apps, and integrate workflows using natural language.
+                      </Typography>
+
+                      <Paper
+                        sx={{
+                          p: 2,
+                          mb: 3,
+                          bgcolor: '#1e1e1e',
+                          borderRadius: 1,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        <Typography sx={{ color: '#d4d4d4', fontSize: '0.85rem' }}>
+                          <span style={{ color: '#FF6B35' }}>$</span> npx @netpad/mcp-server
+                        </Typography>
+                      </Paper>
+
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                        <Chip label="22 AI Tools" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Natural Language" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="App Scaffolding" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Form Generation" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Button
+                          component="a"
+                          href="https://www.npmjs.com/package/@netpad/mcp-server"
+                          target="_blank"
+                          variant="contained"
+                          startIcon={<TerminalIcon />}
+                          sx={{
+                            background: 'linear-gradient(135deg, #FF6B35 0%, #E85A24 100%)',
+                            color: '#fff',
+                            fontWeight: 600,
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #FF7D4D 0%, #FF6B35 100%)',
+                            }
+                          }}
+                        >
+                          View on npm
+                        </Button>
+                        <Button
+                          component="a"
+                          href="https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-server"
+                          target="_blank"
+                          variant="outlined"
+                          startIcon={<GitHubIcon />}
+                          sx={{
+                            borderColor: alpha('#fff', 0.3),
+                            color: 'white',
+                            fontWeight: 600,
+                            '&:hover': {
+                              borderColor: '#FF6B35',
+                              bgcolor: alpha('#FF6B35', 0.1),
+                            }
+                          }}
+                        >
+                          Documentation
+                        </Button>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        sx={{
+                          bgcolor: '#1e1e1e',
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box sx={{ bgcolor: '#FF6B35', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                            Claude Desktop Config
+                          </Typography>
+                          <Chip label="MCP Protocol" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                        </Box>
+                        <Box sx={{ p: 2 }}>
+                          <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto' }}>
+{`{
+  "mcpServers": {
+    "netpad-forms": {
+      "command": "npx",
+      "args": ["@netpad/mcp-server"]
+    }
+  }
+}
+
+// Then ask Claude:
+"Create a lead capture form with
+ company size and interest fields"`}
+                          </pre>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
                 </CardContent>
               </Card>
             </Grid>

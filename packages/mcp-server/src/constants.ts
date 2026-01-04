@@ -1,0 +1,660 @@
+// Field types supported by @netpad/forms
+export const FIELD_TYPES = [
+  // Text fields
+  {
+    type: 'short_text',
+    category: 'text',
+    description: 'Single-line text input',
+    muiComponent: 'TextField',
+    example: { path: 'firstName', label: 'First Name', type: 'short_text', included: true },
+  },
+  {
+    type: 'text',
+    category: 'text',
+    description: 'Single-line text input (alias for short_text)',
+    muiComponent: 'TextField',
+    example: { path: 'title', label: 'Title', type: 'text', included: true },
+  },
+  {
+    type: 'long_text',
+    category: 'text',
+    description: 'Multi-line text input (textarea)',
+    muiComponent: 'TextField (multiline)',
+    example: { path: 'description', label: 'Description', type: 'long_text', included: true },
+  },
+  {
+    type: 'textarea',
+    category: 'text',
+    description: 'Multi-line text input (alias for long_text)',
+    muiComponent: 'TextField (multiline)',
+    example: { path: 'notes', label: 'Notes', type: 'textarea', included: true },
+  },
+  {
+    type: 'paragraph',
+    category: 'text',
+    description: 'Multi-line text for longer content',
+    muiComponent: 'TextField (multiline)',
+    example: { path: 'bio', label: 'Biography', type: 'paragraph', included: true },
+  },
+  // Contact fields
+  {
+    type: 'email',
+    category: 'contact',
+    description: 'Email input with built-in validation',
+    muiComponent: 'TextField (type=email)',
+    example: { path: 'email', label: 'Email Address', type: 'email', included: true, required: true },
+  },
+  {
+    type: 'url',
+    category: 'contact',
+    description: 'URL input with validation',
+    muiComponent: 'TextField (type=url)',
+    example: { path: 'website', label: 'Website', type: 'url', included: true },
+  },
+  {
+    type: 'phone',
+    category: 'contact',
+    description: 'Phone number input',
+    muiComponent: 'TextField (type=tel)',
+    example: { path: 'phone', label: 'Phone Number', type: 'phone', included: true },
+  },
+  // Number fields
+  {
+    type: 'number',
+    category: 'number',
+    description: 'Numeric input field',
+    muiComponent: 'TextField (type=number)',
+    example: { path: 'age', label: 'Age', type: 'number', included: true, validation: { min: 0, max: 150 } },
+  },
+  {
+    type: 'scale',
+    category: 'number',
+    description: 'Number input displayed as scale/slider',
+    muiComponent: 'Slider',
+    example: { path: 'priority', label: 'Priority', type: 'scale', included: true, validation: { min: 1, max: 10 } },
+  },
+  {
+    type: 'slider',
+    category: 'number',
+    description: 'Slider input for numeric ranges',
+    muiComponent: 'Slider',
+    example: { path: 'volume', label: 'Volume', type: 'slider', included: true, validation: { min: 0, max: 100 } },
+  },
+  // Selection fields
+  {
+    type: 'dropdown',
+    category: 'selection',
+    description: 'Single-select dropdown menu',
+    muiComponent: 'Select',
+    example: {
+      path: 'country',
+      label: 'Country',
+      type: 'dropdown',
+      included: true,
+      options: [
+        { label: 'United States', value: 'us' },
+        { label: 'Canada', value: 'ca' },
+        { label: 'United Kingdom', value: 'uk' },
+      ],
+    },
+  },
+  {
+    type: 'select',
+    category: 'selection',
+    description: 'Single-select dropdown (alias for dropdown)',
+    muiComponent: 'Select',
+    example: {
+      path: 'status',
+      label: 'Status',
+      type: 'select',
+      included: true,
+      options: [
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+      ],
+    },
+  },
+  {
+    type: 'multiple_choice',
+    category: 'selection',
+    description: 'Radio button group for single selection',
+    muiComponent: 'RadioGroup',
+    example: {
+      path: 'gender',
+      label: 'Gender',
+      type: 'multiple_choice',
+      included: true,
+      options: [
+        { label: 'Male', value: 'male' },
+        { label: 'Female', value: 'female' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+  },
+  {
+    type: 'radio',
+    category: 'selection',
+    description: 'Radio buttons (alias for multiple_choice)',
+    muiComponent: 'RadioGroup',
+    example: {
+      path: 'plan',
+      label: 'Plan',
+      type: 'radio',
+      included: true,
+      options: [
+        { label: 'Free', value: 'free' },
+        { label: 'Pro', value: 'pro' },
+        { label: 'Enterprise', value: 'enterprise' },
+      ],
+    },
+  },
+  // Multi-select fields
+  {
+    type: 'checkboxes',
+    category: 'multiselect',
+    description: 'Checkbox group for multiple selection',
+    muiComponent: 'FormGroup with Checkboxes',
+    example: {
+      path: 'interests',
+      label: 'Interests',
+      type: 'checkboxes',
+      included: true,
+      options: [
+        { label: 'Technology', value: 'tech' },
+        { label: 'Sports', value: 'sports' },
+        { label: 'Music', value: 'music' },
+      ],
+    },
+  },
+  {
+    type: 'checkbox',
+    category: 'multiselect',
+    description: 'Single checkbox or checkbox group',
+    muiComponent: 'Checkbox or FormGroup',
+    example: { path: 'acceptTerms', label: 'I accept the terms and conditions', type: 'checkbox', included: true, required: true },
+  },
+  {
+    type: 'checkbox-group',
+    category: 'multiselect',
+    description: 'Checkbox group (alias for checkboxes)',
+    muiComponent: 'FormGroup with Checkboxes',
+    example: {
+      path: 'features',
+      label: 'Features',
+      type: 'checkbox-group',
+      included: true,
+      options: [
+        { label: 'Feature A', value: 'a' },
+        { label: 'Feature B', value: 'b' },
+      ],
+    },
+  },
+  // Boolean fields
+  {
+    type: 'yes_no',
+    category: 'boolean',
+    description: 'Yes/No selection',
+    muiComponent: 'RadioGroup or Switch',
+    example: { path: 'isActive', label: 'Is Active?', type: 'yes_no', included: true },
+  },
+  {
+    type: 'boolean',
+    category: 'boolean',
+    description: 'Boolean toggle (true/false)',
+    muiComponent: 'Switch or Checkbox',
+    example: { path: 'enabled', label: 'Enabled', type: 'boolean', included: true },
+  },
+  {
+    type: 'switch',
+    category: 'boolean',
+    description: 'Toggle switch',
+    muiComponent: 'Switch',
+    example: { path: 'notifications', label: 'Enable Notifications', type: 'switch', included: true },
+  },
+  // Rating fields
+  {
+    type: 'rating',
+    category: 'rating',
+    description: 'Star rating input (1-5 by default)',
+    muiComponent: 'Rating',
+    example: { path: 'rating', label: 'Rating', type: 'rating', included: true },
+  },
+  {
+    type: 'nps',
+    category: 'rating',
+    description: 'Net Promoter Score (0-10)',
+    muiComponent: 'Custom NPS component',
+    example: { path: 'nps', label: 'How likely are you to recommend us?', type: 'nps', included: true },
+  },
+  // Date/Time fields
+  {
+    type: 'date',
+    category: 'datetime',
+    description: 'Date picker',
+    muiComponent: 'DatePicker',
+    example: { path: 'birthDate', label: 'Date of Birth', type: 'date', included: true },
+  },
+  {
+    type: 'time',
+    category: 'datetime',
+    description: 'Time picker',
+    muiComponent: 'TimePicker',
+    example: { path: 'startTime', label: 'Start Time', type: 'time', included: true },
+  },
+  {
+    type: 'datetime',
+    category: 'datetime',
+    description: 'Combined date and time picker',
+    muiComponent: 'DateTimePicker',
+    example: { path: 'appointmentDateTime', label: 'Appointment', type: 'datetime', included: true },
+  },
+  // Advanced fields
+  {
+    type: 'autocomplete',
+    category: 'advanced',
+    description: 'Searchable dropdown with autocomplete',
+    muiComponent: 'Autocomplete',
+    example: {
+      path: 'city',
+      label: 'City',
+      type: 'autocomplete',
+      included: true,
+      options: [
+        { label: 'New York', value: 'nyc' },
+        { label: 'Los Angeles', value: 'la' },
+        { label: 'Chicago', value: 'chi' },
+      ],
+    },
+  },
+  {
+    type: 'tags',
+    category: 'advanced',
+    description: 'Free-form tag input',
+    muiComponent: 'Autocomplete (freeSolo)',
+    example: { path: 'tags', label: 'Tags', type: 'tags', included: true },
+  },
+  // Layout fields
+  {
+    type: 'section-header',
+    category: 'layout',
+    description: 'Section header for organizing form',
+    muiComponent: 'Typography',
+    example: {
+      path: 'personalInfoHeader',
+      label: 'Personal Information',
+      type: 'section-header',
+      included: true,
+      layout: { type: 'section-header', title: 'Personal Information', subtitle: 'Please fill in your details' },
+    },
+  },
+  {
+    type: 'description',
+    category: 'layout',
+    description: 'Informational text block',
+    muiComponent: 'Typography',
+    example: {
+      path: 'infoText',
+      label: 'Info',
+      type: 'description',
+      included: true,
+      layout: { type: 'description', content: 'Please review the information carefully before submitting.' },
+    },
+  },
+  {
+    type: 'divider',
+    category: 'layout',
+    description: 'Horizontal divider line',
+    muiComponent: 'Divider',
+    example: { path: 'divider1', label: '', type: 'divider', included: true, layout: { type: 'divider' } },
+  },
+  {
+    type: 'spacer',
+    category: 'layout',
+    description: 'Empty space for layout',
+    muiComponent: 'Box',
+    example: { path: 'spacer1', label: '', type: 'spacer', included: true, layout: { type: 'spacer', height: 24 } },
+  },
+  {
+    type: 'image',
+    category: 'layout',
+    description: 'Display an image in the form',
+    muiComponent: 'Box with img',
+    example: {
+      path: 'logo',
+      label: '',
+      type: 'image',
+      included: true,
+      layout: { type: 'image', imageUrl: 'https://example.com/logo.png', alignment: 'center' },
+    },
+  },
+];
+
+// Conditional logic operators
+export const OPERATORS = [
+  {
+    operator: 'equals',
+    label: 'equals',
+    description: 'Field value equals the specified value',
+    requiresValue: true,
+    example: { field: 'status', operator: 'equals', value: 'active' },
+  },
+  {
+    operator: 'notEquals',
+    label: 'not equals',
+    description: 'Field value does not equal the specified value',
+    requiresValue: true,
+    example: { field: 'status', operator: 'notEquals', value: 'inactive' },
+  },
+  {
+    operator: 'contains',
+    label: 'contains',
+    description: 'Field value contains the specified string',
+    requiresValue: true,
+    example: { field: 'email', operator: 'contains', value: '@company.com' },
+  },
+  {
+    operator: 'notContains',
+    label: 'does not contain',
+    description: 'Field value does not contain the specified string',
+    requiresValue: true,
+    example: { field: 'email', operator: 'notContains', value: 'spam' },
+  },
+  {
+    operator: 'greaterThan',
+    label: 'greater than',
+    description: 'Field value is greater than the specified number',
+    requiresValue: true,
+    example: { field: 'age', operator: 'greaterThan', value: 18 },
+  },
+  {
+    operator: 'lessThan',
+    label: 'less than',
+    description: 'Field value is less than the specified number',
+    requiresValue: true,
+    example: { field: 'quantity', operator: 'lessThan', value: 100 },
+  },
+  {
+    operator: 'isEmpty',
+    label: 'is empty',
+    description: 'Field has no value',
+    requiresValue: false,
+    example: { field: 'middleName', operator: 'isEmpty' },
+  },
+  {
+    operator: 'isNotEmpty',
+    label: 'is not empty',
+    description: 'Field has a value',
+    requiresValue: false,
+    example: { field: 'phone', operator: 'isNotEmpty' },
+  },
+  {
+    operator: 'isTrue',
+    label: 'is true',
+    description: 'Boolean field is true',
+    requiresValue: false,
+    example: { field: 'hasAccount', operator: 'isTrue' },
+  },
+  {
+    operator: 'isFalse',
+    label: 'is false',
+    description: 'Boolean field is false',
+    requiresValue: false,
+    example: { field: 'isGuest', operator: 'isFalse' },
+  },
+];
+
+// Formula functions for computed fields
+export const FORMULA_FUNCTIONS = [
+  // Math functions
+  {
+    name: 'sum',
+    category: 'math',
+    description: 'Sum of values',
+    syntax: 'sum(value1, value2, ...)',
+    example: 'sum(item1, item2, item3)',
+  },
+  {
+    name: 'avg',
+    category: 'math',
+    description: 'Average of values',
+    syntax: 'avg(value1, value2, ...)',
+    example: 'avg(score1, score2, score3)',
+  },
+  {
+    name: 'min',
+    category: 'math',
+    description: 'Minimum value',
+    syntax: 'min(value1, value2, ...)',
+    example: 'min(price1, price2)',
+  },
+  {
+    name: 'max',
+    category: 'math',
+    description: 'Maximum value',
+    syntax: 'max(value1, value2, ...)',
+    example: 'max(score1, score2)',
+  },
+  {
+    name: 'round',
+    category: 'math',
+    description: 'Round to nearest integer',
+    syntax: 'round(value)',
+    example: 'round(total)',
+  },
+  {
+    name: 'floor',
+    category: 'math',
+    description: 'Round down to integer',
+    syntax: 'floor(value)',
+    example: 'floor(price)',
+  },
+  {
+    name: 'ceil',
+    category: 'math',
+    description: 'Round up to integer',
+    syntax: 'ceil(value)',
+    example: 'ceil(quantity)',
+  },
+  {
+    name: 'abs',
+    category: 'math',
+    description: 'Absolute value',
+    syntax: 'abs(value)',
+    example: 'abs(difference)',
+  },
+  {
+    name: 'sqrt',
+    category: 'math',
+    description: 'Square root',
+    syntax: 'sqrt(value)',
+    example: 'sqrt(variance)',
+  },
+  {
+    name: 'pow',
+    category: 'math',
+    description: 'Power/exponent',
+    syntax: 'pow(base, exponent)',
+    example: 'pow(value, 2)',
+  },
+  // String functions
+  {
+    name: 'concat',
+    category: 'string',
+    description: 'Concatenate strings',
+    syntax: 'concat(str1, str2, ...)',
+    example: 'concat(firstName, " ", lastName)',
+  },
+  {
+    name: 'length',
+    category: 'string',
+    description: 'String length',
+    syntax: 'length(str)',
+    example: 'length(description)',
+  },
+  {
+    name: 'upper',
+    category: 'string',
+    description: 'Convert to uppercase',
+    syntax: 'upper(str)',
+    example: 'upper(code)',
+  },
+  {
+    name: 'lower',
+    category: 'string',
+    description: 'Convert to lowercase',
+    syntax: 'lower(str)',
+    example: 'lower(email)',
+  },
+  {
+    name: 'trim',
+    category: 'string',
+    description: 'Remove whitespace from both ends',
+    syntax: 'trim(str)',
+    example: 'trim(input)',
+  },
+  // Conditional functions
+  {
+    name: 'if',
+    category: 'conditional',
+    description: 'Conditional value',
+    syntax: 'if(condition, valueIfTrue, valueIfFalse)',
+    example: 'if(quantity > 10, price * 0.9, price)',
+  },
+  {
+    name: 'coalesce',
+    category: 'conditional',
+    description: 'First non-null value',
+    syntax: 'coalesce(value1, value2, ...)',
+    example: 'coalesce(preferredName, firstName)',
+  },
+  // Date functions
+  {
+    name: 'now',
+    category: 'date',
+    description: 'Current date and time',
+    syntax: 'now()',
+    example: 'now()',
+  },
+  {
+    name: 'today',
+    category: 'date',
+    description: 'Current date (no time)',
+    syntax: 'today()',
+    example: 'today()',
+  },
+  {
+    name: 'year',
+    category: 'date',
+    description: 'Extract year from date',
+    syntax: 'year(date)',
+    example: 'year(birthDate)',
+  },
+  {
+    name: 'month',
+    category: 'date',
+    description: 'Extract month from date (1-12)',
+    syntax: 'month(date)',
+    example: 'month(startDate)',
+  },
+  {
+    name: 'day',
+    category: 'date',
+    description: 'Extract day from date (1-31)',
+    syntax: 'day(date)',
+    example: 'day(eventDate)',
+  },
+];
+
+// Validation options
+export const VALIDATION_OPTIONS = [
+  {
+    property: 'required',
+    type: 'boolean',
+    description: 'Field must have a value',
+    fieldLevel: true,
+    example: { required: true },
+  },
+  {
+    property: 'min',
+    type: 'number',
+    description: 'Minimum numeric value',
+    validationLevel: true,
+    example: { validation: { min: 0 } },
+  },
+  {
+    property: 'max',
+    type: 'number',
+    description: 'Maximum numeric value',
+    validationLevel: true,
+    example: { validation: { max: 100 } },
+  },
+  {
+    property: 'minLength',
+    type: 'number',
+    description: 'Minimum string length',
+    validationLevel: true,
+    example: { validation: { minLength: 3 } },
+  },
+  {
+    property: 'maxLength',
+    type: 'number',
+    description: 'Maximum string length',
+    validationLevel: true,
+    example: { validation: { maxLength: 500 } },
+  },
+  {
+    property: 'pattern',
+    type: 'string (regex)',
+    description: 'Regular expression pattern to match',
+    validationLevel: true,
+    example: { validation: { pattern: '^[A-Z]{2}[0-9]{4}$', errorMessage: 'Must be 2 letters followed by 4 digits' } },
+  },
+  {
+    property: 'errorMessage',
+    type: 'string',
+    description: 'Custom error message to display',
+    validationLevel: true,
+    example: { validation: { errorMessage: 'Please enter a valid value' } },
+  },
+];
+
+// Theme options
+export const THEME_OPTIONS = {
+  colors: [
+    { property: 'primaryColor', description: 'Primary brand color', default: '#1976d2' },
+    { property: 'backgroundColor', description: 'Form background color', default: '#ffffff' },
+    { property: 'surfaceColor', description: 'Surface/card background color', default: '#f5f5f5' },
+    { property: 'textColor', description: 'Primary text color', default: '#212121' },
+    { property: 'textSecondaryColor', description: 'Secondary text color', default: '#757575' },
+    { property: 'errorColor', description: 'Error/validation color', default: '#d32f2f' },
+    { property: 'successColor', description: 'Success color', default: '#388e3c' },
+  ],
+  spacing: [
+    { value: 'compact', description: 'Reduced spacing between elements' },
+    { value: 'comfortable', description: 'Default spacing (recommended)', default: true },
+    { value: 'spacious', description: 'Increased spacing between elements' },
+  ],
+  inputStyle: [
+    { value: 'outlined', description: 'Outlined input style', default: true },
+    { value: 'filled', description: 'Filled input style with background' },
+    { value: 'standard', description: 'Minimal underline style' },
+  ],
+  borderRadius: [
+    { property: 'borderRadius', description: 'General border radius (px)', default: 4 },
+    { property: 'inputBorderRadius', description: 'Input field border radius (px)', default: 4 },
+    { property: 'buttonBorderRadius', description: 'Button border radius (px)', default: 4 },
+  ],
+  other: [
+    { property: 'fontFamily', description: 'Font family for form text', default: 'Roboto, sans-serif' },
+    { property: 'mode', values: ['light', 'dark'], description: 'Color mode', default: 'light' },
+    { property: 'preset', description: 'Theme preset name (if using presets)' },
+  ],
+};
+
+// Field width options
+export const FIELD_WIDTHS = [
+  { value: 'full', description: 'Full width (100%)', gridSize: 12 },
+  { value: 'half', description: 'Half width (50%)', gridSize: 6 },
+  { value: 'third', description: 'One third width (~33%)', gridSize: 4 },
+  { value: 'quarter', description: 'Quarter width (25%)', gridSize: 3 },
+];

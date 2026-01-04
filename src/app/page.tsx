@@ -32,6 +32,7 @@ import {
   RocketLaunch,
   School,
   Cloud,
+  SmartToy,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -201,6 +202,14 @@ const workflowsApiFeatures = [
   { title: 'Wait for Completion', description: 'Built-in polling with waitForExecution helper' },
   { title: 'Lifecycle Control', description: 'Activate, pause, archive workflows via API' },
   { title: 'TypeScript', description: 'Full type safety with comprehensive type exports' },
+];
+
+// MCP Server features
+const mcpServerFeatures = [
+  { title: '22 AI Tools', description: 'Form generation, workflow integration, app scaffolding & more' },
+  { title: 'Natural Language', description: 'Describe your form in plain English, get complete configs' },
+  { title: 'Best Practices', description: 'Built-in guidance for form design, security & workflows' },
+  { title: 'Full Stack Generation', description: 'Generate Next.js apps, API routes & MongoDB queries' },
 ];
 
 export default function LandingPage() {
@@ -1385,6 +1394,238 @@ console.log('Output:', result.execution.result?.output);`}
         </Container>
       </Box>
 
+      {/* MCP Server Section */}
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Chip
+                label="ai assistant"
+                icon={<SmartToy sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#FF6B35', 0.1),
+                  color: '#FF6B35',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#FF6B35' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Build Forms with
+                <br />AI Assistance
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Use <code style={{ color: '#FF6B35', background: alpha('#FF6B35', 0.1), padding: '2px 6px', borderRadius: 4 }}>@netpad/mcp-server</code> with
+                Claude, Cursor, or any MCP-compatible AI to generate forms, scaffold apps, and integrate workflows using natural language.
+              </Typography>
+
+              {/* Install command */}
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography sx={{ color: '#d4d4d4', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#FF6B35' }}>$</span> npx @netpad/mcp-server
+                </Typography>
+                <ContentCopy sx={{ color: alpha('#fff', 0.4), fontSize: 18, cursor: 'pointer', '&:hover': { color: '#fff' } }} />
+              </Paper>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://www.npmjs.com/package/@netpad/mcp-server"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Terminal />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #FF6B35 0%, #E85A24 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #FF7D4D 0%, #FF6B35 100%)',
+                    }
+                  }}
+                >
+                  View on npm
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-server"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<GitHub />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  Documentation
+                </Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                {mcpServerFeatures.map((feature, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* MCP Server Demo Section */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
+              {/* Code preview */}
+              <Paper
+                sx={{
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ bgcolor: '#FF6B35', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                    AI Form Generation
+                  </Typography>
+                  <Chip label="22 Tools" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto', maxHeight: 200 }}>
+{`// Claude Desktop config
+{
+  "mcpServers": {
+    "netpad-forms": {
+      "command": "npx",
+      "args": ["@netpad/mcp-server"]
+    }
+  }
+}
+
+// Then just ask Claude:
+"Create a lead capture form for a SaaS product
+ with company size dropdown and interest checkboxes"
+
+// Claude generates complete form config,
+// API routes, and MongoDB queries automatically`}
+                  </pre>
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ order: { xs: 1, md: 2 } }}>
+              <Chip
+                label="MCP Protocol"
+                icon={<SmartToy sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#FF6B35', 0.1),
+                  color: '#FF6B35',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#FF6B35' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Natural Language
+                <br />Form Development
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                The MCP server provides 22 specialized tools for AI assistants. Generate forms, validate configs,
+                scaffold Next.js apps, and get best practices — all through conversation.
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip label="Form Generation" size="small" sx={{ bgcolor: alpha('#FF6B35', 0.1), color: '#FF6B35' }} />
+                <Chip label="App Scaffolding" size="small" sx={{ bgcolor: alpha('#FF6B35', 0.1), color: '#FF6B35' }} />
+                <Chip label="Workflow Integration" size="small" sx={{ bgcolor: alpha('#FF6B35', 0.1), color: '#FF6B35' }} />
+                <Chip label="Debug & Validate" size="small" sx={{ bgcolor: alpha('#FF6B35', 0.1), color: '#FF6B35' }} />
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-server#available-tools-22-total"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<AutoAwesome />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #FF6B35 0%, #E85A24 100%)',
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #FF7D4D 0%, #FF6B35 100%)',
+                    }
+                  }}
+                >
+                  View All Tools
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/blob/main/packages/mcp-server/README.md#usage-with-claude-desktop"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Code />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  Setup Guide
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Developer Section */}
       <Box sx={{ py: { xs: 5, md: 6 } }}>
         <Container maxWidth="md">
@@ -1650,6 +1891,19 @@ console.log('Output:', result.execution.result?.output);`}
                 }}
               >
                 Terms
+              </Typography>
+              <Typography
+                component="a"
+                href="https://www.npmjs.com/package/@netpad/mcp-server"
+                target="_blank"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#FF6B35' }
+                }}
+              >
+                MCP Server
               </Typography>
               <Typography
                 component="a"

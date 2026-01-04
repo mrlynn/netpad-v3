@@ -1,6 +1,6 @@
 {
   "name": "@netpad/forms",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Render NetPad forms in your React applications. Build sophisticated multi-page wizards with conditional logic, computed fields, and MongoDB integration.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -46,7 +46,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mongodb/netpad.git",
+    "url": "https://github.com/mrlynn/netpad-v3.git",
     "directory": "packages/forms"
   },
   "peerDependencies": {

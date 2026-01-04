@@ -1,0 +1,62 @@
+{
+  "name": "@netpad/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server to help developers build form applications with @netpad/forms - 22 tools for form generation, workflow integration, and more",
+  "author": "MongoDB",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "netpad-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build && npm run typecheck",
+    "test": "echo 'No tests yet'"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "netpad",
+    "forms",
+    "form-builder",
+    "claude",
+    "ai",
+    "react",
+    "nextjs",
+    "mongodb",
+    "workflow",
+    "automation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrlynn/netpad-v3.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mrlynn/netpad-v3/issues"
+  },
+  "homepage": "https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-server#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
