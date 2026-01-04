@@ -158,6 +158,16 @@ export async function GET(
       );
     }
 
+    // Debug: Log what we're returning
+    console.log('[API forms/[formId]] Returning form dataSource:', {
+      formId: form.id,
+      hasDataSource: !!form.dataSource,
+      dataSource: form.dataSource,
+      vaultId: form.dataSource?.vaultId,
+      collection: form.dataSource?.collection,
+      organizationId: form.organizationId,
+    });
+
     return NextResponse.json({
       success: true,
       form,

@@ -83,6 +83,15 @@ export function FormSaveDialog({
         connectionString: connectionString || undefined
       };
 
+      // Debug: Log what we're sending
+      console.log('FormSaveDialog: Sending formConfig with dataSource:', {
+        hasDataSource: !!config.dataSource,
+        dataSource: config.dataSource,
+        vaultId: config.dataSource?.vaultId,
+        collection: config.dataSource?.collection,
+        organizationId: config.organizationId,
+      });
+
       // Save via API for server-side storage with publishing
       console.log('FormSaveDialog: About to fetch /api/forms-save');
       const response = await fetch('/api/forms-save', {

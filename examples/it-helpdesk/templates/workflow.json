@@ -1,0 +1,147 @@
+{
+  "name": "IT Ticket Routing",
+  "description": "Automated routing workflow for IT support tickets. Sends confirmation to requester, notifies IT team, and escalates critical tickets to Slack.",
+  "canvas": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "form-trigger",
+        "position": { "x": 100, "y": 200 },
+        "config": {
+          "event": "submission.created",
+          "formSlug": "it-support-request"
+        },
+        "label": "Form Submitted",
+        "enabled": true
+      },
+      {
+        "id": "email-requester",
+        "type": "email",
+        "position": { "x": 400, "y": 100 },
+        "config": {
+          "to": "{{email}}",
+          "fromName": "IT Support",
+          "subject": "✅ IT Support Request Received: {{subject}}",
+          "body": "Hi {{fullName}},\n\nWe've received your IT support request and a team member will review it shortly.\n\n**Ticket Details:**\n- Subject: {{subject}}\n- Category: {{issueCategory}}\n- Urgency: {{urgencyLevel}}\n\n**Your Description:**\n{{description}}\n\n**What happens next:**\n- Low/Medium urgency: Response within 24 hours\n- High urgency: Response within 4 hours\n- Critical: Immediate escalation\n\nIf this is truly urgent and you haven't heard back, call the IT Help Desk directly at ext. 4357.\n\nThanks,\nThe IT Team",
+          "bodyFormat": "markdown"
+        },
+        "label": "Requester Confirmation",
+        "notes": "Sends confirmation email to the person who submitted the ticket",
+        "enabled": true
+      },
+      {
+        "id": "email-it-team",
+        "type": "email",
+        "position": { "x": 400, "y": 300 },
+        "config": {
+          "to": "it-support@yourcompany.com",
+          "fromName": "IT Help Desk",
+          "subject": "[{{urgencyLevel}}] New Ticket: {{subject}} from {{fullName}}",
+          "body": "New IT support request submitted:\n\n**Reporter:** {{fullName}} ({{department}})\n**Contact:** {{email}} | {{phoneExtension}}\n**Preferred Contact:** {{preferredContactMethod}}\n\n**Issue Details:**\n- Category: {{issueCategory}}\n- Urgency: {{urgencyLevel}}\n- Subject: {{subject}}\n\n**Description:**\n{{description}}\n\n**Additional Context:**\n{{#if assetId}}Asset ID: {{assetId}}{{/if}}\n{{#if applicationName}}Application: {{applicationName}}{{/if}}\n{{#if networkLocation}}Location: {{networkLocation}}{{/if}}",
+          "bodyFormat": "markdown"
+        },
+        "label": "IT Team Notification",
+        "notes": "Notifies the IT support team about the new ticket",
+        "enabled": true
+      },
+      {
+        "id": "condition-critical",
+        "type": "condition",
+        "position": { "x": 400, "y": 500 },
+        "config": {
+          "conditions": [
+            {
+              "field": "urgencyLevel",
+              "operator": "equals",
+              "value": "critical"
+            }
+          ],
+          "logicType": "all"
+        },
+        "label": "Is Critical?",
+        "notes": "Routes critical tickets to additional escalation",
+        "enabled": true
+      },
+      {
+        "id": "slack-critical",
+        "type": "slack",
+        "position": { "x": 700, "y": 450 },
+        "config": {
+          "channel": "#it-critical-alerts",
+          "message": "🚨 CRITICAL IT TICKET from {{fullName}} ({{department}}): {{subject}} — {{description}}",
+          "messageFormat": "text"
+        },
+        "label": "Slack Alert",
+        "notes": "Sends immediate alert to Slack for critical tickets",
+        "enabled": true
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-trigger-to-requester",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "email-requester",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-it-team",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "email-it-team",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-condition",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "condition-critical",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-condition-to-slack",
+        "source": "condition-critical",
+        "sourceHandle": "yes",
+        "target": "slack-critical",
+        "targetHandle": "input",
+        "condition": {
+          "expression": "urgencyLevel === 'critical'",
+          "label": "Yes"
+        }
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "settings": {
+    "executionMode": "parallel",
+    "maxExecutionTime": 300000,
+    "retryPolicy": {
+      "maxRetries": 3,
+      "backoffMultiplier": 2,
+      "initialDelayMs": 1000
+    },
+    "errorHandling": "continue",
+    "timezone": "America/New_York"
+  },
+  "variables": [
+    {
+      "id": "var-it-email",
+      "name": "itTeamEmail",
+      "type": "string",
+      "defaultValue": "it-support@yourcompany.com",
+      "description": "IT team distribution email address"
+    },
+    {
+      "id": "var-slack-channel",
+      "name": "criticalSlackChannel",
+      "type": "string",
+      "defaultValue": "#it-critical-alerts",
+      "description": "Slack channel for critical ticket alerts"
+    }
+  ],
+  "tags": ["it-support", "helpdesk", "ticketing", "automation"]
+}

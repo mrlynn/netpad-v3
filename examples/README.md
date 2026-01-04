@@ -33,6 +33,27 @@ npm run dev
 # Open http://localhost:3001
 ```
 
+### [IT Help Desk](./it-helpdesk/)
+
+A complete internal IT support ticketing system demonstrating:
+
+- Category-based conditional fields (Hardware → Asset ID, Software → App Name, etc.)
+- Priority levels with visual urgency indicators
+- Section headers for organized form layout
+- Half-width field layouts for compact forms
+- MongoDB-ready document structure
+
+**Tech Stack:** Next.js 14, React 18, @netpad/forms, Material-UI
+
+```bash
+cd it-helpdesk
+npm install
+npm run dev
+# Open http://localhost:3003
+```
+
+Based on the tutorial: [Build Your Own IT Help Desk in 30 Minutes](../docs/internal/it-helpdesk-article.md)
+
 ## Building Your Own App with NetPad
 
 ### Step 1: Install the Package

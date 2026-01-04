@@ -1956,6 +1956,86 @@ export function QuestionTypeAttributeEditor({
               Dropdown Settings
             </Typography>
 
+            {/* Options Editor */}
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Options
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {(config.validation?.options || []).map((option, index) => {
+                  const optionLabel = typeof option === 'string' ? option : option.label;
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1,
+                        bgcolor: alpha('#000', 0.02),
+                        borderRadius: 1,
+                      }}
+                    >
+                      <DragIndicator
+                        sx={{ color: 'text.disabled', cursor: 'grab', fontSize: 18 }}
+                      />
+                      <TextField
+                        size="small"
+                        value={optionLabel}
+                        onChange={(e) => {
+                          const currentOptions = [...(config.validation?.options || [])];
+                          const newValue = e.target.value.toLowerCase().replace(/\s+/g, '_');
+                          currentOptions[index] = { label: e.target.value, value: newValue };
+                          updateValidation('options', currentOptions);
+                        }}
+                        placeholder="Option label"
+                        sx={{ flex: 1 }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const currentOptions = [...(config.validation?.options || [])];
+                          currentOptions.splice(index, 1);
+                          updateValidation('options', currentOptions);
+                        }}
+                        disabled={(config.validation?.options || []).length <= 1}
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
+              </Box>
+              <Box
+                onClick={() => {
+                  const currentOptions = [...(config.validation?.options || [])];
+                  const newIndex = currentOptions.length + 1;
+                  currentOptions.push({ label: `Option ${newIndex}`, value: `option_${newIndex}` });
+                  updateValidation('options', currentOptions);
+                }}
+                sx={{
+                  mt: 1,
+                  p: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  cursor: 'pointer',
+                  color: '#00ED64',
+                  borderRadius: 1,
+                  border: '1px dashed',
+                  borderColor: alpha('#00ED64', 0.3),
+                  bgcolor: alpha('#00ED64', 0.02),
+                  '&:hover': {
+                    bgcolor: alpha('#00ED64', 0.05),
+                  },
+                }}
+              >
+                <Add fontSize="small" />
+                <Typography variant="body2">Add option</Typography>
+              </Box>
+            </Box>
+
             <FormControlLabel
               control={
                 <Switch

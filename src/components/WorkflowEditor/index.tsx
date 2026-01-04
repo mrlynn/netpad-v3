@@ -37,11 +37,15 @@ import {
   History as LogsIcon,
   Publish as PublishIcon,
   FiberManualRecord as DotIcon,
+  MoreVert as MoreVertIcon,
+  FileDownload as FileDownloadIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
 
 import { WorkflowProvider, useWorkflow, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
+import { cleanWorkflowForExport } from '@/lib/templates/export';
 import { WorkflowEditorCanvas } from './WorkflowEditorCanvas';
 import { NodePalette } from './Panels/NodePalette';
 import { NodeConfigPanel } from './Panels/NodeConfigPanel';
@@ -192,6 +196,12 @@ function WorkflowEditorInner({
   // Publishing state
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // More menu state
+  const [moreMenuAnchor, setMoreMenuAnchor] = useState<HTMLElement | null>(null);
+
+  // Import input ref
+  const importInputRef = useRef<HTMLInputElement>(null);
+
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
     if (selectedNodeId) {
@@ -337,6 +347,85 @@ function WorkflowEditorInner({
   const hasUnpublishedChanges = workflow && (
     !workflow.publishedVersion || workflow.version > workflow.publishedVersion
   );
+
+  // Handle export workflow
+  const handleExportWorkflow = useCallback(() => {
+    if (!workflow) return;
+
+    // Clean the workflow for export (removes sensitive data)
+    const exportedWorkflow = cleanWorkflowForExport(workflow);
+
+    // Create and download the file
+    const blob = new Blob([JSON.stringify(exportedWorkflow, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(workflow.name || 'workflow').toLowerCase().replace(/\s+/g, '-')}-definition.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setMoreMenuAnchor(null);
+    setSnackbar({
+      open: true,
+      message: 'Workflow definition exported',
+      severity: 'success',
+    });
+  }, [workflow]);
+
+  // Handle import workflow
+  const handleImportWorkflow = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const imported = JSON.parse(content);
+
+        // Validate basic structure
+        if (!imported.canvas || !imported.canvas.nodes || !Array.isArray(imported.canvas.nodes)) {
+          throw new Error('Invalid workflow definition: missing canvas.nodes array');
+        }
+
+        // Import the workflow nodes and edges
+        if (imported.canvas.nodes) {
+          imported.canvas.nodes.forEach((node: WorkflowNode) => {
+            // Generate new IDs to avoid conflicts
+            const newNode: WorkflowNode = {
+              ...node,
+              id: `${node.type}_${nanoid(8)}`,
+            };
+            addNode(newNode);
+          });
+        }
+
+        // Update workflow settings if present
+        if (imported.settings) {
+          updateSettings(imported.settings);
+        }
+
+        setSnackbar({
+          open: true,
+          message: `Imported ${imported.canvas.nodes.length} nodes from workflow definition`,
+          severity: 'success',
+        });
+      } catch (err: any) {
+        setSnackbar({
+          open: true,
+          message: `Failed to import workflow: ${err.message}`,
+          severity: 'error',
+        });
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input so same file can be selected again
+    event.target.value = '';
+    setMoreMenuAnchor(null);
+  }, [addNode, updateSettings]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -527,6 +616,15 @@ function WorkflowEditorInner({
               <LogsIcon />
             </IconButton>
           </Tooltip>
+
+          <Tooltip title="More options">
+            <IconButton
+              size="small"
+              onClick={(e) => setMoreMenuAnchor(e.currentTarget)}
+            >
+              <MoreVertIcon />
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </Paper>
 
@@ -620,6 +718,35 @@ function WorkflowEditorInner({
           </MenuItem>
         )}
       </Menu>
+
+      {/* More Menu */}
+      <Menu
+        anchorEl={moreMenuAnchor}
+        open={Boolean(moreMenuAnchor)}
+        onClose={() => setMoreMenuAnchor(null)}
+      >
+        <MenuItem onClick={handleExportWorkflow} disabled={!workflow}>
+          <ListItemIcon>
+            <FileDownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Export Workflow Definition</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => importInputRef.current?.click()}>
+          <ListItemIcon>
+            <FileUploadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Import Workflow Definition</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Hidden file input for importing workflow definitions */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={handleImportWorkflow}
+      />
 
       {/* Error display */}
       {error && (

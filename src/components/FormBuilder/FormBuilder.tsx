@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -18,7 +18,7 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
-import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility } from '@mui/icons-material';
+import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility, FileDownload, FileUpload } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
@@ -38,6 +38,7 @@ import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, F
 import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
 import { useChat } from '@/contexts/ChatContext';
+import { cleanFormForExport } from '@/lib/templates/export';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -93,6 +94,9 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [newFormDialogOpen, setNewFormDialogOpen] = useState(false);
   const [pendingField, setPendingField] = useState<FieldConfig | null>(null);
   const [pendingTemplate, setPendingTemplate] = useState<{ name: string; fields: FieldConfig[] } | null>(null);
+
+  // File input ref for importing forms
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // Get selected field config
   const selectedFieldConfig = selectedFieldPath
@@ -183,6 +187,103 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     }
   }, [currentFormId]);
 
+  // Handle export form definition
+  const handleExportForm = useCallback(() => {
+    if (fieldConfigs.length === 0) return;
+
+    // Build the current form configuration
+    const formConfig = {
+      id: currentFormId,
+      name: currentFormName || 'Untitled Form',
+      description: currentFormDescription,
+      slug: currentFormSlug,
+      fieldConfigs,
+      variables,
+      multiPageConfig,
+      lifecycleConfig,
+      theme: themeConfig,
+      formType,
+      searchConfig,
+      botProtection,
+      draftSettings,
+      hooksConfig,
+    };
+
+    // Clean the form for export (removes sensitive data)
+    const exportedForm = cleanFormForExport(formConfig as any);
+
+    // Create and download the file
+    const blob = new Blob([JSON.stringify(exportedForm, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(currentFormName || 'form').toLowerCase().replace(/\s+/g, '-')}-definition.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setMoreMenuAnchor(null);
+  }, [fieldConfigs, currentFormId, currentFormName, currentFormDescription, currentFormSlug, variables, multiPageConfig, lifecycleConfig, themeConfig, formType, searchConfig, botProtection, draftSettings, hooksConfig]);
+
+  // Handle import form definition
+  const handleImportForm = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const imported = JSON.parse(content);
+
+        // Validate basic structure
+        if (!imported.fieldConfigs || !Array.isArray(imported.fieldConfigs)) {
+          throw new Error('Invalid form configuration: missing fieldConfigs array');
+        }
+
+        // Apply the imported configuration
+        setFieldConfigs(imported.fieldConfigs);
+        if (imported.name) setCurrentFormName(imported.name);
+        if (imported.description) setCurrentFormDescription(imported.description);
+        if (imported.variables) setVariables(imported.variables);
+        if (imported.multiPageConfig) setMultiPageConfig(imported.multiPageConfig);
+        if (imported.lifecycleConfig) setLifecycleConfig(imported.lifecycleConfig);
+        if (imported.theme) setThemeConfig(imported.theme);
+        if (imported.formType) setFormType(imported.formType);
+        if (imported.searchConfig) setSearchConfig(imported.searchConfig);
+        if (imported.botProtection) setBotProtection(imported.botProtection);
+        if (imported.draftSettings) setDraftSettings(imported.draftSettings);
+        if (imported.hooksConfig) setHooksConfig(imported.hooksConfig);
+
+        // Clear the current form ID so this becomes a new form
+        setCurrentFormId(undefined);
+        setCurrentFormSlug(undefined);
+        setCurrentFormIsPublished(false);
+
+        // Show success notification
+        setError(null);
+        setNotification({
+          open: true,
+          savedForm: {
+            id: 'imported',
+            name: imported.name || 'Imported Form',
+            slug: '',
+            isPublished: false,
+            version: 1,
+          },
+        });
+      } catch (err: any) {
+        setError(`Failed to import form: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+    setMoreMenuAnchor(null);
+  }, []);
+
   // Keyboard shortcuts for power users
   const handleKeyboardShortcuts = useCallback((e: KeyboardEvent) => {
     // Don't trigger if user is typing in an input
@@ -263,6 +364,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
 
       if (data.success && data.form) {
         const config = data.form;
+        console.log('[FormBuilder] Loading form with dataSource:', {
+          formId: config.id,
+          hasDataSource: !!config.dataSource,
+          dataSource: config.dataSource,
+          vaultId: config.dataSource?.vaultId,
+          collection: config.dataSource?.collection,
+          organizationId: config.organizationId,
+        });
         setFieldConfigs(config.fieldConfigs || []);
         setVariables(config.variables || []);
         setMultiPageConfig(config.multiPage);
@@ -903,6 +1012,18 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               </MenuItem>
             )}
             <Divider sx={{ my: 0.5 }} />
+            <MenuItem
+              onClick={handleExportForm}
+              disabled={fieldConfigs.length === 0}
+            >
+              <ListItemIcon><FileDownload fontSize="small" /></ListItemIcon>
+              <ListItemText>Export Form Definition</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => { importInputRef.current?.click(); setMoreMenuAnchor(null); }}>
+              <ListItemIcon><FileUpload fontSize="small" /></ListItemIcon>
+              <ListItemText>Import Form Definition</ListItemText>
+            </MenuItem>
+            <Divider sx={{ my: 0.5 }} />
             <MenuItem onClick={() => { setShortcutsHelpOpen(true); setMoreMenuAnchor(null); }}>
               <ListItemIcon><Keyboard fontSize="small" /></ListItemIcon>
               <ListItemText>Keyboard Shortcuts</ListItemText>
@@ -1268,6 +1389,15 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
       <KeyboardShortcutsHelp
         open={shortcutsHelpOpen}
         onClose={() => setShortcutsHelpOpen(false)}
+      />
+
+      {/* Hidden file input for importing form definitions */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={handleImportForm}
       />
     </Box>
   );

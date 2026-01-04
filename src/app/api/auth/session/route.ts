@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import { getSession, destroySession } from '@/lib/auth/session';
 import { findUserById as findAuthUserById } from '@/lib/auth/db';
 import { findUserById as findPlatformUserById } from '@/lib/platform/users';
@@ -24,8 +25,9 @@ export async function GET(req: NextRequest) {
       if (platformUser?.authId) {
         // New flow: get auth user via authId link
         authUser = await findAuthUserById(platformUser.authId);
-      } else {
+      } else if (ObjectId.isValid(session.userId)) {
         // Fallback for legacy sessions: try using session.userId as auth _id
+        // Only attempt this if session.userId is a valid ObjectId format
         authUser = await findAuthUserById(session.userId);
       }
 

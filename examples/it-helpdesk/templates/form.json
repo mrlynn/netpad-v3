@@ -1,0 +1,253 @@
+{
+  "name": "IT Support Request",
+  "description": "Submit a request for IT support",
+  "fieldConfigs": [
+    {
+      "path": "_section_reporter",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Reporter Information",
+        "subtitle": "Tell us who you are so we can reach you"
+      }
+    },
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "short_text",
+      "included": true,
+      "required": true,
+      "fieldWidth": "half",
+      "placeholder": "Enter your full name"
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true,
+      "fieldWidth": "half",
+      "placeholder": "your.email@company.com"
+    },
+    {
+      "path": "department",
+      "label": "Department",
+      "type": "dropdown",
+      "included": true,
+      "required": true,
+      "fieldWidth": "half",
+      "validation": {
+        "options": [
+          { "label": "Engineering", "value": "engineering" },
+          { "label": "Sales", "value": "sales" },
+          { "label": "Marketing", "value": "marketing" },
+          { "label": "Finance", "value": "finance" },
+          { "label": "Human Resources", "value": "hr" },
+          { "label": "Operations", "value": "operations" },
+          { "label": "Executive", "value": "executive" }
+        ]
+      }
+    },
+    {
+      "path": "phoneExtension",
+      "label": "Phone Extension",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "e.g., 4357"
+    },
+    {
+      "path": "_section_issue",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Issue Details",
+        "subtitle": "Please describe your IT issue"
+      }
+    },
+    {
+      "path": "issueCategory",
+      "label": "Issue Category",
+      "type": "dropdown",
+      "included": true,
+      "required": true,
+      "validation": {
+        "options": [
+          { "label": "Hardware", "value": "hardware" },
+          { "label": "Software", "value": "software" },
+          { "label": "Network / Connectivity", "value": "network" },
+          { "label": "Access & Permissions", "value": "access" },
+          { "label": "Other", "value": "other" }
+        ]
+      }
+    },
+    {
+      "path": "urgencyLevel",
+      "label": "Urgency Level",
+      "type": "radio",
+      "included": true,
+      "required": true,
+      "validation": {
+        "options": [
+          { "label": "🟢 Low — Can wait a few days", "value": "low" },
+          { "label": "🟡 Medium — Need help today", "value": "medium" },
+          { "label": "🔴 High — Blocking my work", "value": "high" },
+          { "label": "🚨 Critical — System down / Security issue", "value": "critical" }
+        ]
+      }
+    },
+    {
+      "path": "subject",
+      "label": "Subject",
+      "type": "short_text",
+      "included": true,
+      "required": true,
+      "placeholder": "Brief summary of the issue"
+    },
+    {
+      "path": "description",
+      "label": "Description",
+      "type": "long_text",
+      "included": true,
+      "required": true,
+      "placeholder": "Please provide details about your issue...",
+      "helpText": "Include any error messages, when the issue started, and what you've already tried.",
+      "validation": {
+        "minLength": 20,
+        "errorMessage": "Please provide at least 20 characters of detail"
+      }
+    },
+    {
+      "path": "assetId",
+      "label": "Asset ID / Serial Number",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "helpText": "Found on the sticker on your device",
+      "placeholder": "e.g., ASSET-12345 or SN-ABC123",
+      "conditionalLogic": {
+        "action": "show",
+        "logicType": "all",
+        "conditions": [
+          { "field": "issueCategory", "operator": "equals", "value": "hardware" }
+        ]
+      }
+    },
+    {
+      "path": "applicationName",
+      "label": "Application Name",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "placeholder": "e.g., Microsoft Excel, Salesforce, Jira",
+      "conditionalLogic": {
+        "action": "show",
+        "logicType": "all",
+        "conditions": [
+          { "field": "issueCategory", "operator": "equals", "value": "software" }
+        ]
+      }
+    },
+    {
+      "path": "networkLocation",
+      "label": "Network Location",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "validation": {
+        "options": [
+          { "label": "Office - Floor 1", "value": "floor1" },
+          { "label": "Office - Floor 2", "value": "floor2" },
+          { "label": "Office - Floor 3", "value": "floor3" },
+          { "label": "Remote / VPN", "value": "remote" },
+          { "label": "Other", "value": "other" }
+        ]
+      },
+      "conditionalLogic": {
+        "action": "show",
+        "logicType": "all",
+        "conditions": [
+          { "field": "issueCategory", "operator": "equals", "value": "network" }
+        ]
+      }
+    },
+    {
+      "path": "systemAccess",
+      "label": "System / Resource Needing Access",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "placeholder": "e.g., GitHub, AWS Console, SharePoint",
+      "conditionalLogic": {
+        "action": "show",
+        "logicType": "all",
+        "conditions": [
+          { "field": "issueCategory", "operator": "equals", "value": "access" }
+        ]
+      }
+    },
+    {
+      "path": "_section_contact",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Contact Preferences"
+      }
+    },
+    {
+      "path": "preferredContactMethod",
+      "label": "Preferred Contact Method",
+      "type": "radio",
+      "included": true,
+      "required": true,
+      "validation": {
+        "options": [
+          { "label": "Email", "value": "email" },
+          { "label": "Phone", "value": "phone" },
+          { "label": "Slack / Teams", "value": "chat" }
+        ]
+      }
+    },
+    {
+      "path": "bestTimeToReach",
+      "label": "Best Time to Reach You",
+      "type": "checkboxes",
+      "included": true,
+      "required": false,
+      "validation": {
+        "options": [
+          { "label": "Morning (8am - 12pm)", "value": "morning" },
+          { "label": "Afternoon (12pm - 5pm)", "value": "afternoon" },
+          { "label": "Anytime", "value": "anytime" }
+        ]
+      }
+    },
+    {
+      "path": "additionalNotes",
+      "label": "Additional Notes",
+      "type": "long_text",
+      "included": true,
+      "required": false,
+      "placeholder": "Any other context that might help us resolve your issue faster..."
+    }
+  ],
+  "submitButtonText": "Submit Ticket",
+  "successMessage": "Thank you! Your ticket has been submitted. You'll receive a confirmation email shortly with your ticket number.",
+  "theme": {
+    "primaryColor": "#1976d2",
+    "spacing": "comfortable",
+    "inputStyle": "outlined",
+    "borderRadius": 8,
+    "mode": "light"
+  }
+}

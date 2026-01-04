@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
       pageBackgroundColor: formConfig?.theme?.pageBackgroundColor,
       pageBackgroundGradient: formConfig?.theme?.pageBackgroundGradient,
     });
+    console.log('[API forms-save] Received formConfig dataSource:', {
+      hasDataSource: !!formConfig?.dataSource,
+      dataSource: formConfig?.dataSource,
+      vaultId: formConfig?.dataSource?.vaultId,
+      collection: formConfig?.dataSource?.collection,
+      organizationId: formConfig?.organizationId,
+    });
 
     if (!formConfig || !formConfig.name) {
       return NextResponse.json(
@@ -104,14 +111,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Build savedForm, explicitly handling dataSource and organizationId to preserve them
+      const { dataSource: formDataSource, organizationId: formOrgId, ...restFormConfig } = formConfig;
       savedForm = {
         ...existing,
-        ...formConfig,
+        ...restFormConfig,
         id: existing.id,
         slug: existing.slug || generateSlug(formConfig.name),
         updatedAt: now,
         isPublished: publish ? true : existing.isPublished,
         publishedAt: publish && !existing.publishedAt ? now : existing.publishedAt,
+        // Explicitly preserve dataSource and organizationId - use formConfig values if provided, otherwise keep existing
+        dataSource: formDataSource !== undefined ? formDataSource : existing.dataSource,
+        organizationId: formOrgId !== undefined ? formOrgId : existing.organizationId,
       };
     } else {
       // Create new form
@@ -135,6 +147,13 @@ export async function POST(request: NextRequest) {
       theme: savedForm.theme,
       pageBackgroundColor: savedForm.theme?.pageBackgroundColor,
       pageBackgroundGradient: savedForm.theme?.pageBackgroundGradient,
+    });
+    console.log('[API forms-save] Saving form with dataSource:', {
+      hasDataSource: !!savedForm.dataSource,
+      dataSource: savedForm.dataSource,
+      vaultId: savedForm.dataSource?.vaultId,
+      collection: savedForm.dataSource?.collection,
+      organizationId: savedForm.organizationId,
     });
 
     // Save to file storage
