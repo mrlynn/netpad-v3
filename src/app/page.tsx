@@ -239,7 +239,7 @@ export default function LandingPage() {
               }}
             >
               <Image
-                src="/logo-250x250-trans.png"
+                src="/logo-300px.png"
                 alt="NetPad"
                 width={100}
                 height={100}
