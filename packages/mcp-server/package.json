@@ -1,6 +1,6 @@
 {
   "name": "@netpad/mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server to help developers build form applications with @netpad/forms - 22 tools for form generation, workflow integration, and more",
   "author": "MongoDB",
   "license": "Apache-2.0",

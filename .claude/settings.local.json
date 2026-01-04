@@ -24,7 +24,11 @@
       "Bash(npx @modelcontextprotocol/inspector node:*)",
       "Bash(node dist/index.js:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(npm pack:*)"
+      "Bash(npm pack:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git push:*)"
     ]
   }
 }
