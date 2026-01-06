@@ -18,11 +18,6 @@
       "schedule": "* * * * *"
     }
   ],
-  "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "SESSION_SECRET": "@session_secret",
-    "VAULT_ENCRYPTION_KEY": "@vault_encryption_key"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
