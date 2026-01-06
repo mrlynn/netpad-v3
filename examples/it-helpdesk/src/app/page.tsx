@@ -18,6 +18,7 @@ import {
   Category,
   NotificationsActive,
   CheckCircle,
+  Search,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
@@ -45,6 +46,11 @@ export default function HomePage() {
       title: 'Complete Tracking',
       description: 'Every submission stored in MongoDB for easy search and reporting',
     },
+    {
+      icon: <Search color="primary" />,
+      title: 'Smart Search',
+      description: 'Search tickets with smart dropdowns showing actual data values and counts',
+    },
   ];
 
   return (
@@ -67,29 +73,49 @@ export default function HomePage() {
           <Typography variant="h5" sx={{ mb: 4, opacity: 0.9 }}>
             A complete internal IT support ticketing system built with NetPad Forms
           </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={() => router.push('/submit-ticket')}
-            sx={{
-              bgcolor: 'white',
-              color: 'primary.main',
-              px: 4,
-              py: 1.5,
-              fontSize: '1.1rem',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)',
-              },
-            }}
-          >
-            Submit a Ticket
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={() => router.push('/submit-ticket')}
+              sx={{
+                bgcolor: 'white',
+                color: 'primary.main',
+                px: 4,
+                py: 1.5,
+                fontSize: '1.1rem',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.9)',
+                },
+              }}
+            >
+              Submit a Ticket
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={() => router.push('/search-tickets')}
+              sx={{
+                borderColor: 'white',
+                color: 'white',
+                px: 4,
+                py: 1.5,
+                fontSize: '1.1rem',
+                '&:hover': {
+                  borderColor: 'rgba(255,255,255,0.9)',
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                },
+              }}
+            >
+              Search Tickets
+            </Button>
+          </Box>
         </Box>
 
         {/* Features Grid */}
         <Grid container spacing={3} sx={{ mb: 8 }}>
           {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
               <Paper
                 elevation={3}
                 sx={{

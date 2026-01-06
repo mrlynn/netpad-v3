@@ -19,6 +19,14 @@ Based on the article: [Build Your Own IT Help Desk in 30 Minutes](../../docs/int
 - **Contact Preferences** — Preferred contact method and availability
 - **Validation** — Required fields and minimum character requirements
 
+### Search Capabilities
+
+- **Smart Dropdowns** — Filter by urgency, category, or department with counts from actual data
+- **Text Search** — Search ticket subjects and descriptions
+- **Reporter Search** — Find tickets by reporter name or email
+- **Date Range Filtering** — Filter tickets by submission date
+- **Results Display** — View search results in a card layout with ticket details
+
 ### Technical Highlights
 
 - Conditional logic with `show`/`hide` actions
@@ -37,6 +45,13 @@ npm run dev
 
 Open [http://localhost:3003](http://localhost:3003) to see the demo.
 
+### Pages
+
+- **Home** (`/`) - Landing page with feature overview
+- **Submit Ticket** (`/submit-ticket`) - IT support request form
+- **Search Tickets** (`/search-tickets`) - Search and filter tickets with smart dropdowns
+- **Success** (`/success`) - Confirmation page after ticket submission
+
 ## Project Structure
 
 ```
@@ -46,11 +61,15 @@ it-helpdesk/
 │   ├── page.tsx            # Landing page
 │   ├── submit-ticket/
 │   │   └── page.tsx        # Main ticket form (imports from templates/form.ts)
+│   ├── search-tickets/
+│   │   └── page.tsx        # Ticket search form (imports from templates/search-form.ts)
 │   └── success/
 │       └── page.tsx        # Confirmation page
 ├── templates/
 │   ├── form.ts             # TypeScript form config with @netpad/forms types
 │   ├── form.json           # Portable JSON form definition (for importing)
+│   ├── search-form.ts      # TypeScript search form config
+│   ├── search-form.json    # Portable JSON search form definition
 │   ├── workflow.ts         # TypeScript workflow config
 │   ├── workflow.json       # Portable JSON workflow definition (for importing)
 │   └── manifest.json       # Template bundle metadata
