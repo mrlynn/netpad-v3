@@ -14,7 +14,6 @@ import {
   Chip,
   IconButton,
   alpha,
-  Skeleton,
   TextField,
   InputAdornment,
   Menu,
@@ -49,6 +48,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface SavedForm {
   id: string;
@@ -434,17 +434,16 @@ export default function MyFormsPage() {
         />
 
         {loading ? (
-          <Grid container spacing={3}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid item xs={12} sm={6} md={4} key={i}>
-                <Skeleton
-                  variant="rounded"
-                  height={200}
-                  sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05) }}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 300,
+            }}
+          >
+            <NetPadLoader size="large" message="Loading forms..." />
+          </Box>
         ) : filteredForms.length === 0 ? (
           <Paper
             sx={{

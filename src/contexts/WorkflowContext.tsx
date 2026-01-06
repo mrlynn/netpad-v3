@@ -52,6 +52,7 @@ interface WorkflowEditorState {
 
   // Actions - Canvas
   setCanvas: (canvas: WorkflowCanvas) => void;
+  clearCanvas: () => void;
 
   // Actions - Nodes
   addNode: (node: WorkflowNode) => void;
@@ -126,6 +127,23 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
         workflow: state.workflow ? { ...state.workflow, canvas } : null,
         isDirty: true,
       })),
+
+      clearCanvas: () => set((state) => {
+        if (!state.workflow) return state;
+        return {
+          workflow: {
+            ...state.workflow,
+            canvas: {
+              ...state.workflow.canvas,
+              nodes: [],
+              edges: [],
+            },
+          },
+          isDirty: true,
+          selectedNodeId: null,
+          selectedEdgeId: null,
+        };
+      }),
 
       // Node actions
       addNode: (node) => set((state) => {
@@ -886,6 +904,7 @@ export function useWorkflowActions() {
   const copySelection = useWorkflowStore((state) => state.copySelection);
   const paste = useWorkflowStore((state) => state.paste);
   const setViewport = useWorkflowStore((state) => state.setViewport);
+  const clearCanvas = useWorkflowStore((state) => state.clearCanvas);
 
   return {
     addNode,
@@ -904,5 +923,6 @@ export function useWorkflowActions() {
     copySelection,
     paste,
     setViewport,
+    clearCanvas,
   };
 }

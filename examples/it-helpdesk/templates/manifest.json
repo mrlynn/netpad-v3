@@ -1,19 +1,19 @@
 {
   "name": "IT Help Desk Template",
-  "version": "1.1.0",
-  "description": "Complete IT support ticketing system with conditional fields, priority-based routing, automated notifications, and Slack escalation for critical tickets",
+  "version": "1.2.0",
+  "description": "Complete IT support ticketing system with ticket submission, search & management, conditional fields, priority-based routing, automated notifications, and Slack escalation for critical tickets",
   "author": "NetPad Examples",
   "license": "MIT",
   "netpadVersion": "3.1.0",
   "assets": {
-    "forms": ["form.json"],
+    "forms": ["form.json", "search-form.json"],
     "workflows": ["workflow.json"]
   },
   "dependencies": {
     "integrations": ["email", "slack"]
   },
   "instructions": {
-    "import": "Import this template into NetPad to create a complete IT help desk system. Includes a ticket submission form with conditional fields and an automated routing workflow.",
+    "import": "Import this template into NetPad to create a complete IT help desk system. Includes a ticket submission form, a ticket search/management form, and an automated routing workflow.",
     "setup": [
       "1. Import the template bundle using the NetPad import API or UI",
       "2. Configure your MongoDB connection (the form will store submissions in your specified collection)",
@@ -21,7 +21,8 @@
       "4. Configure the workflow email addresses (change 'it-support@yourcompany.com' to your IT team's email)",
       "5. Set up Slack integration and update the '#it-critical-alerts' channel name",
       "6. Link the workflow to your form via the Workflows panel",
-      "7. Publish the form and activate the workflow"
+      "7. Publish both the submission form (for end users) and search form (for IT staff)",
+      "8. Activate the workflow to enable automated routing"
     ],
     "customization": [
       "Modify the department dropdown options to match your organization structure",
@@ -29,10 +30,11 @@
       "Customize urgency levels and response time expectations",
       "Edit email templates in the workflow to match your organization's tone",
       "Add additional workflow actions (e.g., create tickets in Jira, log to spreadsheet)",
-      "Configure form theme and branding to match your brand"
+      "Configure form theme and branding to match your brand",
+      "Customize search form filters and result columns for your IT team's needs"
     ]
   },
-  "tags": ["helpdesk", "it-support", "ticketing", "forms", "workflows", "automation", "conditional-logic"],
+  "tags": ["helpdesk", "it-support", "ticketing", "forms", "workflows", "automation", "conditional-logic", "search", "data-management"],
   "category": "helpdesk",
   "createdAt": "2026-01-01T00:00:00.000Z",
   "updatedAt": "2026-01-04T00:00:00.000Z"

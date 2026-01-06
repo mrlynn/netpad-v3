@@ -2,6 +2,36 @@ import { ThemeOptions, createTheme } from '@mui/material/styles';
 
 type ThemeMode = 'light' | 'dark';
 
+// NetPad Signature Colors
+const netpadColors = {
+  // Primary MongoDB green (bright - for dark mode)
+  primary: '#00ED64',
+  primaryLight: '#4DFF9F',
+  primaryDark: '#00B84A',
+  // Signature cyan-green (differentiates from pure MongoDB)
+  accent: '#00D4AA',
+  // Secondary dark green (for light mode primary)
+  secondary: '#00684A',
+  secondaryLight: '#00966B',
+  secondaryDark: '#004A33',
+  // Signature gradients
+  gradient: 'linear-gradient(135deg, #00ED64 0%, #00D4AA 100%)',
+  gradientReverse: 'linear-gradient(135deg, #00D4AA 0%, #00ED64 100%)',
+  gradientLight: 'linear-gradient(135deg, #00684A 0%, #00966B 100%)',
+  // Glow effects (dark mode)
+  glowPrimary: '0 4px 16px rgba(0, 237, 100, 0.3)',
+  glowPrimaryHover: '0 6px 24px rgba(0, 237, 100, 0.4)',
+  glowSubtle: '0 0 30px rgba(0, 237, 100, 0.1)',
+  // Shadow effects (light mode - softer, professional)
+  shadowPrimary: '0 4px 16px rgba(0, 104, 74, 0.15)',
+  shadowPrimaryHover: '0 6px 24px rgba(0, 104, 74, 0.22)',
+  shadowSubtle: '0 2px 12px rgba(0, 104, 74, 0.08)',
+  // Grid pattern for NetPad identity
+  gridPatternDark: `radial-gradient(circle at 1px 1px, rgba(0, 237, 100, 0.03) 1px, transparent 0)`,
+  gridPatternLight: `radial-gradient(circle at 1px 1px, rgba(0, 104, 74, 0.06) 1px, transparent 0)`,
+  gridSize: '24px 24px',
+};
+
 // Shared design elements
 const sharedTypography = {
   fontFamily: '"Inter", -apple-system, "Segoe UI", "Roboto", "Helvetica Neue", sans-serif',
@@ -49,15 +79,15 @@ const sharedShape = {
 const darkPalette = {
   mode: 'dark' as const,
   primary: {
-    main: '#00ED64', // MongoDB green
-    light: '#4DFF9F',
-    dark: '#00B84A',
+    main: netpadColors.primary, // MongoDB green
+    light: netpadColors.primaryLight,
+    dark: netpadColors.primaryDark,
     contrastText: '#000'
   },
   secondary: {
-    main: '#00684A', // MongoDB dark green
-    light: '#00966B',
-    dark: '#004A33'
+    main: netpadColors.accent, // NetPad cyan-green accent
+    light: '#4DFFE0',
+    dark: netpadColors.secondary
   },
   background: {
     default: '#0a0e14',
@@ -94,18 +124,18 @@ const darkPalette = {
 const lightPalette = {
   mode: 'light' as const,
   primary: {
-    main: '#00684A', // MongoDB dark green for light mode
-    light: '#00966B',
-    dark: '#004A33',
+    main: netpadColors.secondary, // MongoDB dark green for light mode
+    light: netpadColors.secondaryLight,
+    dark: netpadColors.secondaryDark,
     contrastText: '#fff'
   },
   secondary: {
-    main: '#00ED64', // MongoDB bright green as secondary
-    light: '#4DFF9F',
-    dark: '#00B84A'
+    main: netpadColors.accent, // NetPad cyan-green accent
+    light: netpadColors.primaryLight,
+    dark: netpadColors.primaryDark
   },
   background: {
-    default: '#f5f7f9',
+    default: '#F8FAF9', // Warmer, subtle green tint
     paper: '#ffffff'
   },
   text: {
@@ -360,18 +390,21 @@ const darkComponents: ThemeOptions['components'] = {
     },
     styleOverrides: {
       root: {
-        backgroundImage: 'none',
+        backgroundImage: netpadColors.gridPatternDark,
+        backgroundSize: netpadColors.gridSize,
         border: '1px solid rgba(110, 118, 129, 0.12)',
         borderRadius: 12,
+        // Subtle inner highlight at top - signature NetPad styling
+        boxShadow: 'inset 0 1px 0 rgba(0, 237, 100, 0.05)',
       },
       elevation1: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+        boxShadow: `inset 0 1px 0 rgba(0, 237, 100, 0.05), 0 2px 8px rgba(0, 0, 0, 0.2)`,
       },
       elevation2: {
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+        boxShadow: `inset 0 1px 0 rgba(0, 237, 100, 0.05), 0 4px 12px rgba(0, 0, 0, 0.25)`,
       },
       elevation3: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+        boxShadow: `inset 0 1px 0 rgba(0, 237, 100, 0.05), 0 8px 24px rgba(0, 0, 0, 0.3)`,
       },
     },
   },
@@ -380,8 +413,13 @@ const darkComponents: ThemeOptions['components'] = {
     styleOverrides: {
       ...sharedComponents.MuiButton?.styleOverrides,
       contained: {
+        // Signature NetPad gradient for primary buttons
+        background: netpadColors.gradient,
+        boxShadow: netpadColors.glowPrimary,
         '&:hover': {
-          transform: 'translateY(-1px)',
+          background: netpadColors.gradient,
+          boxShadow: netpadColors.glowPrimaryHover,
+          transform: 'translateY(-2px)',
         },
       },
       outlined: {
@@ -389,6 +427,7 @@ const darkComponents: ThemeOptions['components'] = {
         '&:hover': {
           borderColor: 'rgba(0, 237, 100, 0.5)',
           backgroundColor: 'rgba(0, 237, 100, 0.04)',
+          transform: 'translateY(-1px)',
         },
       },
     },
@@ -398,9 +437,14 @@ const darkComponents: ThemeOptions['components'] = {
       root: {
         borderRadius: 12,
         border: '1px solid rgba(110, 118, 129, 0.12)',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.2s ease',
+        // Subtle grid pattern background - NetPad identity
+        backgroundImage: netpadColors.gridPatternDark,
+        backgroundSize: netpadColors.gridSize,
         '&:hover': {
           borderColor: 'rgba(0, 237, 100, 0.3)',
+          // Signature glow on hover
+          boxShadow: `inset 0 1px 0 rgba(0, 237, 100, 0.1), ${netpadColors.glowSubtle}`,
         },
       },
     },
@@ -414,7 +458,7 @@ const darkComponents: ThemeOptions['components'] = {
       root: {
         '& .MuiOutlinedInput-root': {
           borderRadius: 8,
-          transition: 'all 0.15s ease',
+          transition: 'all 0.2s ease',
           '&:hover': {
             '& .MuiOutlinedInput-notchedOutline': {
               borderColor: 'rgba(0, 237, 100, 0.4)',
@@ -422,9 +466,12 @@ const darkComponents: ThemeOptions['components'] = {
           },
           '&.Mui-focused': {
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#00ED64',
+              // Gradient border effect on focus
+              borderColor: netpadColors.accent,
               borderWidth: 2,
             },
+            // Subtle glow on focus
+            boxShadow: '0 0 0 3px rgba(0, 212, 170, 0.1)',
           },
         },
       },
@@ -437,6 +484,10 @@ const darkComponents: ThemeOptions['components'] = {
     styleOverrides: {
       root: {
         borderRadius: 8,
+        transition: 'all 0.2s ease',
+        '&.Mui-focused': {
+          boxShadow: '0 0 0 3px rgba(0, 212, 170, 0.1)',
+        },
       },
     },
   },
@@ -465,18 +516,21 @@ const lightComponents: ThemeOptions['components'] = {
     },
     styleOverrides: {
       root: {
-        backgroundImage: 'none',
-        border: '1px solid rgba(0, 0, 0, 0.08)',
+        backgroundImage: netpadColors.gridPatternLight,
+        backgroundSize: netpadColors.gridSize,
+        border: '1px solid rgba(0, 104, 74, 0.1)',
         borderRadius: 12,
+        // Subtle top highlight for depth
+        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)',
       },
       elevation1: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.8), ${netpadColors.shadowSubtle}`,
       },
       elevation2: {
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+        boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.8), ${netpadColors.shadowPrimary}`,
       },
       elevation3: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+        boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.8), ${netpadColors.shadowPrimaryHover}`,
       },
     },
   },
@@ -485,15 +539,28 @@ const lightComponents: ThemeOptions['components'] = {
     styleOverrides: {
       ...sharedComponents.MuiButton?.styleOverrides,
       contained: {
+        // Refined gradient for light mode
+        background: netpadColors.gradientLight,
+        boxShadow: netpadColors.shadowPrimary,
         '&:hover': {
-          transform: 'translateY(-1px)',
+          background: netpadColors.gradientLight,
+          boxShadow: netpadColors.shadowPrimaryHover,
+          transform: 'translateY(-2px)',
         },
       },
       outlined: {
-        borderColor: 'rgba(0, 0, 0, 0.15)',
+        borderColor: 'rgba(0, 104, 74, 0.25)',
+        color: netpadColors.secondary,
         '&:hover': {
-          borderColor: 'rgba(0, 104, 74, 0.5)',
+          borderColor: netpadColors.secondary,
           backgroundColor: 'rgba(0, 104, 74, 0.04)',
+          transform: 'translateY(-1px)',
+        },
+      },
+      text: {
+        color: netpadColors.secondary,
+        '&:hover': {
+          backgroundColor: 'rgba(0, 104, 74, 0.06)',
         },
       },
     },
@@ -502,10 +569,17 @@ const lightComponents: ThemeOptions['components'] = {
     styleOverrides: {
       root: {
         borderRadius: 12,
-        border: '1px solid rgba(0, 0, 0, 0.08)',
-        transition: 'all 0.15s ease',
+        border: '1px solid rgba(0, 104, 74, 0.1)',
+        transition: 'all 0.2s ease',
+        // Subtle grid pattern background - NetPad identity (light mode)
+        backgroundImage: netpadColors.gridPatternLight,
+        backgroundSize: netpadColors.gridSize,
+        // Inner highlight for depth
+        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.9)',
         '&:hover': {
-          borderColor: 'rgba(0, 104, 74, 0.3)',
+          borderColor: 'rgba(0, 104, 74, 0.25)',
+          // Refined shadow on hover
+          boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.9), ${netpadColors.shadowSubtle}`,
         },
       },
     },
@@ -519,17 +593,21 @@ const lightComponents: ThemeOptions['components'] = {
       root: {
         '& .MuiOutlinedInput-root': {
           borderRadius: 8,
-          transition: 'all 0.15s ease',
+          transition: 'all 0.2s ease',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
           '&:hover': {
             '& .MuiOutlinedInput-notchedOutline': {
               borderColor: 'rgba(0, 104, 74, 0.4)',
             },
           },
           '&.Mui-focused': {
+            backgroundColor: '#ffffff',
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#00684A',
+              borderColor: netpadColors.secondaryLight,
               borderWidth: 2,
             },
+            // Subtle focus ring
+            boxShadow: '0 0 0 3px rgba(0, 150, 107, 0.1)',
           },
         },
       },
@@ -542,6 +620,10 @@ const lightComponents: ThemeOptions['components'] = {
     styleOverrides: {
       root: {
         borderRadius: 8,
+        transition: 'all 0.2s ease',
+        '&.Mui-focused': {
+          boxShadow: '0 0 0 3px rgba(0, 150, 107, 0.1)',
+        },
       },
     },
   },
@@ -552,10 +634,36 @@ const lightComponents: ThemeOptions['components'] = {
       },
       track: {
         borderRadius: 10,
-        opacity: 0.3,
+        opacity: 0.4,
+        backgroundColor: 'rgba(0, 104, 74, 0.3)',
       },
       thumb: {
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12)',
+      },
+      switchBase: {
+        '&.Mui-checked': {
+          '& + .MuiSwitch-track': {
+            backgroundColor: netpadColors.secondaryLight,
+            opacity: 1,
+          },
+        },
+      },
+    },
+  },
+  MuiChip: {
+    styleOverrides: {
+      root: {
+        fontWeight: 500,
+        borderRadius: 6,
+      },
+      filled: {
+        backgroundColor: 'rgba(0, 104, 74, 0.08)',
+        '&:hover': {
+          backgroundColor: 'rgba(0, 104, 74, 0.12)',
+        },
+      },
+      outlined: {
+        borderColor: 'rgba(0, 104, 74, 0.25)',
       },
     },
   },
@@ -564,9 +672,51 @@ const lightComponents: ThemeOptions['components'] = {
       root: {
         borderRadius: 6,
         margin: '2px 0',
-        '&.Mui-selected': {
-          backgroundColor: 'rgba(0, 104, 74, 0.08)',
+        '&:hover': {
+          backgroundColor: 'rgba(0, 104, 74, 0.04)',
         },
+        '&.Mui-selected': {
+          backgroundColor: 'rgba(0, 150, 107, 0.1)',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 150, 107, 0.14)',
+          },
+        },
+      },
+    },
+  },
+  MuiTooltip: {
+    styleOverrides: {
+      tooltip: {
+        backgroundColor: netpadColors.secondary,
+        color: '#ffffff',
+        fontSize: '0.75rem',
+        fontWeight: 500,
+        borderRadius: 6,
+        padding: '6px 10px',
+        boxShadow: netpadColors.shadowPrimary,
+      },
+      arrow: {
+        color: netpadColors.secondary,
+      },
+    },
+  },
+  MuiAlert: {
+    styleOverrides: {
+      root: {
+        borderRadius: 8,
+      },
+      standardSuccess: {
+        backgroundColor: 'rgba(0, 150, 107, 0.1)',
+        borderLeft: `4px solid ${netpadColors.secondaryLight}`,
+      },
+      standardInfo: {
+        borderLeft: '4px solid #0288d1',
+      },
+      standardWarning: {
+        borderLeft: '4px solid #ed6c02',
+      },
+      standardError: {
+        borderLeft: '4px solid #d32f2f',
       },
     },
   },
@@ -589,3 +739,6 @@ export const theme = createTheme(getDesignTokens('dark'));
 // Named theme exports
 export const darkTheme = createTheme(getDesignTokens('dark'));
 export const lightTheme = createTheme(getDesignTokens('light'));
+
+// Export NetPad signature colors for use in components
+export { netpadColors };

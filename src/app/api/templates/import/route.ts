@@ -110,7 +110,10 @@ export async function POST(request: NextRequest) {
               formDef,
               orgId,
               userId,
-              options
+              {
+                generateNewId: options.generateNewIds,
+                preserveSlug: options.preserveSlugs,
+              }
             );
             
             await collection.insertOne(formConfig as any);
@@ -126,7 +129,10 @@ export async function POST(request: NextRequest) {
               formDef,
               '', // No orgId for legacy
               userId,
-              options
+              {
+                generateNewId: options.generateNewIds,
+                preserveSlug: options.preserveSlugs,
+              }
             );
             
             await saveForm(sessionId, formConfig as any);
@@ -167,7 +173,10 @@ export async function POST(request: NextRequest) {
             workflowDef,
             orgId,
             userId,
-            options
+            {
+              generateNewId: options.generateNewIds,
+              preserveSlug: options.preserveSlugs,
+            }
           );
           
           // createWorkflow only takes name, description, tags
@@ -208,7 +217,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Determine overall success
-    result.success = result.errors.length === 0;
+    result.success = (result.errors?.length ?? 0) === 0;
     
     return NextResponse.json(result, {
       status: result.success ? 200 : 207, // 207 = Multi-Status (partial success)

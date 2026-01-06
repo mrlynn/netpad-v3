@@ -84,8 +84,9 @@ const nodes: WorkflowNode[] = [
     type: 'form-trigger',
     position: { x: 100, y: 200 },
     config: {
-      event: 'submission.created',
-      formSlug: 'it-support-request',
+      formId: 'YOUR_FORM_ID_HERE',
+      waitForValidation: false,
+      includeMetadata: true,
     },
     label: 'Form Submitted',
     enabled: true,
@@ -94,23 +95,23 @@ const nodes: WorkflowNode[] = [
   // Action: Send Confirmation to Requester
   {
     id: 'email-requester',
-    type: 'email',
+    type: 'email-send',
     position: { x: 400, y: 100 },
     config: {
-      to: '{{email}}',
+      to: '{{trigger.payload.data.email}}',
       fromName: 'IT Support',
-      subject: '✅ IT Support Request Received: {{subject}}',
-      body: `Hi {{fullName}},
+      subject: '✅ IT Support Request Received: {{trigger.payload.data.subject}}',
+      body: `Hi {{trigger.payload.data.fullName}},
 
 We've received your IT support request and a team member will review it shortly.
 
 **Ticket Details:**
-- Subject: {{subject}}
-- Category: {{issueCategory}}
-- Urgency: {{urgencyLevel}}
+- Subject: {{trigger.payload.data.subject}}
+- Category: {{trigger.payload.data.issueCategory}}
+- Urgency: {{trigger.payload.data.urgencyLevel}}
 
 **Your Description:**
-{{description}}
+{{trigger.payload.data.description}}
 
 **What happens next:**
 - Low/Medium urgency: Response within 24 hours
@@ -131,30 +132,25 @@ The IT Team`,
   // Action: Notify IT Team
   {
     id: 'email-it-team',
-    type: 'email',
+    type: 'email-send',
     position: { x: 400, y: 300 },
     config: {
       to: 'it-support@yourcompany.com',
       fromName: 'IT Help Desk',
-      subject: '[{{urgencyLevel}}] New Ticket: {{subject}} from {{fullName}}',
+      subject: '[{{trigger.payload.data.urgencyLevel}}] New Ticket: {{trigger.payload.data.subject}} from {{trigger.payload.data.fullName}}',
       body: `New IT support request submitted:
 
-**Reporter:** {{fullName}} ({{department}})
-**Contact:** {{email}} | {{phoneExtension}}
-**Preferred Contact:** {{preferredContactMethod}}
+**Reporter:** {{trigger.payload.data.fullName}} ({{trigger.payload.data.department}})
+**Contact:** {{trigger.payload.data.email}} | {{trigger.payload.data.phoneExtension}}
+**Preferred Contact:** {{trigger.payload.data.preferredContactMethod}}
 
 **Issue Details:**
-- Category: {{issueCategory}}
-- Urgency: {{urgencyLevel}}
-- Subject: {{subject}}
+- Category: {{trigger.payload.data.issueCategory}}
+- Urgency: {{trigger.payload.data.urgencyLevel}}
+- Subject: {{trigger.payload.data.subject}}
 
 **Description:**
-{{description}}
-
-**Additional Context:**
-{{#if assetId}}Asset ID: {{assetId}}{{/if}}
-{{#if applicationName}}Application: {{applicationName}}{{/if}}
-{{#if networkLocation}}Location: {{networkLocation}}{{/if}}`,
+{{trigger.payload.data.description}}`,
       bodyFormat: 'markdown',
     },
     label: 'IT Team Notification',
@@ -165,12 +161,12 @@ The IT Team`,
   // Logic: Check if Critical
   {
     id: 'condition-critical',
-    type: 'condition',
+    type: 'conditional',
     position: { x: 400, y: 500 },
     config: {
       conditions: [
         {
-          field: 'urgencyLevel',
+          field: 'trigger.payload.data.urgencyLevel',
           operator: 'equals',
           value: 'critical',
         },
@@ -182,19 +178,21 @@ The IT Team`,
     enabled: true,
   },
 
-  // Action: Slack Alert for Critical Tickets
+  // Action: Slack Webhook for Critical Tickets
   {
-    id: 'slack-critical',
-    type: 'slack',
+    id: 'webhook-critical',
+    type: 'http-request',
     position: { x: 700, y: 450 },
     config: {
-      channel: '#it-critical-alerts',
-      message:
-        '🚨 CRITICAL IT TICKET from {{fullName}} ({{department}}): {{subject}} — {{description}}',
-      messageFormat: 'text',
+      method: 'POST',
+      url: 'https://hooks.slack.com/services/YOUR_WEBHOOK_URL',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: '{"text": "🚨 CRITICAL IT TICKET from {{trigger.payload.data.fullName}} ({{trigger.payload.data.department}}): {{trigger.payload.data.subject}} — {{trigger.payload.data.description}}"}',
     },
-    label: 'Slack Alert',
-    notes: 'Sends immediate alert to Slack for critical tickets',
+    label: 'Slack Webhook',
+    notes: 'Sends immediate alert to Slack for critical tickets. Replace YOUR_WEBHOOK_URL with your Slack incoming webhook URL.',
     enabled: true,
   },
 ];
@@ -231,15 +229,15 @@ const edges: WorkflowEdge[] = [
     targetHandle: 'input',
   },
 
-  // Critical Check (Yes) → Slack Alert
+  // Critical Check (Yes) → Slack Webhook
   {
-    id: 'edge-condition-to-slack',
+    id: 'edge-condition-to-webhook',
     source: 'condition-critical',
     sourceHandle: 'yes',
-    target: 'slack-critical',
+    target: 'webhook-critical',
     targetHandle: 'input',
     condition: {
-      expression: "urgencyLevel === 'critical'",
+      expression: "trigger.payload.data.urgencyLevel === 'critical'",
       label: 'Yes',
     },
   },
@@ -274,7 +272,7 @@ const canvas: WorkflowCanvas = {
 export const itTicketRoutingWorkflow: WorkflowDefinition = {
   name: 'IT Ticket Routing',
   description:
-    'Automated routing workflow for IT support tickets. Sends confirmation to requester, notifies IT team, and escalates critical tickets to Slack.',
+    'Automated routing workflow for IT support tickets. Sends confirmation to requester, notifies IT team, and escalates critical tickets via webhook.',
   canvas,
   settings,
   variables,

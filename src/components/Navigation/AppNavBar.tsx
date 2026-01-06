@@ -41,6 +41,7 @@ import {
   Payments,
   Api,
   Menu as MenuIcon,
+  MonitorHeart,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -141,7 +142,24 @@ export function AppNavBar() {
       sx={{
         bgcolor: 'background.paper',
         borderBottom: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        // NetPad signature: subtle glow beneath navbar in dark mode
+        boxShadow: (theme) => theme.palette.mode === 'dark'
+          ? '0 1px 0 rgba(0, 237, 100, 0.1), 0 4px 12px rgba(0, 237, 100, 0.05)'
+          : 'none',
+        // Subtle gradient border effect
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: (theme) => theme.palette.mode === 'dark'
+            ? 'linear-gradient(90deg, transparent 0%, rgba(0, 237, 100, 0.3) 50%, transparent 100%)'
+            : 'transparent',
+          pointerEvents: 'none',
+        },
       }}
     >
       <Toolbar
@@ -430,6 +448,19 @@ export function AppNavBar() {
                       <GitHub sx={{ fontSize: 18 }} />
                     </ListItemIcon>
                     <ListItemText primary="GitHub" />
+                  </MenuItem>
+
+                  <MenuItem
+                    component="a"
+                    href="https://status.netpad.io"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleMenuClose}
+                  >
+                    <ListItemIcon>
+                      <MonitorHeart sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary="System Status" />
                   </MenuItem>
 
                   <Divider />

@@ -40,6 +40,7 @@ import {
   DataObject as ExtractIcon,
   Code as CodeIcon,
   TableChart as SheetsIcon,
+  StickyNote2 as StickyNoteIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 
@@ -252,6 +253,16 @@ const PALETTE_NODES: PaletteNode[] = [
     color: '#795548',
     category: 'custom',
   },
+
+  // Annotations
+  {
+    type: 'sticky-note',
+    label: 'Sticky Note',
+    description: 'Add notes and annotations to your workflow (Markdown supported)',
+    icon: <StickyNoteIcon />,
+    color: '#FBC02D',
+    category: 'annotations',
+  },
 ];
 
 // Category configuration
@@ -264,6 +275,7 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   ai: { label: 'AI', icon: <AiIcon />, color: '#E91E63' },
   forms: { label: 'Forms', icon: <FormIcon />, color: '#00BCD4' },
   custom: { label: 'Custom', icon: <CategoryIcon />, color: '#795548' },
+  annotations: { label: 'Annotations', icon: <StickyNoteIcon />, color: '#FBC02D' },
 };
 
 interface NodePaletteProps {
@@ -308,6 +320,7 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
   return (
     <Paper
       elevation={0}
+      data-tour="node-palette"
       sx={{
         width: 280,
         height: '100%',
@@ -323,6 +336,7 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
           Node Palette
         </Typography>
         <TextField
+          data-tour="node-search"
           fullWidth
           size="small"
           placeholder="Search nodes..."

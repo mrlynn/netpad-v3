@@ -39,12 +39,25 @@ import {
   Delete as DeleteIcon,
   DataObject as DataIcon,
   CallSplit as ConditionalIcon,
+  Palette as PaletteIcon,
+  Circle as CircleIcon,
 } from '@mui/icons-material';
 import { WorkflowNode, RetryPolicy } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
 import { DataContextPanel } from './DataContextPanel';
 import { ConditionBuilder, ConditionGroup, conditionGroupToExpression } from './ConditionBuilder';
 import { VariablePickerButton } from '../VariablePicker';
+
+// Sticky note color options (matching StickyNote.tsx)
+const STICKY_COLORS = [
+  { name: 'Yellow', value: '#FFF9C4', border: '#FBC02D' },
+  { name: 'Green', value: '#C8E6C9', border: '#66BB6A' },
+  { name: 'Blue', value: '#BBDEFB', border: '#42A5F5' },
+  { name: 'Pink', value: '#F8BBD0', border: '#EC407A' },
+  { name: 'Orange', value: '#FFE0B2', border: '#FFA726' },
+  { name: 'Purple', value: '#E1BEE7', border: '#AB47BC' },
+  { name: 'Gray', value: '#ECEFF1', border: '#78909C' },
+];
 
 interface NodeConfigPanelProps {
   open: boolean;
@@ -171,6 +184,9 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'update', label: 'Update (JSON)', type: 'code', description: 'Update operations for updateOne/updateMany (e.g., { "$set": {...} })' },
     { key: 'pipeline', label: 'Pipeline (JSON Array)', type: 'code', description: 'Aggregation pipeline for aggregate operation' },
     { key: 'options', label: 'Options (JSON)', type: 'code', description: 'Additional options: { "sort": {...}, "limit": 10, "projection": {...}, "upsert": true }' },
+  ],
+  'sticky-note': [
+    { key: 'content', label: 'Note Content', type: 'code', description: 'Markdown content for the sticky note' },
   ],
 };
 
@@ -417,6 +433,11 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
 
   const configSchema = NODE_CONFIG_SCHEMAS[selectedNode.type] || [];
   const isConditionalNode = selectedNode.type === 'conditional';
+  const isStickyNote = selectedNode.type === 'sticky-note';
+
+  // Get current sticky note color
+  const currentStickyColor = config.bgColor as string || STICKY_COLORS[0].value;
+  const currentStickyColorObj = STICKY_COLORS.find(c => c.value === currentStickyColor) || STICKY_COLORS[0];
 
   // Render config field based on type
   const renderConfigField = (field: ConfigField) => {
@@ -865,6 +886,93 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
           </Accordion>
         )}
 
+        {/* Sticky Note Configuration */}
+        {isStickyNote && (
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandIcon />}>
+              <PaletteIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Note Content & Style
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {/* Content */}
+              <TextField
+                fullWidth
+                multiline
+                rows={8}
+                size="small"
+                label="Note Content"
+                value={(config.content as string) || ''}
+                onChange={(e) => handleConfigChange('content', e.target.value)}
+                placeholder="Write your note here...
+
+# Markdown Supported
+- **Bold** and *italic* text
+- Lists and checkboxes
+- [Links](https://example.com)
+- `code` snippets"
+                helperText="Supports Markdown formatting"
+                sx={{
+                  mb: 2,
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                  },
+                }}
+              />
+
+              {/* Color Selection */}
+              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                Note Color
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {STICKY_COLORS.map((color) => (
+                  <IconButton
+                    key={color.name}
+                    onClick={() => handleConfigChange('bgColor', color.value)}
+                    size="small"
+                    sx={{
+                      p: 0.5,
+                      border: currentStickyColor === color.value ? `2px solid ${color.border}` : '2px solid transparent',
+                      borderRadius: 1,
+                      bgcolor: color.value,
+                      '&:hover': {
+                        bgcolor: color.value,
+                        opacity: 0.9,
+                      },
+                    }}
+                  >
+                    <CircleIcon
+                      sx={{
+                        fontSize: 24,
+                        color: color.border,
+                        opacity: currentStickyColor === color.value ? 1 : 0.6,
+                      }}
+                    />
+                  </IconButton>
+                ))}
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Current: {currentStickyColorObj.name}
+              </Typography>
+
+              {/* Size Info */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                  Size
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {(config.width as number) || 200}px × {(config.height as number) || 150}px
+                </Typography>
+                <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Tip: Drag the edges of the sticky note on the canvas to resize
+                </Typography>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        )}
+
         {/* Node-Specific Config */}
         {configSchema.length > 0 && !isConditionalNode && (
           <Accordion defaultExpanded>
@@ -880,110 +988,116 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
           </Accordion>
         )}
 
-        {/* Data Context Panel - show available variables */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <DataIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              Available Data
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{ p: 0 }}>
-            <DataContextPanel
-              nodeId={selectedNode.id}
-              onInsertVariable={handleInsertVariable}
-            />
-          </AccordionDetails>
-        </Accordion>
+        {/* Data Context Panel - show available variables (not for sticky notes) */}
+        {!isStickyNote && (
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandIcon />}>
+              <DataIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Available Data
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+              <DataContextPanel
+                nodeId={selectedNode.id}
+                onInsertVariable={handleInsertVariable}
+              />
+            </AccordionDetails>
+          </Accordion>
+        )}
 
-        {/* Execution Settings */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <TimerIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              Execution
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <TextField
-              fullWidth
-              size="small"
-              label="Timeout (ms)"
-              type="number"
-              value={timeout ?? ''}
-              onChange={(e) => setTimeout(e.target.value ? Number(e.target.value) : undefined)}
-              helperText="Override workflow timeout for this node"
-              sx={{ mb: 2 }}
-            />
-          </AccordionDetails>
-        </Accordion>
+        {/* Execution Settings (not for sticky notes) */}
+        {!isStickyNote && (
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandIcon />}>
+              <TimerIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Execution
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <TextField
+                fullWidth
+                size="small"
+                label="Timeout (ms)"
+                type="number"
+                value={timeout ?? ''}
+                onChange={(e) => setTimeout(e.target.value ? Number(e.target.value) : undefined)}
+                helperText="Override workflow timeout for this node"
+                sx={{ mb: 2 }}
+              />
+            </AccordionDetails>
+          </Accordion>
+        )}
 
-        {/* Retry Policy */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <RetryIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              Retry Policy
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={retryEnabled}
-                  onChange={(e) => setRetryEnabled(e.target.checked)}
-                />
-              }
-              label="Enable custom retry policy"
-              sx={{ mb: 2 }}
-            />
-            {retryEnabled && (
-              <>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Max Retries"
-                  type="number"
-                  value={retryPolicy.maxRetries}
-                  onChange={(e) =>
-                    setRetryPolicy((prev) => ({
-                      ...prev,
-                      maxRetries: Number(e.target.value),
-                    }))
-                  }
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Initial Delay (ms)"
-                  type="number"
-                  value={retryPolicy.initialDelayMs}
-                  onChange={(e) =>
-                    setRetryPolicy((prev) => ({
-                      ...prev,
-                      initialDelayMs: Number(e.target.value),
-                    }))
-                  }
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Backoff Multiplier"
-                  type="number"
-                  value={retryPolicy.backoffMultiplier}
-                  onChange={(e) =>
-                    setRetryPolicy((prev) => ({
-                      ...prev,
-                      backoffMultiplier: Number(e.target.value),
-                    }))
-                  }
-                />
-              </>
-            )}
-          </AccordionDetails>
-        </Accordion>
+        {/* Retry Policy (not for sticky notes) */}
+        {!isStickyNote && (
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandIcon />}>
+              <RetryIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Retry Policy
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={retryEnabled}
+                    onChange={(e) => setRetryEnabled(e.target.checked)}
+                  />
+                }
+                label="Enable custom retry policy"
+                sx={{ mb: 2 }}
+              />
+              {retryEnabled && (
+                <>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Max Retries"
+                    type="number"
+                    value={retryPolicy.maxRetries}
+                    onChange={(e) =>
+                      setRetryPolicy((prev) => ({
+                        ...prev,
+                        maxRetries: Number(e.target.value),
+                      }))
+                    }
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Initial Delay (ms)"
+                    type="number"
+                    value={retryPolicy.initialDelayMs}
+                    onChange={(e) =>
+                      setRetryPolicy((prev) => ({
+                        ...prev,
+                        initialDelayMs: Number(e.target.value),
+                      }))
+                    }
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Backoff Multiplier"
+                    type="number"
+                    value={retryPolicy.backoffMultiplier}
+                    onChange={(e) =>
+                      setRetryPolicy((prev) => ({
+                        ...prev,
+                        backoffMultiplier: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </>
+              )}
+            </AccordionDetails>
+          </Accordion>
+        )}
 
         <Divider sx={{ my: 2 }} />
 

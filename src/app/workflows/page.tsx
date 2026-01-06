@@ -25,7 +25,6 @@ import {
   Skeleton,
   Alert,
   alpha,
-  CircularProgress,
 } from '@mui/material';
 import {
   Add,
@@ -46,6 +45,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { WelcomeScreen, OnboardingWizard, WelcomeModal } from '@/components/Onboarding';
 import { useWelcomeModal } from '@/hooks/useWelcomeModal';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { WorkflowStatus } from '@/types/workflow';
 
 interface WorkflowListItem {
@@ -214,7 +214,7 @@ export default function WorkflowsPage() {
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <AppNavBar />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 64px)' }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" message="Loading workflows..." />
         </Box>
       </Box>
     );

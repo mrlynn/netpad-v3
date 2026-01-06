@@ -2342,6 +2342,594 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
   // Employee Onboarding Portal
   // ============================================
 
+  // ============================================
+  // Developer Packages
+  // ============================================
+
+  'mcp-server': {
+    id: 'mcp-server',
+    title: 'MCP Server (@netpad/mcp-server)',
+    description:
+      'Model Context Protocol server that enables Claude and other AI tools to help build NetPad forms and applications through natural language.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the MCP Server?',
+      },
+      {
+        type: 'text',
+        content:
+          'The @netpad/mcp-server package is a Model Context Protocol (MCP) server that integrates with AI assistants like Claude Desktop and Cursor IDE. It provides 22+ AI-powered tools for generating forms, scaffolding applications, and integrating with MongoDB.',
+      },
+      {
+        type: 'heading',
+        content: 'Installation',
+      },
+      {
+        type: 'code',
+        content: [
+          '# Using npx (recommended)',
+          'npx @netpad/mcp-server',
+          '',
+          '# Or install globally',
+          'npm install -g @netpad/mcp-server',
+          'netpad-mcp',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Claude Desktop Setup',
+      },
+      {
+        type: 'text',
+        content:
+          'Add the MCP server to your Claude Desktop configuration file (claude_desktop_config.json):',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "mcpServers": {',
+          '    "netpad": {',
+          '      "command": "npx",',
+          '      "args": ["@netpad/mcp-server"]',
+          '    }',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Cursor IDE Setup',
+      },
+      {
+        type: 'text',
+        content: 'Add to your .cursor/mcp.json file:',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "mcpServers": {',
+          '    "netpad": {',
+          '      "command": "npx",',
+          '      "args": ["@netpad/mcp-server"]',
+          '    }',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Form Building Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'generate_form - Generate complete form configurations from natural language',
+          'generate_field - Create individual field configurations with validation',
+          'generate_conditional_logic - Create show/hide logic for fields',
+          'generate_computed_field - Create formula-based calculated fields',
+          'generate_multipage_config - Generate multi-page wizard configurations',
+          'validate_form_config - Validate form configurations and identify issues',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Application Development Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'scaffold_nextjs_app - Generate complete Next.js applications with forms',
+          'generate_workflow_integration - Generate code for workflow integration',
+          'generate_mongodb_query - Generate MongoDB queries for form data',
+          'generate_api_route - Generate Next.js API routes for form operations',
+          'generate_react_code - Generate React components that render forms',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Reference Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'list_field_types - List all 28+ supported field types',
+          'list_operators - List conditional logic operators',
+          'list_formula_functions - List formula functions for computed fields',
+          'list_validation_options - List validation rule options',
+          'list_theme_options - List theme customization options',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Helper Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'get_use_case_template - Get pre-built templates (lead capture, event registration, etc.)',
+          'suggest_form_fields - Get field recommendations based on use case',
+          'get_best_practices - Get guidelines for form design and security',
+          'debug_form_config - Analyze form configuration for issues',
+          'explain_error - Explain error codes and provide solutions',
+          'get_documentation - Access comprehensive documentation topics',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Usage',
+      },
+      {
+        type: 'text',
+        content:
+          'Once configured, you can ask Claude to help you build forms using natural language:',
+      },
+      {
+        type: 'example',
+        content:
+          '"Create a contact form with name, email, phone, and message fields. Make the email and message required, and add a dropdown for inquiry type."',
+      },
+      {
+        type: 'tip',
+        content:
+          'The MCP server provides built-in prompts for common use cases. Try asking Claude to "create a contact form" or "create a survey form" to use these templates.',
+      },
+      {
+        type: 'heading',
+        content: 'Available Resources',
+      },
+      {
+        type: 'list',
+        content: [
+          'netpad://docs/readme - Main documentation',
+          'netpad://docs/quick-start - Quick start guide',
+          'netpad://docs/examples - Code examples',
+          'netpad://reference/field-types - Field type reference',
+          'netpad://reference/operators - Operator reference',
+          'netpad://reference/formulas - Formula function reference',
+        ],
+      },
+    ],
+    relatedTopics: ['netpad-forms-package', 'netpad-workflows-package', 'form-builder'],
+    keywords: [
+      'mcp',
+      'model context protocol',
+      'claude',
+      'cursor',
+      'ai',
+      'code generation',
+      'scaffolding',
+      'package',
+      'npm',
+    ],
+  },
+
+  'netpad-forms-package': {
+    id: 'netpad-forms-package',
+    title: 'Forms Package (@netpad/forms)',
+    description:
+      'React form engine library for rendering NetPad forms in your applications with multi-page wizards, conditional logic, and computed fields.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is @netpad/forms?',
+      },
+      {
+        type: 'text',
+        content:
+          '@netpad/forms is a production-ready React library that renders sophisticated forms from JSON configuration. Build multi-page wizards, add conditional logic, create computed fields, and integrate with your backend—all with declarative configuration.',
+      },
+      {
+        type: 'heading',
+        content: 'Installation',
+      },
+      {
+        type: 'code',
+        content: [
+          'npm install @netpad/forms',
+          '',
+          '# Peer dependencies',
+          'npm install react react-dom @mui/material @mui/icons-material @emotion/react @emotion/styled',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Quick Start',
+      },
+      {
+        type: 'code',
+        content: [
+          "import { FormRenderer } from '@netpad/forms';",
+          '',
+          'const config = {',
+          "  name: 'Contact Form',",
+          '  fieldConfigs: [',
+          "    { path: 'name', label: 'Name', type: 'short_text', included: true, required: true },",
+          "    { path: 'email', label: 'Email', type: 'email', included: true, required: true },",
+          "    { path: 'message', label: 'Message', type: 'long_text', included: true }",
+          '  ]',
+          '};',
+          '',
+          'function MyForm() {',
+          '  return <FormRenderer config={config} onSubmit={handleSubmit} />;',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Key Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Multi-page wizards with progress tracking',
+          'Conditional logic for dynamic field visibility',
+          'Computed fields with formula evaluation',
+          'Built-in validation with custom error messages',
+          'Nested data structures with dot notation paths',
+          'Customizable theming (colors, fonts, input styles)',
+          '28+ field types (text, number, date, file upload, and more)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Supported Field Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'Text: short_text, long_text, email, url, phone',
+          'Numeric: number, slider, rating',
+          'Selection: dropdown, multiple_choice, checkboxes, yes_no',
+          'Date/Time: date, time, datetime',
+          'Advanced: autocomplete, tags, file_upload',
+          'Layout: section-header, description, divider, spacer, image',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Multi-Page Configuration',
+      },
+      {
+        type: 'code',
+        content: [
+          'const config = {',
+          "  name: 'Employee Onboarding',",
+          '  multiPageConfig: {',
+          '    enabled: true,',
+          "    stepIndicator: 'numbers',",
+          '    pages: [',
+          "      { id: 'personal', title: 'Personal Info', type: 'form' },",
+          "      { id: 'employment', title: 'Employment', type: 'form' },",
+          "      { id: 'review', title: 'Review', type: 'summary' }",
+          '    ]',
+          '  },',
+          '  fieldConfigs: [',
+          "    { path: 'name', label: 'Name', pageId: 'personal', ... },",
+          "    { path: 'department', label: 'Department', pageId: 'employment', ... }",
+          '  ]',
+          '};',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Conditional Logic',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          "  path: 'companyName',",
+          "  label: 'Company Name',",
+          "  type: 'short_text',",
+          '  conditionalLogic: {',
+          "    action: 'show',",
+          "    logicType: 'all',",
+          '    conditions: [',
+          "      { field: 'accountType', operator: 'equals', value: 'business' }",
+          '    ]',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'API Client',
+      },
+      {
+        type: 'text',
+        content:
+          'The package includes a client for fetching forms and submitting data to the NetPad API:',
+      },
+      {
+        type: 'code',
+        content: [
+          "import { createNetPadClient } from '@netpad/forms';",
+          '',
+          'const client = createNetPadClient({',
+          "  baseUrl: 'https://your-netpad-instance.com',",
+          "  apiKey: 'np_live_xxx'",
+          '});',
+          '',
+          "const form = await client.getForm('my-form-id');",
+          "await client.submitForm('my-form-id', formData);",
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Utility Functions',
+      },
+      {
+        type: 'list',
+        content: [
+          'evaluateConditionalLogic() - Evaluate field visibility conditions',
+          'validateField() / validateForm() - Validate form data',
+          'evaluateFormula() - Evaluate computed field formulas',
+          'getNestedValue() / setNestedValue() - Handle nested data paths',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'TypeScript Support',
+      },
+      {
+        type: 'text',
+        content:
+          'Full TypeScript support with exported types for type-safe form configuration:',
+      },
+      {
+        type: 'code',
+        content: [
+          "import type { FormConfiguration, FieldConfig, FormRendererProps } from '@netpad/forms';",
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Check out the examples in the NetPad repository for complete implementations including the Employee Onboarding demo and IT Help Desk application.',
+      },
+    ],
+    relatedTopics: ['mcp-server', 'netpad-workflows-package', 'form-builder', 'multi-page-forms'],
+    keywords: [
+      'forms',
+      'react',
+      'form renderer',
+      'npm',
+      'package',
+      'library',
+      'wizard',
+      'multi-page',
+      'validation',
+    ],
+  },
+
+  'netpad-workflows-package': {
+    id: 'netpad-workflows-package',
+    title: 'Workflows Package (@netpad/workflows)',
+    description:
+      'Type-safe TypeScript client for programmatically triggering and managing NetPad workflows from your applications.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is @netpad/workflows?',
+      },
+      {
+        type: 'text',
+        content:
+          '@netpad/workflows is a TypeScript client library that enables external systems, CI/CD pipelines, and server-side code to trigger, manage, and monitor NetPad workflow executions programmatically.',
+      },
+      {
+        type: 'heading',
+        content: 'Installation',
+      },
+      {
+        type: 'code',
+        content: 'npm install @netpad/workflows',
+      },
+      {
+        type: 'heading',
+        content: 'Quick Start',
+      },
+      {
+        type: 'code',
+        content: [
+          "import { createNetPadWorkflowClient } from '@netpad/workflows';",
+          '',
+          'const client = createNetPadWorkflowClient({',
+          "  baseUrl: 'https://your-netpad-instance.com',",
+          "  apiKey: 'np_live_xxx'",
+          '});',
+          '',
+          '// Trigger a workflow',
+          "const execution = await client.executeWorkflow('workflow-id', {",
+          '  variables: { userId: 123, action: "process" }',
+          '});',
+          '',
+          '// Wait for completion',
+          'const result = await client.waitForExecution(execution.executionId);',
+          'console.log(result.status, result.outputs);',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Workflow Management',
+      },
+      {
+        type: 'list',
+        content: [
+          'listWorkflows(options) - List workflows with filtering and pagination',
+          'getWorkflow(workflowId) - Get workflow details and configuration',
+          'createWorkflow(options) - Create a new workflow',
+          'updateWorkflow(workflowId, options) - Update workflow configuration',
+          'deleteWorkflow(workflowId) - Delete a workflow',
+          'activateWorkflow(workflowId) - Activate a workflow',
+          'pauseWorkflow(workflowId) - Pause a workflow',
+          'archiveWorkflow(workflowId) - Archive a workflow',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Workflow Execution',
+      },
+      {
+        type: 'list',
+        content: [
+          'executeWorkflow(workflowId, options) - Trigger workflow execution',
+          'listExecutions(workflowId, options) - List execution history',
+          'getExecution(workflowId, executionId) - Get execution details',
+          'getExecutionStatus(executionId) - Get current execution status',
+          'waitForExecution(executionId, options) - Poll until completion',
+          'retryExecution(workflowId, executionId) - Retry a failed execution',
+          'cancelExecution(workflowId, executionId) - Cancel running execution',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Execute and Wait Pattern',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Start execution and wait for result',
+          "const execution = await client.executeWorkflow('workflow-id', {",
+          "  variables: { email: 'user@example.com' }",
+          '});',
+          '',
+          'const result = await client.waitForExecution(execution.executionId, {',
+          '  timeout: 300000,     // 5 minutes',
+          '  pollInterval: 2000   // Check every 2 seconds',
+          '});',
+          '',
+          "if (result.status === 'completed') {",
+          '  console.log(result.context.outputs);',
+          "} else if (result.status === 'failed') {",
+          '  console.error(result.context.errors);',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Execution Status Values',
+      },
+      {
+        type: 'list',
+        content: [
+          'pending - Execution is queued but not started',
+          'running - Execution is currently in progress',
+          'paused - Execution is paused (waiting for input)',
+          'completed - Execution finished successfully',
+          'failed - Execution encountered an error',
+          'cancelled - Execution was manually cancelled',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Error Handling',
+      },
+      {
+        type: 'code',
+        content: [
+          "import { NetPadWorkflowError } from '@netpad/workflows';",
+          '',
+          'try {',
+          "  await client.executeWorkflow('workflow-id');",
+          '} catch (error) {',
+          '  if (error instanceof NetPadWorkflowError) {',
+          '    if (error.status === 404) {',
+          "      console.error('Workflow not found');",
+          '    } else if (error.status === 429) {',
+          "      console.error('Rate limit exceeded, retry later');",
+          '    }',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'TypeScript Types',
+      },
+      {
+        type: 'text',
+        content:
+          'All types are exported for full type safety in your applications:',
+      },
+      {
+        type: 'code',
+        content: [
+          'import type {',
+          '  WorkflowDocument,',
+          '  WorkflowExecution,',
+          '  ExecutionStatus,',
+          '  WorkflowVariable,',
+          '  ExecuteWorkflowOptions',
+          "} from '@netpad/workflows';",
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Batch Execution',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Execute multiple workflows in parallel',
+          'const users = [1, 2, 3, 4, 5];',
+          '',
+          'const executions = await Promise.allSettled(',
+          '  users.map(userId =>',
+          "    client.executeWorkflow('onboarding-workflow', {",
+          '      variables: { userId }',
+          '    })',
+          '  )',
+          ');',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use the waitForExecution method with appropriate timeout values for long-running workflows. The default timeout is 5 minutes with 1-second polling intervals.',
+      },
+      {
+        type: 'warning',
+        content:
+          'API keys should be stored securely in environment variables. Never expose them in client-side code or commit them to version control.',
+      },
+    ],
+    relatedTopics: ['mcp-server', 'netpad-forms-package', 'workflow-nodes', 'workflow-variables'],
+    keywords: [
+      'workflows',
+      'automation',
+      'npm',
+      'package',
+      'api client',
+      'typescript',
+      'execute',
+      'trigger',
+    ],
+  },
+
   'employee-onboarding': {
     id: 'employee-onboarding',
     title: 'Employee Onboarding Portal',
@@ -2561,6 +3149,240 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'hr',
       'human resources',
       'new hire',
+    ],
+  },
+
+  'search-forms': {
+    id: 'search-forms',
+    title: 'Search Forms',
+    description:
+      'Learn how to create search forms that enable users to find, filter, and manage data stored in MongoDB. Search forms provide powerful querying capabilities with smart dropdowns, multiple operators, and customizable result displays.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Search Forms?',
+      },
+      {
+        type: 'text',
+        content:
+          'Search forms are a special form type designed for data discovery and management rather than data entry. While data-entry forms collect new submissions, search forms let users query and filter existing data in your MongoDB collection.',
+      },
+      {
+        type: 'heading',
+        content: 'Form Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'data-entry - Traditional forms for collecting new submissions',
+          'search - Forms designed for querying and filtering existing data',
+          'both - Forms that support both data entry and search modes',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating a Search Form',
+      },
+      {
+        type: 'text',
+        content:
+          'To create a search form, set the formType to "search" and configure a searchConfig object that defines which fields are searchable, what operators are available, and how results should be displayed.',
+      },
+      {
+        type: 'code',
+        content: `{
+  "formType": "search",
+  "searchConfig": {
+    "enabled": true,
+    "fields": {
+      "status": {
+        "enabled": true,
+        "operators": ["equals", "in"],
+        "defaultOperator": "equals",
+        "showInResults": true
+      }
+    },
+    "results": {
+      "layout": "table",
+      "pageSize": 25,
+      "allowView": true,
+      "allowEdit": true
+    }
+  }
+}`,
+      },
+      {
+        type: 'heading',
+        content: 'Search Operators',
+      },
+      {
+        type: 'list',
+        content: [
+          'equals / notEquals - Exact match comparison',
+          'contains / startsWith / endsWith - Text pattern matching',
+          'greaterThan / lessThan / between - Numeric and date ranges',
+          'in / notIn - Value in/not in array of options',
+          'exists - Check if field exists',
+          'regex - Regular expression matching',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Results Configuration',
+      },
+      {
+        type: 'text',
+        content:
+          'Configure how search results are displayed using the results configuration. Choose from table, cards, or list layouts, enable pagination, and control which actions (view, edit, delete, export) are available.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use Smart Dropdowns (optionsSource) to automatically populate filter options from your actual data. This ensures users only see values that exist in the database.',
+      },
+      {
+        type: 'example',
+        content:
+          'A ticket search form might have filters for urgency level, category, and department—each populated dynamically with values from existing tickets, showing counts like "Hardware (45)" so users know how many results to expect.',
+      },
+    ],
+    relatedTopics: ['smart-dropdowns', 'form-builder', 'response-management', 'lookup-fields'],
+    keywords: [
+      'search',
+      'filter',
+      'query',
+      'find',
+      'data management',
+      'search form',
+      'operators',
+      'results',
+      'table',
+      'pagination',
+    ],
+  },
+
+  'smart-dropdowns': {
+    id: 'smart-dropdowns',
+    title: 'Smart Dropdowns (Dynamic Options)',
+    description:
+      'Smart dropdowns automatically populate their options from your MongoDB data. Instead of hardcoded values, dropdown options are fetched dynamically—showing actual values with counts, sorted by frequency.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Smart Dropdowns?',
+      },
+      {
+        type: 'text',
+        content:
+          'Smart dropdowns use the optionsSource configuration to dynamically fetch options from your database. This is especially useful for search forms where you want filters to show only values that actually exist in your data.',
+      },
+      {
+        type: 'heading',
+        content: 'Options Source Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'static - Use hardcoded options (traditional approach)',
+          'distinct - Extract unique values from the collection',
+          'lookup - Fetch options from another collection',
+          'aggregation - Use custom MongoDB aggregation pipeline',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Distinct Values Configuration',
+      },
+      {
+        type: 'text',
+        content:
+          'The most common smart dropdown type is "distinct" which extracts unique values from a field. You can show counts, sort by frequency, and map raw values to friendly labels.',
+      },
+      {
+        type: 'code',
+        content: `{
+  "optionsSource": {
+    "type": "distinct",
+    "distinct": {
+      "showCounts": true,
+      "sortBy": "count",
+      "sortDirection": "desc",
+      "limit": 50,
+      "labelMap": {
+        "hardware": "Hardware",
+        "software": "Software",
+        "network": "Network / Connectivity"
+      }
+    },
+    "refreshOnMount": true
+  }
+}`,
+      },
+      {
+        type: 'heading',
+        content: 'Configuration Options',
+      },
+      {
+        type: 'list',
+        content: [
+          'showCounts - Display count badges like "Hardware (45)"',
+          'sortBy - Sort by "count", "value", or "label"',
+          'sortDirection - "asc" or "desc"',
+          'limit - Maximum number of options to show',
+          'labelMap - Map raw values to display labels',
+          'filter - Base MongoDB filter to apply',
+          'refreshOnMount - Fetch options when form loads',
+          'refreshInterval - Auto-refresh interval in milliseconds',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'API Endpoint',
+      },
+      {
+        type: 'text',
+        content:
+          'Smart dropdowns use the /api/mongodb/distinct-values endpoint to fetch unique values. This endpoint uses MongoDB aggregation to efficiently extract and count distinct values from your collection.',
+      },
+      {
+        type: 'code',
+        content: `POST /api/mongodb/distinct-values
+{
+  "formId": "your-form-id",
+  "field": "issueCategory",
+  "includeCounts": true,
+  "sortBy": "count",
+  "limit": 100
+}`,
+      },
+      {
+        type: 'tip',
+        content:
+          'Use labelMap to convert database values like "hr" to user-friendly labels like "Human Resources". The raw value is still used for filtering, but users see the friendly label.',
+      },
+      {
+        type: 'example',
+        content:
+          'An IT ticket search form uses smart dropdowns for Issue Category, Urgency Level, and Department. Each dropdown shows options like "Software (127)" and "Hardware (45)", sorted by frequency so the most common values appear first.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Smart dropdowns require a database connection. If the form is not connected to a collection, the API will return an error. Make sure your form has a valid dataSource configured.',
+      },
+    ],
+    relatedTopics: ['search-forms', 'lookup-fields', 'form-builder', 'field-configuration'],
+    keywords: [
+      'smart dropdown',
+      'dynamic options',
+      'distinct values',
+      'optionsSource',
+      'dropdown',
+      'autocomplete',
+      'filter options',
+      'count',
+      'frequency',
+      'labelMap',
     ],
   },
 };

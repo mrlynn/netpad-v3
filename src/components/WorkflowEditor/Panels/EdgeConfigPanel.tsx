@@ -30,7 +30,7 @@ import {
   ColorLens as StyleIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { WorkflowEdge, DataMapping } from '@/types/workflow';
+import { WorkflowEdge, DataMapping, WorkflowEdgeType } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
 
 interface EdgeConfigPanelProps {
@@ -47,6 +47,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
   const [conditionExpression, setConditionExpression] = useState('');
   const [conditionLabel, setConditionLabel] = useState('');
   const [animated, setAnimated] = useState(true);
+  const [edgeType, setEdgeType] = useState<WorkflowEdgeType>('default');
   const [strokeColor, setStrokeColor] = useState('');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
 
@@ -56,6 +57,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
       setConditionExpression(selectedEdge.condition?.expression || '');
       setConditionLabel(selectedEdge.condition?.label || '');
       setAnimated(selectedEdge.animated !== false);
+      setEdgeType(selectedEdge.type || 'default');
       setStrokeColor(selectedEdge.style?.stroke || '');
       setStrokeWidth(selectedEdge.style?.strokeWidth || 2);
     }
@@ -67,6 +69,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
 
     const updates: Partial<WorkflowEdge> = {
       animated,
+      type: edgeType !== 'default' ? edgeType : undefined,
       condition: conditionExpression
         ? { expression: conditionExpression, label: conditionLabel || undefined }
         : undefined,
@@ -166,6 +169,39 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
             </Typography>
           </AccordionSummary>
           <AccordionDetails>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Edge Type</InputLabel>
+              <Select
+                value={edgeType}
+                label="Edge Type"
+                onChange={(e) => setEdgeType(e.target.value as WorkflowEdgeType)}
+              >
+                <MenuItem value="default">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>⌒</Box>
+                    Bezier (Default)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="straight">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>—</Box>
+                    Straight
+                  </Box>
+                </MenuItem>
+                <MenuItem value="step">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>⌐</Box>
+                    Step (Right Angles)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="smoothstep">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>╭</Box>
+                    Smooth Step (Rounded)
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
             <FormControlLabel
               control={
                 <Switch

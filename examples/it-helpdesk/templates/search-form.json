@@ -1,0 +1,331 @@
+{
+  "name": "IT Ticket Search",
+  "description": "Search, filter, and manage IT support tickets. Find tickets by reporter, category, urgency, or date range. Features smart dropdowns that show actual data values with counts.",
+  "formType": "search",
+  "searchConfig": {
+    "enabled": true,
+    "fields": {
+      "email": {
+        "enabled": true,
+        "operators": ["contains", "equals"],
+        "defaultOperator": "contains",
+        "showInResults": true,
+        "resultOrder": 3,
+        "placeholder": "Search by email...",
+        "optionsSource": {
+          "type": "distinct",
+          "distinct": {
+            "showCounts": true,
+            "sortBy": "count",
+            "sortDirection": "desc",
+            "limit": 50
+          },
+          "refreshOnMount": true
+        }
+      },
+      "subject": {
+        "enabled": true,
+        "operators": ["contains", "startsWith", "regex"],
+        "defaultOperator": "contains",
+        "showInResults": true,
+        "resultOrder": 1,
+        "placeholder": "Search ticket subjects..."
+      },
+      "description": {
+        "enabled": true,
+        "operators": ["contains", "regex"],
+        "defaultOperator": "contains",
+        "showInResults": false,
+        "placeholder": "Search in descriptions..."
+      },
+      "issueCategory": {
+        "enabled": true,
+        "operators": ["equals", "in"],
+        "defaultOperator": "equals",
+        "showInResults": true,
+        "resultOrder": 4,
+        "placeholder": "Filter by category",
+        "optionsSource": {
+          "type": "distinct",
+          "distinct": {
+            "showCounts": true,
+            "sortBy": "count",
+            "sortDirection": "desc",
+            "limit": 20,
+            "labelMap": {
+              "hardware": "Hardware",
+              "software": "Software",
+              "network": "Network / Connectivity",
+              "access": "Access & Permissions",
+              "other": "Other"
+            }
+          },
+          "refreshOnMount": true
+        }
+      },
+      "urgencyLevel": {
+        "enabled": true,
+        "operators": ["equals", "in"],
+        "defaultOperator": "equals",
+        "showInResults": true,
+        "resultOrder": 5,
+        "placeholder": "Filter by urgency",
+        "optionsSource": {
+          "type": "distinct",
+          "distinct": {
+            "showCounts": true,
+            "sortBy": "count",
+            "sortDirection": "desc",
+            "labelMap": {
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "critical": "Critical"
+            }
+          },
+          "refreshOnMount": true
+        }
+      },
+      "department": {
+        "enabled": true,
+        "operators": ["equals", "in"],
+        "defaultOperator": "equals",
+        "showInResults": true,
+        "resultOrder": 6,
+        "placeholder": "Filter by department",
+        "optionsSource": {
+          "type": "distinct",
+          "distinct": {
+            "showCounts": true,
+            "sortBy": "count",
+            "sortDirection": "desc",
+            "labelMap": {
+              "engineering": "Engineering",
+              "sales": "Sales",
+              "marketing": "Marketing",
+              "finance": "Finance",
+              "hr": "Human Resources",
+              "operations": "Operations",
+              "executive": "Executive"
+            }
+          },
+          "refreshOnMount": true
+        }
+      },
+      "fullName": {
+        "enabled": true,
+        "operators": ["contains", "equals", "startsWith"],
+        "defaultOperator": "contains",
+        "showInResults": true,
+        "resultOrder": 2,
+        "placeholder": "Search by reporter name...",
+        "optionsSource": {
+          "type": "distinct",
+          "distinct": {
+            "showCounts": true,
+            "sortBy": "count",
+            "sortDirection": "desc",
+            "limit": 50
+          },
+          "refreshOnMount": true
+        }
+      },
+      "_formSubmission.submittedAt": {
+        "enabled": true,
+        "operators": ["greaterThan", "lessThan", "between"],
+        "defaultOperator": "between",
+        "showInResults": true,
+        "resultOrder": 0,
+        "helpText": "Filter tickets by submission date"
+      }
+    },
+    "results": {
+      "layout": "table",
+      "pageSize": 25,
+      "pageSizeOptions": [10, 25, 50, 100],
+      "showPagination": true,
+      "allowView": true,
+      "allowEdit": true,
+      "allowDelete": false,
+      "allowExport": true,
+      "defaultSortField": "_formSubmission.submittedAt",
+      "defaultSortDirection": "desc",
+      "allowSorting": true,
+      "allowSelection": true,
+      "allowBulkActions": true
+    },
+    "maxResults": 500
+  },
+  "fieldConfigs": [
+    {
+      "path": "_section_quick_filters",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Quick Filters",
+        "subtitle": "Filter tickets by status, urgency, or category. Options show actual values from your data."
+      }
+    },
+    {
+      "path": "urgencyLevel",
+      "label": "Urgency Level",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "fieldWidth": "third",
+      "placeholder": "Any urgency",
+      "validation": {
+        "options": [
+          { "label": "Low", "value": "low" },
+          { "label": "Medium", "value": "medium" },
+          { "label": "High", "value": "high" },
+          { "label": "Critical", "value": "critical" }
+        ],
+        "clearable": true
+      }
+    },
+    {
+      "path": "issueCategory",
+      "label": "Issue Category",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "fieldWidth": "third",
+      "placeholder": "Any category",
+      "validation": {
+        "options": [
+          { "label": "Hardware", "value": "hardware" },
+          { "label": "Software", "value": "software" },
+          { "label": "Network / Connectivity", "value": "network" },
+          { "label": "Access & Permissions", "value": "access" },
+          { "label": "Other", "value": "other" }
+        ],
+        "clearable": true
+      }
+    },
+    {
+      "path": "department",
+      "label": "Department",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "fieldWidth": "third",
+      "placeholder": "Any department",
+      "validation": {
+        "options": [
+          { "label": "Engineering", "value": "engineering" },
+          { "label": "Sales", "value": "sales" },
+          { "label": "Marketing", "value": "marketing" },
+          { "label": "Finance", "value": "finance" },
+          { "label": "Human Resources", "value": "hr" },
+          { "label": "Operations", "value": "operations" },
+          { "label": "Executive", "value": "executive" }
+        ],
+        "clearable": true
+      }
+    },
+    {
+      "path": "_section_text_search",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Text Search",
+        "subtitle": "Search by keyword in ticket content"
+      }
+    },
+    {
+      "path": "subject",
+      "label": "Subject Contains",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "Search ticket subjects...",
+      "helpText": "Partial matches are supported"
+    },
+    {
+      "path": "description",
+      "label": "Description Contains",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "Search in ticket descriptions...",
+      "helpText": "Search for keywords in the detailed description"
+    },
+    {
+      "path": "_section_reporter_search",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Reporter Details",
+        "subtitle": "Find tickets by who submitted them"
+      }
+    },
+    {
+      "path": "fullName",
+      "label": "Reporter Name",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "Search by name..."
+    },
+    {
+      "path": "email",
+      "label": "Reporter Email",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "Search by email..."
+    },
+    {
+      "path": "_section_date_range",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Date Range",
+        "subtitle": "Filter tickets by submission date"
+      }
+    },
+    {
+      "path": "dateFrom",
+      "label": "From Date",
+      "type": "date",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "helpText": "Start of date range"
+    },
+    {
+      "path": "dateTo",
+      "label": "To Date",
+      "type": "date",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "helpText": "End of date range"
+    }
+  ],
+  "submitButtonText": "Search Tickets",
+  "theme": {
+    "primaryColor": "#1976d2",
+    "spacing": "comfortable",
+    "inputStyle": "outlined",
+    "borderRadius": 8,
+    "mode": "light"
+  }
+}

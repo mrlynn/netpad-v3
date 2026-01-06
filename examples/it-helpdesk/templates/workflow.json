@@ -1,6 +1,6 @@
 {
   "name": "IT Ticket Routing",
-  "description": "Automated routing workflow for IT support tickets. Sends confirmation to requester, notifies IT team, and escalates critical tickets to Slack.",
+  "description": "Automated routing workflow for IT support tickets. Sends confirmation to requester, notifies IT team, and escalates critical tickets via webhook.",
   "canvas": {
     "nodes": [
       {
@@ -8,21 +8,22 @@
         "type": "form-trigger",
         "position": { "x": 100, "y": 200 },
         "config": {
-          "event": "submission.created",
-          "formSlug": "it-support-request"
+          "formId": "YOUR_FORM_ID_HERE",
+          "waitForValidation": false,
+          "includeMetadata": true
         },
         "label": "Form Submitted",
         "enabled": true
       },
       {
         "id": "email-requester",
-        "type": "email",
+        "type": "email-send",
         "position": { "x": 400, "y": 100 },
         "config": {
-          "to": "{{email}}",
+          "to": "{{trigger.payload.data.email}}",
           "fromName": "IT Support",
-          "subject": "✅ IT Support Request Received: {{subject}}",
-          "body": "Hi {{fullName}},\n\nWe've received your IT support request and a team member will review it shortly.\n\n**Ticket Details:**\n- Subject: {{subject}}\n- Category: {{issueCategory}}\n- Urgency: {{urgencyLevel}}\n\n**Your Description:**\n{{description}}\n\n**What happens next:**\n- Low/Medium urgency: Response within 24 hours\n- High urgency: Response within 4 hours\n- Critical: Immediate escalation\n\nIf this is truly urgent and you haven't heard back, call the IT Help Desk directly at ext. 4357.\n\nThanks,\nThe IT Team",
+          "subject": "✅ IT Support Request Received: {{trigger.payload.data.subject}}",
+          "body": "Hi {{trigger.payload.data.fullName}},\n\nWe've received your IT support request and a team member will review it shortly.\n\n**Ticket Details:**\n- Subject: {{trigger.payload.data.subject}}\n- Category: {{trigger.payload.data.issueCategory}}\n- Urgency: {{trigger.payload.data.urgencyLevel}}\n\n**Your Description:**\n{{trigger.payload.data.description}}\n\n**What happens next:**\n- Low/Medium urgency: Response within 24 hours\n- High urgency: Response within 4 hours\n- Critical: Immediate escalation\n\nIf this is truly urgent and you haven't heard back, call the IT Help Desk directly at ext. 4357.\n\nThanks,\nThe IT Team",
           "bodyFormat": "markdown"
         },
         "label": "Requester Confirmation",
@@ -31,13 +32,13 @@
       },
       {
         "id": "email-it-team",
-        "type": "email",
+        "type": "email-send",
         "position": { "x": 400, "y": 300 },
         "config": {
           "to": "it-support@yourcompany.com",
           "fromName": "IT Help Desk",
-          "subject": "[{{urgencyLevel}}] New Ticket: {{subject}} from {{fullName}}",
-          "body": "New IT support request submitted:\n\n**Reporter:** {{fullName}} ({{department}})\n**Contact:** {{email}} | {{phoneExtension}}\n**Preferred Contact:** {{preferredContactMethod}}\n\n**Issue Details:**\n- Category: {{issueCategory}}\n- Urgency: {{urgencyLevel}}\n- Subject: {{subject}}\n\n**Description:**\n{{description}}\n\n**Additional Context:**\n{{#if assetId}}Asset ID: {{assetId}}{{/if}}\n{{#if applicationName}}Application: {{applicationName}}{{/if}}\n{{#if networkLocation}}Location: {{networkLocation}}{{/if}}",
+          "subject": "[{{trigger.payload.data.urgencyLevel}}] New Ticket: {{trigger.payload.data.subject}} from {{trigger.payload.data.fullName}}",
+          "body": "New IT support request submitted:\n\n**Reporter:** {{trigger.payload.data.fullName}} ({{trigger.payload.data.department}})\n**Contact:** {{trigger.payload.data.email}} | {{trigger.payload.data.phoneExtension}}\n**Preferred Contact:** {{trigger.payload.data.preferredContactMethod}}\n\n**Issue Details:**\n- Category: {{trigger.payload.data.issueCategory}}\n- Urgency: {{trigger.payload.data.urgencyLevel}}\n- Subject: {{trigger.payload.data.subject}}\n\n**Description:**\n{{trigger.payload.data.description}}",
           "bodyFormat": "markdown"
         },
         "label": "IT Team Notification",
@@ -46,12 +47,12 @@
       },
       {
         "id": "condition-critical",
-        "type": "condition",
+        "type": "conditional",
         "position": { "x": 400, "y": 500 },
         "config": {
           "conditions": [
             {
-              "field": "urgencyLevel",
+              "field": "trigger.payload.data.urgencyLevel",
               "operator": "equals",
               "value": "critical"
             }
@@ -63,16 +64,19 @@
         "enabled": true
       },
       {
-        "id": "slack-critical",
-        "type": "slack",
+        "id": "webhook-critical",
+        "type": "http-request",
         "position": { "x": 700, "y": 450 },
         "config": {
-          "channel": "#it-critical-alerts",
-          "message": "🚨 CRITICAL IT TICKET from {{fullName}} ({{department}}): {{subject}} — {{description}}",
-          "messageFormat": "text"
+          "method": "POST",
+          "url": "https://hooks.slack.com/services/YOUR_WEBHOOK_URL",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"text\": \"🚨 CRITICAL IT TICKET from {{trigger.payload.data.fullName}} ({{trigger.payload.data.department}}): {{trigger.payload.data.subject}} — {{trigger.payload.data.description}}\"}"
         },
-        "label": "Slack Alert",
-        "notes": "Sends immediate alert to Slack for critical tickets",
+        "label": "Slack Webhook",
+        "notes": "Sends immediate alert to Slack for critical tickets. Replace YOUR_WEBHOOK_URL with your Slack incoming webhook URL.",
         "enabled": true
       }
     ],
@@ -99,13 +103,13 @@
         "targetHandle": "input"
       },
       {
-        "id": "edge-condition-to-slack",
+        "id": "edge-condition-to-webhook",
         "source": "condition-critical",
         "sourceHandle": "yes",
-        "target": "slack-critical",
+        "target": "webhook-critical",
         "targetHandle": "input",
         "condition": {
-          "expression": "urgencyLevel === 'critical'",
+          "expression": "trigger.payload.data.urgencyLevel === 'critical'",
           "label": "Yes"
         }
       }

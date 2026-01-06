@@ -39,6 +39,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { DeployToVercelButton } from '@/components/Deploy';
+import { netpadColors } from '@/theme/theme';
 
 // The three pillars of NetPad
 const pillars = [
@@ -225,7 +226,23 @@ export default function LandingPage() {
         sx={{
           pt: { xs: 6, md: 8 },
           pb: { xs: 6, md: 8 },
-          background: 'radial-gradient(ellipse at top, rgba(0, 237, 100, 0.15) 0%, transparent 60%)'
+          position: 'relative',
+          overflow: 'hidden',
+          // Layered background for depth
+          background: `
+            radial-gradient(ellipse at top, rgba(0, 237, 100, 0.15) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(0, 212, 170, 0.08) 0%, transparent 40%)
+          `,
+          // NetPad signature grid pattern overlay
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: netpadColors.gridPatternDark,
+            backgroundSize: '32px 32px',
+            opacity: 0.5,
+            pointerEvents: 'none',
+          },
         }}
       >
         <Container maxWidth="lg">
@@ -1917,6 +1934,20 @@ console.log('Output:', result.execution.result?.output);`}
                 }}
               >
                 GitHub
+              </Typography>
+              <Typography
+                component="a"
+                href="https://status.netpad.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Status
               </Typography>
               <Typography
                 component="a"

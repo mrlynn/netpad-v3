@@ -40,6 +40,58 @@ export type SearchOperator =
   | 'regex';          // Regular expression
 
 /**
+ * Options source type for search field dropdowns
+ * - static: Use hardcoded options from validation.options
+ * - distinct: Extract unique values from the target collection
+ * - lookup: Use LookupConfig to fetch from another collection
+ * - aggregation: Use custom MongoDB aggregation pipeline
+ */
+export type SearchOptionsSourceType = 'static' | 'distinct' | 'lookup' | 'aggregation';
+
+/**
+ * Configuration for how dropdown options are populated in search fields
+ */
+export interface SearchOptionsSource {
+  type: SearchOptionsSourceType;
+
+  // For 'distinct' type - extract unique values from target collection
+  distinct?: {
+    field?: string;              // Field to get distinct values from (defaults to search field path)
+    showCounts?: boolean;        // Show count badge next to each option (e.g., "Hardware (45)")
+    sortBy?: 'value' | 'count' | 'label';  // How to sort options
+    sortDirection?: 'asc' | 'desc';
+    limit?: number;              // Max options to show (default: 100)
+    labelMap?: Record<string, string>;  // Map values to display labels
+    filter?: Record<string, any>;  // Base filter to apply when fetching
+  };
+
+  // For 'lookup' type - fetch from another collection
+  lookup?: {
+    collection: string;          // Source collection
+    displayField: string;        // Field to show as label
+    valueField: string;          // Field to use as value
+    filter?: Record<string, any>;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
+    limit?: number;
+  };
+
+  // For 'aggregation' type - custom pipeline
+  aggregation?: {
+    collection?: string;         // Collection (defaults to form's collection)
+    pipeline: any[];             // MongoDB aggregation pipeline
+    valueField: string;          // Field in result to use as value
+    labelField: string;          // Field in result to use as label
+    countField?: string;         // Optional field for count
+  };
+
+  // Common options
+  refreshOnMount?: boolean;      // Fetch options when form loads (default: true)
+  refreshInterval?: number;      // Auto-refresh interval in ms (0 = disabled)
+  cacheKey?: string;             // Cache key for sharing options across fields
+}
+
+/**
  * Configuration for a searchable field
  */
 export interface SearchFieldConfig {
@@ -51,6 +103,8 @@ export interface SearchFieldConfig {
   // UI options
   placeholder?: string;          // Search input placeholder
   helpText?: string;             // Help text for search field
+  // Dynamic options configuration
+  optionsSource?: SearchOptionsSource;  // How to populate dropdown options
 }
 
 /**

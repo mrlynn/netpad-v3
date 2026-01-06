@@ -127,6 +127,11 @@ export interface WorkflowNode {
 }
 
 /**
+ * Edge type determines the visual path of the connection
+ */
+export type WorkflowEdgeType = 'default' | 'straight' | 'step' | 'smoothstep';
+
+/**
  * Connection between two nodes
  */
 export interface WorkflowEdge {
@@ -146,6 +151,7 @@ export interface WorkflowEdge {
   };
 
   // Visual
+  type?: WorkflowEdgeType;       // Edge path style (default: bezier curve)
   animated?: boolean;
   style?: EdgeStyle;
 }
@@ -177,7 +183,8 @@ export type NodeCategory =
   | 'actions'
   | 'ai'
   | 'forms'
-  | 'custom';
+  | 'custom'
+  | 'annotations';
 
 /**
  * Node lifecycle stage

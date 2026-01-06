@@ -37,6 +37,8 @@ import {
   Edit,
   Delete,
   Download,
+  TrendingUp,
+  AutoAwesome,
 } from '@mui/icons-material';
 import {
   SearchConfig,
@@ -45,6 +47,8 @@ import {
   SearchResultsConfig,
   FieldConfig,
   FormType,
+  SearchOptionsSource,
+  SearchOptionsSourceType,
 } from '@/types/form';
 
 // Operator labels and descriptions
@@ -414,6 +418,238 @@ export function SearchConfigEditor({
                               })
                             }
                           />
+
+                          {/* Smart Dropdown Configuration */}
+                          {['dropdown', 'select', 'string', 'enum'].includes(field.type?.toLowerCase() || '') && (
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                mt: 2,
+                                p: 2,
+                                bgcolor: alpha('#00ED64', 0.03),
+                                border: '1px solid',
+                                borderColor: alpha('#00ED64', 0.15),
+                                borderRadius: 1,
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                <AutoAwesome sx={{ fontSize: 18, color: '#00ED64' }} />
+                                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                  Smart Dropdown
+                                </Typography>
+                                {fieldConfig.optionsSource && (
+                                  <Chip
+                                    label={fieldConfig.optionsSource.type}
+                                    size="small"
+                                    sx={{
+                                      height: 18,
+                                      fontSize: '0.6rem',
+                                      bgcolor: alpha('#00ED64', 0.15),
+                                      color: '#00ED64',
+                                    }}
+                                  />
+                                )}
+                              </Box>
+
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    size="small"
+                                    checked={!!fieldConfig.optionsSource}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        handleFieldConfigChange(field.path, {
+                                          optionsSource: {
+                                            type: 'distinct',
+                                            distinct: {
+                                              showCounts: true,
+                                              sortBy: 'count',
+                                              sortDirection: 'desc',
+                                              limit: 100,
+                                            },
+                                            refreshOnMount: true,
+                                          },
+                                        });
+                                      } else {
+                                        handleFieldConfigChange(field.path, {
+                                          optionsSource: undefined,
+                                        });
+                                      }
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography variant="caption">
+                                    Enable smart dropdown (fetch options from data)
+                                  </Typography>
+                                }
+                              />
+
+                              {fieldConfig.optionsSource && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
+                                  {/* Options Source Type */}
+                                  <FormControl size="small" fullWidth>
+                                    <InputLabel>Options Source</InputLabel>
+                                    <Select
+                                      value={fieldConfig.optionsSource.type || 'distinct'}
+                                      label="Options Source"
+                                      onChange={(e) => {
+                                        const newType = e.target.value as SearchOptionsSourceType;
+                                        const newSource: SearchOptionsSource = { type: newType };
+                                        if (newType === 'distinct') {
+                                          newSource.distinct = {
+                                            showCounts: true,
+                                            sortBy: 'count',
+                                            sortDirection: 'desc',
+                                            limit: 100,
+                                          };
+                                          newSource.refreshOnMount = true;
+                                        }
+                                        handleFieldConfigChange(field.path, { optionsSource: newSource });
+                                      }}
+                                    >
+                                      <MenuItem value="distinct">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <TrendingUp sx={{ fontSize: 16 }} />
+                                          <span>Distinct Values (from data)</span>
+                                        </Box>
+                                      </MenuItem>
+                                      <MenuItem value="static">Static (use field options)</MenuItem>
+                                    </Select>
+                                  </FormControl>
+
+                                  {/* Distinct Values Configuration */}
+                                  {fieldConfig.optionsSource.type === 'distinct' && (
+                                    <>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Options load dynamically from actual field values in your data.
+                                      </Typography>
+
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            size="small"
+                                            checked={fieldConfig.optionsSource.distinct?.showCounts !== false}
+                                            onChange={(e) =>
+                                              handleFieldConfigChange(field.path, {
+                                                optionsSource: {
+                                                  ...fieldConfig.optionsSource!,
+                                                  distinct: {
+                                                    ...fieldConfig.optionsSource!.distinct,
+                                                    showCounts: e.target.checked,
+                                                  },
+                                                },
+                                              })
+                                            }
+                                          />
+                                        }
+                                        label={
+                                          <Typography variant="caption">
+                                            Show counts (e.g., &quot;Hardware (45)&quot;)
+                                          </Typography>
+                                        }
+                                      />
+
+                                      <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <FormControl size="small" sx={{ flex: 1 }}>
+                                          <InputLabel>Sort By</InputLabel>
+                                          <Select
+                                            value={fieldConfig.optionsSource.distinct?.sortBy || 'count'}
+                                            label="Sort By"
+                                            onChange={(e) =>
+                                              handleFieldConfigChange(field.path, {
+                                                optionsSource: {
+                                                  ...fieldConfig.optionsSource!,
+                                                  distinct: {
+                                                    ...fieldConfig.optionsSource!.distinct,
+                                                    sortBy: e.target.value as 'value' | 'count' | 'label',
+                                                  },
+                                                },
+                                              })
+                                            }
+                                          >
+                                            <MenuItem value="count">Count (most common)</MenuItem>
+                                            <MenuItem value="value">Value (alphabetical)</MenuItem>
+                                            <MenuItem value="label">Label</MenuItem>
+                                          </Select>
+                                        </FormControl>
+
+                                        <FormControl size="small" sx={{ flex: 1 }}>
+                                          <InputLabel>Direction</InputLabel>
+                                          <Select
+                                            value={fieldConfig.optionsSource.distinct?.sortDirection || 'desc'}
+                                            label="Direction"
+                                            onChange={(e) =>
+                                              handleFieldConfigChange(field.path, {
+                                                optionsSource: {
+                                                  ...fieldConfig.optionsSource!,
+                                                  distinct: {
+                                                    ...fieldConfig.optionsSource!.distinct,
+                                                    sortDirection: e.target.value as 'asc' | 'desc',
+                                                  },
+                                                },
+                                              })
+                                            }
+                                          >
+                                            <MenuItem value="desc">Descending</MenuItem>
+                                            <MenuItem value="asc">Ascending</MenuItem>
+                                          </Select>
+                                        </FormControl>
+                                      </Box>
+
+                                      <TextField
+                                        size="small"
+                                        label="Max Options"
+                                        type="number"
+                                        value={fieldConfig.optionsSource.distinct?.limit || 100}
+                                        onChange={(e) =>
+                                          handleFieldConfigChange(field.path, {
+                                            optionsSource: {
+                                              ...fieldConfig.optionsSource!,
+                                              distinct: {
+                                                ...fieldConfig.optionsSource!.distinct,
+                                                limit: parseInt(e.target.value, 10) || 100,
+                                              },
+                                            },
+                                          })
+                                        }
+                                        inputProps={{ min: 1, max: 500 }}
+                                        helperText="Maximum number of options to show"
+                                      />
+
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            size="small"
+                                            checked={fieldConfig.optionsSource.refreshOnMount !== false}
+                                            onChange={(e) =>
+                                              handleFieldConfigChange(field.path, {
+                                                optionsSource: {
+                                                  ...fieldConfig.optionsSource!,
+                                                  refreshOnMount: e.target.checked,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        }
+                                        label={
+                                          <Typography variant="caption">
+                                            Refresh options when form loads
+                                          </Typography>
+                                        }
+                                      />
+                                    </>
+                                  )}
+
+                                  {fieldConfig.optionsSource.type === 'static' && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      Options will use the field&apos;s configured validation options.
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                            </Paper>
+                          )}
                         </Box>
                       )}
                     </AccordionDetails>

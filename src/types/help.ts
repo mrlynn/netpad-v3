@@ -30,6 +30,8 @@ export type HelpTopicId =
   | 'form-library'
   | 'document-preview'
   | 'form-publishing'
+  | 'search-forms'
+  | 'smart-dropdowns'
   | 'pipeline-builder'
   | 'aggregation-stages'
   | 'mongodb-connection'
@@ -52,4 +54,7 @@ export type HelpTopicId =
   | 'api-keys-management'
   | 'workflow-variables'
   | 'workflow-nodes'
-  | 'employee-onboarding';
+  | 'employee-onboarding'
+  | 'mcp-server'
+  | 'netpad-forms-package'
+  | 'netpad-workflows-package';

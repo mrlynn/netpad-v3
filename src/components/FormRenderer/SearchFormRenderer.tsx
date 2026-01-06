@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -30,6 +30,9 @@ import {
   Collapse,
   ToggleButtonGroup,
   ToggleButton,
+  Autocomplete,
+  ListItemText,
+  Badge,
 } from '@mui/material';
 import {
   Search,
@@ -43,9 +46,17 @@ import {
   ArrowDownward,
   ContentCopy,
   Lock,
+  Refresh,
 } from '@mui/icons-material';
-import { FormConfiguration, FieldConfig, SearchConfig, SearchOperator } from '@/types/form';
+import { FormConfiguration, FieldConfig, SearchConfig, SearchOperator, SearchOptionsSource } from '@/types/form';
 import { getResolvedTheme } from '@/lib/formThemes';
+
+// Type for distinct value options
+interface DistinctOption {
+  value: any;
+  label: string;
+  count: number;
+}
 
 interface SearchResult {
   _id: string;
@@ -97,6 +108,10 @@ export function SearchFormRenderer({
   const [sortField, setSortField] = useState<string | undefined>(searchConfig.results?.defaultSortField);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(searchConfig.results?.defaultSortDirection || 'desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  // Dynamic options state for smart dropdowns
+  const [dynamicOptions, setDynamicOptions] = useState<Record<string, DistinctOption[]>>({});
+  const [optionsLoading, setOptionsLoading] = useState<Record<string, boolean>>({});
 
   // Get resolved theme
   const theme = useMemo(() => getResolvedTheme(form.theme), [form.theme]);
@@ -161,6 +176,62 @@ export function SearchFormRenderer({
     });
     setOperators(defaultOperators);
   }, [searchableFields, searchConfig.fields]);
+
+  // Fetch distinct values for a single field
+  const fetchDistinctValues = useCallback(async (fieldPath: string, optionsSource: SearchOptionsSource) => {
+    if (!form.id || optionsSource.type !== 'distinct') return;
+
+    setOptionsLoading(prev => ({ ...prev, [fieldPath]: true }));
+
+    try {
+      const distinctConfig = optionsSource.distinct || {};
+
+      const response = await fetch('/api/mongodb/distinct-values', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formId: form.id,
+          field: distinctConfig.field || fieldPath,
+          includeCounts: distinctConfig.showCounts !== false,
+          sortBy: distinctConfig.sortBy || 'count',
+          sortDirection: distinctConfig.sortDirection || 'desc',
+          limit: distinctConfig.limit || 100,
+          labelMap: distinctConfig.labelMap,
+          filter: distinctConfig.filter,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.values) {
+        // Apply label mapping
+        const labelMap = distinctConfig.labelMap || {};
+        const options: DistinctOption[] = data.values.map((v: DistinctOption) => ({
+          ...v,
+          label: labelMap[v.value] || v.label || String(v.value),
+        }));
+
+        setDynamicOptions(prev => ({ ...prev, [fieldPath]: options }));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch distinct values for ${fieldPath}:`, err);
+    } finally {
+      setOptionsLoading(prev => ({ ...prev, [fieldPath]: false }));
+    }
+  }, [form.id]);
+
+  // Fetch all dynamic options on mount
+  useEffect(() => {
+    const fieldsWithOptions = Object.entries(searchConfig.fields || {}).filter(
+      ([_, config]) => config.optionsSource?.type === 'distinct' && config.optionsSource?.refreshOnMount !== false
+    );
+
+    fieldsWithOptions.forEach(([fieldPath, config]) => {
+      if (config.optionsSource) {
+        fetchDistinctValues(fieldPath, config.optionsSource);
+      }
+    });
+  }, [searchConfig.fields, fetchDistinctValues]);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -403,6 +474,99 @@ export function SearchFormRenderer({
         )}
       </Box>
     );
+
+    // Check if this field has dynamic options (smart dropdown)
+    const options = dynamicOptions[field.path];
+    const isLoadingOptions = optionsLoading[field.path];
+    const hasOptionsSource = fieldSearchConfig?.optionsSource?.type === 'distinct';
+    const showCounts = fieldSearchConfig?.optionsSource?.distinct?.showCounts !== false;
+
+    // Render smart dropdown if we have dynamic options
+    if (hasOptionsSource && (options || isLoadingOptions)) {
+      return (
+        <Box key={field.path} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          {operatorSelector}
+          <FormControl fullWidth size="small">
+            <Autocomplete
+              size="small"
+              options={options || []}
+              loading={isLoadingOptions}
+              value={options?.find(opt => opt.value === value) || null}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  setSearchValues(prev => ({ ...prev, [field.path]: newValue.value }));
+                } else {
+                  setSearchValues(prev => {
+                    const newValues = { ...prev };
+                    delete newValues[field.path];
+                    return newValues;
+                  });
+                }
+              }}
+              getOptionLabel={(option) => {
+                if (showCounts && option.count > 0) {
+                  return `${option.label} (${option.count})`;
+                }
+                return option.label;
+              }}
+              renderOption={(props, option) => (
+                <li {...props} key={option.value}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <Typography variant="body2">{option.label}</Typography>
+                    {showCounts && option.count > 0 && (
+                      <Chip
+                        label={option.count}
+                        size="small"
+                        sx={{
+                          ml: 1,
+                          height: 20,
+                          fontSize: 11,
+                          bgcolor: alpha(theme.primaryColor || '#00ED64', 0.1),
+                          color: theme.primaryColor || '#00ED64',
+                        }}
+                      />
+                    )}
+                  </Box>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={field.label}
+                  placeholder={fieldSearchConfig?.placeholder || `Select ${field.label.toLowerCase()}...`}
+                  helperText={fieldSearchConfig?.helpText}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingOptions ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              isOptionEqualToValue={(option, val) => option.value === val.value}
+              clearOnEscape
+              blurOnSelect
+            />
+          </FormControl>
+          {/* Refresh button */}
+          {fieldSearchConfig?.optionsSource && (
+            <Tooltip title="Refresh options">
+              <IconButton
+                size="small"
+                onClick={() => fetchDistinctValues(field.path, fieldSearchConfig.optionsSource!)}
+                disabled={isLoadingOptions}
+                sx={{ mt: 0.5 }}
+              >
+                <Refresh sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      );
+    }
 
     // Boolean field - use toggle buttons or select
     if (field.type === 'boolean') {

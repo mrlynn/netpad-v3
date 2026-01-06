@@ -1,5 +1,97 @@
 import { TourStep } from '@/components/Help/OnboardingTour';
 
+// Workflow Editor tour steps
+export const workflowEditorTourSteps: TourStep[] = [
+  {
+    target: 'center',
+    title: 'Welcome to the Workflow Editor!',
+    content:
+      'Build powerful automation workflows by connecting nodes together. Let\'s take a quick tour of the main features.',
+    placement: 'center',
+    disableOverlay: true,
+  },
+  {
+    target: '[data-tour="workflow-toolbar"]',
+    title: 'Workflow Toolbar',
+    content:
+      'Manage your workflow from here. Save changes, publish new versions, run your workflow, and access settings and execution logs.',
+    placement: 'bottom',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="node-palette"]',
+    title: 'Node Palette',
+    content:
+      'Drag nodes from here onto the canvas. Nodes are organized by category: Triggers start your workflow, Logic controls flow, Integrations connect to external services, and more.',
+    placement: 'right',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="node-search"]',
+    title: 'Search Nodes',
+    content:
+      'Quickly find nodes by typing in the search box. Filter by name or category to locate exactly what you need.',
+    placement: 'right',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="workflow-canvas"]',
+    title: 'Workflow Canvas',
+    content:
+      'This is where you build your workflow. Drag nodes here, connect them together by drawing lines between connection points, and arrange them visually.',
+    placement: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    target: '[data-tour="workflow-controls"]',
+    title: 'Canvas Controls',
+    content:
+      'Use these controls to zoom in/out, fit the view to show all nodes, and toggle interactive mode. You can also use your mouse wheel to zoom.',
+    placement: 'top',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="workflow-status"]',
+    title: 'Workflow Status',
+    content:
+      'Your workflow starts as a Draft. When ready, publish it to make it Active. You can also Pause or Archive workflows from this dropdown.',
+    placement: 'bottom',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="workflow-save"]',
+    title: 'Save Your Work',
+    content:
+      'Click Save to persist your changes. The indicator shows when you have unsaved changes. Use Ctrl/Cmd+S as a shortcut.',
+    placement: 'bottom',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="workflow-run"]',
+    title: 'Run Your Workflow',
+    content:
+      'Test your workflow by clicking Run. For workflows with triggers, you can manually execute them here to verify everything works correctly.',
+    placement: 'bottom',
+    spotlightPadding: 4,
+  },
+  {
+    target: '[data-tour="workflow-logs"]',
+    title: 'Execution Logs',
+    content:
+      'View the history of workflow executions here. See which nodes ran, their outputs, and any errors that occurred.',
+    placement: 'bottom',
+    spotlightPadding: 4,
+  },
+  {
+    target: 'center',
+    title: 'You\'re Ready to Build!',
+    content:
+      'Start by dragging a Trigger node onto the canvas, then add more nodes to define your workflow logic. Double-click any node to configure it. Press Cmd+/ anytime to search help topics.',
+    placement: 'center',
+    disableOverlay: true,
+  },
+];
+
 // Pipeline Builder tour steps
 export const pipelineBuilderTourSteps: TourStep[] = [
   {
@@ -130,6 +222,24 @@ export const formBuilderTourSteps: TourStep[] = [
 
 // Quick start tips shown in a simpler format
 export const quickStartTips = {
+  'workflow-editor': [
+    {
+      title: 'Drag & Drop Nodes',
+      description: 'Drag nodes from the palette onto the canvas to add them to your workflow.',
+    },
+    {
+      title: 'Connect Nodes',
+      description: 'Click and drag from one node\'s output handle to another node\'s input to connect them.',
+    },
+    {
+      title: 'Configure Nodes',
+      description: 'Double-click any node to open its configuration panel on the right.',
+    },
+    {
+      title: 'Use Variables',
+      description: 'Reference data from previous nodes using {{nodes.nodeId.field}} syntax.',
+    },
+  ],
   'pipeline-builder': [
     {
       title: 'Drag & Drop Stages',

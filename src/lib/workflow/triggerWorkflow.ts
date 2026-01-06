@@ -48,6 +48,24 @@ export async function findWorkflowsForForm(
     // Direct database query instead of API call to avoid authentication issues
     const collection = await getWorkflowsCollection(orgId);
 
+    console.log(`[Workflow Trigger] Searching for workflows in org ${orgId} for form ${formId}`);
+
+    // First, let's see all workflows with form-trigger nodes for debugging
+    const allFormTriggerWorkflows = await collection.find({
+      'canvas.nodes': {
+        $elemMatch: {
+          type: 'form-trigger',
+        },
+      },
+    }).toArray();
+
+    console.log(`[Workflow Trigger] Found ${allFormTriggerWorkflows.length} workflow(s) with form-trigger nodes`);
+
+    for (const wf of allFormTriggerWorkflows) {
+      const triggerNode = wf.canvas?.nodes?.find((n: any) => n.type === 'form-trigger');
+      console.log(`[Workflow Trigger] - Workflow "${wf.name}" (${wf.id}): status=${wf.status}, triggerFormId=${triggerNode?.config?.formId}, looking for formId=${formId}`);
+    }
+
     // Find active workflows with a form-trigger for this form
     const workflows = await collection.find({
       status: 'active',
@@ -60,7 +78,7 @@ export async function findWorkflowsForForm(
       },
     }).toArray();
 
-    console.log(`[Workflow Trigger] Found ${workflows.length} active workflow(s) for form ${formId}`);
+    console.log(`[Workflow Trigger] Found ${workflows.length} active workflow(s) matching form ${formId}`);
     return workflows;
   } catch (error) {
     console.error('Error finding workflows for form:', error);

@@ -806,6 +806,7 @@ export async function initializeClusterDatabase(
       ],
     });
 
+    let finalUsername = dbUsername;
     if (!userResult.success) {
       // User might already exist, try with a different name
       const altUsername = `${dbUsername}_${Date.now().toString(36)}`;
@@ -821,9 +822,8 @@ export async function initializeClusterDatabase(
       if (!altUserResult.success) {
         return { success: false, error: 'Failed to create database user' };
       }
+      finalUsername = altUsername;
     }
-
-    const finalUsername = userResult.success ? dbUsername : `${dbUsername}_${Date.now().toString(36)}`;
 
     // Build connection string
     const connectionString = buildConnectionString(

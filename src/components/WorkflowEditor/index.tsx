@@ -21,6 +21,11 @@ import {
   ListItemIcon,
   ListItemText,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -40,6 +45,7 @@ import {
   MoreVert as MoreVertIcon,
   FileDownload as FileDownloadIcon,
   FileUpload as FileUploadIcon,
+  DeleteSweep as ClearCanvasIcon,
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
@@ -107,6 +113,7 @@ function WorkflowEditorInner({
     removeNode,
     addEdge: addWorkflowEdge,
     updateSettings,
+    clearCanvas,
   } = useWorkflowActions();
 
   // Chat integration
@@ -201,6 +208,9 @@ function WorkflowEditorInner({
 
   // Import input ref
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Clear canvas confirmation dialog state
+  const [clearCanvasDialogOpen, setClearCanvasDialogOpen] = useState(false);
 
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
@@ -374,6 +384,18 @@ function WorkflowEditorInner({
     });
   }, [workflow]);
 
+  // Handle clear canvas
+  const handleClearCanvas = useCallback(() => {
+    clearCanvas();
+    setClearCanvasDialogOpen(false);
+    setMoreMenuAnchor(null);
+    setSnackbar({
+      open: true,
+      message: 'Canvas cleared',
+      severity: 'success',
+    });
+  }, [clearCanvas]);
+
   // Handle import workflow
   const handleImportWorkflow = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -390,15 +412,34 @@ function WorkflowEditorInner({
           throw new Error('Invalid workflow definition: missing canvas.nodes array');
         }
 
-        // Import the workflow nodes and edges
+        // Create ID mapping (old ID -> new ID) to update edge references
+        const idMapping: Record<string, string> = {};
+
+        // Import nodes with new IDs
         if (imported.canvas.nodes) {
           imported.canvas.nodes.forEach((node: WorkflowNode) => {
             // Generate new IDs to avoid conflicts
+            const newId = `${node.type}_${nanoid(8)}`;
+            idMapping[node.id] = newId;
+
             const newNode: WorkflowNode = {
               ...node,
-              id: `${node.type}_${nanoid(8)}`,
+              id: newId,
             };
             addNode(newNode);
+          });
+        }
+
+        // Import edges with updated node references
+        if (imported.canvas.edges && Array.isArray(imported.canvas.edges)) {
+          imported.canvas.edges.forEach((edge: WorkflowEdge) => {
+            const newEdge: WorkflowEdge = {
+              ...edge,
+              id: `edge_${nanoid(8)}`,
+              source: idMapping[edge.source] || edge.source,
+              target: idMapping[edge.target] || edge.target,
+            };
+            addWorkflowEdge(newEdge);
           });
         }
 
@@ -407,9 +448,11 @@ function WorkflowEditorInner({
           updateSettings(imported.settings);
         }
 
+        const nodeCount = imported.canvas.nodes?.length || 0;
+        const edgeCount = imported.canvas.edges?.length || 0;
         setSnackbar({
           open: true,
-          message: `Imported ${imported.canvas.nodes.length} nodes from workflow definition`,
+          message: `Imported ${nodeCount} nodes and ${edgeCount} connections from workflow definition`,
           severity: 'success',
         });
       } catch (err: any) {
@@ -425,7 +468,7 @@ function WorkflowEditorInner({
     // Reset input so same file can be selected again
     event.target.value = '';
     setMoreMenuAnchor(null);
-  }, [addNode, updateSettings]);
+  }, [addNode, addWorkflowEdge, updateSettings]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -472,6 +515,7 @@ function WorkflowEditorInner({
       {/* Toolbar */}
       <Paper
         elevation={0}
+        data-tour="workflow-toolbar"
         sx={{
           borderBottom: `1px solid ${theme.palette.divider}`,
           zIndex: 10,
@@ -494,6 +538,7 @@ function WorkflowEditorInner({
           {/* Status Chip */}
           {workflow && (
             <Chip
+              data-tour="workflow-status"
               icon={STATUS_CONFIG[workflow.status].icon}
               label={STATUS_CONFIG[workflow.status].label}
               deleteIcon={<ExpandMoreIcon />}
@@ -573,6 +618,7 @@ function WorkflowEditorInner({
           </Tooltip>
 
           <Button
+            data-tour="workflow-save"
             variant="outlined"
             size="small"
             startIcon={isSaving ? <CircularProgress size={16} /> : <SaveIcon />}
@@ -598,6 +644,7 @@ function WorkflowEditorInner({
           </Tooltip>
 
           <Button
+            data-tour="workflow-run"
             variant="outlined"
             size="small"
             startIcon={<RunIcon />}
@@ -609,6 +656,7 @@ function WorkflowEditorInner({
 
           <Tooltip title="Execution Logs">
             <IconButton
+              data-tour="workflow-logs"
               size="small"
               onClick={() => setLogsPanelOpen(true)}
               disabled={!workflow}
@@ -634,7 +682,7 @@ function WorkflowEditorInner({
         <NodePalette />
 
         {/* Canvas */}
-        <Box sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <Box data-tour="workflow-canvas" sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <ReactFlowProvider>
             <WorkflowEditorCanvas
               onNodeDoubleClick={handleNodeDoubleClick}
@@ -737,6 +785,19 @@ function WorkflowEditorInner({
           </ListItemIcon>
           <ListItemText>Import Workflow Definition</ListItemText>
         </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setMoreMenuAnchor(null);
+            setClearCanvasDialogOpen(true);
+          }}
+          disabled={!workflow || workflow.canvas.nodes.length === 0}
+        >
+          <ListItemIcon>
+            <ClearCanvasIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>Clear Canvas</ListItemText>
+        </MenuItem>
       </Menu>
 
       {/* Hidden file input for importing workflow definitions */}
@@ -772,6 +833,28 @@ function WorkflowEditorInner({
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Clear Canvas Confirmation Dialog */}
+      <Dialog
+        open={clearCanvasDialogOpen}
+        onClose={() => setClearCanvasDialogOpen(false)}
+      >
+        <DialogTitle>Clear Canvas?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will remove all {workflow?.canvas.nodes.length || 0} nodes and {workflow?.canvas.edges.length || 0} connections from the canvas.
+            This action can be undone with Ctrl+Z.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearCanvasDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleClearCanvas} color="error" variant="contained">
+            Clear Canvas
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
@@ -800,3 +883,4 @@ export { DataContextPanel } from './Panels/DataContextPanel';
 export { ConditionBuilder } from './Panels/ConditionBuilder';
 export { BaseNode } from './Nodes/BaseNode';
 export { TriggerNode } from './Nodes/TriggerNode';
+export { StickyNote } from './Nodes/StickyNote';

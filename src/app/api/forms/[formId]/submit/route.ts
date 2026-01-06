@@ -348,6 +348,7 @@ export async function POST(
 
       // Trigger any workflows configured for this form
       if (form.organizationId) {
+        console.log(`[Form Submit] Triggering workflows for form ${form.id} in org ${form.organizationId}`);
         triggerFormWorkflowsAsync(
           form.organizationId,
           form.id!,
@@ -366,6 +367,8 @@ export async function POST(
 
         // Increment subscription submission usage
         await incrementSubmissionUsage(form.organizationId, form.id!);
+      } else {
+        console.log(`[Form Submit] No organizationId on form ${form.id}, skipping workflow trigger`);
       }
 
       return NextResponse.json({

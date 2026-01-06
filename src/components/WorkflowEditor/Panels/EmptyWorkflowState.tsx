@@ -222,6 +222,7 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   ai: { label: 'AI', icon: <AiIcon />, color: '#E91E63' },
   forms: { label: 'Forms', icon: <FormIcon />, color: '#00BCD4' },
   custom: { label: 'Custom', icon: <CategoryIcon />, color: '#795548' },
+  annotations: { label: 'Annotations', icon: <CategoryIcon />, color: '#9E9E9E' },
 };
 
 // Workflow template definition
