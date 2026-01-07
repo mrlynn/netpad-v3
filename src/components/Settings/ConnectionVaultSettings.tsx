@@ -53,9 +53,14 @@ interface Organization {
   name: string;
 }
 
-export function ConnectionVaultSettings() {
+interface ConnectionVaultSettingsProps {
+  organizationId?: string;
+  projectId?: string;
+}
+
+export function ConnectionVaultSettings({ organizationId: propOrgId, projectId }: ConnectionVaultSettingsProps = {}) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(propOrgId || '');
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,14 +73,19 @@ export function ConnectionVaultSettings() {
   const [connectionToDuplicate, setConnectionToDuplicate] = useState<Connection | null>(null);
 
   useEffect(() => {
-    fetchOrganizations();
-  }, []);
+    if (propOrgId) {
+      // If orgId provided as prop, use it and skip fetching orgs
+      setSelectedOrgId(propOrgId);
+    } else {
+      fetchOrganizations();
+    }
+  }, [propOrgId]);
 
   useEffect(() => {
     if (selectedOrgId) {
       fetchConnections(selectedOrgId);
     }
-  }, [selectedOrgId]);
+  }, [selectedOrgId, projectId]);
 
   const fetchOrganizations = async () => {
     try {
@@ -98,7 +108,12 @@ export function ConnectionVaultSettings() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/organizations/${orgId}/vault`);
+      // Add projectId filter if provided
+      const url = projectId 
+        ? `/api/organizations/${orgId}/vault?projectId=${projectId}`
+        : `/api/organizations/${orgId}/vault`;
+      
+      const response = await fetch(url);
       const data = await response.json();
 
       if (response.ok) {
@@ -202,20 +217,22 @@ export function ConnectionVaultSettings() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Organization</InputLabel>
-            <Select
-              value={selectedOrgId}
-              label="Organization"
-              onChange={(e) => setSelectedOrgId(e.target.value)}
-            >
-              {organizations.map((org) => (
-                <MenuItem key={org.orgId} value={org.orgId}>
-                  {org.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {!propOrgId && (
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Organization</InputLabel>
+              <Select
+                value={selectedOrgId}
+                label="Organization"
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+              >
+                {organizations.map((org) => (
+                  <MenuItem key={org.orgId} value={org.orgId}>
+                    {org.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -443,6 +460,7 @@ export function ConnectionVaultSettings() {
         onClose={() => setCreateDialogOpen(false)}
         organizationId={selectedOrgId}
         organizationName={organizations.find((o) => o.orgId === selectedOrgId)?.name}
+        projectId={projectId}
         onSuccess={handleConnectionCreated}
       />
 

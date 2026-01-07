@@ -128,20 +128,9 @@ export async function createOrganization(input: CreateOrgInput): Promise<Organiz
     timestamp: new Date(),
   });
 
-  // Auto-provision M0 cluster for free tier organizations
-  if (!input.skipProvisioning && isAutoProvisioningAvailable()) {
-    try {
-      console.log(`[Org] Auto-provisioning M0 cluster for org ${org.orgId}`);
-      await queueClusterProvisioning({
-        organizationId: org.orgId,
-        userId: input.createdBy,
-        databaseName: 'forms',
-      });
-    } catch (error) {
-      // Don't fail org creation if provisioning fails
-      console.error('[Org] Failed to queue cluster provisioning:', error);
-    }
-  }
+  // Note: Auto-provisioning at org level is disabled in the new project-based model.
+  // Cluster provisioning now happens at the project level to support multi-project orgs.
+  // See: src/app/api/organizations/[orgId]/cluster/initialize/route.ts
 
   return org;
 }

@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Build savedForm, explicitly handling dataSource and organizationId to preserve them
-      const { dataSource: formDataSource, organizationId: formOrgId, ...restFormConfig } = formConfig;
+      // Build savedForm, explicitly handling dataSource, organizationId, and projectId to preserve them
+      const { dataSource: formDataSource, organizationId: formOrgId, projectId: formProjectId, ...restFormConfig } = formConfig;
       savedForm = {
         ...existing,
         ...restFormConfig,
@@ -121,9 +121,10 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
         isPublished: publish ? true : existing.isPublished,
         publishedAt: publish && !existing.publishedAt ? now : existing.publishedAt,
-        // Explicitly preserve dataSource and organizationId - use formConfig values if provided, otherwise keep existing
+        // Explicitly preserve dataSource, organizationId, and projectId - use formConfig values if provided, otherwise keep existing
         dataSource: formDataSource !== undefined ? formDataSource : existing.dataSource,
         organizationId: formOrgId !== undefined ? formOrgId : existing.organizationId,
+        projectId: formProjectId !== undefined ? formProjectId : existing.projectId,
       };
     } else {
       // Create new form

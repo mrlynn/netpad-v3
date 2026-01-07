@@ -20,6 +20,7 @@ interface UseClusterProvisioningResult {
   error: string | null;
   refetch: () => Promise<void>;
   triggerProvisioning: (options?: {
+    projectId?: string;
     provider?: 'AWS' | 'GCP' | 'AZURE';
     region?: string;
     databaseName?: string;
@@ -55,12 +56,17 @@ export function useClusterProvisioning(orgId: string | undefined): UseClusterPro
   }, [orgId]);
 
   const triggerProvisioning = useCallback(async (options?: {
+    projectId?: string;
     provider?: 'AWS' | 'GCP' | 'AZURE';
     region?: string;
     databaseName?: string;
   }): Promise<{ success: boolean; error?: string }> => {
     if (!orgId) {
       return { success: false, error: 'No organization selected' };
+    }
+
+    if (!options?.projectId) {
+      return { success: false, error: 'Project ID is required' };
     }
 
     try {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import {
   Dialog,
   DialogTitle,
@@ -21,6 +22,8 @@ import { Save, Public, Edit } from '@mui/icons-material';
 import { FormConfiguration } from '@/types/form';
 import { saveFormConfiguration } from '@/lib/formStorage';
 import { usePipeline } from '@/contexts/PipelineContext';
+import { ProjectSelector } from '@/components/Projects/ProjectSelector';
+import { generateFormThumbnail, FormThumbnailData } from '@/lib/thumbnail/formThumbnail';
 
 export interface SavedFormInfo {
   id: string;
@@ -45,12 +48,19 @@ export function FormSaveDialog({
   open,
   onClose,
   onSave,
-  formConfig
+  formConfig,
 }: FormSaveDialogProps) {
   const { connectionString } = usePipeline();
+  const params = useParams();
+  // Check if we're in a project context from the URL
+  const urlProjectId = params?.projectId as string | undefined;
+  const isInProjectContext = !!urlProjectId;
+  
   const [name, setName] = useState(formConfig.name || '');
   const [description, setDescription] = useState(formConfig.description || '');
   const [publish, setPublish] = useState(formConfig.isPublished || false);
+  // If we're in a project context, use the URL projectId; otherwise use formConfig or empty
+  const [projectId, setProjectId] = useState<string>(isInProjectContext ? (urlProjectId || '') : (formConfig.projectId || ''));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,12 +73,27 @@ export function FormSaveDialog({
       setName(formConfig.name || '');
       setDescription(formConfig.description || '');
       setPublish(formConfig.isPublished || false);
+      // If we're in a project context, always use the URL projectId
+      if (isInProjectContext && urlProjectId) {
+        setProjectId(urlProjectId);
+      } else if (formConfig.projectId) {
+        // Otherwise, use projectId from formConfig if available
+        setProjectId(formConfig.projectId);
+      } else {
+        // If no projectId in formConfig, reset to empty so user can select
+        setProjectId('');
+      }
       setError(null);
     }
-  }, [open, formConfig]);
+  }, [open, formConfig, isInProjectContext, urlProjectId]);
 
   const handleSave = async () => {
     if (!name.trim()) {
+      return;
+    }
+    
+    if (!projectId) {
+      setError('Please select a project');
       return;
     }
 
@@ -80,6 +105,7 @@ export function FormSaveDialog({
         ...formConfig,
         name: name.trim(),
         description: description.trim() || undefined,
+        projectId: projectId,
         connectionString: connectionString || undefined
       };
 
@@ -123,6 +149,45 @@ export function FormSaveDialog({
         isPublished: data.form.isPublished,
         version: data.form.version || 1,
       });
+
+      // Generate thumbnail in background (don't block UI)
+      console.log('[FormSaveDialog] Checking thumbnail generation:', {
+        organizationId: config.organizationId,
+        formId: data.form.id,
+        fieldCount: config.fieldConfigs?.length,
+      });
+
+      if (config.organizationId) {
+        // Use setTimeout to not block the UI
+        setTimeout(async () => {
+          console.log('[FormSaveDialog] Starting thumbnail generation...');
+          try {
+            const thumbnailData: FormThumbnailData = {
+              formName: name.trim(),
+              formDescription: description.trim() || undefined,
+              fields: config.fieldConfigs,
+              primaryColor: config.theme?.primaryColor || '#00ED64',
+            };
+            console.log('[FormSaveDialog] Thumbnail data:', thumbnailData);
+
+            const thumbnailUrl = await generateFormThumbnail(
+              thumbnailData,
+              data.form.id,
+              config.organizationId!
+            );
+            if (thumbnailUrl) {
+              console.log('[FormSaveDialog] Thumbnail generated successfully:', thumbnailUrl);
+            } else {
+              console.warn('[FormSaveDialog] Thumbnail generation returned null');
+            }
+          } catch (err) {
+            // Thumbnail generation failure is not critical, just log it
+            console.error('[FormSaveDialog] Thumbnail generation failed:', err);
+          }
+        }, 100);
+      } else {
+        console.warn('[FormSaveDialog] No organizationId - skipping thumbnail generation');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -218,6 +283,35 @@ export function FormSaveDialog({
             rows={3}
             placeholder="Describe what this form is used for..."
           />
+          
+          {formConfig.organizationId && !isInProjectContext && (
+            <ProjectSelector
+              organizationId={formConfig.organizationId}
+              value={projectId}
+              onChange={setProjectId}
+              required
+              label="Project"
+              helperText="Select a project to organize this form"
+            />
+          )}
+          {formConfig.organizationId && isInProjectContext && urlProjectId && (
+            <Box
+              sx={{
+                p: 1.5,
+                bgcolor: alpha('#00ED64', 0.05),
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: alpha('#00ED64', 0.2)
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                <strong style={{ color: '#00ED64' }}>Current Project</strong>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                This form will be saved to the current project
+              </Typography>
+            </Box>
+          )}
 
           {/* Publish Option */}
           <FormControlLabel

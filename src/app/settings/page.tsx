@@ -21,6 +21,7 @@ import {
   Extension,
   CreditCard,
   Cloud,
+  Chat,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +32,7 @@ import { PrivacySettings } from '@/components/Settings/PrivacySettings';
 import { APIKeySettings } from '@/components/Settings/APIKeySettings';
 import { IntegrationCredentialsSettings } from '@/components/Settings/IntegrationCredentialsSettings';
 import { BillingSettings } from '@/components/Settings/BillingSettings';
+import { TemplateSettings } from '@/components/Settings/TemplateSettings';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -68,16 +70,17 @@ function SettingsContent() {
     if (tab === 'organizations') setTabValue(0);
     else if (tab === 'connections') setTabValue(1);
     else if (tab === 'integrations') setTabValue(2);
-    else if (tab === 'api-keys') setTabValue(3);
-    else if (tab === 'billing') setTabValue(4);
-    else if (tab === 'profile') setTabValue(5);
-    else if (tab === 'privacy') setTabValue(6);
+    else if (tab === 'templates') setTabValue(3);
+    else if (tab === 'api-keys') setTabValue(4);
+    else if (tab === 'billing') setTabValue(5);
+    else if (tab === 'profile') setTabValue(6);
+    else if (tab === 'privacy') setTabValue(7);
   }, [searchParams]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Update URL
-    const tabs = ['organizations', 'connections', 'integrations', 'api-keys', 'billing', 'profile', 'privacy'];
+    const tabs = ['organizations', 'connections', 'integrations', 'templates', 'api-keys', 'billing', 'profile', 'privacy'];
     router.push(`/settings?tab=${tabs[newValue]}`, { scroll: false });
   };
 
@@ -195,6 +198,11 @@ function SettingsContent() {
               label="Integrations"
             />
             <Tab
+              icon={<Chat sx={{ fontSize: 20 }} />}
+              iconPosition="start"
+              label="Templates"
+            />
+            <Tab
               icon={<Key sx={{ fontSize: 20 }} />}
               iconPosition="start"
               label="API Keys"
@@ -228,15 +236,18 @@ function SettingsContent() {
             <IntegrationCredentialsSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={3}>
-            <APIKeySettings />
+            <TemplateSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={4}>
-            <BillingSettings />
+            <APIKeySettings />
           </TabPanel>
           <TabPanel value={tabValue} index={5}>
-            <ProfileSettings />
+            <BillingSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={6}>
+            <ProfileSettings />
+          </TabPanel>
+          <TabPanel value={tabValue} index={7}>
             <PrivacySettings />
           </TabPanel>
         </Box>

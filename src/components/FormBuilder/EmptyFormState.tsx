@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -11,18 +11,28 @@ import {
   Tab,
   Divider,
   Chip,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+  Collapse,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Add,
   AutoAwesome,
   Folder,
   Storage,
-  Description,
   Lightbulb,
+  NoteAdd,
+  KeyboardArrowDown,
+  Send,
+  History,
 } from '@mui/icons-material';
 import { QuestionTypePicker } from './QuestionTypePicker';
 import { FieldConfig } from '@/types/form';
 import AIFormGeneratorDialog, { AIGenerationConnectionContext } from './AIFormGeneratorDialog';
+import { useAIFormGenerator } from '@/hooks/useAI';
 
 interface EmptyFormStateProps {
   onAddField: (field: FieldConfig) => void;
@@ -31,6 +41,7 @@ interface EmptyFormStateProps {
   onConnectDatabase?: () => void;
   hasConnection: boolean;
   onAIGenerateWithConnection?: (fields: FieldConfig[], connectionContext?: AIGenerationConnectionContext) => void;
+  onStartBlank?: () => void;
 }
 
 // Form templates for quick start - organized by category
@@ -461,6 +472,18 @@ const TEMPLATE_CATEGORIES = [
   { id: 'realestate', label: 'Real Estate', icon: '🏠' },
 ];
 
+// Example prompts for quick start
+const HERO_EXAMPLE_PROMPTS = [
+  'Customer feedback form with rating and comments',
+  'Event registration with name, email, and dietary restrictions',
+  'Job application with resume upload and experience',
+  'IT helpdesk ticket with issue category and priority',
+  'Newsletter signup with email and interests',
+];
+
+// Storage key for recent prompts
+const RECENT_PROMPTS_KEY = 'netpad_recent_ai_prompts';
+
 export function EmptyFormState({
   onAddField,
   onAddTemplate,
@@ -468,10 +491,88 @@ export function EmptyFormState({
   onConnectDatabase,
   hasConnection,
   onAIGenerateWithConnection,
+  onStartBlank,
 }: EmptyFormStateProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Hero prompt state
+  const [heroPrompt, setHeroPrompt] = useState('');
+  const [showManualOptions, setShowManualOptions] = useState(false);
+  const [recentPrompts, setRecentPrompts] = useState<string[]>([]);
+  const [showRecentPrompts, setShowRecentPrompts] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // AI form generation hook
+  const {
+    data: generatedForm,
+    loading: isGenerating,
+    error: generateError,
+    generateForm,
+    reset: resetGeneration,
+  } = useAIFormGenerator();
+
+  // Load recent prompts from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_PROMPTS_KEY);
+      if (stored) {
+        setRecentPrompts(JSON.parse(stored).slice(0, 5));
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Save prompt to recent prompts
+  const saveRecentPrompt = (prompt: string) => {
+    try {
+      const updated = [prompt, ...recentPrompts.filter(p => p !== prompt)].slice(0, 5);
+      setRecentPrompts(updated);
+      localStorage.setItem(RECENT_PROMPTS_KEY, JSON.stringify(updated));
+    } catch {
+      // Ignore localStorage errors
+    }
+  };
+
+  // Handle hero prompt submission
+  const handleHeroGenerate = async () => {
+    if (!heroPrompt.trim() || isGenerating) return;
+
+    saveRecentPrompt(heroPrompt.trim());
+
+    await generateForm(heroPrompt.trim(), {}, {
+      includeValidation: true,
+      includeConditionalLogic: true,
+    });
+  };
+
+  // Apply generated form
+  useEffect(() => {
+    if (generatedForm && generatedForm.fieldConfigs && generatedForm.fieldConfigs.length > 0) {
+      if (onAddTemplate) {
+        onAddTemplate(generatedForm.fieldConfigs, generatedForm.name || 'AI Generated Form');
+      } else {
+        generatedForm.fieldConfigs.forEach((field, index) => {
+          setTimeout(() => {
+            onAddField(field);
+          }, index * 50);
+        });
+      }
+      // Reset after applying
+      setHeroPrompt('');
+      resetGeneration();
+    }
+  }, [generatedForm, onAddField, onAddTemplate, resetGeneration]);
+
+  // Handle Enter key in prompt input
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleHeroGenerate();
+    }
+  };
 
   // Filter templates by selected category
   const filteredTemplates = selectedCategory === 'all'
@@ -519,65 +620,382 @@ export function EmptyFormState({
           borderColor: 'divider',
         }}
       >
-        {/* Header */}
+        {/* Hero AI Prompt Section */}
         <Box
           sx={{
-            p: 3,
+            p: 4,
             textAlign: 'center',
-            background: `linear-gradient(135deg, ${alpha('#00ED64', 0.1)} 0%, ${alpha('#00ED64', 0.02)} 100%)`,
+            background: `linear-gradient(135deg, ${alpha('#00ED64', 0.15)} 0%, ${alpha('#00ED64', 0.03)} 100%)`,
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
         >
+          {/* AI Icon */}
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              bgcolor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 2,
+              boxShadow: `0 4px 20px ${alpha('#00ED64', 0.3)}`,
+              border: `2px solid ${alpha('#00ED64', 0.3)}`,
+            }}
+          >
+            <AutoAwesome sx={{ color: '#00ED64', fontSize: 28 }} />
+          </Box>
+
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-            Create Your Form
+            What kind of form do you want to create?
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Start from scratch or use a template. No database knowledge required.
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Describe your form in plain English and AI will generate it for you
           </Typography>
+
+          {/* Hero Prompt Input */}
+          <Box sx={{ position: 'relative', maxWidth: 560, mx: 'auto' }}>
+            <TextField
+              ref={inputRef}
+              fullWidth
+              placeholder="e.g., Customer feedback form with rating and comments..."
+              value={heroPrompt}
+              onChange={(e) => setHeroPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isGenerating}
+              InputProps={{
+                sx: {
+                  bgcolor: 'background.paper',
+                  borderRadius: 2,
+                  pr: 1,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: alpha('#00ED64', 0.3),
+                    borderWidth: 2,
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: alpha('#00ED64', 0.5),
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#00ED64',
+                  },
+                },
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <AutoAwesome sx={{ color: '#00ED64', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {recentPrompts.length > 0 && (
+                        <Tooltip title="Recent prompts">
+                          <IconButton
+                            size="small"
+                            onClick={() => setShowRecentPrompts(!showRecentPrompts)}
+                            sx={{ color: 'text.secondary' }}
+                          >
+                            <History fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleHeroGenerate}
+                        disabled={!heroPrompt.trim() || isGenerating}
+                        sx={{
+                          minWidth: 'auto',
+                          px: 2,
+                          background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #00CC55 0%, #00AA44 100%)',
+                          },
+                          '&.Mui-disabled': {
+                            background: alpha('#00ED64', 0.3),
+                          },
+                        }}
+                      >
+                        {isGenerating ? (
+                          <CircularProgress size={20} sx={{ color: 'white' }} />
+                        ) : (
+                          <Send sx={{ fontSize: 18 }} />
+                        )}
+                      </Button>
+                    </Box>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* Recent prompts dropdown */}
+            <Collapse in={showRecentPrompts && recentPrompts.length > 0}>
+              <Paper
+                elevation={3}
+                sx={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  mt: 1,
+                  zIndex: 10,
+                  maxHeight: 200,
+                  overflow: 'auto',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 500 }}
+                >
+                  Recent prompts
+                </Typography>
+                {recentPrompts.map((prompt, index) => (
+                  <Box
+                    key={index}
+                    onClick={() => {
+                      setHeroPrompt(prompt);
+                      setShowRecentPrompts(false);
+                    }}
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: alpha('#00ED64', 0.08),
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" noWrap>
+                      {prompt}
+                    </Typography>
+                  </Box>
+                ))}
+              </Paper>
+            </Collapse>
+          </Box>
+
+          {/* Error message */}
+          {generateError && (
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'error.main',
+                mt: 2,
+                p: 1.5,
+                bgcolor: alpha('#f44336', 0.1),
+                borderRadius: 1,
+                maxWidth: 560,
+                mx: 'auto',
+              }}
+            >
+              {generateError}
+            </Typography>
+          )}
+
+          {/* Loading message */}
+          {isGenerating && (
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#00ED64',
+                mt: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+              }}
+            >
+              <AutoAwesome sx={{ fontSize: 16, animation: 'pulse 1.5s ease-in-out infinite' }} />
+              Generating your form...
+            </Typography>
+          )}
+
+          {/* Example prompts */}
+          <Box sx={{ mt: 2.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Try an example:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, justifyContent: 'center' }}>
+              {HERO_EXAMPLE_PROMPTS.map((example, index) => (
+                <Chip
+                  key={index}
+                  label={example}
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setHeroPrompt(example)}
+                  disabled={isGenerating}
+                  sx={{
+                    cursor: 'pointer',
+                    borderColor: alpha('#00ED64', 0.3),
+                    '&:hover': {
+                      borderColor: '#00ED64',
+                      bgcolor: alpha('#00ED64', 0.08),
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
         </Box>
 
-        {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onChange={(_, v) => setActiveTab(v)}
-          variant="fullWidth"
+        {/* Divider with "or start manually" */}
+        <Box
           sx={{
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 500,
-              minHeight: 48,
-            },
-            '& .Mui-selected': {
-              color: '#00ED64',
-            },
-            '& .MuiTabs-indicator': {
-              bgcolor: '#00ED64',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            px: 3,
+            py: 1.5,
+            bgcolor: alpha('#000', 0.02),
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: alpha('#000', 0.04),
             },
           }}
+          onClick={() => setShowManualOptions(!showManualOptions)}
         >
-          <Tab
-            icon={<Add sx={{ fontSize: 18 }} />}
-            iconPosition="start"
-            label="Add Questions"
-          />
-          <Tab
-            icon={<AutoAwesome sx={{ fontSize: 18 }} />}
-            iconPosition="start"
-            label="Templates"
-          />
-          <Tab
-            icon={<AutoAwesome sx={{ fontSize: 18 }} />}
-            iconPosition="start"
-            label="AI Generate"
-          />
-        </Tabs>
+          <Divider sx={{ flex: 1 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+              or start manually
+            </Typography>
+            <KeyboardArrowDown
+              sx={{
+                fontSize: 18,
+                color: 'text.secondary',
+                transform: showManualOptions ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            />
+          </Box>
+          <Divider sx={{ flex: 1 }} />
+        </Box>
 
-        {/* Tab Content */}
-        <Box sx={{ minHeight: 300 }}>
-          {activeTab === 0 && (
+        {/* Collapsible Manual Options */}
+        <Collapse in={showManualOptions}>
+          {/* Quick action buttons */}
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1,
+              p: 2,
+              justifyContent: 'center',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<NoteAdd />}
+              onClick={() => {
+                if (onStartBlank) {
+                  onStartBlank();
+                }
+              }}
+              sx={{
+                borderColor: alpha('#00ED64', 0.5),
+                color: '#00ED64',
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: '#00ED64',
+                  bgcolor: alpha('#00ED64', 0.08),
+                },
+              }}
+            >
+              Start Blank
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Folder />}
+              onClick={onOpenLibrary}
+              sx={{
+                borderColor: 'divider',
+                color: 'text.secondary',
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'text.secondary',
+                },
+              }}
+            >
+              My Forms
+            </Button>
+            {onConnectDatabase && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Storage />}
+                onClick={onConnectDatabase}
+                sx={{
+                  borderColor: hasConnection ? alpha('#00ED64', 0.5) : 'divider',
+                  color: hasConnection ? '#00ED64' : 'text.secondary',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.05),
+                  },
+                }}
+              >
+                {hasConnection ? 'Connected' : 'Connect DB'}
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<AutoAwesome />}
+              onClick={() => setAiDialogOpen(true)}
+              sx={{
+                borderColor: 'divider',
+                color: 'text.secondary',
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'text.secondary',
+                },
+              }}
+            >
+              Advanced AI
+            </Button>
+          </Box>
+
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onChange={(_, v) => setActiveTab(v)}
+            variant="fullWidth"
+            sx={{
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                minHeight: 48,
+              },
+              '& .Mui-selected': {
+                color: '#00ED64',
+              },
+              '& .MuiTabs-indicator': {
+                bgcolor: '#00ED64',
+              },
+            }}
+          >
+            <Tab
+              icon={<Add sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="Add Questions"
+            />
+            <Tab
+              icon={<AutoAwesome sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="Templates"
+            />
+          </Tabs>
+
+          {/* Tab Content */}
+          <Box sx={{ minHeight: 300 }}>
+            {activeTab === 0 && (
             <Box
               sx={{
                 height: 400,
@@ -773,88 +1191,8 @@ export function EmptyFormState({
             </Box>
           )}
 
-          {activeTab === 2 && (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <AutoAwesome sx={{ fontSize: 48, color: '#00ED64', mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                Generate Form with AI
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                Describe your form in plain English and let AI create a complete form configuration with fields, validation, and conditional logic.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AutoAwesome />}
-                onClick={() => setAiDialogOpen(true)}
-                sx={{
-                  background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
-                  },
-                }}
-              >
-                Generate with AI
-              </Button>
-            </Box>
-          )}
         </Box>
-
-        {/* Footer with additional options */}
-        <Box
-          sx={{
-            p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: alpha('#000', 0.02),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Lightbulb sx={{ fontSize: 16, color: 'text.disabled' }} />
-            <Typography variant="caption" color="text.secondary">
-              Pro tip: Connect to MongoDB to import fields from existing data
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Folder />}
-              onClick={onOpenLibrary}
-              sx={{
-                borderColor: 'divider',
-                color: 'text.secondary',
-                '&:hover': {
-                  borderColor: 'text.secondary',
-                },
-              }}
-            >
-              Forms
-            </Button>
-            {onConnectDatabase && (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<Storage />}
-                onClick={onConnectDatabase}
-                sx={{
-                  borderColor: hasConnection ? alpha('#00ED64', 0.5) : 'divider',
-                  color: hasConnection ? '#00ED64' : 'text.secondary',
-                  '&:hover': {
-                    borderColor: '#00ED64',
-                    bgcolor: alpha('#00ED64', 0.05),
-                  },
-                }}
-              >
-                {hasConnection ? 'Connected' : 'Connect DB'}
-              </Button>
-            )}
-          </Box>
-        </Box>
+        </Collapse>
       </Paper>
 
       {/* AI Form Generator Dialog */}

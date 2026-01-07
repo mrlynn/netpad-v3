@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId');
     const status = searchParams.get('status') || undefined;
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || undefined;
+    const projectId = searchParams.get('projectId') || undefined;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
     const sortBy = searchParams.get('sortBy') || 'updatedAt';
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
     const { workflows, total } = await listWorkflows(orgId, {
       status,
       tags,
+      projectId,
       page,
       pageSize,
       sortBy,
@@ -85,10 +87,14 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { orgId, name, description, tags } = body;
+    const { orgId, projectId, name, description, tags } = body;
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
+    }
+
+    if (!projectId) {
+      return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
     }
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -98,6 +104,16 @@ export async function POST(request: NextRequest) {
     if (name.length > 100) {
       return NextResponse.json(
         { error: 'name must be 100 characters or less' },
+        { status: 400 }
+      );
+    }
+
+    // Validate project exists and belongs to organization
+    const { getProject } = await import('@/lib/platform/projects');
+    const project = await getProject(projectId);
+    if (!project || project.organizationId !== orgId) {
+      return NextResponse.json(
+        { error: 'Project not found or does not belong to this organization' },
         { status: 400 }
       );
     }
@@ -113,6 +129,7 @@ export async function POST(request: NextRequest) {
       name: name.trim(),
       description: description?.trim(),
       tags: tags || [],
+      projectId,
     });
 
     return NextResponse.json({ workflow }, { status: 201 });

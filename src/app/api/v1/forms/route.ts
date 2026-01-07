@@ -36,11 +36,17 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20')));
     const status = searchParams.get('status'); // 'draft' | 'published' | null (all)
     const search = searchParams.get('search');
+    const projectId = searchParams.get('projectId');
 
     // Build query
     const query: Record<string, any> = {
       organizationId: context.organizationId,
     };
+
+    // Filter by project if provided
+    if (projectId) {
+      query.projectId = projectId;
+    }
 
     if (status === 'published') {
       query.isPublished = true;
@@ -140,6 +146,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate projectId is required
+    if (!body.projectId || typeof body.projectId !== 'string') {
+      return createAPIErrorResponse(
+        'VALIDATION_ERROR',
+        'projectId is required',
+        400,
+        context,
+        { field: 'projectId' }
+      );
+    }
+
+    // Validate project exists and belongs to organization
+    const { getProject } = await import('@/lib/platform/projects');
+    const project = await getProject(body.projectId);
+    if (!project || project.organizationId !== context.organizationId) {
+      return createAPIErrorResponse(
+        'VALIDATION_ERROR',
+        'Project not found or does not belong to this organization',
+        400,
+        context,
+        { field: 'projectId' }
+      );
+    }
+
     // Generate slug
     const slug = body.slug || body.name
       .toLowerCase()
@@ -209,6 +239,7 @@ export async function POST(request: NextRequest) {
     const newForm = {
       id: formId,
       organizationId: context.organizationId,
+      projectId: body.projectId,
       name: body.name,
       description: body.description || '',
       slug,

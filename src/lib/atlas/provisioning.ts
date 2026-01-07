@@ -159,6 +159,20 @@ export async function getProvisionedClusterForOrg(
 }
 
 /**
+ * Get provisioned cluster for a project
+ */
+export async function getProvisionedClusterForProject(
+  projectId: string
+): Promise<ProvisionedCluster | null> {
+  const collection = await getProvisionedClustersCollection();
+  return collection.findOne({
+    projectId,
+    deletedAt: { $exists: false },
+    status: { $nin: ['deleted', 'failed'] },
+  });
+}
+
+/**
  * Get all provisioned clusters (admin use)
  */
 export async function getAllProvisionedClusters(): Promise<ProvisionedCluster[]> {
@@ -302,6 +316,7 @@ export async function provisionM0Cluster(
 
   const {
     organizationId,
+    projectId,
     userId,
     clusterName = generateClusterName(organizationId),
     provider = DEFAULT_PROVIDER,
@@ -309,15 +324,35 @@ export async function provisionM0Cluster(
     databaseName = 'forms',
   } = options;
 
-  // Check if org already has a cluster
-  const existingCluster = await getProvisionedClusterForOrg(organizationId);
+  // Validate projectId
+  if (!projectId) {
+    return {
+      success: false,
+      status: 'failed',
+      error: 'Project ID is required',
+    };
+  }
+
+  // Verify project exists and belongs to organization
+  const { getProject } = await import('../platform/projects');
+  const project = await getProject(projectId);
+  if (!project || project.organizationId !== organizationId) {
+    return {
+      success: false,
+      status: 'failed',
+      error: 'Invalid project or project does not belong to this organization',
+    };
+  }
+
+  // Check if project already has a cluster
+  const existingCluster = await getProvisionedClusterForProject(projectId);
   if (existingCluster) {
     return {
       success: false,
       status: existingCluster.status,
       clusterId: existingCluster.clusterId,
       vaultId: existingCluster.vaultId,
-      error: 'Organization already has a provisioned cluster',
+      error: 'Project already has a provisioned cluster',
     };
   }
 
@@ -325,6 +360,7 @@ export async function provisionM0Cluster(
   const projectName = `netpad-${organizationId.slice(-8)}`;
   const clusterRecord = await createProvisionedClusterRecord({
     organizationId,
+    projectId,
     atlasProjectId: '',
     atlasProjectName: projectName,
     atlasClusterName: clusterName,
@@ -544,6 +580,7 @@ export async function provisionM0Cluster(
 
     const vault = await createConnectionVault({
       organizationId,
+      projectId,
       createdBy: 'system',
       name: 'Default Database (Auto-provisioned)',
       description: `M0 cluster automatically provisioned on ${new Date().toLocaleDateString()}`,
@@ -716,6 +753,7 @@ export function isAutoProvisioningAvailable(): boolean {
  */
 export async function initializeClusterDatabase(
   organizationId: string,
+  projectId: string,
   userId: string
 ): Promise<{
   success: boolean;
@@ -723,11 +761,22 @@ export async function initializeClusterDatabase(
   collectionsCreated?: string[];
   error?: string;
 }> {
-  console.log(`[Provisioning] Initializing database for org ${organizationId}`);
+  console.log(`[Provisioning] Initializing database for org ${organizationId}, project ${projectId}`);
 
-  const cluster = await getProvisionedClusterForOrg(organizationId);
+  if (!projectId) {
+    return { success: false, error: 'Project ID is required' };
+  }
+
+  // Verify project exists and belongs to organization
+  const { getProject } = await import('../platform/projects');
+  const project = await getProject(projectId);
+  if (!project || project.organizationId !== organizationId) {
+    return { success: false, error: 'Invalid project or project does not belong to this organization' };
+  }
+
+  const cluster = await getProvisionedClusterForProject(projectId);
   if (!cluster) {
-    return { success: false, error: 'No cluster found' };
+    return { success: false, error: 'No cluster found for this project' };
   }
 
   if (cluster.status !== 'ready') {
@@ -834,9 +883,10 @@ export async function initializeClusterDatabase(
     );
 
     // Create vault entry
-    console.log(`[Provisioning] Creating vault entry for org ${organizationId}`);
+    console.log(`[Provisioning] Creating vault entry for org ${organizationId}, project ${projectId}`);
     const vault = await createConnectionVault({
       organizationId,
+      projectId,
       createdBy: userId,
       name: 'Default Database (Auto-provisioned)',
       description: `M0 cluster database initialized on ${new Date().toLocaleDateString()}`,
@@ -867,6 +917,16 @@ export async function initializeClusterDatabase(
         },
       }
     );
+
+    // Set this vault as the project's default database
+    try {
+      const { setProjectDefaultVault } = await import('../platform/projects');
+      await setProjectDefaultVault(projectId, vault.vaultId);
+      console.log(`[Provisioning] Set vault ${vault.vaultId} as default for project ${projectId}`);
+    } catch (vaultError: any) {
+      console.warn(`[Provisioning] Warning: Could not set project default vault: ${vaultError.message}`);
+      // Don't fail the whole operation if this step fails
+    }
 
     console.log(`[Provisioning] Database initialized successfully for org ${organizationId}`);
 

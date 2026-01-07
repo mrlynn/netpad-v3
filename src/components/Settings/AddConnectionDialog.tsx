@@ -27,6 +27,7 @@ import {
   Error,
   Close,
 } from '@mui/icons-material';
+import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 
 interface AddConnectionDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ interface AddConnectionDialogProps {
   }) => void;
   organizationId: string;
   organizationName?: string;
+  projectId?: string; // Optional: if provided, use this project instead of showing selector
 }
 
 export function AddConnectionDialog({
@@ -47,6 +49,7 @@ export function AddConnectionDialog({
   onSuccess,
   organizationId,
   organizationName,
+  projectId: propProjectId,
 }: AddConnectionDialogProps) {
   const [connectionName, setConnectionName] = useState('');
   const [connectionDescription, setConnectionDescription] = useState('');
@@ -56,6 +59,7 @@ export function AddConnectionDialog({
   const [showConnectionString, setShowConnectionString] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(propProjectId || '');
 
   // Test connection
   const [testing, setTesting] = useState(false);
@@ -111,6 +115,12 @@ export function AddConnectionDialog({
       return;
     }
 
+    const projectIdToUse = propProjectId || selectedProjectId;
+    if (!projectIdToUse) {
+      setCreateError('Please select a project');
+      return;
+    }
+
     try {
       setCreating(true);
       setCreateError(null);
@@ -124,6 +134,7 @@ export function AddConnectionDialog({
           connectionString,
           database,
           allowedCollections,
+          projectId: projectIdToUse,
           testFirst: true,
         }),
       });
@@ -158,6 +169,7 @@ export function AddConnectionDialog({
     setTestResult(null);
     setAvailableCollections([]);
     setCreateError(null);
+    setSelectedProjectId('');
   };
 
   const handleClose = () => {
@@ -215,6 +227,19 @@ export function AddConnectionDialog({
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCreateError(null)}>
             {createError}
           </Alert>
+        )}
+
+        {!propProjectId && (
+          <Box sx={{ mb: 2 }}>
+            <ProjectSelector
+              organizationId={organizationId}
+              value={selectedProjectId}
+              onChange={setSelectedProjectId}
+              required
+              label="Project"
+              helperText="Select a project for this connection"
+            />
+          </Box>
         )}
 
         <TextField
@@ -315,7 +340,7 @@ export function AddConnectionDialog({
         <Button
           onClick={handleCreateConnection}
           variant="contained"
-          disabled={creating || !connectionName || !connectionString || !database}
+          disabled={creating || !connectionName || !connectionString || !database || !(propProjectId || selectedProjectId)}
           startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Lock />}
           sx={{
             background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',

@@ -17,8 +17,9 @@ export type FormMode = 'create' | 'edit' | 'view' | 'clone' | 'search';
  * - data-entry: Standard form for inserting/editing documents
  * - search: Form for searching/filtering existing documents
  * - both: Form can switch between data entry and search modes
+ * - conversational: AI-powered conversational form for natural data collection
  */
-export type FormType = 'data-entry' | 'search' | 'both';
+export type FormType = 'data-entry' | 'search' | 'both' | 'conversational';
 
 /**
  * Search operator types for field queries
@@ -872,6 +873,7 @@ export interface FormConfiguration {
   // Form type and search configuration
   formType?: FormType;            // What kind of form this is (default: 'data-entry')
   searchConfig?: SearchConfig;    // Search/filter configuration for search forms
+  conversationalConfig?: import('@/types/conversational').ConversationalFormConfig; // AI conversational config
   // Publishing configuration
   slug?: string;                  // URL-friendly identifier for public access
   isPublished?: boolean;          // Whether the form is publicly accessible
@@ -889,6 +891,7 @@ export interface FormConfiguration {
 
   // NEW: Organization ownership
   organizationId?: string;        // Which org owns this form
+  projectId?: string;             // Which project this form belongs to (required in production)
   createdBy?: string;             // User who created the form
 
   // ============================================
@@ -945,6 +948,14 @@ export interface FormConfiguration {
   // User-friendly automation configuration
   // Pre-fill, post-submit actions, webhooks, redirects
   hooks?: import('./formHooks').FormHooksConfig;
+
+  // ============================================
+  // Thumbnail Preview
+  // ============================================
+
+  // URL to the form thumbnail image (generated at save/publish time)
+  thumbnailUrl?: string;
+  thumbnailUpdatedAt?: string;
 }
 
 // Form header configuration (Google Forms-style header image and colors)

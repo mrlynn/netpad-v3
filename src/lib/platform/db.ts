@@ -17,7 +17,9 @@ import {
   OrganizationUsage,
   BillingEvent,
   AtlasInvitationRecord,
+  Project,
 } from '@/types/platform';
+import { Deployment } from '@/types/deployment';
 
 // Connection pool
 let platformClient: MongoClient | null = null;
@@ -147,6 +149,35 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await atlasInvitations.createIndex({ userId: 1 });
     await atlasInvitations.createIndex({ status: 1 });
 
+    // Projects collection
+    const projects = db.collection('projects');
+    await projects.createIndex({ projectId: 1 }, { unique: true });
+    await projects.createIndex({ organizationId: 1 });
+    await projects.createIndex({ organizationId: 1, slug: 1 }, { unique: true });
+    await projects.createIndex({ organizationId: 1, name: 1 });
+    await projects.createIndex({ environment: 1 }); // NEW: Environment index
+    await projects.createIndex({ organizationId: 1, environment: 1 }); // NEW: Composite index
+
+    // Deployments collection
+    const deployments = db.collection('deployments');
+    await deployments.createIndex({ deploymentId: 1 }, { unique: true });
+    await deployments.createIndex({ projectId: 1 });
+    await deployments.createIndex({ organizationId: 1 });
+    await deployments.createIndex({ organizationId: 1, projectId: 1 });
+    await deployments.createIndex({ status: 1 });
+    await deployments.createIndex({ target: 1 });
+    await deployments.createIndex({ vercelProjectId: 1 }, { sparse: true });
+    await deployments.createIndex({ createdAt: -1 });
+    await deployments.createIndex({ deletedAt: 1 }, { sparse: true });
+
+    // Provisioned clusters collection (platform database)
+    const clusters = db.collection('provisioned_clusters');
+    await clusters.createIndex({ clusterId: 1 }, { unique: true });
+    await clusters.createIndex({ organizationId: 1 });
+    await clusters.createIndex({ projectId: 1 }); // NEW: Project-scoped index
+    await clusters.createIndex({ organizationId: 1, projectId: 1 }); // NEW: Composite index
+    await clusters.createIndex({ status: 1 });
+
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
     // Indexes may already exist
@@ -164,6 +195,8 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await vault.createIndex({ vaultId: 1 }, { unique: true });
     await vault.createIndex({ createdBy: 1 });
     await vault.createIndex({ status: 1 });
+    await vault.createIndex({ projectId: 1 }); // NEW: Project-scoped index
+    await vault.createIndex({ organizationId: 1, projectId: 1 }); // NEW: Composite index
 
     // Forms collection
     const forms = db.collection('forms');
@@ -172,6 +205,8 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await forms.createIndex({ createdBy: 1 });
     await forms.createIndex({ isPublished: 1 });
     await forms.createIndex({ 'dataSource.vaultId': 1 });
+    await forms.createIndex({ organizationId: 1, projectId: 1 });
+    await forms.createIndex({ projectId: 1 });
 
     // Form submissions collection
     const submissions = db.collection('form_submissions');
@@ -181,11 +216,33 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await submissions.createIndex({ submittedAt: -1 });
     await submissions.createIndex({ 'respondent.userId': 1 });
 
+    // Conversation submissions collection (for conversational forms)
+    const conversationSubmissions = db.collection('conversation_submissions');
+    await conversationSubmissions.createIndex({ id: 1 }, { unique: true });
+    await conversationSubmissions.createIndex({ conversationId: 1 }, { unique: true });
+    await conversationSubmissions.createIndex({ formId: 1 });
+    await conversationSubmissions.createIndex({ organizationId: 1, projectId: 1 });
+    await conversationSubmissions.createIndex({ submittedAt: -1 });
+    await conversationSubmissions.createIndex({ status: 1 });
+    await conversationSubmissions.createIndex({ 'metadata.completedAt': -1 });
+
     // Org audit logs
     const auditLogs = db.collection('org_audit_logs');
     await auditLogs.createIndex({ eventType: 1 });
     await auditLogs.createIndex({ userId: 1 });
     await auditLogs.createIndex({ timestamp: -1 });
+
+    // Conversational templates collection
+    const templates = db.collection('conversational_templates');
+    await templates.createIndex({ templateId: 1 }, { unique: true });
+    await templates.createIndex({ organizationId: 1 });
+    await templates.createIndex({ status: 1 });
+    await templates.createIndex({ category: 1 });
+    await templates.createIndex({ scope: 1 });
+    await templates.createIndex({ enabled: 1 });
+    await templates.createIndex({ priority: -1 });
+    await templates.createIndex({ organizationId: 1, status: 1, enabled: 1 });
+    await templates.createIndex({ name: 'text', description: 'text' });
 
     // Integration credentials collection
     const integrationCreds = db.collection('integration_credentials');
@@ -250,11 +307,22 @@ export async function getAtlasInvitationsCollection(): Promise<Collection<AtlasI
   return db.collection<AtlasInvitationRecord>('atlas_invitations');
 }
 
+export async function getProjectsCollection(): Promise<Collection<Project>> {
+  const db = await getPlatformDb();
+  return db.collection<Project>('projects');
+}
+
+export async function getDeploymentsCollection(): Promise<Collection<Deployment>> {
+  const db = await getPlatformDb();
+  return db.collection<Deployment>('deployments');
+}
+
 // ============================================
 // Collection Accessors - Organization
 // ============================================
 
 import { ConnectionVault, PlatformFormSubmission, IntegrationCredential } from '@/types/platform';
+import { ConversationSubmission, StoredTemplate } from '@/types/conversational';
 
 export async function getConnectionVaultCollection(orgId: string): Promise<Collection<ConnectionVault>> {
   const db = await getOrgDb(orgId);
@@ -279,6 +347,16 @@ export async function getOrgAuditCollection(orgId: string): Promise<Collection<A
 export async function getIntegrationCredentialsCollection(orgId: string): Promise<Collection<IntegrationCredential>> {
   const db = await getOrgDb(orgId);
   return db.collection<IntegrationCredential>('integration_credentials');
+}
+
+export async function getConversationSubmissionsCollection(orgId: string): Promise<Collection<ConversationSubmission>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<ConversationSubmission>('conversation_submissions');
+}
+
+export async function getConversationalTemplatesCollection(orgId: string): Promise<Collection<StoredTemplate>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<StoredTemplate>('conversational_templates');
 }
 
 // ============================================

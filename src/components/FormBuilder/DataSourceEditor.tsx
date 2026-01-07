@@ -33,6 +33,9 @@ import {
   PlayArrow,
   Close,
   Bolt,
+  Edit,
+  Info,
+  Folder,
 } from '@mui/icons-material';
 import { FormDataSource } from '@/types/form';
 import NextLink from 'next/link';
@@ -54,6 +57,7 @@ interface Organization {
 interface DataSourceEditorProps {
   value?: FormDataSource;
   organizationId?: string;
+  projectId?: string;                    // Optional: project context for showing defaults
   onChange: (value: FormDataSource | undefined, orgId?: string) => void;
   disabled?: boolean;
 }
@@ -61,6 +65,7 @@ interface DataSourceEditorProps {
 export function DataSourceEditor({
   value,
   organizationId,
+  projectId,
   onChange,
   disabled = false,
 }: DataSourceEditorProps) {
@@ -69,6 +74,13 @@ export function DataSourceEditor({
   const [selectedOrgId, setSelectedOrgId] = useState<string>(organizationId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [projectDefaultVault, setProjectDefaultVault] = useState<{
+    vaultId: string;
+    name: string;
+    database: string;
+  } | null>(null);
+  const [loadingProjectVault, setLoadingProjectVault] = useState(false);
 
   // Inline connection creation state
   const [showInlineCreate, setShowInlineCreate] = useState(false);
@@ -95,6 +107,39 @@ export function DataSourceEditor({
       fetchConnections(selectedOrgId);
     }
   }, [selectedOrgId]);
+
+  // Fetch project default vault if projectId is provided
+  useEffect(() => {
+    const fetchProjectDefaultVault = async () => {
+      if (!projectId || !selectedOrgId) {
+        setProjectDefaultVault(null);
+        return;
+      }
+
+      try {
+        setLoadingProjectVault(true);
+        const response = await fetch(`/api/projects/${projectId}/default-vault`);
+        const data = await response.json();
+
+        if (data.hasDefaultVault && data.vault) {
+          setProjectDefaultVault({
+            vaultId: data.vault.vaultId,
+            name: data.vault.name,
+            database: data.vault.database,
+          });
+        } else {
+          setProjectDefaultVault(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch project default vault:', err);
+        setProjectDefaultVault(null);
+      } finally {
+        setLoadingProjectVault(false);
+      }
+    };
+
+    fetchProjectDefaultVault();
+  }, [projectId, selectedOrgId]);
 
   const fetchOrganizations = async () => {
     try {
@@ -267,6 +312,10 @@ export function DataSourceEditor({
 
   const selectedConnection = connections.find((c) => c.vaultId === value?.vaultId);
   const availableCollections = selectedConnection?.allowedCollections || [];
+  
+  // Check if we're using project default vault
+  const isUsingProjectDefault = projectDefaultVault && value?.vaultId === projectDefaultVault.vaultId;
+  const currentOrg = organizations.find(o => o.orgId === selectedOrgId);
 
   if (organizations.length === 0) {
     return (
@@ -302,6 +351,45 @@ export function DataSourceEditor({
 
   return (
     <Box>
+      {/* Context Display */}
+      {(currentOrg || projectId) && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 2,
+            bgcolor: alpha('#00ED64', 0.05),
+            border: '1px solid',
+            borderColor: alpha('#00ED64', 0.2),
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Info sx={{ color: '#00ED64', fontSize: 18 }} />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Current Context
+            </Typography>
+          </Box>
+          <Box sx={{ pl: 3, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {currentOrg && (
+              <Typography variant="caption" color="text.secondary">
+                Organization: <strong>{currentOrg.name}</strong>
+              </Typography>
+            )}
+            {projectId && (
+              <Typography variant="caption" color="text.secondary">
+                Project: <strong>{projectId}</strong>
+              </Typography>
+            )}
+            {projectDefaultVault && (
+              <Typography variant="caption" color="text.secondary">
+                Default Database: <strong>{projectDefaultVault.database}</strong>
+              </Typography>
+            )}
+          </Box>
+        </Paper>
+      )}
+
       <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
         Where should form data be stored?
       </Typography>
@@ -311,6 +399,132 @@ export function DataSourceEditor({
           {error}
         </Alert>
       )}
+
+      {/* Simplified View: Using Project Default */}
+      {!showAdvanced && isUsingProjectDefault && projectDefaultVault && value?.collection && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 2,
+            bgcolor: alpha('#00ED64', 0.05),
+            border: '2px solid',
+            borderColor: alpha('#00ED64', 0.3),
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+            <CheckCircle sx={{ color: '#00ED64', fontSize: 24, mt: 0.25 }} />
+            <Box sx={{ flex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  ✅ Using Project Default
+                </Typography>
+                <Chip
+                  label="Default"
+                  size="small"
+                  sx={{
+                    bgcolor: alpha('#00ED64', 0.2),
+                    color: '#00ED64',
+                    fontWeight: 600,
+                    fontSize: '0.7rem',
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.primary' }}>
+                {projectDefaultVault.database}.{value.collection}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Connection: {projectDefaultVault.name} • Encrypted storage
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Edit />}
+                onClick={() => setShowAdvanced(true)}
+                sx={{
+                  borderColor: '#00ED64',
+                  color: '#00ED64',
+                  '&:hover': {
+                    borderColor: '#00CC55',
+                    bgcolor: alpha('#00ED64', 0.05),
+                  },
+                }}
+              >
+                Change Database
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Simplified View: No Project Default or Not Using Default */}
+      {!showAdvanced && (!isUsingProjectDefault || !projectDefaultVault) && value?.vaultId && value?.collection && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 2,
+            bgcolor: alpha('#2196f3', 0.05),
+            border: '1px solid',
+            borderColor: alpha('#2196f3', 0.2),
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+            <Storage sx={{ color: '#2196f3', fontSize: 24, mt: 0.25 }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                Custom Database Configuration
+              </Typography>
+              {selectedConnection && (
+                <>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+                    {selectedConnection.database}.{value.collection}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Connection: {selectedConnection.name}
+                  </Typography>
+                </>
+              )}
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Edit />}
+                onClick={() => setShowAdvanced(true)}
+                sx={{
+                  borderColor: '#2196f3',
+                  color: '#2196f3',
+                  '&:hover': {
+                    borderColor: '#1976d2',
+                    bgcolor: alpha('#2196f3', 0.05),
+                  },
+                }}
+              >
+                Change Database
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Advanced View: Full Configuration */}
+      {showAdvanced && (
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Advanced Configuration
+            </Typography>
+            {value?.vaultId && value?.collection && (
+              <Button
+                size="small"
+                onClick={() => setShowAdvanced(false)}
+                sx={{ textTransform: 'none' }}
+              >
+                Use Default
+              </Button>
+            )}
+          </Box>
 
       {/* Organization Selector */}
       <FormControl fullWidth sx={{ mb: 2 }} disabled={disabled}>
@@ -328,8 +542,8 @@ export function DataSourceEditor({
         </Select>
       </FormControl>
 
-      {/* Connection Selector */}
-      {loading ? (
+          {/* Connection Selector */}
+          {loading ? (
         <Box sx={{ textAlign: 'center', py: 2 }}>
           <CircularProgress size={24} sx={{ color: '#00ED64' }} />
         </Box>
@@ -544,9 +758,69 @@ export function DataSourceEditor({
           )}
         </>
       )}
+        </Box>
+      )}
 
-      {/* Selected Connection Info */}
-      {selectedConnection && value?.collection && (
+      {/* No Configuration State */}
+      {!showAdvanced && !value?.vaultId && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            border: '2px dashed',
+            borderColor: 'divider',
+            borderRadius: 2,
+            textAlign: 'center',
+            bgcolor: alpha('#ff9800', 0.02),
+          }}
+        >
+          <Storage sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
+          <Typography variant="body1" color="text.secondary" gutterBottom>
+            {projectDefaultVault 
+              ? 'Click "Use Project Default" to configure'
+              : 'No database configured'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {projectDefaultVault
+              ? `This project has a default database (${projectDefaultVault.database}). Configure it below.`
+              : 'Configure a database connection to store form submissions.'}
+          </Typography>
+          {projectDefaultVault ? (
+            <Button
+              variant="contained"
+              startIcon={<CheckCircle />}
+              onClick={() => {
+                const collectionName = value?.collection || 'form_responses';
+                onChange({
+                  vaultId: projectDefaultVault.vaultId,
+                  collection: collectionName,
+                }, selectedOrgId);
+              }}
+              sx={{
+                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                color: '#001E2B',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #00CC55 0%, #3DFF8F 100%)',
+                },
+              }}
+            >
+              Use Project Default
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setShowAdvanced(true)}
+              sx={{ borderColor: '#00ED64', color: '#00ED64' }}
+            >
+              Configure Database
+            </Button>
+          )}
+        </Paper>
+      )}
+
+      {/* Selected Connection Info - Only show in advanced view */}
+      {showAdvanced && selectedConnection && value?.collection && (
         <Paper
           elevation={0}
           sx={{
@@ -578,31 +852,33 @@ export function DataSourceEditor({
         </Paper>
       )}
 
-      {/* Security Notice */}
-      <Paper
-        elevation={0}
-        sx={{
-          mt: 2,
-          p: 2,
-          bgcolor: alpha('#2196f3', 0.05),
-          border: '1px solid',
-          borderColor: alpha('#2196f3', 0.2),
-          borderRadius: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-          <Lock sx={{ color: '#2196f3', fontSize: 20, mt: 0.25 }} />
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              Secure Connection Storage
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Connection strings are encrypted with AES-256 and only decrypted server-side when
-              processing form submissions. Your credentials are never exposed to the browser.
-            </Typography>
+      {/* Security Notice - Only show in advanced view */}
+      {showAdvanced && (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 2,
+            p: 2,
+            bgcolor: alpha('#2196f3', 0.05),
+            border: '1px solid',
+            borderColor: alpha('#2196f3', 0.2),
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+            <Lock sx={{ color: '#2196f3', fontSize: 20, mt: 0.25 }} />
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Secure Connection Storage
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Connection strings are encrypted with AES-256 and only decrypted server-side when
+                processing form submissions. Your credentials are never exposed to the browser.
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
+      )}
     </Box>
   );
 }

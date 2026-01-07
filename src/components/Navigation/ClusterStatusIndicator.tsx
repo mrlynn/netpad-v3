@@ -12,6 +12,7 @@ import {
   Divider,
   CircularProgress,
   Button,
+  IconButton,
 } from '@mui/material';
 import {
   Storage,
@@ -24,6 +25,8 @@ import Link from 'next/link';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
 import { ClusterProvisioningStatus } from '@/types/platform';
+import { usePathname } from 'next/navigation';
+import { parseOrgProjectFromPath, getOrgProjectUrl } from '@/lib/routing';
 
 interface ConnectionInfo {
   vaultId: string;
@@ -90,10 +93,24 @@ const STATUS_CONFIG: Record<ClusterProvisioningStatus, {
 
 export function ClusterStatusIndicator() {
   const { currentOrgId, organization } = useOrganization();
+  const pathname = usePathname();
   const { status, loading } = useClusterProvisioning(currentOrgId || undefined);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [loadingConnection, setLoadingConnection] = useState(false);
+
+  // Get org/project from URL or use defaults
+  const { orgId: urlOrgId, projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
+  const orgId = urlOrgId || currentOrgId;
+  const projectId = urlProjectId || localStorage.getItem('selected_project_id') || undefined;
+
+  // Generate infrastructure URL
+  const getInfrastructureUrl = () => {
+    if (orgId && projectId) {
+      return getOrgProjectUrl(orgId, projectId, 'data');
+    }
+    return '/data?tab=infrastructure'; // Fallback to legacy
+  };
 
   // Fetch connection info when cluster is ready
   useEffect(() => {
@@ -153,33 +170,39 @@ export function ClusterStatusIndicator() {
 
   return (
     <>
-      <Tooltip title="Your database status">
-        <Chip
-          icon={config ? config.icon : <Storage sx={{ fontSize: 14 }} />}
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>
-                {isReady ? 'MongoDB' : config?.shortLabel || 'Database'}
-              </Typography>
-            </Box>
-          }
-          size="small"
-          onClick={handleClick}
-          sx={{
-            height: 24,
-            cursor: 'pointer',
-            bgcolor: alpha(config?.color || '#00ED64', 0.1),
-            borderColor: alpha(config?.color || '#00ED64', 0.3),
-            color: config?.color || '#00ED64',
-            '& .MuiChip-icon': {
-              color: config?.color || '#00ED64',
-            },
-            '&:hover': {
-              bgcolor: alpha(config?.color || '#00ED64', 0.2),
-            },
-          }}
-          variant="outlined"
-        />
+      <Tooltip title={isReady ? 'MongoDB connected' : config?.label || 'Database status'}>
+        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+          <IconButton
+            size="small"
+            onClick={handleClick}
+            sx={{
+              color: isReady ? '#00ED64' : 'text.secondary',
+              p: 0.75,
+              '&:hover': {
+                color: isReady ? '#00ED64' : 'text.primary',
+                bgcolor: alpha('#000', 0.05)
+              }
+            }}
+          >
+            <Storage sx={{ fontSize: 18 }} />
+          </IconButton>
+          {isReady && (
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 4,
+                right: 4,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: '#00ED64',
+                border: '2px solid',
+                borderColor: 'background.paper',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </Box>
       </Tooltip>
 
       <Popover
@@ -307,7 +330,7 @@ export function ClusterStatusIndicator() {
               </Typography>
               <Button
                 component={Link}
-                href="/data?tab=infrastructure"
+                href={getInfrastructureUrl()}
                 size="small"
                 startIcon={<Settings />}
                 onClick={handleClose}
@@ -323,7 +346,7 @@ export function ClusterStatusIndicator() {
           <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               component={Link}
-              href="/data?tab=infrastructure"
+              href={getInfrastructureUrl()}
               size="small"
               startIcon={<Settings />}
               onClick={handleClose}

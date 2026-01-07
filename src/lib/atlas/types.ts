@@ -201,7 +201,8 @@ export type ProvisioningStatus =
 export interface ProvisionedCluster {
   _id?: any;
   clusterId: string;                    // Our internal ID: "cluster_abc123"
-  organizationId: string;               // Our org ID
+  organizationId: string;               // Our org ID (kept for reference)
+  projectId: string;                    // REQUIRED: NetPad project ID
 
   // Atlas identifiers
   atlasProjectId: string;
@@ -263,6 +264,7 @@ export interface AtlasApiResponse<T> {
 
 export interface ProvisionClusterOptions {
   organizationId: string;               // Our org ID
+  projectId: string;                    // REQUIRED: NetPad project ID
   userId: string;                       // User triggering provisioning
   clusterName?: string;                 // Optional custom name
   provider?: ClusterBackingProvider;    // Default: AWS

@@ -33,6 +33,9 @@ import {
   School,
   Cloud,
   SmartToy,
+  ChatBubble,
+  FolderSpecial,
+  Speed as SpeedIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -41,7 +44,7 @@ import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 
-// The three pillars of NetPad
+// The four pillars of NetPad
 const pillars = [
   {
     id: 'forms',
@@ -73,11 +76,22 @@ const pillars = [
     cta: 'Explore Data',
     color: '#2196F3',
   },
+  {
+    id: 'ai',
+    icon: <ChatBubble sx={{ fontSize: 40 }} />,
+    title: 'Engage',
+    subtitle: 'AI & Conversational',
+    description: 'Collect data through natural language conversations. AI-powered forms that feel like chatting with a helpful assistant.',
+    href: '/builder',
+    cta: 'Try Conversational',
+    color: '#E91E63',
+  },
 ];
 
 const heroStats = [
   { value: '30+', label: 'Field Types' },
-  { value: '100+', label: 'API Endpoints' },
+  { value: '160+', label: 'API Endpoints' },
+  { value: '12+', label: 'AI Agents' },
   { value: 'Free', label: 'MongoDB Atlas' },
 ];
 
@@ -136,6 +150,11 @@ const platformFeatures = [
     description: 'Get a free MongoDB Atlas M0 cluster automatically when you sign up. Zero configuration required.',
   },
   {
+    icon: <FolderSpecial sx={{ fontSize: 28 }} />,
+    title: 'Projects & Environments',
+    description: 'Organize work by environment (dev, staging, prod) or initiative. Project-level analytics and exports.',
+  },
+  {
     icon: <Security sx={{ fontSize: 28 }} />,
     title: 'Field-Level Encryption',
     description: 'Protect sensitive data with MongoDB Queryable Encryption. Your data stays secure.',
@@ -150,8 +169,52 @@ const platformFeatures = [
     title: 'Organization Management',
     description: 'Create organizations, invite team members, and manage permissions.',
   },
+  {
+    icon: <RocketLaunch sx={{ fontSize: 28 }} />,
+    title: 'One-Click Deployment',
+    description: 'Deploy your own instance to Vercel with auto-provisioned database. From database to production in minutes.',
+  },
 ];
 
+// AI Features organized by category
+const aiFeaturesByCategory = [
+  {
+    category: 'Form Building',
+    color: '#E91E63',
+    features: [
+      { icon: <AutoAwesome />, title: 'AI Form Generation', description: 'Describe what you need, get a complete form' },
+      { icon: <Tune />, title: 'Smart Validation', description: 'Auto-suggest validation rules for your fields' },
+      { icon: <Rule />, title: 'Logic Builder', description: 'AI-assisted conditional logic configuration' },
+      { icon: <Functions />, title: 'Formula Helper', description: 'Generate and explain calculated field formulas' },
+    ],
+  },
+  {
+    category: 'Optimization & Insights',
+    color: '#9C27B0',
+    features: [
+      { icon: <SpeedIcon />, title: 'Form Optimization', description: 'Analyze and improve form performance' },
+      { icon: <DataObject />, title: 'Response Insights', description: 'Analyze submission patterns and trends' },
+      { icon: <Tune />, title: 'Response Processing', description: 'Process and transform responses automatically' },
+    ],
+  },
+  {
+    category: 'Compliance & Translation',
+    color: '#2196F3',
+    features: [
+      { icon: <Security />, title: 'Compliance Audit', description: 'Check for regulatory compliance (HIPAA, GDPR)' },
+      { icon: <AutoAwesome />, title: 'Auto-Translation', description: 'Translate forms to multiple languages' },
+    ],
+  },
+  {
+    category: 'Workflow & Automation',
+    color: '#00ED64',
+    features: [
+      { icon: <AccountTree />, title: 'Workflow Generator', description: 'Generate workflows from natural language' },
+    ],
+  },
+];
+
+// Legacy aiFeatures for backward compatibility
 const aiFeatures = [
   { icon: <AutoAwesome />, title: 'AI Form Generation', description: 'Describe what you need, get a complete form' },
   { icon: <Tune />, title: 'Smart Validation', description: 'Auto-suggest validation rules for your fields' },
@@ -333,15 +396,15 @@ export default function LandingPage() {
                 fontSize: { xs: '0.95rem', md: '1.1rem' }
               }}
             >
-              Collect data with forms. Automate with workflows. Explore with a visual data browser.
-              All connected to MongoDB. No code required.
+              Collect data with forms or conversations. Automate with workflows. Explore with a visual data browser.
+              All connected to MongoDB. Powered by AI. No code required.
             </Typography>
           </Box>
 
-          {/* Three Pillars - The Core Value Proposition */}
+          {/* Four Pillars - The Core Value Proposition */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {pillars.map((pillar, index) => (
-              <Grid item xs={12} md={4} key={pillar.id}>
+              <Grid item xs={12} sm={6} md={3} key={pillar.id}>
                 <Paper
                   component={Link}
                   href={pillar.href}
@@ -481,6 +544,8 @@ export default function LandingPage() {
               <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#9C27B0' }} />
               <ArrowForward sx={{ color: alpha('#fff', 0.3), fontSize: 16 }} />
               <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2196F3' }} />
+              <ArrowForward sx={{ color: alpha('#fff', 0.3), fontSize: 16 }} />
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#E91E63' }} />
             </Box>
           </Box>
 
@@ -810,9 +875,119 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* AI Features Section - Applies to all pillars */}
+      {/* Conversational Forms Section - 4th Pillar */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
-        <Container maxWidth="md">
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    bgcolor: alpha('#E91E63', 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#E91E63',
+                  }}
+                >
+                  <ChatBubble />
+                </Box>
+                <Typography variant="overline" sx={{ color: '#E91E63', fontWeight: 700, letterSpacing: 1.5 }}>
+                  Engage
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
+                Collect Data Through
+                <br />Conversation
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Replace traditional form fields with natural language dialogue. AI-powered conversational forms guide users through data collection, ask clarifying questions, and extract structured data automatically.
+              </Typography>
+              <Button
+                component={Link}
+                href="/builder"
+                variant="contained"
+                startIcon={<ChatBubble />}
+                sx={{
+                  background: 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)',
+                  color: '#fff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #F06292 0%, #E91E63 100%)',
+                  }
+                }}
+              >
+                Try Conversational Forms
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Paper
+                sx={{
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: alpha('#E91E63', 0.2),
+                }}
+              >
+                <Box sx={{ bgcolor: '#E91E63', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                    IT Helpdesk Example
+                  </Typography>
+                  <Chip label="Template" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                </Box>
+                <Box sx={{ p: 3 }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'flex-start' }}>
+                      <Box sx={{ bgcolor: alpha('#E91E63', 0.2), borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <SmartToy sx={{ fontSize: 18, color: '#E91E63' }} />
+                      </Box>
+                      <Box sx={{ flex: 1, bgcolor: alpha('#E91E63', 0.1), borderRadius: 2, p: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                          Hi! I&apos;m here to help you submit an IT support ticket. What kind of issue are you experiencing?
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
+                      <Box sx={{ bgcolor: alpha('#00ED64', 0.2), borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Person sx={{ fontSize: 18, color: '#00ED64' }} />
+                      </Box>
+                      <Box sx={{ flex: 1, bgcolor: alpha('#00ED64', 0.1), borderRadius: 2, p: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                          My laptop won&apos;t turn on
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                      <Box sx={{ bgcolor: alpha('#E91E63', 0.2), borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <SmartToy sx={{ fontSize: 18, color: '#E91E63' }} />
+                      </Box>
+                      <Box sx={{ flex: 1, bgcolor: alpha('#E91E63', 0.1), borderRadius: 2, p: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                          I&apos;m sorry to hear that. When you say it won&apos;t turn on, does the screen stay completely black, or do you see any lights or error messages?
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                  <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: alpha('#fff', 0.1) }}>
+                    <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), fontStyle: 'italic' }}>
+                      → Extracted Data: issueCategory: &quot;hardware&quot;, urgencyLevel: &quot;high&quot;, description: &quot;Laptop won&apos;t power on...&quot;
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* AI Features Section - Expanded */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Chip
               label="AI-Powered"
@@ -827,39 +1002,70 @@ export default function LandingPage() {
               }}
             />
             <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 1.5 }}>
-              AI Assistance Everywhere
+              12+ AI Agents at Your Service
             </Typography>
-            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 500, mx: 'auto' }}>
-              Generate forms and workflows from natural language. AI helps you build faster.
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 600, mx: 'auto' }}>
+              Generate forms and workflows from natural language. AI helps you build faster, optimize performance, ensure compliance, and translate content.
             </Typography>
           </Box>
-          <Grid container spacing={2} justifyContent="center">
-            {aiFeatures.map((feature, index) => (
-              <Grid item xs={6} sm={3} key={index}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Box
+          <Grid container spacing={3}>
+            {aiFeaturesByCategory.map((category, catIndex) => (
+              <Grid item xs={12} md={6} key={catIndex}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    bgcolor: alpha('#fff', 0.03),
+                    border: '1px solid',
+                    borderColor: alpha(category.color, 0.2),
+                    borderRadius: 2,
+                    height: '100%',
+                  }}
+                >
+                  <Typography
+                    variant="h6"
                     sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 2,
-                      bgcolor: alpha('#E91E63', 0.1),
+                      fontWeight: 700,
+                      color: category.color,
+                      mb: 2,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#E91E63',
-                      mx: 'auto',
-                      mb: 1.5
+                      gap: 1,
                     }}
                   >
-                    {feature.icon}
-                  </Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
-                    {feature.title}
+                    {category.category}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
-                    {feature.description}
-                  </Typography>
-                </Box>
+                  <Grid container spacing={2}>
+                    {category.features.map((feature, featIndex) => (
+                      <Grid item xs={12} sm={6} key={featIndex}>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 1.5,
+                              bgcolor: alpha(category.color, 0.1),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: category.color,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {feature.icon}
+                          </Box>
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.25 }}>
+                              {feature.title}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.4 }}>
+                              {feature.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
               </Grid>
             ))}
           </Grid>
@@ -1643,8 +1849,74 @@ console.log('Output:', result.execution.result?.output);`}
         </Container>
       </Box>
 
+      {/* Deployment Platform Section */}
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Chip
+                label="Deployment"
+                icon={<RocketLaunch sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#00ED64', 0.1),
+                  color: '#00ED64',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#00ED64' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                From Database to Production
+                <br />in Minutes
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Deploy your own NetPad instance with one click. Auto-provision a MongoDB Atlas cluster, configure custom branding, and go live in minutes. Perfect for self-hosting or white-label deployments.
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip label="One-Click Deploy" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Auto-Provision DB" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Custom Branding" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                <Chip label="Custom Domain" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+              </Box>
+              <DeployToVercelButton variant="contained" size="small" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                {[
+                  { title: 'Vercel', description: 'Primary deployment target with full integration' },
+                  { title: 'Netlify', description: 'Framework support for alternative hosting' },
+                  { title: 'Railway', description: 'Self-hosted deployment options' },
+                  { title: 'Self-Hosted', description: 'Full control with Docker support' },
+                ].map((item, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {item.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {item.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Developer Section */}
-      <Box sx={{ py: { xs: 5, md: 6 } }}>
+      <Box sx={{ py: { xs: 5, md: 6 }, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 700, color: '#fff', mb: 1 }}>
@@ -1669,9 +1941,15 @@ console.log('Output:', result.execution.result?.output);`}
             />
             <Chip
               icon={<Code sx={{ fontSize: 14 }} />}
-              label="100+ API Endpoints"
+              label="160+ API Endpoints"
               size="small"
               sx={{ bgcolor: alpha('#fff', 0.1), color: '#fff' }}
+            />
+            <Chip
+              icon={<AutoAwesome sx={{ fontSize: 14 }} />}
+              label="12+ AI Agents"
+              size="small"
+              sx={{ bgcolor: alpha('#E91E63', 0.2), color: '#fff', fontWeight: 600 }}
             />
             <Chip
               icon={<Webhook sx={{ fontSize: 14 }} />}

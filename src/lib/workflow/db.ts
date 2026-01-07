@@ -127,6 +127,8 @@ export async function createOrgWorkflowIndexes(orgId: string): Promise<void> {
     await workflows.createIndex({ tags: 1 });
     await workflows.createIndex({ updatedAt: -1 });
     await workflows.createIndex({ createdBy: 1 });
+    await workflows.createIndex({ orgId: 1, projectId: 1 });
+    await workflows.createIndex({ projectId: 1 });
 
     // Workflow versions collection
     const versions = db.collection('workflow_versions');
@@ -163,6 +165,7 @@ export async function createWorkflow(
     name: string;
     description?: string;
     tags?: string[];
+    projectId?: string;
   }
 ): Promise<WorkflowDocument> {
   const collection = await getWorkflowsCollection(orgId);
@@ -180,6 +183,7 @@ export async function createWorkflow(
   const workflow: WorkflowDocument = {
     id,
     orgId,
+    projectId: data.projectId,
     name: data.name,
     description: data.description,
     slug,
@@ -230,6 +234,7 @@ export async function listWorkflows(
   options: {
     status?: string;
     tags?: string[];
+    projectId?: string;
     page?: number;
     pageSize?: number;
     sortBy?: string;
@@ -240,6 +245,7 @@ export async function listWorkflows(
   const {
     status,
     tags,
+    projectId,
     page = 1,
     pageSize = 20,
     sortBy = 'updatedAt',
@@ -250,6 +256,7 @@ export async function listWorkflows(
   const query: Record<string, unknown> = {};
   if (status) query.status = status;
   if (tags && tags.length > 0) query.tags = { $in: tags };
+  if (projectId) query.projectId = projectId;
 
   // Get total count
   const total = await collection.countDocuments(query);

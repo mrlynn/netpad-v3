@@ -83,6 +83,44 @@ export interface OrgMembership {
   invitedBy?: string;
 }
 
+// ============================================
+// Project
+// ============================================
+
+export interface ProjectSettings {
+  // Custom settings object for future extensibility
+  [key: string]: unknown;
+}
+
+export interface ProjectStats {
+  formCount: number;
+  workflowCount: number;
+  clusterCount?: number;
+  connectionCount?: number;
+  lastActivityAt?: Date;
+}
+
+export type ProjectEnvironment = 'dev' | 'test' | 'staging' | 'prod';
+
+export interface Project {
+  _id?: ObjectId;
+  projectId: string;                    // "proj_abc123"
+  organizationId: string;               // "org_xyz789"
+  name: string;
+  description?: string;
+  slug: string;                         // URL-friendly, unique per org
+  environment: ProjectEnvironment;      // REQUIRED: dev, test, staging, or prod
+  tags: string[];
+  color?: string;                       // Hex color for UI theming
+  icon?: string;                        // Icon identifier
+  settings: ProjectSettings;            // Custom settings object
+  stats: ProjectStats;                  // Form count, workflow count, last activity
+  defaultVaultId?: string;              // Default vault connection for this project (set when cluster is provisioned)
+  createdBy: string;                    // userId
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Default settings per plan
 export const ORG_PLAN_LIMITS: Record<OrgPlan, Partial<OrganizationSettings>> = {
   free: {
@@ -178,7 +216,8 @@ export interface ConnectionPermission {
 export interface ConnectionVault {
   _id?: ObjectId;
   vaultId: string;                    // "vault_abc123"
-  organizationId: string;
+  organizationId: string;              // Kept for reference
+  projectId: string;                    // REQUIRED: NetPad project ID
   createdBy: string;
 
   // Display info (not sensitive)

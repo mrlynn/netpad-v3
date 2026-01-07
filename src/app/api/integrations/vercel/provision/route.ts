@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { createOrganization, getUserOrganizations } from '@/lib/platform/organizations';
+import { ensureDefaultProject } from '@/lib/platform/projects';
 import { provisionM0Cluster, getProvisioningStatus, isAutoProvisioningAvailable } from '@/lib/atlas/provisioning';
 import { getPlatformDb } from '@/lib/platform/db';
 import crypto from 'crypto';
@@ -145,8 +146,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<Provision
     }
 
     // Start provisioning
+    // Get or create default project for the organization
+    const defaultProject = await ensureDefaultProject(organizationId, session.userId);
+
+    // Provision cluster for the default project
     const result = await provisionM0Cluster({
       organizationId,
+      projectId: defaultProject.projectId,
       userId: session.userId,
     });
 

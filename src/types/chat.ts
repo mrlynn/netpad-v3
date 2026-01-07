@@ -217,7 +217,7 @@ export interface FormBuilderContext {
   selectedFieldPath?: string | null;
 
   /** Form type */
-  formType?: 'data-entry' | 'search' | 'both';
+  formType?: 'data-entry' | 'search' | 'both' | 'conversational';
 
   /** Current view/screen */
   currentView: CurrentView;

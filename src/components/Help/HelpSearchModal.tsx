@@ -44,6 +44,13 @@ const categoryConfig: Record<string, { icon: React.ReactNode; label: string; col
   'pipeline': { icon: <Widgets fontSize="small" />, label: 'Pipeline', color: '#2196f3' },
   'mongodb': { icon: <Storage fontSize="small" />, label: 'MongoDB', color: '#13AA52' },
   'aggregation': { icon: <Widgets fontSize="small" />, label: 'Pipeline', color: '#2196f3' },
+  'conversational': { icon: <Description fontSize="small" />, label: 'Conversational', color: '#9c27b0' },
+  'template': { icon: <Description fontSize="small" />, label: 'Templates', color: '#ff9800' },
+  'project': { icon: <Widgets fontSize="small" />, label: 'Projects', color: '#673ab7' },
+  'deploy': { icon: <PlayCircleOutline fontSize="small" />, label: 'Deployment', color: '#e91e63' },
+  'organization': { icon: <Storage fontSize="small" />, label: 'Organizations', color: '#00bcd4' },
+  'connection': { icon: <Storage fontSize="small" />, label: 'Connections', color: '#795548' },
+  'vault': { icon: <Storage fontSize="small" />, label: 'Connections', color: '#795548' },
 };
 
 function getTopicCategory(topicId: string): { icon: React.ReactNode; label: string; color: string } {

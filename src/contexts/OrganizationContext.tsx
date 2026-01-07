@@ -8,7 +8,9 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
+import { parseOrgProjectFromPath } from '@/lib/routing';
 import {
   Organization,
   SubscriptionTier,
@@ -61,6 +63,7 @@ const SELECTED_ORG_KEY = 'formbuilder_selected_org';
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
+  const pathname = usePathname();
 
   const [state, setState] = useState<OrganizationState>({
     organization: null,
@@ -91,16 +94,28 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       const orgs: Organization[] = data.organizations || [];
 
-      // Try to restore selected org from localStorage
+      // Try to get org from URL first (new route structure)
+      const { orgId: urlOrgId } = parseOrgProjectFromPath(pathname);
       let selectedOrg: Organization | null = null;
-      const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
 
-      if (savedOrgId) {
-        selectedOrg = orgs.find(o => o.orgId === savedOrgId) || null;
-        // Clear stale org from localStorage if it doesn't exist anymore
-        if (!selectedOrg) {
-          console.warn(`[OrganizationContext] Saved org ${savedOrgId} not found in user's organizations. Clearing stale selection.`);
-          localStorage.removeItem(SELECTED_ORG_KEY);
+      if (urlOrgId) {
+        // Use org from URL if it exists in user's organizations
+        selectedOrg = orgs.find(o => o.orgId === urlOrgId) || null;
+        if (selectedOrg) {
+          localStorage.setItem(SELECTED_ORG_KEY, selectedOrg.orgId);
+        }
+      }
+
+      // Fall back to localStorage if not in URL
+      if (!selectedOrg) {
+        const savedOrgId = localStorage.getItem(SELECTED_ORG_KEY);
+        if (savedOrgId) {
+          selectedOrg = orgs.find(o => o.orgId === savedOrgId) || null;
+          // Clear stale org from localStorage if it doesn't exist anymore
+          if (!selectedOrg) {
+            console.warn(`[OrganizationContext] Saved org ${savedOrgId} not found in user's organizations. Clearing stale selection.`);
+            localStorage.removeItem(SELECTED_ORG_KEY);
+          }
         }
       }
 
@@ -209,10 +224,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     return tierConfig.limits;
   }, [tierConfig]);
 
-  // Load organizations on auth change
+  // Load organizations on auth change or pathname change
   useEffect(() => {
     refreshOrganizations();
-  }, [refreshOrganizations]);
+  }, [refreshOrganizations, pathname]);
 
   // Context value
   const value: OrganizationContextValue = {

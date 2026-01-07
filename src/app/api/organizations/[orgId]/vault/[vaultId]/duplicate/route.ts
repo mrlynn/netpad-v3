@@ -35,7 +35,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { name, description, database, allowedCollections } = body;
+    const { name, description, database, allowedCollections, projectId } = body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json(
@@ -44,8 +44,16 @@ export async function POST(
       );
     }
 
+    if (!projectId || typeof projectId !== 'string') {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
     const input: DuplicateVaultInput = {
       name: name.trim(),
+      projectId,
       description: description?.trim(),
       database: database?.trim(),
       allowedCollections,

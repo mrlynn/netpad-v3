@@ -57,4 +57,11 @@ export type HelpTopicId =
   | 'employee-onboarding'
   | 'mcp-server'
   | 'netpad-forms-package'
-  | 'netpad-workflows-package';
+  | 'netpad-workflows-package'
+  // New features
+  | 'conversational-forms'
+  | 'conversational-templates'
+  | 'projects-management'
+  | 'deployment-vercel'
+  | 'organizations'
+  | 'connection-vault';

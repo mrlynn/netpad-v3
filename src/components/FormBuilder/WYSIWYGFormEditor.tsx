@@ -10,12 +10,14 @@ import {
   Tooltip,
   InputBase,
   Collapse,
+  Alert,
 } from '@mui/material';
 import {
   Add,
   DragIndicator,
+  Info,
 } from '@mui/icons-material';
-import { FieldConfig, LayoutFieldType, FormHeader } from '@/types/form';
+import { FieldConfig, LayoutFieldType, FormHeader, FormType } from '@/types/form';
 import { WYSIWYGFieldCard } from './WYSIWYGFieldCard';
 import { AddQuestionDropzone } from './AddQuestionDropzone';
 import { FormHeaderDisplay } from './FormHeaderDisplay';
@@ -48,6 +50,8 @@ interface WYSIWYGFormEditorProps {
   // Inline editing callbacks
   onFormTitleChange?: (title: string) => void;
   onFormDescriptionChange?: (description: string) => void;
+  // Form type for conversational mode warning
+  formType?: FormType;
 }
 
 export function WYSIWYGFormEditor({
@@ -67,6 +71,7 @@ export function WYSIWYGFormEditor({
   formDescription,
   onFormTitleChange,
   onFormDescriptionChange,
+  formType,
 }: WYSIWYGFormEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -167,7 +172,8 @@ export function WYSIWYGFormEditor({
       {/* Scrollable form area - Google Forms style centered */}
       <Box sx={{ flex: 1, overflow: 'auto', py: 3, px: 2 }}>
         {/* Form Header with inline editable title - matches published form */}
-        <Box sx={{ maxWidth: 700, mx: 'auto', mb: 3 }}>
+        {/* data-thumbnail-target is used by FormBuilder to capture preview for thumbnails */}
+        <Box sx={{ maxWidth: 700, mx: 'auto', mb: 3 }} data-thumbnail-target="true">
           {/* Header Image (if configured) with editable title overlay */}
           {header && header.type !== 'none' ? (
             <Box sx={{ position: 'relative' }}>
@@ -398,6 +404,23 @@ export function WYSIWYGFormEditor({
           </Paper>
         ) : (
           <Box sx={{ maxWidth: 700, mx: 'auto' }}>
+            {/* Conversational Mode Warning */}
+            {formType === 'conversational' && (
+              <Alert 
+                severity="warning" 
+                icon={<Info />}
+                sx={{ mb: 2 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Conversational Mode Active
+                </Typography>
+                <Typography variant="caption">
+                  This form uses AI conversation to collect data. Form fields should match your extraction schema defined in Settings → Conversational Config. 
+                  Fields are used for data mapping and workflow integration. To sync fields with your extraction schema, go to Settings → Conversational Config → Extraction Schema and click "Generate Form Fields from Extraction Schema".
+                </Typography>
+              </Alert>
+            )}
+
             {/* First dropzone */}
             <AddQuestionDropzone onAdd={() => handleAddAtIndex(0)} />
 

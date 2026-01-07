@@ -52,6 +52,13 @@ export async function POST(
       );
     }
 
+    if (!cluster.projectId) {
+      return NextResponse.json(
+        { error: 'Cluster is missing projectId. Please run migration script.' },
+        { status: 400 }
+      );
+    }
+
     if (cluster.status !== 'ready') {
       return NextResponse.json(
         { error: `Cluster is not ready. Current status: ${cluster.status}` },
@@ -66,6 +73,7 @@ export async function POST(
       const existingVault = await vaultsCollection.findOne({
         vaultId: cluster.vaultId,
         organizationId: orgId,
+        projectId: cluster.projectId,
         status: 'active',
       });
 
@@ -82,7 +90,7 @@ export async function POST(
     }
 
     // Initialize the database
-    const result = await initializeClusterDatabase(orgId, session.userId);
+    const result = await initializeClusterDatabase(orgId, cluster.projectId, session.userId);
 
     if (result.success) {
       return NextResponse.json({

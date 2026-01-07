@@ -24,6 +24,7 @@ import {
   Publish,
   Shield,
   Bolt,
+  Chat,
 } from '@mui/icons-material';
 import { FormTheme, MultiPageConfig, FormLifecycle, FormVariable, FieldConfig, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
 import { FormHooksConfig } from '@/types/formHooks';
@@ -37,6 +38,8 @@ import { DataSourceEditor } from './DataSourceEditor';
 import { AccessControlEditor } from './AccessControlEditor';
 import { BotProtectionEditor, DraftSettingsEditor } from './BotProtectionEditor';
 import { EmbedCodeGenerator } from './EmbedCodeGenerator';
+import { ConversationalConfigEditor } from './ConversationalConfigEditor';
+import { ConversationalFormConfig } from '@/types/conversational';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -88,9 +91,14 @@ interface FormSettingsDrawerProps {
   onFormTypeChange: (type: FormType) => void;
   searchConfig?: SearchConfig;
   onSearchConfigChange: (config: SearchConfig | undefined) => void;
+  // Conversational Form
+  conversationalConfig?: ConversationalFormConfig;
+  onConversationalConfigChange: (config: ConversationalFormConfig | undefined) => void;
+  onGenerateFieldsFromSchema?: (schema: import('@/types/conversational').ExtractionSchema[]) => void;
   // Publishing - Data Source & Access Control
   dataSource?: FormDataSource;
   organizationId?: string;
+  projectId?: string;
   onDataSourceChange: (dataSource: FormDataSource | undefined, orgId?: string) => void;
   accessControl?: FormAccessControl;
   onAccessControlChange: (accessControl: FormAccessControl | undefined) => void;
@@ -129,8 +137,12 @@ export function FormSettingsDrawer({
   onFormTypeChange,
   searchConfig,
   onSearchConfigChange,
+  conversationalConfig,
+  onConversationalConfigChange,
+  onGenerateFieldsFromSchema,
   dataSource,
   organizationId,
+  projectId,
   onDataSourceChange,
   accessControl,
   onAccessControlChange,
@@ -152,6 +164,7 @@ export function FormSettingsDrawer({
   const hasLifecycle = !!lifecycleConfig?.create || !!lifecycleConfig?.edit;
   const variablesCount = variables.length;
   const hasSearch = formType === 'search' || formType === 'both';
+  const hasConversational = formType === 'conversational';
   const hasPublishing = !!(dataSource?.vaultId && dataSource?.collection);
   const hasProtection = botProtection?.enabled || draftSettings?.enabled;
   const hasHooks = !!(hooksConfig?.prefill?.fromUrlParams || hooksConfig?.onSuccess?.message || hooksConfig?.onSuccess?.redirect || hooksConfig?.onSuccess?.webhook || hooksConfig?.onError?.message);
@@ -168,6 +181,12 @@ export function FormSettingsDrawer({
       icon: <Search fontSize="small" />,
       badge: hasSearch ? '✓' : undefined,
       color: '#2196f3'
+    },
+    {
+      label: 'AI Chat',
+      icon: <Chat fontSize="small" />,
+      badge: hasConversational ? '✓' : undefined,
+      color: '#00ED64'
     },
     {
       label: 'Theme',
@@ -331,6 +350,7 @@ export function FormSettingsDrawer({
           <DataSourceEditor
             value={dataSource}
             organizationId={organizationId}
+            projectId={projectId}
             onChange={onDataSourceChange}
           />
 
@@ -375,6 +395,19 @@ export function FormSettingsDrawer({
 
       <TabPanel value={activeTab} index={2}>
         <Box sx={{ p: 2 }}>
+          <ConversationalConfigEditor
+            formType={formType}
+            onFormTypeChange={onFormTypeChange}
+            config={conversationalConfig}
+            onChange={onConversationalConfigChange}
+            fieldConfigs={fieldConfigs}
+            onGenerateFieldsFromSchema={onGenerateFieldsFromSchema}
+          />
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={3}>
+        <Box sx={{ p: 2 }}>
           <ThemeConfigEditor
             config={themeConfig}
             onChange={(theme) => {
@@ -391,7 +424,7 @@ export function FormSettingsDrawer({
         </Box>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={3}>
+      <TabPanel value={activeTab} index={4}>
         <Box sx={{ p: 2 }}>
           <PageConfigEditor
             config={multiPageConfig}
@@ -401,7 +434,7 @@ export function FormSettingsDrawer({
         </Box>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={4}>
+      <TabPanel value={activeTab} index={5}>
         <Box sx={{ p: 2 }}>
           <LifecycleConfigEditor
             config={lifecycleConfig}
@@ -412,7 +445,7 @@ export function FormSettingsDrawer({
         </Box>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={5}>
+      <TabPanel value={activeTab} index={6}>
         <Box sx={{ p: 2 }}>
           <VariablesPanel
             variables={variables}
@@ -422,7 +455,7 @@ export function FormSettingsDrawer({
         </Box>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={6}>
+      <TabPanel value={activeTab} index={7}>
         <Box sx={{ p: 2 }}>
           <HooksSettingsEditor
             config={hooksConfig}
@@ -432,7 +465,7 @@ export function FormSettingsDrawer({
         </Box>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={7}>
+      <TabPanel value={activeTab} index={8}>
         <Box sx={{ p: 2 }}>
           <BotProtectionEditor
             config={botProtection}

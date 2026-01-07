@@ -3385,4 +3385,455 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'labelMap',
     ],
   },
+
+  'conversational-forms': {
+    id: 'conversational-forms',
+    title: 'Conversational Forms',
+    description:
+      'Create AI-powered conversational forms that collect data through natural dialogue instead of traditional form fields.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Conversational Forms?',
+      },
+      {
+        type: 'text',
+        content:
+          'Conversational forms use AI to engage users in a natural dialogue, extracting structured data from the conversation. Instead of filling out static fields, users chat with an AI assistant that guides them through the data collection process.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Natural language interaction - Users describe their needs conversationally',
+          'Intelligent topic coverage - AI ensures all required information is gathered',
+          'Automatic data extraction - Structured data is extracted from conversation',
+          'Adaptive questioning - Follow-up questions based on user responses',
+          'Configurable personas - Customize the AI\'s communication style',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating a Conversational Form',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create a new form and select "Conversational" as the form type',
+          'Choose a template (e.g., IT Helpdesk, Customer Feedback) or start from scratch',
+          'Define topics the conversation should cover',
+          'Configure the extraction schema for structured output',
+          'Set conversation limits (max turns, duration, confidence threshold)',
+          'Customize the AI persona (professional, friendly, empathetic)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Topics and Coverage',
+      },
+      {
+        type: 'text',
+        content:
+          'Topics define what information should be gathered during the conversation. Each topic has a priority (required, important, optional) and depth (surface, moderate, deep). The AI tracks topic coverage and ensures required topics are fully explored.',
+      },
+      {
+        type: 'heading',
+        content: 'Extraction Schema',
+      },
+      {
+        type: 'text',
+        content:
+          'The extraction schema defines what structured data to extract from the conversation. Fields can be strings, numbers, booleans, enums, arrays, or objects. Each field has a description to guide the extraction process.',
+      },
+      {
+        type: 'code',
+        content: `{
+  "fields": [
+    { "field": "issue_summary", "type": "string", "required": true },
+    { "field": "urgency", "type": "enum", "options": ["low", "medium", "high"] },
+    { "field": "affected_systems", "type": "array" }
+  ]
+}`,
+      },
+      {
+        type: 'tip',
+        content:
+          'Start with a built-in template like IT Helpdesk or Customer Feedback, then customize it to match your specific needs. Templates include pre-configured topics, extraction schemas, and personas.',
+      },
+      {
+        type: 'example',
+        content:
+          'An IT helpdesk conversational form greets the user, asks about their issue, gathers details about affected systems and urgency, and extracts structured ticket data that can be automatically routed to the right team.',
+      },
+    ],
+    relatedTopics: ['conversational-templates', 'form-builder', 'form-publishing'],
+    keywords: [
+      'conversational',
+      'AI form',
+      'chatbot',
+      'natural language',
+      'dialogue',
+      'extraction',
+      'topics',
+      'persona',
+    ],
+  },
+
+  'conversational-templates': {
+    id: 'conversational-templates',
+    title: 'Conversational Form Templates',
+    description:
+      'Manage and customize templates for conversational forms. Templates provide pre-configured conversation flows, topics, and extraction schemas.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Templates?',
+      },
+      {
+        type: 'text',
+        content:
+          'Templates are pre-built configurations for conversational forms. They include topics to explore, extraction schemas, persona settings, and conversation limits. NetPad includes built-in templates and you can create custom templates for your organization.',
+      },
+      {
+        type: 'heading',
+        content: 'Built-in Templates',
+      },
+      {
+        type: 'list',
+        content: [
+          'IT Helpdesk - Technical support ticket creation with troubleshooting',
+          'Customer Feedback - Collect customer satisfaction and feedback',
+          'Patient Intake - Healthcare patient information gathering',
+          'General Intake - Flexible intake form for various use cases',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Managing Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'Access the Template Admin in Settings > Templates. Here you can view all templates, clone built-in templates to customize them, and create new templates from scratch.',
+      },
+      {
+        type: 'heading',
+        content: 'Template Components',
+      },
+      {
+        type: 'list',
+        content: [
+          'Basic Info - Name, description, category, priority',
+          'Persona - AI communication style, tone, behaviors, restrictions',
+          'Topics - Conversation topics with priority and depth settings',
+          'Extraction Schema - Fields to extract from conversation',
+          'Prompts - Optional custom prompt templates for advanced control',
+          'Limits - Max turns, duration, minimum confidence threshold',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Cloning Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'To customize a built-in template, clone it to your organization. The clone becomes an editable custom template that you can modify while keeping the original built-in template unchanged.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use template categories (Support, Feedback, Intake, Application, General) to organize your templates. Filter by category in the template selector to quickly find the right template.',
+      },
+    ],
+    relatedTopics: ['conversational-forms', 'form-builder'],
+    keywords: [
+      'template',
+      'conversational template',
+      'IT helpdesk',
+      'customer feedback',
+      'patient intake',
+      'clone template',
+      'admin',
+    ],
+  },
+
+  'projects-management': {
+    id: 'projects-management',
+    title: 'Projects',
+    description:
+      'Organize your forms and workflows into projects for better management and collaboration.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Projects?',
+      },
+      {
+        type: 'text',
+        content:
+          'Projects are containers that group related forms, workflows, and resources together. Use projects to organize work by client, department, or initiative.',
+      },
+      {
+        type: 'heading',
+        content: 'Creating a Project',
+      },
+      {
+        type: 'list',
+        content: [
+          'Go to the Projects section from the navigation',
+          'Click "New Project" and enter a name and description',
+          'Optionally add tags and configure project settings',
+          'Start adding forms and workflows to the project',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Project Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Group forms and workflows logically',
+          'Export entire projects for backup or migration',
+          'Share project access with team members',
+          'Track project-level analytics and usage',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Exporting Projects',
+      },
+      {
+        type: 'text',
+        content:
+          'Export a project to create a portable package containing all forms, workflows, and configurations. Use exports for backup, migration between environments, or sharing with other organizations.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use descriptive project names and tags to make it easy to find projects later. Consider organizing by client name, department, or initiative.',
+      },
+    ],
+    relatedTopics: ['form-builder', 'organizations', 'deployment-vercel'],
+    keywords: ['project', 'organize', 'group', 'export', 'management', 'folder', 'container'],
+  },
+
+  'deployment-vercel': {
+    id: 'deployment-vercel',
+    title: 'Deploying to Vercel',
+    description:
+      'Self-host your own NetPad instance by deploying to Vercel with your own database configuration.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is Self-Hosting?',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad can be deployed to your own Vercel account, giving you complete control over your instance. Self-hosting allows you to use your own MongoDB database, custom domain, and environment configuration.',
+      },
+      {
+        type: 'heading',
+        content: 'Deployment Process',
+      },
+      {
+        type: 'list',
+        content: [
+          'Click "Deploy to Vercel" from the Settings page',
+          'Connect your GitHub account if not already connected',
+          'Fork the NetPad repository to your account',
+          'Configure environment variables in Vercel',
+          'Deploy and access your custom instance',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Required Environment Variables',
+      },
+      {
+        type: 'list',
+        content: [
+          'MONGODB_URI - Your MongoDB connection string',
+          'NEXTAUTH_SECRET - Random secret for authentication',
+          'NEXTAUTH_URL - Your deployment URL',
+          'GOOGLE_CLIENT_ID/SECRET - For Google OAuth (optional)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Benefits of Self-Hosting',
+      },
+      {
+        type: 'list',
+        content: [
+          'Full control over data and infrastructure',
+          'Use existing MongoDB databases',
+          'Custom domain and branding',
+          'No usage limits or rate limiting',
+          'Private, isolated instance',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Self-hosted instances require you to manage updates, security patches, and infrastructure. Make sure to keep your deployment up to date with the latest NetPad releases.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use Vercel\'s preview deployments to test changes before deploying to production. Each pull request automatically gets a preview URL.',
+      },
+    ],
+    relatedTopics: ['organizations', 'mongodb-connection'],
+    keywords: ['vercel', 'deploy', 'self-host', 'hosting', 'infrastructure', 'custom domain'],
+  },
+
+  'organizations': {
+    id: 'organizations',
+    title: 'Organizations',
+    description:
+      'Manage workspaces, team members, and shared resources within your organization.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Organizations?',
+      },
+      {
+        type: 'text',
+        content:
+          'Organizations (also called workspaces) are the top-level container for all your NetPad resources. Each organization has its own database, forms, workflows, and team members.',
+      },
+      {
+        type: 'heading',
+        content: 'Organization Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Isolated data and resources per organization',
+          'Team member management with roles and permissions',
+          'Shared connection vault for database credentials',
+          'Organization-specific templates and settings',
+          'Billing and usage tracking per organization',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating an Organization',
+      },
+      {
+        type: 'text',
+        content:
+          'New users are guided through the onboarding wizard to create their first organization. You can create additional organizations from the organization selector in the navigation bar.',
+      },
+      {
+        type: 'heading',
+        content: 'Switching Organizations',
+      },
+      {
+        type: 'text',
+        content:
+          'If you\'re a member of multiple organizations, use the organization selector in the top navigation to switch between them. Each organization maintains separate data and settings.',
+      },
+      {
+        type: 'heading',
+        content: 'Organization Settings',
+      },
+      {
+        type: 'list',
+        content: [
+          'Go to Settings > Organizations to manage your workspace',
+          'Update organization name and details',
+          'Manage team members and their roles',
+          'Configure database connections',
+          'View cluster status and usage',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Create separate organizations for different clients or projects to keep data isolated. Use the organization selector to quickly switch between workspaces.',
+      },
+    ],
+    relatedTopics: ['connection-vault', 'getting-started', 'mongodb-connection'],
+    keywords: ['organization', 'workspace', 'team', 'members', 'roles', 'permissions', 'settings'],
+  },
+
+  'connection-vault': {
+    id: 'connection-vault',
+    title: 'Connection Vault',
+    description:
+      'Securely manage database connections and credentials for your organization.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the Connection Vault?',
+      },
+      {
+        type: 'text',
+        content:
+          'The Connection Vault is a secure storage for database connection strings and credentials. It allows team members to use shared connections without exposing sensitive credentials.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Encrypted credential storage',
+          'Named connections for easy reference',
+          'Team-wide access without sharing passwords',
+          'Connection testing and validation',
+          'Usage tracking and audit logs',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Adding a Connection',
+      },
+      {
+        type: 'list',
+        content: [
+          'Go to Settings > Connections',
+          'Click "Add Connection" and enter a name',
+          'Paste your MongoDB connection string',
+          'Test the connection to verify it works',
+          'Save the connection to the vault',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Using Connections',
+      },
+      {
+        type: 'text',
+        content:
+          'Once a connection is saved to the vault, it appears in the connection selector throughout NetPad. Team members can use the connection without seeing the actual connection string.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Only organization administrators can add or modify connections in the vault. Regular users can only use existing connections that have been shared with them.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use descriptive names for connections like "Production DB" or "Staging - Analytics" to make it easy for team members to select the right connection.',
+      },
+    ],
+    relatedTopics: ['organizations', 'mongodb-connection', 'getting-started'],
+    keywords: [
+      'connection vault',
+      'credentials',
+      'connection string',
+      'database connection',
+      'secure storage',
+      'team sharing',
+    ],
+  },
 };

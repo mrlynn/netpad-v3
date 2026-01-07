@@ -19,6 +19,7 @@ export interface WorkflowDocument {
   // Identity
   id: string;                    // UUID for external reference
   orgId: string;                 // Organization owner
+  projectId?: string;            // Which project this workflow belongs to (required in production)
   name: string;
   description?: string;
   slug: string;                  // URL-safe identifier

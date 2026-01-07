@@ -36,6 +36,8 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SchoolIcon from '@mui/icons-material/School';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 
 const CodeBlock = ({ title, lines, color }: { title: string; lines: number; color: string }) => (
   <Box
@@ -253,6 +255,8 @@ const comparisonData = [
   { feature: 'Conditional logic', scratch: 'Custom evaluator (~150 lines)', netpad: 'JSON conditions' },
   { feature: 'Nested data (contact.phone)', scratch: 'Utility functions (~80 lines)', netpad: 'Dot notation' },
   { feature: 'Computed fields', scratch: 'Custom formula parser', netpad: 'Formula strings' },
+  { feature: 'Conversational forms', scratch: 'Chat UI + NLP + extraction (~2000 lines)', netpad: 'Template-based config' },
+  { feature: 'AI form generation', scratch: 'LLM integration + parsing (~500 lines)', netpad: 'Built-in AI agents' },
   { feature: 'Error display', scratch: 'Custom error handling', netpad: 'Automatic' },
   { feature: 'Accessibility (ARIA)', scratch: 'Manual implementation', netpad: 'Built-in' },
 ];
@@ -284,6 +288,15 @@ const capabilityComparison = [
     netpad: ['Automatic MongoDB storage', 'REST API included', 'Full-text search', 'Built-in pagination', 'Admin dashboard ready'],
     scratchTime: '2-3 weeks',
     netpadTime: 'Included',
+  },
+  {
+    category: 'AI & Conversational',
+    icon: <ChatBubbleIcon />,
+    color: '#E91E63',
+    scratch: ['Build chat interface', 'Implement NLP processing', 'Create conversation flows', 'Handle data extraction', 'Build template system'],
+    netpad: ['Conversational forms built-in', '12+ AI agents included', 'Template admin system', 'Automatic data extraction', 'Natural language processing'],
+    scratchTime: '4-6 weeks',
+    netpadTime: '1-2 hours',
   },
 ];
 
@@ -331,7 +344,7 @@ export default function WhyNetPadPage() {
           </Box>
 
           <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ maxWidth: 800 }}>
-            Stop rebuilding forms, workflows, and data management from scratch.
+            Stop rebuilding forms, workflows, data management, and AI experiences from scratch.
           </Typography>
           <Typography variant="h6" sx={{ opacity: 0.8, maxWidth: 700, mb: 4 }}>
             Ship production-ready applications in hours instead of weeks.
@@ -342,7 +355,8 @@ export default function WhyNetPadPage() {
             {[
               { icon: <SpeedIcon sx={{ fontSize: 40 }} />, stat: '10x', label: 'Faster Development' },
               { icon: <CodeIcon sx={{ fontSize: 40 }} />, stat: '90%', label: 'Less Code' },
-              { icon: <SecurityIcon sx={{ fontSize: 40 }} />, stat: '100%', label: 'Type Safe' },
+              { icon: <SecurityIcon sx={{ fontSize: 40 }} />, stat: '160+', label: 'API Endpoints' },
+              { icon: <SmartToyIcon sx={{ fontSize: 40 }} />, stat: '12+', label: 'AI Agents' },
             ].map((item, i) => (
               <Grid item xs={12} md={4} key={i}>
                 <Paper
@@ -461,15 +475,15 @@ export default function WhyNetPadPage() {
       <Box sx={{ py: 8, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="lg">
           <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
-            The Three Pillars of NetPad
+            The Four Pillars of NetPad
           </Typography>
           <Typography variant="h6" textAlign="center" sx={{ mb: 6, color: alpha('#fff', 0.6) }}>
-            Forms, Workflows, and Data Management — all integrated
+            Forms, Workflows, Data Management, and AI & Conversational Experiences — all integrated
           </Typography>
 
           <Grid container spacing={4}>
             {capabilityComparison.map((cap, i) => (
-              <Grid item xs={12} md={4} key={i}>
+              <Grid item xs={12} sm={6} md={3} key={i}>
                 <Card
                   sx={{
                     height: '100%',
@@ -556,13 +570,13 @@ export default function WhyNetPadPage() {
                   Building From Scratch
                 </Typography>
                 <Typography variant="h2" fontWeight="bold" sx={{ color: '#ff8a80' }}>
-                  6-10 weeks
+                  10-16 weeks
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 2, color: alpha('#fff', 0.6) }}>
-                  Forms + Workflows + Data Management
+                  Forms + Workflows + Data + AI/Conversational
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.6) }}>
-                  5,000+ lines of code
+                  8,000+ lines of code
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.6) }}>
                   Ongoing maintenance burden
@@ -586,7 +600,7 @@ export default function WhyNetPadPage() {
                   1-2 days
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 2, color: alpha('#fff', 0.8) }}>
-                  All three capabilities integrated
+                  All four capabilities integrated
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.8) }}>
                   ~100 lines of configuration
@@ -646,6 +660,86 @@ export default function WhyNetPadPage() {
           <Typography variant="body2" sx={{ mt: 4, color: alpha('#fff', 0.5) }}>
             Free MongoDB Atlas cluster included. No credit card required.
           </Typography>
+        </Container>
+      </Box>
+
+      {/* What's New in 2026 Section */}
+      <Box sx={{ py: 8 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Chip
+              label="What's New in 2026"
+              size="small"
+              sx={{
+                mb: 2,
+                bgcolor: alpha('#E91E63', 0.1),
+                color: '#E91E63',
+                fontWeight: 600,
+              }}
+            />
+            <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
+              The Future of Data Collection
+            </Typography>
+            <Typography variant="h6" sx={{ color: alpha('#fff', 0.6), maxWidth: 700, mx: 'auto' }}>
+              NetPad has evolved beyond traditional forms. Now with AI-powered conversational experiences, template systems, and enterprise-ready features.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            {[
+              {
+                icon: <ChatBubbleIcon sx={{ fontSize: 40, color: '#E91E63' }} />,
+                title: 'Conversational Forms',
+                description: 'Collect data through natural language conversations. AI guides users, asks clarifying questions, and extracts structured data automatically.',
+                color: '#E91E63',
+              },
+              {
+                icon: <SmartToyIcon sx={{ fontSize: 40, color: '#9C27B0' }} />,
+                title: '12+ AI Agents',
+                description: 'Form generation, optimization, compliance auditing, translation, and workflow generation — all powered by AI.',
+                color: '#9C27B0',
+              },
+              {
+                icon: <FolderSpecialIcon sx={{ fontSize: 40, color: '#2196F3' }} />,
+                title: 'Projects & Templates',
+                description: 'Organize work by environment (dev/staging/prod) and accelerate development with built-in conversational form templates.',
+                color: '#2196F3',
+              },
+              {
+                icon: <RocketLaunchIcon sx={{ fontSize: 40, color: '#00ED64' }} />,
+                title: 'One-Click Deployment',
+                description: 'Deploy your own instance to Vercel with auto-provisioned database. From database to production in minutes.',
+                color: '#00ED64',
+              },
+            ].map((item, i) => (
+              <Grid item xs={12} sm={6} md={3} key={i}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    bgcolor: alpha('#fff', 0.03),
+                    border: '1px solid',
+                    borderColor: alpha(item.color, 0.2),
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      borderColor: alpha(item.color, 0.5),
+                      bgcolor: alpha(item.color, 0.05),
+                      transform: 'translateY(-4px)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                    <Box sx={{ mb: 2 }}>{item.icon}</Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'white', mb: 1 }}>
+                      {item.title}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: alpha('#fff', 0.6), lineHeight: 1.6 }}>
+                      {item.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Container>
       </Box>
 
@@ -835,18 +929,18 @@ export default function WhyNetPadPage() {
               </Card>
             </Grid>
 
-            {/* Example App Card */}
+            {/* MCP Server NPM Package Card */}
             <Grid item xs={12} md={4}>
               <Card
                 sx={{
                   height: '100%',
                   bgcolor: alpha('#fff', 0.03),
                   border: '1px solid',
-                  borderColor: alpha('#9C27B0', 0.3),
+                  borderColor: alpha('#FF6B35', 0.3),
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    borderColor: alpha('#9C27B0', 0.5),
-                    bgcolor: alpha('#9C27B0', 0.05),
+                    borderColor: alpha('#FF6B35', 0.5),
+                    bgcolor: alpha('#FF6B35', 0.05),
                   },
                 }}
               >
@@ -854,30 +948,30 @@ export default function WhyNetPadPage() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                     <Box
                       sx={{
-                        bgcolor: alpha('#9C27B0', 0.2),
-                        color: '#9C27B0',
+                        bgcolor: alpha('#FF6B35', 0.2),
+                        color: '#FF6B35',
                         p: 1.5,
                         borderRadius: 2,
                         display: 'flex',
                       }}
                     >
-                      <SchoolIcon />
+                      <SmartToyIcon />
                     </Box>
                     <Box>
                       <Chip
-                        label="Example App"
+                        label="npm package"
                         size="small"
-                        sx={{ bgcolor: alpha('#9C27B0', 0.2), color: '#9C27B0', mb: 0.5 }}
+                        sx={{ bgcolor: alpha('#FF6B35', 0.2), color: '#FF6B35', mb: 0.5 }}
                       />
                       <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
-                        Employee Onboarding
+                        @netpad/mcp-server
                       </Typography>
                     </Box>
                   </Box>
 
                   <Typography variant="body1" sx={{ color: alpha('#fff', 0.7), mb: 3 }}>
-                    Clone a complete working example with a 3-page wizard, conditional fields,
-                    nested data structures, and validation — all in under 300 lines of code.
+                    Build forms with AI assistance. Use Claude, Cursor, or any MCP-compatible AI
+                    to generate forms, scaffold apps, and integrate workflows using natural language.
                   </Typography>
 
                   <Paper
@@ -890,50 +984,50 @@ export default function WhyNetPadPage() {
                     }}
                   >
                     <Typography sx={{ color: '#d4d4d4', fontSize: '0.85rem' }}>
-                      <span style={{ color: '#9C27B0' }}>$</span> git clone examples/employee-onboarding-demo
+                      <span style={{ color: '#FF6B35' }}>$</span> npx @netpad/mcp-server
                     </Typography>
                   </Paper>
 
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                    <Chip label="3-Page Wizard" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                    <Chip label="Progress Tracking" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                    <Chip label="Nested Objects" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                    <Chip label="Next.js 14" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                    <Chip label="22 AI Tools" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                    <Chip label="Natural Language" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                    <Chip label="App Scaffolding" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                    <Chip label="Form Generation" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
                   </Box>
 
                   <Button
                     component="a"
-                    href="https://github.com/mrlynn/netpad-v3/tree/main/examples/employee-onboarding-demo"
+                    href="https://www.npmjs.com/package/@netpad/mcp-server"
                     target="_blank"
                     variant="contained"
                     fullWidth
-                    startIcon={<SchoolIcon />}
+                    startIcon={<TerminalIcon />}
                     sx={{
-                      background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                      background: 'linear-gradient(135deg, #FF6B35 0%, #E85A24 100%)',
                       color: '#fff',
                       fontWeight: 600,
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
+                        background: 'linear-gradient(135deg, #FF7D4D 0%, #FF6B35 100%)',
                       }
                     }}
                   >
-                    View Example
+                    View on npm
                   </Button>
                 </CardContent>
               </Card>
             </Grid>
 
-            {/* MCP Server Card */}
+            {/* IT Helpdesk Example App Card */}
             <Grid item xs={12}>
               <Card
                 sx={{
                   bgcolor: alpha('#fff', 0.03),
                   border: '1px solid',
-                  borderColor: alpha('#FF6B35', 0.3),
+                  borderColor: alpha('#9C27B0', 0.3),
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    borderColor: alpha('#FF6B35', 0.5),
-                    bgcolor: alpha('#FF6B35', 0.05),
+                    borderColor: alpha('#9C27B0', 0.5),
+                    bgcolor: alpha('#9C27B0', 0.05),
                   },
                 }}
               >
@@ -943,30 +1037,31 @@ export default function WhyNetPadPage() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <Box
                           sx={{
-                            bgcolor: alpha('#FF6B35', 0.2),
-                            color: '#FF6B35',
+                            bgcolor: alpha('#9C27B0', 0.2),
+                            color: '#9C27B0',
                             p: 1.5,
                             borderRadius: 2,
                             display: 'flex',
                           }}
                         >
-                          <SmartToyIcon />
+                          <SchoolIcon />
                         </Box>
                         <Box>
                           <Chip
-                            label="ai assistant"
+                            label="Example App"
                             size="small"
-                            sx={{ bgcolor: alpha('#FF6B35', 0.2), color: '#FF6B35', mb: 0.5 }}
+                            sx={{ bgcolor: alpha('#9C27B0', 0.2), color: '#9C27B0', mb: 0.5 }}
                           />
                           <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
-                            @netpad/mcp-server
+                            IT Helpdesk
                           </Typography>
                         </Box>
                       </Box>
 
                       <Typography variant="body1" sx={{ color: alpha('#fff', 0.7), mb: 3 }}>
-                        Build forms with AI assistance. Use Claude, Cursor, or any MCP-compatible AI
-                        to generate forms, scaffold apps, and integrate workflows using natural language.
+                        A complete IT helpdesk application built on NetPad. Capture requests,
+                        route them to the right team, and automate approvals and notifications
+                        using forms, workflows, and MongoDB.
                       </Typography>
 
                       <Paper
@@ -979,38 +1074,41 @@ export default function WhyNetPadPage() {
                         }}
                       >
                         <Typography sx={{ color: '#d4d4d4', fontSize: '0.85rem' }}>
-                          <span style={{ color: '#FF6B35' }}>$</span> npx @netpad/mcp-server
+                          <span style={{ color: '#9C27B0' }}>$</span> git clone https://github.com/mrlynn/netpad-v3
+                        </Typography>
+                        <Typography sx={{ color: '#d4d4d4', fontSize: '0.85rem' }}>
+                          <span style={{ color: '#9C27B0' }}>$</span> cd netpad-3/examples/it-helpdesk
                         </Typography>
                       </Paper>
 
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                        <Chip label="22 AI Tools" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                        <Chip label="Natural Language" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                        <Chip label="App Scaffolding" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
-                        <Chip label="Form Generation" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Request Intake" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Triage & Routing" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Approvals" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
+                        <Chip label="Slack & Email" size="small" variant="outlined" sx={{ borderColor: alpha('#fff', 0.2), color: alpha('#fff', 0.7) }} />
                       </Box>
 
                       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                         <Button
                           component="a"
-                          href="https://www.npmjs.com/package/@netpad/mcp-server"
+                          href="https://github.com/mrlynn/netpad-v3/tree/main/examples/it-helpdesk"
                           target="_blank"
                           variant="contained"
-                          startIcon={<TerminalIcon />}
+                          startIcon={<SchoolIcon />}
                           sx={{
-                            background: 'linear-gradient(135deg, #FF6B35 0%, #E85A24 100%)',
+                            background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
                             color: '#fff',
                             fontWeight: 600,
                             '&:hover': {
-                              background: 'linear-gradient(135deg, #FF7D4D 0%, #FF6B35 100%)',
+                              background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
                             }
                           }}
                         >
-                          View on npm
+                          View Example
                         </Button>
                         <Button
                           component="a"
-                          href="https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-server"
+                          href="https://github.com/mrlynn/netpad-v3/tree/main/examples/it-helpdesk"
                           target="_blank"
                           variant="outlined"
                           startIcon={<GitHubIcon />}
@@ -1024,7 +1122,7 @@ export default function WhyNetPadPage() {
                             }
                           }}
                         >
-                          Documentation
+                          Read README
                         </Button>
                       </Box>
                     </Grid>

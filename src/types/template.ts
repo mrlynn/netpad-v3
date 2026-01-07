@@ -123,6 +123,92 @@ export interface BundleExport {
   forms?: FormDefinition[];
   workflows?: WorkflowDefinition[];
   theme?: any;
+  // NEW: Project metadata
+  project?: {
+    name: string;
+    description?: string;
+    settings?: Record<string, unknown>;
+    branding?: {
+      logo?: string;
+      primaryColor?: string;
+      favicon?: string;
+    };
+  };
+  // NEW: Deployment configuration
+  deployment?: DeploymentConfig;
+}
+
+/**
+ * Deployment Configuration
+ * Defines how the application should be deployed
+ */
+export interface DeploymentConfig {
+  mode: 'standalone' | 'connected';
+  environment: {
+    required: EnvVarSpec[];
+    optional: EnvVarSpec[];
+  };
+  database: {
+    provisioning: 'auto' | 'manual' | 'existing';
+    collections: CollectionSpec[];
+    indexes: IndexSpec[];
+  };
+  seed: {
+    forms: boolean;
+    workflows: boolean;
+    sampleData?: boolean;
+  };
+  branding?: {
+    appName: string;
+    logo?: string;
+    favicon?: string;
+    primaryColor?: string;
+  };
+}
+
+/**
+ * Environment Variable Specification
+ * Defines required/optional environment variables for deployment
+ */
+export interface EnvVarSpec {
+  name: string;
+  description: string;
+  required: boolean;
+  default?: string;
+  generator?: 'secret' | 'uuid' | 'none';
+}
+
+/**
+ * Collection Specification
+ * Defines database collections needed for the application
+ */
+export interface CollectionSpec {
+  name: string;
+  description?: string;
+  indexes?: IndexSpec[];
+}
+
+/**
+ * Index Specification
+ * Defines database indexes for collections
+ */
+export interface IndexSpec {
+  key: Record<string, 1 | -1>;
+  name: string;
+  unique?: boolean;
+  sparse?: boolean;
+}
+
+/**
+ * Connection Configuration Export
+ * Sanitized connection metadata (no secrets)
+ */
+export interface ConnectionConfigExport {
+  name: string;
+  description?: string;
+  database: string;
+  allowedCollections: string[];
+  // Excluded: encryptedConnectionString, encryptionKeyId, permissions
 }
 
 /**

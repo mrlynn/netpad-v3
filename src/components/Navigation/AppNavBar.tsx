@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   AppBar,
@@ -42,6 +42,9 @@ import {
   Api,
   Menu as MenuIcon,
   MonitorHeart,
+  FolderOpen,
+  ArrowDropDown,
+  Description,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -49,7 +52,11 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
 import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
+import { OrganizationSelector } from './OrganizationSelector';
+import { ProjectSelectorNav } from './ProjectSelectorNav';
+import { getOrgProjectUrl, parseOrgProjectFromPath } from '@/lib/routing';
 
 interface NavItem {
   href: string;
@@ -59,22 +66,30 @@ interface NavItem {
   matchPaths?: string[]; // Additional paths that should highlight this nav item
 }
 
-const NAV_ITEMS: NavItem[] = [
+// Navigation items - will be generated dynamically based on context
+const NAV_ITEM_CONFIGS = [
   {
-    href: '/my-forms',
+    key: 'projects',
+    label: 'Projects',
+    icon: <FolderOpen sx={{ fontSize: 18 }} />,
+    color: '#FF9800',
+    matchPaths: ['/projects'],
+  },
+  {
+    key: 'forms',
     label: 'Forms',
     icon: <Folder sx={{ fontSize: 18 }} />,
     color: '#00ED64',
     matchPaths: ['/forms', '/builder'],
   },
   {
-    href: '/workflows',
+    key: 'workflows',
     label: 'Workflows',
     icon: <AccountTree sx={{ fontSize: 18 }} />,
     color: '#9C27B0',
   },
   {
-    href: '/data',
+    key: 'data',
     label: 'Data',
     icon: <Storage sx={{ fontSize: 18 }} />,
     color: '#2196F3',
@@ -84,18 +99,89 @@ const NAV_ITEMS: NavItem[] = [
 export function AppNavBar() {
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, logout, registerPasskey } = useAuth();
+  const { organization, currentOrgId } = useOrganization();
   const { openSearch } = useHelp();
   const { mode, toggleTheme } = useAppTheme();
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
 
+  // Get current org/project from URL or context
+  const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  
+  useEffect(() => {
+    // Try to parse from URL first
+    const { orgId: urlOrgId, projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
+    
+    if (urlOrgId && urlProjectId) {
+      // We're in the new URL structure
+      setCurrentProjectId(urlProjectId);
+      
+      // Generate nav items with new URLs
+      const items = NAV_ITEM_CONFIGS.map(config => {
+        // Projects link goes to org's projects list, not project-specific
+        if (config.key === 'projects') {
+          return {
+            href: `/orgs/${urlOrgId}/projects`,
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
+        // Other items are project-specific
+        return {
+          href: getOrgProjectUrl(urlOrgId, urlProjectId, config.key as any),
+          label: config.label,
+          icon: config.icon,
+          color: config.color,
+          matchPaths: config.matchPaths,
+        };
+      });
+      setNavItems(items);
+    } else {
+      // Legacy routes - use old URLs (they'll redirect)
+      const items = NAV_ITEM_CONFIGS.map(config => {
+        if (config.key === 'projects') {
+          // Projects link needs orgId
+          const orgId = organization?.orgId;
+          return {
+            href: orgId ? `/orgs/${orgId}/projects` : '/projects',
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
+        return {
+          href: config.key === 'forms' ? '/my-forms' : `/${config.key}`,
+          label: config.label,
+          icon: config.icon,
+          color: config.color,
+          matchPaths: config.matchPaths,
+        };
+      });
+      setNavItems(items);
+      
+      // Get project from localStorage for legacy routes
+      const stored = localStorage.getItem('selected_project_id');
+      setCurrentProjectId(stored || undefined);
+    }
+  }, [pathname, organization]);
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [newMenuAnchorEl, setNewMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const newMenuOpen = Boolean(newMenuAnchorEl);
 
   // Check if a nav item is active based on current path
   const isNavItemActive = (item: NavItem): boolean => {
     if (pathname === item.href) return true;
+    // Special handling for projects - match /orgs/[orgId]/projects (with or without trailing slash or sub-paths)
+    if (item.href.includes('/projects') && pathname.match(/^\/orgs\/[^/]+\/projects(\/|$)/)) {
+      return true;
+    }
     if (item.matchPaths?.some(path => pathname.startsWith(path))) return true;
     return false;
   };
@@ -124,6 +210,14 @@ export function AppNavBar() {
   const handleRegisterPasskey = async () => {
     handleMenuClose();
     await registerPasskey();
+  };
+
+  const handleNewMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setNewMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleNewMenuClose = () => {
+    setNewMenuAnchorEl(null);
   };
 
   // Get user initials for avatar
@@ -170,113 +264,115 @@ export function AppNavBar() {
           gap: 1
         }}
       >
-        {/* Logo / Home */}
-        <Tooltip title="Back to home">
-          <Box
-            component={Link}
-            href="/"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              textDecoration: 'none',
-              borderRadius: 1,
-              px: 0.5,
-              py: 0.25,
-              '&:hover': {
-                bgcolor: alpha('#00ED64', 0.1)
-              },
-              transition: 'background-color 0.15s ease'
-            }}
-          >
-            <Image
-              src="/logo-250x250-trans.png"
-              alt="NetPad"
-              width={28}
-              height={28}
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 237, 100, 0.2))',
-              }}
-            />
-            <Typography
-              variant="subtitle2"
+        {/* LEFT: Identity + Scope - Quieter */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Logo / Home */}
+          <Tooltip title="Back to home">
+            <Box
+              component={Link}
+              href="/"
               sx={{
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                display: { xs: 'none', sm: 'block' }
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.75,
+                textDecoration: 'none',
+                borderRadius: 1,
+                px: 0.75,
+                py: 0.5,
+                '&:hover': {
+                  bgcolor: alpha('#000', 0.05)
+                },
+                transition: 'background-color 0.15s ease'
               }}
             >
-              NetPad
-            </Typography>
-          </Box>
-        </Tooltip>
+              <Image
+                src="/logo-250x250-trans.png"
+                alt="NetPad"
+                width={24}
+                height={24}
+                style={{
+                  opacity: 0.9,
+                }}
+              />
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  color: 'text.primary',
+                  display: { xs: 'none', sm: 'block' },
+                  fontSize: '0.875rem',
+                }}
+              >
+                NetPad
+              </Typography>
+            </Box>
+          </Tooltip>
+
+          {/* Organization & Project Selectors - Compact, quieter */}
+          {isAuthenticated && organization && !isMobile && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <OrganizationSelector compact />
+                <ProjectSelectorNav compact currentProjectId={currentProjectId} />
+              </Box>
+            </>
+          )}
+        </Box>
 
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Desktop Navigation - hide on mobile */}
+        {/* CENTER: Primary Navigation - Tabs, not pills */}
         {!isMobile && (
-          <>
-            {/* Navigation Items */}
-            {NAV_ITEMS.map((item) => {
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {navItems.map((item) => {
               const isActive = isNavItemActive(item);
               return (
                 <Button
                   key={item.href}
                   component={Link}
                   href={item.href}
-                  startIcon={item.icon}
+                  startIcon={<Box sx={{ display: 'flex', alignItems: 'center' }}>{item.icon}</Box>}
                   size="small"
                   sx={{
                     minWidth: 'auto',
-                    px: 1.5,
-                    py: 0.5,
+                    px: 2,
+                    py: 0.75,
                     color: isActive ? item.color : 'text.secondary',
-                    bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
-                    borderRadius: 1,
+                    bgcolor: 'transparent',
+                    borderRadius: 0,
                     textTransform: 'none',
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: '0.8125rem',
-                    '&:hover': {
-                      bgcolor: alpha(item.color, 0.15),
-                      color: item.color
+                    fontWeight: isActive ? 600 : 400,
+                    fontSize: '0.875rem',
+                    position: 'relative',
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 0,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: isActive ? 'calc(100% - 16px)' : 0,
+                      height: 2,
+                      bgcolor: isActive ? item.color : 'transparent',
+                      transition: 'width 0.2s ease',
                     },
-                    transition: 'all 0.15s ease'
+                    '&:hover': {
+                      bgcolor: 'transparent',
+                      color: isActive ? item.color : 'text.primary',
+                      '&::after': {
+                        width: isActive ? 'calc(100% - 16px)' : 'calc(100% - 16px)',
+                        bgcolor: isActive ? item.color : alpha(item.color, 0.3),
+                      }
+                    },
+                    transition: 'color 0.15s ease'
                   }}
                 >
                   {item.label}
                 </Button>
               );
             })}
-
-            {/* New Form Button */}
-            <Button
-              component={Link}
-              href="/builder"
-              startIcon={<Add sx={{ fontSize: 18 }} />}
-              size="small"
-              sx={{
-                minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                color: '#00ED64',
-                bgcolor: alpha('#00ED64', 0.1),
-                borderRadius: 1,
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.8125rem',
-                '&:hover': {
-                  bgcolor: alpha('#00ED64', 0.2)
-                },
-                transition: 'all 0.15s ease'
-              }}
-            >
-              New Form
-            </Button>
-          </>
+          </Box>
         )}
 
         {/* Mobile Menu Button */}
@@ -296,57 +392,152 @@ export function AppNavBar() {
           </IconButton>
         )}
 
-        {/* Cluster Status - only show when authenticated, hide on mobile */}
-        {isAuthenticated && !isMobile && <ClusterStatusIndicator />}
-
-        {/* Theme Toggle */}
-        <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
-          <IconButton
-            size="small"
-            onClick={toggleTheme}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                color: mode === 'dark' ? '#ffa726' : '#5c6bc0',
-                bgcolor: mode === 'dark' ? alpha('#ffa726', 0.1) : alpha('#5c6bc0', 0.1)
-              }
-            }}
-          >
-            {mode === 'dark' ? <LightMode sx={{ fontSize: 18 }} /> : <DarkMode sx={{ fontSize: 18 }} />}
-          </IconButton>
-        </Tooltip>
-
-        {/* Auth Section */}
-        {!isLoading && (
-          <>
-            {isAuthenticated && user ? (
+        {/* RIGHT: Actions + Status */}
+        {!isMobile && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {/* + New Dropdown */}
+            {isAuthenticated && (
               <>
-                <Tooltip title={user.email}>
-                  <IconButton
-                    onClick={handleMenuOpen}
-                    size="small"
-                    sx={{
-                      p: 0,
-                      '&:hover': {
-                        opacity: 0.8
-                      }
-                    }}
-                  >
-                    <Avatar
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        bgcolor: '#00ED64',
-                        color: '#001E2B'
-                      }}
-                    >
-                      {getUserInitials()}
-                    </Avatar>
-                  </IconButton>
-                </Tooltip>
+                <Button
+                  onClick={handleNewMenuOpen}
+                  startIcon={<Add sx={{ fontSize: 16 }} />}
+                  endIcon={<ArrowDropDown sx={{ fontSize: 16 }} />}
+                  size="small"
+                  sx={{
+                    minWidth: 'auto',
+                    px: 1.5,
+                    py: 0.5,
+                    color: 'text.primary',
+                    bgcolor: 'transparent',
+                    borderRadius: 1,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: '0.8125rem',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      bgcolor: alpha('#000', 0.05),
+                      borderColor: 'divider',
+                    },
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  New
+                </Button>
                 <Menu
+                  anchorEl={newMenuAnchorEl}
+                  open={newMenuOpen}
+                  onClose={handleNewMenuClose}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 180,
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }
+                  }}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                >
+                  <MenuItem
+                    component={Link}
+                    href={
+                      organization?.orgId && currentProjectId
+                        ? getOrgProjectUrl(organization.orgId, currentProjectId, 'builder')
+                        : '/builder'
+                    }
+                    onClick={handleNewMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Description sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Form" secondary="Create a new form" />
+                  </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    href={
+                      organization?.orgId && currentProjectId
+                        ? getOrgProjectUrl(organization.orgId, currentProjectId, 'workflows')
+                        : '/workflows'
+                    }
+                    onClick={handleNewMenuClose}
+                  >
+                    <ListItemIcon>
+                      <AccountTree sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Workflow" secondary="Create a new workflow" />
+                  </MenuItem>
+                  {organization?.orgId && (
+                    <MenuItem
+                      component={Link}
+                      href={`/orgs/${organization.orgId}/projects`}
+                      onClick={handleNewMenuClose}
+                    >
+                      <ListItemIcon>
+                        <FolderOpen sx={{ fontSize: 18 }} />
+                      </ListItemIcon>
+                      <ListItemText primary="Project" secondary="Create a new project" />
+                    </MenuItem>
+                  )}
+                </Menu>
+              </>
+            )}
+
+            {/* MongoDB Status - Icon with popover */}
+            {isAuthenticated && (
+              <ClusterStatusIndicator />
+            )}
+
+            {/* Theme Toggle */}
+            <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
+              <IconButton
+                size="small"
+                onClick={toggleTheme}
+                sx={{
+                  color: 'text.secondary',
+                  p: 0.75,
+                  '&:hover': {
+                    color: 'text.primary',
+                    bgcolor: alpha('#000', 0.05)
+                  }
+                }}
+              >
+                {mode === 'dark' ? <LightMode sx={{ fontSize: 18 }} /> : <DarkMode sx={{ fontSize: 18 }} />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Auth Section */}
+            {!isLoading && (
+              <>
+                {isAuthenticated && user ? (
+                  <>
+                    <Tooltip title={user.email}>
+                      <IconButton
+                        onClick={handleMenuOpen}
+                        size="small"
+                        sx={{
+                          p: 0,
+                          '&:hover': {
+                            opacity: 0.8
+                          }
+                        }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            bgcolor: '#00ED64',
+                            color: '#001E2B'
+                          }}
+                        >
+                          {getUserInitials()}
+                        </Avatar>
+                      </IconButton>
+                    </Tooltip>
+                    <Menu
                   anchorEl={anchorEl}
                   open={menuOpen}
                   onClose={handleMenuClose}
@@ -395,6 +586,19 @@ export function AppNavBar() {
                         <Key sx={{ fontSize: 18 }} />
                       </ListItemIcon>
                       <ListItemText primary="Set up Passkey" secondary="Enable biometric login" />
+                    </MenuItem>
+                  )}
+
+                  {organization?.orgId && (
+                    <MenuItem
+                      component={Link}
+                      href={`/orgs/${organization.orgId}/projects`}
+                      onClick={handleMenuClose}
+                    >
+                      <ListItemIcon>
+                        <FolderOpen sx={{ fontSize: 18 }} />
+                      </ListItemIcon>
+                      <ListItemText primary="Projects" secondary="Manage your projects" />
                     </MenuItem>
                   )}
 
@@ -465,38 +669,43 @@ export function AppNavBar() {
 
                   <Divider />
 
-                  <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                    <ListItemIcon>
-                      <Logout sx={{ fontSize: 18, color: 'error.main' }} />
-                    </ListItemIcon>
-                    <ListItemText primary="Sign out" />
-                  </MenuItem>
-                </Menu>
+                    <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+                      <ListItemIcon>
+                        <Logout sx={{ fontSize: 18, color: 'error.main' }} />
+                      </ListItemIcon>
+                      <ListItemText primary="Sign out" />
+                    </MenuItem>
+                  </Menu>
+                  </>
+                ) : (
+                  <Button
+                    component={Link}
+                    href="/auth/login"
+                    startIcon={<Login sx={{ fontSize: 16 }} />}
+                    size="small"
+                    sx={{
+                      px: 1.5,
+                      py: 0.5,
+                      color: 'text.primary',
+                      bgcolor: 'transparent',
+                      borderRadius: 1,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: '0.8125rem',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        bgcolor: alpha('#000', 0.05),
+                        borderColor: 'divider'
+                      }
+                    }}
+                  >
+                    Sign In
+                  </Button>
+                )}
               </>
-            ) : (
-              <Button
-                component={Link}
-                href="/auth/login"
-                startIcon={<Login sx={{ fontSize: 16 }} />}
-                size="small"
-                sx={{
-                  px: 1.5,
-                  py: 0.5,
-                  color: '#00ED64',
-                  bgcolor: alpha('#00ED64', 0.1),
-                  borderRadius: 1,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.8125rem',
-                  '&:hover': {
-                    bgcolor: alpha('#00ED64', 0.2)
-                  }
-                }}
-              >
-                Sign In
-              </Button>
             )}
-          </>
+          </Box>
         )}
       </Toolbar>
 
@@ -516,8 +725,17 @@ export function AppNavBar() {
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
             Navigation
           </Typography>
+          
+          {/* Organization & Project Selectors for Mobile */}
+          {isAuthenticated && organization && (
+            <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <OrganizationSelector />
+              <ProjectSelectorNav currentProjectId={currentProjectId} />
+            </Box>
+          )}
+          
           <List>
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive = isNavItemActive(item);
               return (
                 <ListItem key={item.href} disablePadding>
@@ -548,32 +766,69 @@ export function AppNavBar() {
                 </ListItem>
               );
             })}
+            {/* New Actions */}
             <ListItem disablePadding>
               <ListItemButton
                 component={Link}
-                href="/builder"
+                href={
+                  organization?.orgId && currentProjectId
+                    ? getOrgProjectUrl(organization.orgId, currentProjectId, 'builder')
+                    : '/builder'
+                }
                 onClick={handleMobileMenuClose}
                 sx={{
-                  color: '#00ED64',
-                  bgcolor: alpha('#00ED64', 0.1),
                   borderRadius: 1,
                   mb: 0.5,
-                  '&:hover': {
-                    bgcolor: alpha('#00ED64', 0.2),
-                  }
                 }}
               >
-                <ListItemIcon sx={{ color: '#00ED64', minWidth: 40 }}>
+                <ListItemIcon sx={{ minWidth: 40 }}>
                   <Add />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="New Form"
-                  primaryTypographyProps={{
-                    fontWeight: 600,
-                  }}
-                />
+                <ListItemText primary="New Form" />
               </ListItemButton>
             </ListItem>
+            {organization?.orgId && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={
+                      organization?.orgId && currentProjectId
+                        ? getOrgProjectUrl(organization.orgId, currentProjectId, 'workflows')
+                        : '/workflows'
+                    }
+                    onClick={handleMobileMenuClose}
+                    sx={{
+                      borderRadius: 1,
+                      mb: 0.5,
+                      pl: 6,
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <AccountTree />
+                    </ListItemIcon>
+                    <ListItemText primary="New Workflow" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={`/orgs/${organization.orgId}/projects`}
+                    onClick={handleMobileMenuClose}
+                    sx={{
+                      borderRadius: 1,
+                      mb: 0.5,
+                      pl: 6,
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <FolderOpen />
+                    </ListItemIcon>
+                    <ListItemText primary="New Project" />
+                  </ListItemButton>
+                </ListItem>
+              </>
+            )}
           </List>
 
           {isAuthenticated && (

@@ -22,6 +22,7 @@ import {
   buildFieldSuggestionPrompt,
   suggestFieldType,
 } from './prompts';
+import { sortFieldsByPriority } from './fieldOrdering';
 
 // ============================================
 // Service Configuration
@@ -231,6 +232,11 @@ Create appropriate labels, field types, and validation based on the schema field
     } else if (Array.isArray(generated.fields)) {
       // Handle alternate schema format
       form.fieldConfigs = generated.fields.map((field: any) => this.normalizeFieldConfig(field));
+    }
+
+    // Sort fields by priority (contact info first, metadata last)
+    if (form.fieldConfigs && form.fieldConfigs.length > 0) {
+      form.fieldConfigs = sortFieldsByPriority(form.fieldConfigs);
     }
 
     return form;

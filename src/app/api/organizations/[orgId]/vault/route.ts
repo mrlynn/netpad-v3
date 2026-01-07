@@ -32,8 +32,17 @@ export async function GET(
       );
     }
 
+    // Get optional projectId filter from query params
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId') || undefined;
+
     // List vaults accessible by this user
-    const vaults = await listUserVaults(orgId, session.userId);
+    let vaults = await listUserVaults(orgId, session.userId);
+
+    // Filter by projectId if provided
+    if (projectId) {
+      vaults = vaults.filter(v => v.projectId === projectId);
+    }
 
     return NextResponse.json({
       connections: vaults.map(v => ({
@@ -43,6 +52,7 @@ export async function GET(
         database: v.database,
         allowedCollections: v.allowedCollections,
         status: v.status,
+        projectId: v.projectId,
         lastTestedAt: v.lastTestedAt,
         lastUsedAt: v.lastUsedAt,
         usageCount: v.usageCount,
@@ -131,12 +141,29 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { name, description, connectionString, database, allowedCollections, testFirst } = body;
+    const { projectId, name, description, connectionString, database, allowedCollections, testFirst } = body;
 
     // Validate required fields
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'projectId is required' },
+        { status: 400 }
+      );
+    }
+
     if (!name || !connectionString || !database) {
       return NextResponse.json(
         { error: 'Name, connectionString, and database are required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify project exists and belongs to organization
+    const { getProject } = await import('@/lib/platform/projects');
+    const project = await getProject(projectId);
+    if (!project || project.organizationId !== orgId) {
+      return NextResponse.json(
+        { error: 'Invalid project or project does not belong to this organization' },
         { status: 400 }
       );
     }
@@ -155,6 +182,7 @@ export async function POST(
     // Create vault entry
     const vault = await createConnectionVault({
       organizationId: orgId,
+      projectId,
       createdBy: session.userId,
       name,
       description,

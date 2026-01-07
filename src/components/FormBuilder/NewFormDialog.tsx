@@ -19,12 +19,14 @@ import {
   Storage,
   ArrowForward,
 } from '@mui/icons-material';
+import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 
 interface NewFormDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (formName: string, collectionName: string) => void;
+  onConfirm: (formName: string, collectionName: string, projectId?: string) => void;
   suggestedName?: string;
+  organizationId?: string;
 }
 
 // Generate a valid MongoDB collection name from a form name
@@ -43,9 +45,11 @@ export function NewFormDialog({
   onClose,
   onConfirm,
   suggestedName = '',
+  organizationId,
 }: NewFormDialogProps) {
   const [formName, setFormName] = useState(suggestedName);
   const [collectionName, setCollectionName] = useState('');
+  const [projectId, setProjectId] = useState<string>('');
 
   // Update collection name when form name changes
   useEffect(() => {
@@ -62,16 +66,18 @@ export function NewFormDialog({
 
   const handleConfirm = () => {
     if (formName.trim() && collectionName.trim()) {
-      onConfirm(formName.trim(), collectionName.trim());
+      onConfirm(formName.trim(), collectionName.trim(), projectId || undefined);
       // Reset for next time
       setFormName('');
       setCollectionName('');
+      setProjectId('');
     }
   };
 
   const handleClose = () => {
     setFormName('');
     setCollectionName('');
+    setProjectId('');
     onClose();
   };
 
@@ -109,7 +115,7 @@ export function NewFormDialog({
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 3 }}>
+      <DialogContent sx={{ pt: 3, overflow: 'visible' }}>
         <TextField
           fullWidth
           label="What data are you collecting?"
@@ -122,7 +128,7 @@ export function NewFormDialog({
             }
           }}
           autoFocus
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, mt: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -175,6 +181,19 @@ export function NewFormDialog({
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
               Each form submission creates a document in this collection. You can browse your data anytime in the Data tab.
             </Typography>
+          </Box>
+        )}
+
+        {organizationId && (
+          <Box sx={{ mt: 3 }}>
+            <ProjectSelector
+              organizationId={organizationId}
+              value={projectId}
+              onChange={setProjectId}
+              required
+              label="Project"
+              helperText="Select a project to organize this form"
+            />
           </Box>
         )}
       </DialogContent>

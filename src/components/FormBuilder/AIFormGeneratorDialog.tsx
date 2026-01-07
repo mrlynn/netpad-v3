@@ -58,6 +58,7 @@ import {
 import { useAIFormGenerator } from '@/hooks/useAI';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { FormConfiguration, FieldConfig } from '@/types/form';
+import { sortFieldsByPriority } from '@/lib/ai/fieldOrdering';
 
 // ============================================
 // Types
@@ -777,6 +778,11 @@ ${confirmedRelationships.length > 0 ? '7. For reference fields listed above, use
             return field;
           });
         }
+      }
+
+      // Sort fields by priority (contact info first, metadata last)
+      if (formToApply.fieldConfigs) {
+        formToApply.fieldConfigs = sortFieldsByPriority(formToApply.fieldConfigs);
       }
 
       onGenerate(formToApply, connectionContext);

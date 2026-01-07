@@ -15,6 +15,8 @@ import {
   Description,
   Storage,
   ArrowForward,
+  Chat,
+  AccountTree,
 } from '@mui/icons-material';
 
 interface WelcomeModalProps {
@@ -103,25 +105,32 @@ export function WelcomeModal({ open, onContinue }: WelcomeModalProps) {
         {/* Info Cards */}
         <Box sx={{ p: 3 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <InfoCard
                 icon={<Description />}
-                title="What is NetPad?"
-                description="Create data collection forms without writing code. Design forms visually, and submissions are saved directly to your MongoDB database."
+                title="Visual Form Builder"
+                description="Design forms with drag-and-drop. Add fields, validation, conditional logic, and save directly to MongoDB."
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
+              <InfoCard
+                icon={<Chat />}
+                title="Conversational Forms"
+                description="Create AI-powered forms that collect data through natural dialogue instead of static fields."
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <InfoCard
+                icon={<AccountTree />}
+                title="Workflows"
+                description="Automate data processing with visual workflows. Transform, route, and integrate your form data."
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <InfoCard
                 icon={<Storage />}
-                title="What's a Connection?"
-                description="A connection string is like a URL to your database. It contains the address and credentials needed to store your form data securely."
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <InfoCard
-                icon={<Rocket />}
-                title="Quick Setup"
-                description="Don't have a database? No problem! We'll provision a free MongoDB Atlas cluster for you automatically. Just name your workspace and you're ready to go."
+                title="Auto-Provisioned Database"
+                description="We'll set up a free MongoDB Atlas cluster automatically. No configuration required."
               />
             </Grid>
           </Grid>

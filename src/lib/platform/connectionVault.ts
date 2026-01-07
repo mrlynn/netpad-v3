@@ -29,6 +29,7 @@ import {
 
 export interface CreateVaultInput {
   organizationId: string;
+  projectId: string;                    // REQUIRED: NetPad project ID
   createdBy: string;
   name: string;
   description?: string;
@@ -46,9 +47,22 @@ export async function createConnectionVault(input: CreateVaultInput): Promise<Co
   // Encrypt the connection string
   const encryptedConnectionString = encrypt(input.connectionString);
 
+  // Validate projectId
+  if (!input.projectId) {
+    throw new Error('Project ID is required');
+  }
+
+  // Verify project exists and belongs to organization
+  const { getProject } = await import('./projects');
+  const project = await getProject(input.projectId);
+  if (!project || project.organizationId !== input.organizationId) {
+    throw new Error('Invalid project or project does not belong to this organization');
+  }
+
   const vault: ConnectionVault = {
     vaultId: generateSecureId('vault'),
     organizationId: input.organizationId,
+    projectId: input.projectId,
     createdBy: input.createdBy,
     name: input.name,
     description: input.description,
@@ -193,6 +207,7 @@ export async function listUserVaults(
  */
 export interface DuplicateVaultInput {
   name: string;
+  projectId: string;                    // Target project ID
   description?: string;
   database?: string; // Optional: use different database
   allowedCollections?: string[]; // Optional: override collections
@@ -217,6 +232,7 @@ export async function duplicateConnectionVault(
   const newVault: ConnectionVault = {
     vaultId: generateSecureId('vault'),
     organizationId,
+    projectId: input.projectId,
     createdBy: duplicatedBy,
     name: input.name,
     description: input.description || sourceVault.description,

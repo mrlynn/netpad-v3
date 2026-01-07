@@ -47,9 +47,26 @@ export async function GET(
     // Check if auto-provisioning is available
     const provisioningAvailable = isAutoProvisioningAvailable();
 
-    // Get provisioning status
-    const status = await getProvisioningStatus(orgId);
-    const cluster = await getProvisionedClusterForOrg(orgId);
+    // Get optional projectId filter from query params
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId') || undefined;
+
+    let cluster = null;
+    let status = null;
+
+    if (projectId) {
+      // Get cluster for specific project
+      const { getProvisionedClusterForProject } = await import('@/lib/atlas');
+      cluster = await getProvisionedClusterForProject(projectId);
+      if (cluster) {
+        // Get status for the cluster's organization
+        status = await getProvisioningStatus(cluster.organizationId);
+      }
+    } else {
+      // Get cluster for organization (backward compatibility)
+      cluster = await getProvisionedClusterForOrg(orgId);
+      status = await getProvisioningStatus(orgId);
+    }
 
     return NextResponse.json({
       provisioningAvailable,
@@ -59,6 +76,7 @@ export async function GET(
       vaultId: status?.vaultId || null,
       cluster: cluster ? {
         clusterId: cluster.clusterId,
+        projectId: cluster.projectId,
         provider: cluster.provider,
         region: cluster.region,
         instanceSize: cluster.instanceSize,
@@ -121,12 +139,35 @@ export async function POST(
       );
     }
 
-    // Check if already has a cluster
-    const existingCluster = await getProvisionedClusterForOrg(orgId);
+    // Parse configuration from body
+    const body = await request.json().catch(() => ({}));
+    const { projectId, provider, region, databaseName } = body;
+
+    // Validate projectId is provided
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'projectId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify project exists and belongs to organization
+    const { getProject } = await import('@/lib/platform/projects');
+    const project = await getProject(projectId);
+    if (!project || project.organizationId !== orgId) {
+      return NextResponse.json(
+        { error: 'Invalid project or project does not belong to this organization' },
+        { status: 400 }
+      );
+    }
+
+    // Check if project already has a cluster
+    const { getProvisionedClusterForProject } = await import('@/lib/atlas');
+    const existingCluster = await getProvisionedClusterForProject(projectId);
     if (existingCluster) {
       return NextResponse.json(
         {
-          error: 'Organization already has a provisioned cluster',
+          error: 'Project already has a provisioned cluster',
           cluster: {
             clusterId: existingCluster.clusterId,
             status: existingCluster.status,
@@ -136,13 +177,10 @@ export async function POST(
       );
     }
 
-    // Parse optional configuration from body
-    const body = await request.json().catch(() => ({}));
-    const { provider, region, databaseName } = body;
-
     // Start provisioning
     const result = await provisionM0Cluster({
       organizationId: orgId,
+      projectId,
       userId: session.userId,
       provider,
       region,

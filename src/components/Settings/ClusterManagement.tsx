@@ -58,6 +58,7 @@ import {
 } from '@mui/icons-material';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
 import { ClusterProvisioningStatus as ProvisioningStatusType } from '@/types/platform';
+import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 
 interface ClusterManagementProps {
   organizationId: string;
@@ -129,12 +130,18 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showConnectionString, setShowConnectionString] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
   const handleProvision = async () => {
+    if (!selectedProjectId) {
+      setProvisionError('Please select a project first');
+      return;
+    }
+
     setProvisioning(true);
     setProvisionError(null);
 
-    const result = await triggerProvisioning();
+    const result = await triggerProvisioning({ projectId: selectedProjectId });
 
     if (!result.success) {
       setProvisionError(result.error || 'Failed to provision cluster');
@@ -426,12 +433,23 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
               </Alert>
             )}
 
+            <Box sx={{ maxWidth: 400, mx: 'auto', mb: 3 }}>
+              <ProjectSelector
+                organizationId={organizationId}
+                value={selectedProjectId}
+                onChange={setSelectedProjectId}
+                required
+                label="Select Project"
+                helperText="Choose a project to provision the cluster in"
+              />
+            </Box>
+
             <Button
               variant="contained"
               size="large"
               startIcon={provisioning ? <CircularProgress size={20} color="inherit" /> : <CloudQueue />}
               onClick={handleProvision}
-              disabled={provisioning}
+              disabled={provisioning || !selectedProjectId}
               sx={{
                 bgcolor: '#00ED64',
                 color: '#001E2B',

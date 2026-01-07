@@ -1,0 +1,48 @@
+{
+  "manifest": {
+    "name": "NetPad Application",
+    "version": "1.0.0",
+    "description": "A standalone application deployed from NetPad",
+    "assets": {
+      "forms": [],
+      "workflows": []
+    },
+    "tags": ["netpad", "standalone"],
+    "category": "application",
+    "createdAt": "2026-01-06T00:00:00.000Z"
+  },
+  "forms": [],
+  "workflows": [],
+  "project": {
+    "name": "NetPad Application",
+    "description": "This bundle will be replaced during deployment with your actual forms and workflows."
+  },
+  "deployment": {
+    "mode": "standalone",
+    "environment": {
+      "required": [
+        {
+          "name": "MONGODB_URI",
+          "description": "MongoDB connection string",
+          "required": true,
+          "generator": "none"
+        }
+      ],
+      "optional": []
+    },
+    "database": {
+      "provisioning": "auto",
+      "collections": [
+        { "name": "forms", "description": "Form definitions" },
+        { "name": "form_submissions", "description": "Form submission data" },
+        { "name": "app_state", "description": "Application state" }
+      ],
+      "indexes": []
+    },
+    "seed": {
+      "forms": true,
+      "workflows": true,
+      "sampleData": false
+    }
+  }
+}

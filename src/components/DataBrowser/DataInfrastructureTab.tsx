@@ -51,6 +51,8 @@ import { AddConnectionDialog } from '@/components/Settings/AddConnectionDialog';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
+import { usePathname } from 'next/navigation';
+import { parseOrgProjectFromPath, getOrgProjectUrl } from '@/lib/routing';
 
 interface ConnectionInfo {
   vaultId: string;
@@ -61,8 +63,36 @@ interface ConnectionInfo {
 
 export function DataInfrastructureTab() {
   const { currentOrgId, organization } = useOrganization();
+  const pathname = usePathname();
   const { status, loading, refetch } = useClusterProvisioning(currentOrgId || undefined);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
+
+  // Get org/project from URL or use defaults
+  const { orgId: urlOrgId, projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
+  const orgId = urlOrgId || currentOrgId;
+  const projectId = urlProjectId || localStorage.getItem('selected_project_id') || undefined;
+
+  // Generate URLs based on context
+  const getBrowseUrl = () => {
+    if (orgId && projectId) {
+      return getOrgProjectUrl(orgId, projectId, 'data');
+    }
+    return '/data?tab=browse';
+  };
+
+  const getBuilderUrl = () => {
+    if (orgId && projectId) {
+      return getOrgProjectUrl(orgId, projectId, 'builder');
+    }
+    return '/builder';
+  };
+
+  const getWorkflowsUrl = () => {
+    if (orgId && projectId) {
+      return getOrgProjectUrl(orgId, projectId, 'workflows');
+    }
+    return '/workflows';
+  };
   const [connectionCount, setConnectionCount] = useState<number>(0);
 
   // Connection string visibility state
@@ -590,7 +620,7 @@ export function DataInfrastructureTab() {
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Button
               component={Link}
-              href="/data?tab=browse"
+              href={getBrowseUrl()}
               variant="contained"
               size="small"
               endIcon={<ArrowForward />}
@@ -604,7 +634,7 @@ export function DataInfrastructureTab() {
             </Button>
             <Button
               component={Link}
-              href="/builder"
+              href={getBuilderUrl()}
               variant="outlined"
               size="small"
               sx={{ borderColor: '#00ED64', color: '#00ED64' }}
@@ -613,7 +643,7 @@ export function DataInfrastructureTab() {
             </Button>
             <Button
               component={Link}
-              href="/workflows"
+              href={getWorkflowsUrl()}
               variant="outlined"
               size="small"
               sx={{ borderColor: '#ff9800', color: '#ff9800' }}

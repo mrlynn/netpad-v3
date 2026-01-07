@@ -39,13 +39,27 @@ import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
 import { useChat } from '@/contexts/ChatContext';
 import { cleanFormForExport } from '@/lib/templates/export';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { usePathname } from 'next/navigation';
+import { parseOrgProjectFromPath } from '@/lib/routing';
+import { formNameToCollectionName } from '@/lib/utils/collectionNaming';
 
 interface FormBuilderProps {
   initialFormId?: string;
+  organizationId?: string;
+  projectId?: string;
 }
 
-export function FormBuilder({ initialFormId }: FormBuilderProps) {
+export function FormBuilder({ initialFormId, organizationId: propOrganizationId, projectId: propProjectId }: FormBuilderProps) {
   const { connectionString, databaseName, collection, sampleDocs, dispatch } = usePipeline();
+  const { currentOrgId, organization } = useOrganization();
+  const pathname = usePathname();
+  
+  // Get project context from URL or props
+  const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
+  const effectiveProjectId = propProjectId || urlProjectId || localStorage.getItem('selected_project_id') || undefined;
+  const effectiveOrgId = propOrganizationId || currentOrgId || undefined;
+  
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,9 +93,11 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
   const [formType, setFormType] = useState<FormType>('data-entry');
   const [searchConfig, setSearchConfig] = useState<SearchConfig | undefined>(undefined);
+  const [conversationalConfig, setConversationalConfig] = useState<import('@/types/conversational').ConversationalFormConfig | undefined>(undefined);
+  const [projectId, setProjectId] = useState<string | undefined>(propProjectId);
   const [dataSource, setDataSource] = useState<FormDataSource | undefined>(undefined);
   const [accessControl, setAccessControl] = useState<FormAccessControl | undefined>(undefined);
-  const [organizationId, setOrganizationId] = useState<string | undefined>(undefined);
+  const [organizationId, setOrganizationId] = useState<string | undefined>(propOrganizationId);
   const [addQuestionDialogOpen, setAddQuestionDialogOpen] = useState(false);
   const [dataSourceModalOpen, setDataSourceModalOpen] = useState(false);
   const [botProtection, setBotProtection] = useState<BotProtectionConfig | undefined>(undefined);
@@ -204,6 +220,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
       theme: themeConfig,
       formType,
       searchConfig,
+      conversationalConfig,
       botProtection,
       draftSettings,
       hooksConfig,
@@ -224,7 +241,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     URL.revokeObjectURL(url);
 
     setMoreMenuAnchor(null);
-  }, [fieldConfigs, currentFormId, currentFormName, currentFormDescription, currentFormSlug, variables, multiPageConfig, lifecycleConfig, themeConfig, formType, searchConfig, botProtection, draftSettings, hooksConfig]);
+  }, [fieldConfigs, currentFormId, currentFormName, currentFormDescription, currentFormSlug, variables, multiPageConfig, lifecycleConfig, themeConfig, formType, searchConfig, conversationalConfig, botProtection, draftSettings, hooksConfig]);
 
   // Handle import form definition
   const handleImportForm = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,6 +269,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         if (imported.theme) setThemeConfig(imported.theme);
         if (imported.formType) setFormType(imported.formType);
         if (imported.searchConfig) setSearchConfig(imported.searchConfig);
+        if (imported.conversationalConfig) setConversationalConfig(imported.conversationalConfig);
         if (imported.botProtection) setBotProtection(imported.botProtection);
         if (imported.draftSettings) setDraftSettings(imported.draftSettings);
         if (imported.hooksConfig) setHooksConfig(imported.hooksConfig);
@@ -346,6 +364,67 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
     return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
   }, [handleKeyboardShortcuts]);
 
+  // Initialize organizationId and projectId from context/props (update if context changes)
+  useEffect(() => {
+    if (effectiveOrgId) {
+      setOrganizationId(effectiveOrgId);
+    }
+    if (effectiveProjectId) {
+      setProjectId(effectiveProjectId);
+    }
+  }, [effectiveOrgId, effectiveProjectId]);
+
+  // Auto-populate dataSource when project changes (fetch default vault)
+  useEffect(() => {
+    const fetchProjectDefaultVault = async () => {
+      if (!effectiveProjectId || !effectiveOrgId) return;
+      
+      // Don't override if dataSource is already set (user may have manually configured it)
+      if (dataSource?.vaultId) return;
+
+      try {
+        const response = await fetch(`/api/projects/${effectiveProjectId}/default-vault`);
+        const data = await response.json();
+
+        if (data.hasDefaultVault && data.vault) {
+          // Auto-generate collection name from form name if form name exists
+          const collectionName = currentFormName 
+            ? formNameToCollectionName(currentFormName)
+            : 'form_responses';
+
+          setDataSource({
+            vaultId: data.vault.vaultId,
+            collection: collectionName,
+          });
+        }
+      } catch (error) {
+        console.error('[FormBuilder] Failed to fetch project default vault:', error);
+        // Silently fail - user can configure manually
+      }
+    };
+
+    fetchProjectDefaultVault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveProjectId, effectiveOrgId]); // Note: intentionally not including dataSource to avoid loops
+
+  // Auto-update collection name when form name changes (if using default vault)
+  useEffect(() => {
+    if (!currentFormName || !dataSource?.vaultId) return;
+    
+    // Only auto-update if collection name looks auto-generated (ends with _responses)
+    const currentCollection = dataSource.collection || '';
+    if (currentCollection.endsWith('_responses') || currentCollection === 'form_responses') {
+      const newCollectionName = formNameToCollectionName(currentFormName);
+      if (newCollectionName !== currentCollection) {
+        setDataSource({
+          ...dataSource,
+          collection: newCollectionName,
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFormName]); // Only depend on form name, not dataSource to avoid loops
+
   // Load form from initialFormId when provided (e.g., from URL params)
   useEffect(() => {
     if (initialFormId) {
@@ -384,6 +463,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         setCurrentFormIsPublished(config.isPublished || false);
         setFormType(config.formType || 'data-entry');
         setSearchConfig(config.searchConfig);
+        setConversationalConfig(config.conversationalConfig);
         setDataSource(config.dataSource);
         setAccessControl(config.accessControl);
         setOrganizationId(config.organizationId);
@@ -710,9 +790,14 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
   };
 
   // Handle new form dialog confirmation
-  const handleNewFormConfirm = (formName: string, collectionName: string) => {
+  const handleNewFormConfirm = (formName: string, collectionName: string, selectedProjectId?: string) => {
     // Set the form name
     setCurrentFormName(formName);
+    
+    // Set the project ID
+    if (selectedProjectId) {
+      setProjectId(selectedProjectId);
+    }
 
     // Set the collection name in data source
     setDataSource({
@@ -930,9 +1015,11 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
               theme: themeConfig,
               formType,
               searchConfig,
+              conversationalConfig,
               dataSource,
               accessControl,
               organizationId,
+              projectId,
             }}
             disabled={fieldConfigs.length === 0}
             onPublished={(info) => {
@@ -1067,6 +1154,19 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           onOpenLibrary={() => setShowLibrary(true)}
           hasConnection={hasConnection}
           onAIGenerateWithConnection={handleAIGenerateWithConnection}
+          onStartBlank={() => {
+            // Start with a blank form - add a simple text field to get started
+            // This will trigger the form naming dialog
+            const blankField: FieldConfig = {
+              path: 'field1',
+              label: 'Question 1',
+              type: 'string',
+              included: true,
+              required: false,
+              source: 'custom',
+            };
+            handleStartNewForm(blankField);
+          }}
         />
       ) : (
         // Main editing area - Google Forms style centered layout
@@ -1089,6 +1189,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
             formDescription={currentFormDescription}
             onFormTitleChange={setCurrentFormName}
             onFormDescriptionChange={setCurrentFormDescription}
+            formType={formType}
           />
 
           {/* Floating Action Toolbar - Google Forms Style */}
@@ -1147,6 +1248,7 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         }}
         onConfirm={handleNewFormConfirm}
         suggestedName={pendingTemplate?.name || ''}
+        organizationId={organizationId}
       />
 
       {/* Save Dialog */}
@@ -1177,9 +1279,11 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
           hooks: hooksConfig,
           formType,
           searchConfig,
+          conversationalConfig,
           dataSource,
           accessControl,
           organizationId,
+          projectId,
         }}
       />
 
@@ -1353,8 +1457,44 @@ export function FormBuilder({ initialFormId }: FormBuilderProps) {
         onFormTypeChange={setFormType}
         searchConfig={searchConfig}
         onSearchConfigChange={setSearchConfig}
+        conversationalConfig={conversationalConfig}
+        onConversationalConfigChange={setConversationalConfig}
+        onGenerateFieldsFromSchema={(schema) => {
+          // Generate form fields from extraction schema
+          const newFields: FieldConfig[] = schema.map((s) => {
+            // Map extraction schema type to form field type
+            let fieldType: FieldConfig['type'] = 'text';
+            if (s.type === 'number') fieldType = 'number';
+            else if (s.type === 'boolean') fieldType = 'yes-no';
+            else if (s.type === 'enum') fieldType = s.options && s.options.length > 0 ? 'select' : 'text';
+            else if (s.type === 'array') fieldType = 'array';
+            else if (s.type === 'object') fieldType = 'object';
+            
+            const field: FieldConfig = {
+              path: s.field,
+              label: s.description || s.field,
+              type: fieldType,
+              included: true,
+              required: s.required || false,
+              source: 'custom', // Fields generated from conversational extraction schema
+            };
+
+            // Add options for enum/select fields
+            if (s.type === 'enum' && s.options && s.options.length > 0) {
+              field.validation = {
+                options: s.options.map(opt => typeof opt === 'string' ? opt : { label: opt, value: opt }),
+              };
+            }
+
+            return field;
+          });
+
+          // Replace existing fields with generated ones
+          setFieldConfigs(newFields);
+        }}
         dataSource={dataSource}
         organizationId={organizationId}
+        projectId={effectiveProjectId}
         onDataSourceChange={(ds, orgId) => {
           setDataSource(ds);
           if (orgId) setOrganizationId(orgId);

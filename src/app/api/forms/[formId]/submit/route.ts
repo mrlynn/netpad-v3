@@ -286,10 +286,38 @@ export async function POST(
     }
 
     // Strip bot protection metadata from data before storing
+    // Preserve _meta for conversational forms (contains transcript and conversation metadata)
     const cleanData = { ...data };
     delete cleanData._botProtection;
     delete cleanData._fieldInteractions;
-    delete cleanData._formMeta;
+    // Only delete _formMeta if it's not conversational (conversational uses _meta)
+    if (cleanData._meta?.submissionType !== 'conversational') {
+      delete cleanData._formMeta;
+    }
+    // _meta is preserved for conversational submissions
+    
+    // For conversational submissions, inject authenticated user info if not already present
+    // This ensures workflows have access to email, fullName, etc. even if not extracted
+    if (cleanData._meta?.submissionType === 'conversational' && userId && authSession.email) {
+      // Only inject if not already provided (user info from frontend takes precedence)
+      if (!cleanData.email && authSession.email) {
+        cleanData.email = authSession.email;
+      }
+      // Try to get displayName from platform user if available
+      if (!cleanData.fullName && !cleanData.name) {
+        try {
+          const { findUserById } = await import('@/lib/platform/users');
+          const platformUser = await findUserById(userId);
+          if (platformUser?.displayName) {
+            cleanData.fullName = platformUser.displayName;
+            cleanData.name = platformUser.displayName;
+          }
+        } catch (error) {
+          // If we can't fetch user, continue without it
+          console.warn('[Form Submit] Could not fetch platform user for displayName:', error);
+        }
+      }
+    }
 
     // ============================================
     // Production Mode: Use dataSource + Vault

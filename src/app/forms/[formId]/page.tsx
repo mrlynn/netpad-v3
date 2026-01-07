@@ -23,8 +23,13 @@ import Link from 'next/link';
 import { replaceTemplateVariables, buildRedirectUrl } from '@/types/formHooks';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { SearchFormRenderer } from '@/components/FormRenderer/SearchFormRenderer';
+import { ConversationalFormChat } from '@/components/ConversationalForm';
 import { AuthMethod } from '@/types/platform';
 import { getResolvedTheme } from '@/lib/formThemes';
+import { mapExtractedDataToFormFields, validateMappedData } from '@/lib/conversational/mapping';
+import { getExtractionSchemaForConfig } from '@/lib/conversational/schemas';
+import { ConversationState } from '@/types/conversational';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SearchResult {
   _id: string;
@@ -44,6 +49,7 @@ export default function PublicFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const formId = params.formId as string;
+  const { user, isAuthenticated } = useAuth();
 
   // Read embed parameters from query string
   const hideHeader = searchParams.get('hideHeader') === 'true';
@@ -479,9 +485,11 @@ export default function PublicFormPage() {
 
   const formType = form.formType || 'data-entry';
   const searchConfig = form.searchConfig;
+  const conversationalConfig = form.conversationalConfig;
   const showModeToggle = formType === 'both';
   const showSearchMode = formType === 'search' || (formType === 'both' && activeMode === 'search');
   const showCreateMode = formType === 'data-entry' || (formType === 'both' && activeMode === 'create');
+  const showConversationalMode = formType === 'conversational' && conversationalConfig;
 
   // Check if form has a header banner that displays the title
   const headerConfig = form.theme?.header;
@@ -586,7 +594,101 @@ export default function PublicFormPage() {
 
       {/* Form Content */}
       <Paper sx={{ p: { xs: 2, md: 4 } }}>
-        {showSearchMode && searchConfig ? (
+        {showConversationalMode && conversationalConfig ? (
+          <ConversationalFormChat
+            formId={form.id || formId}
+            config={conversationalConfig}
+            onComplete={(conversationState: ConversationState) => {
+              // Map extracted data to form field structure
+              if (!form?.fieldConfigs) {
+                setError('Form configuration error: fieldConfigs not found');
+                return;
+              }
+
+              try {
+                // Get extraction schema (use IT Helpdesk schema if template is enabled)
+                const extractionSchema = getExtractionSchemaForConfig(conversationalConfig);
+
+                // Map extracted data to form fields
+                const { mappedData, unmappedFields, mappingReport } = mapExtractedDataToFormFields(
+                  conversationState.partialExtractions,
+                  extractionSchema,
+                  form.fieldConfigs
+                );
+
+                // Validate mapped data
+                const validation = validateMappedData(mappedData, form.fieldConfigs);
+
+                // Calculate conversation duration
+                const duration = conversationState.completedAt && conversationState.startedAt
+                  ? Math.round((conversationState.completedAt.getTime() - conversationState.startedAt.getTime()) / 1000)
+                  : Math.round((Date.now() - conversationState.startedAt.getTime()) / 1000);
+
+                // Inject authenticated user information if available
+                // This allows workflows to use email, fullName, etc. without asking the user
+                const userInfo: Record<string, any> = {};
+                if (isAuthenticated && user) {
+                  // Map auth user fields to common form field names
+                  if (user.email) {
+                    userInfo.email = user.email;
+                  }
+                  if (user.displayName) {
+                    // Use displayName as fullName for workflows
+                    userInfo.fullName = user.displayName;
+                    userInfo.name = user.displayName; // Also provide as 'name' for compatibility
+                  }
+                  // Add userId for reference (User type has _id, not userId)
+                  if (user._id) {
+                    userInfo._userId = user._id;
+                  }
+                }
+
+                // Prepare submission data with conversation metadata
+                // User info takes precedence over extracted data (auth is more reliable)
+                const submissionData = {
+                  ...userInfo, // Auth data first
+                  ...mappedData, // Then extracted data (may override auth if explicitly provided)
+                  _meta: {
+                    submissionType: 'conversational',
+                    conversationId: conversationState.conversationId,
+                    transcript: conversationState.messages,
+                    turnCount: conversationState.turnCount,
+                    confidence: conversationState.confidence,
+                    completionReason: conversationState.status === 'completed' ? 'completed' : 'user_confirmed',
+                    duration,
+                    topicsCovered: conversationState.topics.map(t => ({
+                      topicId: t.topicId,
+                      name: t.name,
+                      covered: t.covered,
+                      depth: t.depth,
+                    })),
+                    extractionSchema: extractionSchema.map(s => ({
+                      field: s.field,
+                      type: s.type,
+                      required: s.required,
+                    })),
+                    mappingReport,
+                    validationWarnings: validation.warnings,
+                    missingRequiredFields: validation.missingRequiredFields,
+                    unmappedFields: Object.keys(unmappedFields).length > 0 ? unmappedFields : undefined,
+                    // Include auth info in metadata for reference
+                    authenticatedUser: isAuthenticated && user ? {
+                      userId: user._id,
+                      email: user.email,
+                      displayName: user.displayName,
+                    } : undefined,
+                  },
+                };
+
+                // Submit the mapped data
+                handleSubmit(submissionData);
+              } catch (err: any) {
+                console.error('[PublicForm] Error mapping conversational data:', err);
+                setError('Failed to process conversation data. Please try again.');
+              }
+            }}
+          />
+        ) : showSearchMode && searchConfig ? (
           <SearchFormRenderer
             form={form}
             searchConfig={searchConfig}

@@ -192,7 +192,7 @@ export function DeployToVercelButton({
     const baseUrl = 'https://vercel.com/new/clone';
     const params = new URLSearchParams({
       'repository-url': 'https://github.com/mrlynn/netpad-v3',
-      'env': 'MONGODB_URI,SESSION_SECRET,VAULT_ENCRYPTION_KEY',
+      'env': 'MONGODB_URI,MONGODB_DATABASE,SESSION_SECRET,VAULT_ENCRYPTION_KEY',
       'envDescription': 'Required environment variables for NetPad',
       'envLink': 'https://github.com/mrlynn/netpad-v3/blob/main/docs/DEPLOY.md',
       'project-name': 'my-netpad',
@@ -441,6 +441,7 @@ export function DeployToVercelButton({
             onClick={handleDeploy}
             sx={{
               background: 'linear-gradient(135deg, #000 0%, #333 100%)',
+              color: '#fff',
               '&:hover': {
                 background: 'linear-gradient(135deg, #222 0%, #444 100%)',
               },
