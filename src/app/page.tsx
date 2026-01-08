@@ -43,6 +43,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
+import { SpotlightCard, hexToRgb } from '@/components/marketing';
 
 // The four pillars of NetPad
 const pillars = [
@@ -390,7 +391,7 @@ export default function LandingPage() {
                 color: alpha('#fff', 0.7),
                 maxWidth: 700,
                 mx: 'auto',
-                mb: 3,
+                mb: 4,
                 fontWeight: 400,
                 lineHeight: 1.6,
                 fontSize: { xs: '0.95rem', md: '1.1rem' }
@@ -399,16 +400,58 @@ export default function LandingPage() {
               Collect data with forms or conversations. Automate with workflows. Explore with a visual data browser.
               All connected to MongoDB. Powered by AI. No code required.
             </Typography>
+
+            {/* Primary CTAs - deliberate, not pushy */}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mb: 4 }}>
+              <Button
+                component={Link}
+                href="/why-netpad"
+                variant="outlined"
+                size="large"
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  borderColor: alpha('#00ED64', 0.5),
+                  color: '#00ED64',
+                  fontWeight: 600,
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.1),
+                  },
+                }}
+              >
+                Explore how it works
+              </Button>
+              <Button
+                component={Link}
+                href="/auth/login"
+                variant="contained"
+                size="large"
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                  color: '#001E2B',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
+                  },
+                }}
+              >
+                Get access
+              </Button>
+            </Box>
           </Box>
 
           {/* Four Pillars - The Core Value Proposition */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {pillars.map((pillar, index) => (
               <Grid item xs={12} sm={6} md={3} key={pillar.id}>
-                <Paper
+                <SpotlightCard
                   component={Link}
                   href={pillar.href}
-                  elevation={0}
+                  spotlightColor={hexToRgb(pillar.color)}
+                  hoverBorderColor={alpha(pillar.color, 0.4)}
                   sx={{
                     p: 3,
                     height: '100%',
@@ -417,16 +460,9 @@ export default function LandingPage() {
                     alignItems: 'center',
                     textAlign: 'center',
                     textDecoration: 'none',
-                    bgcolor: alpha('#fff', 0.03),
-                    border: '1px solid',
-                    borderColor: alpha('#fff', 0.1),
                     borderRadius: 3,
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    transition: 'all 0.3s ease, border-color 0.2s ease',
                     '&:hover': {
-                      bgcolor: alpha(pillar.color, 0.08),
-                      borderColor: alpha(pillar.color, 0.4),
                       transform: 'translateY(-4px)',
                       '& .pillar-icon': {
                         transform: 'scale(1.1)',
@@ -524,7 +560,7 @@ export default function LandingPage() {
                   >
                     {pillar.cta}
                   </Button>
-                </Paper>
+                </SpotlightCard>
               </Grid>
             ))}
           </Grid>
@@ -635,19 +671,10 @@ export default function LandingPage() {
               <Grid container spacing={2}>
                 {formFeatures.map((feature, index) => (
                   <Grid item xs={12} sm={6} key={index}>
-                    <Box
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 2,
-                        bgcolor: alpha('#fff', 0.03),
-                        border: '1px solid',
-                        borderColor: alpha('#fff', 0.1),
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          bgcolor: alpha('#00ED64', 0.05),
-                          borderColor: alpha('#00ED64', 0.3),
-                        }
-                      }}
+                    <SpotlightCard
+                      spotlightColor="0, 237, 100"
+                      hoverBorderColor={alpha('#00ED64', 0.3)}
+                      sx={{ p: 2.5, height: '100%' }}
                     >
                       <Box
                         sx={{
@@ -670,7 +697,7 @@ export default function LandingPage() {
                       <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
                         {feature.description}
                       </Typography>
-                    </Box>
+                    </SpotlightCard>
                   </Grid>
                 ))}
               </Grid>
@@ -687,19 +714,10 @@ export default function LandingPage() {
               <Grid container spacing={2}>
                 {workflowFeatures.map((feature, index) => (
                   <Grid item xs={12} sm={6} key={index}>
-                    <Box
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 2,
-                        bgcolor: alpha('#fff', 0.03),
-                        border: '1px solid',
-                        borderColor: alpha('#fff', 0.1),
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          bgcolor: alpha('#9C27B0', 0.05),
-                          borderColor: alpha('#9C27B0', 0.3),
-                        }
-                      }}
+                    <SpotlightCard
+                      spotlightColor="156, 39, 176"
+                      hoverBorderColor={alpha('#9C27B0', 0.3)}
+                      sx={{ p: 2.5, height: '100%' }}
                     >
                       <Box
                         sx={{
@@ -722,7 +740,7 @@ export default function LandingPage() {
                       <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
                         {feature.description}
                       </Typography>
-                    </Box>
+                    </SpotlightCard>
                   </Grid>
                 ))}
               </Grid>
@@ -831,19 +849,10 @@ export default function LandingPage() {
               <Grid container spacing={2}>
                 {dataFeatures.map((feature, index) => (
                   <Grid item xs={12} sm={6} key={index}>
-                    <Box
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 2,
-                        bgcolor: alpha('#fff', 0.03),
-                        border: '1px solid',
-                        borderColor: alpha('#fff', 0.1),
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          bgcolor: alpha('#2196F3', 0.05),
-                          borderColor: alpha('#2196F3', 0.3),
-                        }
-                      }}
+                    <SpotlightCard
+                      spotlightColor="33, 150, 243"
+                      hoverBorderColor={alpha('#2196F3', 0.3)}
+                      sx={{ p: 2.5, height: '100%' }}
                     >
                       <Box
                         sx={{
@@ -866,7 +875,7 @@ export default function LandingPage() {
                       <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
                         {feature.description}
                       </Typography>
-                    </Box>
+                    </SpotlightCard>
                   </Grid>
                 ))}
               </Grid>
@@ -1137,6 +1146,62 @@ export default function LandingPage() {
               </Grid>
             ))}
           </Grid>
+
+          {/* Mid-page CTA - catches those who've read enough */}
+          <Box
+            sx={{
+              mt: 6,
+              p: 4,
+              borderRadius: 3,
+              bgcolor: alpha('#00ED64', 0.05),
+              border: '1px solid',
+              borderColor: alpha('#00ED64', 0.15),
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="h5" fontWeight="bold" sx={{ color: 'white', mb: 1 }}>
+              Ready to build your first workflow?
+            </Typography>
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.65), mb: 3, maxWidth: 600, mx: 'auto' }}>
+              Design intake-to-decision flows with forms, approvals, and automation — all connected to MongoDB.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                component={Link}
+                href="/auth/login"
+                variant="contained"
+                sx={{
+                  px: 4,
+                  py: 1.25,
+                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                  color: '#001E2B',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
+                  },
+                }}
+              >
+                Get access
+              </Button>
+              <Button
+                component={Link}
+                href="/why-netpad"
+                variant="text"
+                sx={{
+                  px: 3,
+                  py: 1.25,
+                  color: alpha('#fff', 0.7),
+                  fontWeight: 500,
+                  '&:hover': {
+                    color: '#fff',
+                    bgcolor: alpha('#fff', 0.05),
+                  },
+                }}
+              >
+                Learn more
+              </Button>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
@@ -2138,7 +2203,32 @@ console.log('Output:', result.execution.result?.output);`}
                 Built with MongoDB, Next.js, and Material-UI
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 3 }}>
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Typography
+                component={Link}
+                href="/auth/login"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.5),
+                  textDecoration: 'none',
+                  '&:hover': { color: alpha('#fff', 0.8) }
+                }}
+              >
+                Sign in
+              </Typography>
+              <Typography
+                component={Link}
+                href="/auth/login"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.5),
+                  textDecoration: 'none',
+                  '&:hover': { color: alpha('#fff', 0.8) }
+                }}
+              >
+                Request access
+              </Typography>
+              <Box sx={{ width: '1px', bgcolor: alpha('#fff', 0.1) }} />
               <Typography
                 component={Link}
                 href="/why-netpad"

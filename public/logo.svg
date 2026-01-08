@@ -1,0 +1,57 @@
+<!-- NetPad micro mark (robot head) — animation-ready -->
+<svg
+  id="netpad-micro"
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 256 256"
+  role="img"
+  aria-label="NetPad micro mark"
+>
+  <!--
+    Styling notes:
+    - Stroke + fills use currentColor so you can set color via CSS (e.g., color: #000; or #fff)
+    - Face fill is transparent so it works on any background.
+    - All parts have IDs for animation.
+  -->
+
+  <g id="mark" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Antenna -->
+    <line id="antenna-stem" x1="128" y1="38" x2="128" y2="62" stroke-width="16" />
+    <circle id="antenna-dot" cx="128" cy="28" r="16" fill="currentColor" stroke="none" />
+
+    <!-- Head outline (rounded rectangle + small bottom point) -->
+    <path
+      id="head-outline"
+      d="
+        M64 76
+        Q64 60 80 60
+        H176
+        Q192 60 192 76
+        V152
+        Q192 168 176 168
+        H144
+        L128 186
+        L112 168
+        H80
+        Q64 168 64 152
+        Z
+      "
+      stroke-width="18"
+    />
+
+    <!-- Face panel (optional, gives inner boundary) -->
+    <rect
+      id="face"
+      x="78"
+      y="82"
+      width="100"
+      height="74"
+      rx="22"
+      stroke-width="14"
+      opacity="0.95"
+    />
+
+    <!-- Eyes -->
+    <circle id="eye-left" cx="106" cy="118" r="14" fill="currentColor" stroke="none" />
+    <circle id="eye-right" cx="150" cy="118" r="14" fill="currentColor" stroke="none" />
+  </g>
+</svg>

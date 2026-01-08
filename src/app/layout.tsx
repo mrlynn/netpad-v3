@@ -11,11 +11,15 @@ export const metadata: Metadata = {
   title: 'NetPad - Build MongoDB Forms & Workflows',
   description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.',
   icons: {
+    // Next.js automatically uses src/app/icon.png, but we also provide explicit metadata
+    // for better browser compatibility and to ensure it works on all pages
     icon: [
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon.ico', sizes: 'any' },
     ],
+    shortcut: '/favicon.ico',
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],

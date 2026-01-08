@@ -1,17 +1,14 @@
 'use client';
 
-import './paddy-loader.css';
+import NetPadMicroTiny from '@/components/NetPadMicroTiny';
+import '@/styles/netpad-micro.css';
 
 export default function TestLoaderPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="paddyLoader">
-        <img src="/netpad-thinking.png" alt="Loading" className="paddyImg" />
-        <div className="paddyDots" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-900">
+      <div className="flex items-center gap-3">
+        <NetPadMicroTiny size={24} />
+        <span className="text-sm font-medium">Thinking…</span>
       </div>
     </div>
   );

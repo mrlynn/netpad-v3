@@ -1,0 +1,53 @@
+/* /src/styles/netpad-micro.css */
+
+.netpad-micro #antenna-dot {
+    transform-origin: 128px 30px;
+    animation: netpadAntennaPulse 1200ms ease-in-out infinite;
+  }
+  
+  .netpad-micro #eye-left {
+    transform-origin: 108px 122px;
+    animation:
+      netpadEyeFocusLeft 1200ms ease-in-out infinite,
+      netpadBlink 1200ms ease-in-out infinite;
+  }
+  
+  .netpad-micro #eye-right {
+    transform-origin: 148px 122px;
+    animation:
+      netpadEyeFocusRight 1200ms ease-in-out infinite,
+      netpadBlink 1200ms ease-in-out infinite;
+  }
+  
+  /* Antenna pulse: “thought initiated” */
+  @keyframes netpadAntennaPulse {
+    0%   { transform: scale(1);    opacity: 1; }
+    30%  { transform: scale(1);    opacity: 1; }
+    52%  { transform: scale(1.14); opacity: 0.86; }
+    70%  { transform: scale(1);    opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  
+  /* Eye focus: slight inward converge, late in the cycle */
+  @keyframes netpadEyeFocusLeft {
+    0%   { transform: translateX(0); }
+    45%  { transform: translateX(0); }
+    68%  { transform: translateX(2px); }
+    82%  { transform: translateX(0); }
+    100% { transform: translateX(0); }
+  }
+  
+  @keyframes netpadEyeFocusRight {
+    0%   { transform: translateX(0); }
+    45%  { transform: translateX(0); }
+    68%  { transform: translateX(-2px); }
+    82%  { transform: translateX(0); }
+    100% { transform: translateX(0); }
+  }
+  
+  /* Blink: quick, near the end */
+  @keyframes netpadBlink {
+    0%, 86%, 100% { transform: scaleY(1); }
+    92%           { transform: scaleY(0.15); }
+    96%           { transform: scaleY(1); }
+  }

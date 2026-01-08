@@ -38,6 +38,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
+import { SpotlightCard, hexToRgb } from '@/components/marketing';
 
 const CodeBlock = ({ title, lines, color }: { title: string; lines: number; color: string }) => (
   <Box
@@ -261,42 +262,93 @@ const comparisonData = [
   { feature: 'Accessibility (ARIA)', scratch: 'Manual implementation', netpad: 'Built-in' },
 ];
 
+// Positioning note:
+// NetPad is not "a form builder". Forms are one interface.
+// The product is about moving data through decisions (people + systems + AI) with governance.
 const capabilityComparison = [
   {
-    category: 'Forms',
+    category: 'Interfaces',
     icon: <DescriptionIcon />,
     color: '#00ED64',
-    scratch: ['Build 15+ field components', 'Implement validation logic', 'Handle conditional visibility', 'Manage multi-page state', 'Style everything from scratch'],
-    netpad: ['28+ field types included', 'Declarative validation', 'JSON-based conditions', 'Config-driven wizards', 'Themeable out of the box'],
-    scratchTime: '2-3 weeks',
+    scratch: [
+      'Build 15+ field components',
+      'Implement validation + error UX',
+      'Handle conditional visibility + multi-page state',
+      'Create an intake API + admin tooling',
+      'Bolt on chat later (and regret it)',
+    ],
+    netpad: [
+      'Forms, API, and conversational intake (same data model)',
+      'Declarative validation + conditional logic',
+      'Config-driven wizards + theming',
+      'Templates for repeatable intake patterns',
+      'AI-assisted capture without changing your schema',
+    ],
+    scratchTime: '2-4 weeks',
     netpadTime: '2-3 hours',
   },
   {
-    category: 'Workflows',
+    category: 'Orchestration',
     icon: <AccountTreeIcon />,
     color: '#9C27B0',
-    scratch: ['Design state machine', 'Build approval chains', 'Implement notifications', 'Handle edge cases', 'Add audit logging'],
-    netpad: ['Visual workflow builder', 'Pre-built approval patterns', 'Email/Slack integration', 'Automatic retries', 'Built-in audit trail'],
-    scratchTime: '3-4 weeks',
+    scratch: [
+      'Design a state machine',
+      'Build approvals + routing',
+      'Implement notifications + retries',
+      'Handle edge cases + race conditions',
+      'Instrument everything for visibility',
+    ],
+    netpad: [
+      'Visual workflow builder (states + transitions)',
+      'Approvals, branching, and routing patterns',
+      'Slack/email integration + retries',
+      'Human + system steps in one flow',
+      'AI assists decisions (triage, summarize, route)',
+    ],
+    scratchTime: '3-6 weeks',
     netpadTime: '1-2 days',
   },
   {
-    category: 'Data Management',
+    category: 'Data layer',
     icon: <StorageIcon />,
     color: '#2196F3',
-    scratch: ['Design database schema', 'Build CRUD APIs', 'Implement search/filter', 'Add pagination', 'Build admin dashboard'],
-    netpad: ['Automatic MongoDB storage', 'REST API included', 'Full-text search', 'Built-in pagination', 'Admin dashboard ready'],
-    scratchTime: '2-3 weeks',
+    scratch: [
+      'Design schemas + migrations',
+      'Build CRUD + search + filtering',
+      'Add pagination + exports',
+      'Build submission dashboards',
+      'Maintain it forever',
+    ],
+    netpad: [
+      'MongoDB-native storage (schema-flexible)',
+      'Search, filtering, and pagination built-in',
+      'Exports + audit-friendly views',
+      'Projects for environment separation',
+      'APIs you don’t have to babysit',
+    ],
+    scratchTime: '2-4 weeks',
     netpadTime: 'Included',
   },
   {
-    category: 'AI & Conversational',
-    icon: <ChatBubbleIcon />,
+    category: 'Governance',
+    icon: <SecurityIcon />,
     color: '#E91E63',
-    scratch: ['Build chat interface', 'Implement NLP processing', 'Create conversation flows', 'Handle data extraction', 'Build template system'],
-    netpad: ['Conversational forms built-in', '12+ AI agents included', 'Template admin system', 'Automatic data extraction', 'Natural language processing'],
-    scratchTime: '4-6 weeks',
-    netpadTime: '1-2 hours',
+    scratch: [
+      'Implement RBAC + permissions',
+      'Add audit logs + retention rules',
+      'Secure secrets + integrations',
+      'Harden endpoints + rate limiting',
+      'Prove it to compliance (ugh)',
+    ],
+    netpad: [
+      'RBAC + projects/orgs',
+      'Built-in audit trail (who/what/when)',
+      'Secure integrations + environment separation',
+      'Enterprise-ready patterns (SSO-ready surface)',
+      'Designed for high-stakes operational workflows',
+    ],
+    scratchTime: '3-8 weeks',
+    netpadTime: 'Included',
   },
 ];
 
@@ -343,22 +395,67 @@ export default function WhyNetPadPage() {
             </Typography>
           </Box>
 
-          <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ maxWidth: 800 }}>
-            Stop rebuilding forms, workflows, data management, and AI experiences from scratch.
+          <Typography variant="h2" fontWeight="bold" gutterBottom sx={{ maxWidth: 900, lineHeight: 1.05 }}>
+            Design how data moves through your organization.
           </Typography>
-          <Typography variant="h6" sx={{ opacity: 0.8, maxWidth: 700, mb: 4 }}>
-            Ship production-ready applications in hours instead of weeks.
-            Focus on what makes your app unique, not boilerplate infrastructure.
+          <Typography variant="h6" sx={{ opacity: 0.85, maxWidth: 850, mb: 2, lineHeight: 1.6 }}>
+            NetPad is a visual platform for turning <b>intake</b> into <b>decisions</b> into <b>action</b> — across people, systems, and AI — with governance
+            built in.
           </Typography>
+
+          <Typography variant="body1" sx={{ color: alpha('#fff', 0.65), maxWidth: 850, mb: 4 }}>
+            Forms are one interface. The product is the <b>document lifecycle</b>: capture → route → approve → automate → audit.
+          </Typography>
+
+          {/* Primary CTA - deliberate, not pushy */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 6 }}>
+            <Button
+              component={Link}
+              href="/examples"
+              variant="outlined"
+              size="large"
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderColor: alpha('#00ED64', 0.5),
+                color: '#00ED64',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#00ED64',
+                  bgcolor: alpha('#00ED64', 0.1),
+                },
+              }}
+            >
+              Explore how NetPad works
+            </Button>
+            <Button
+              component={Link}
+              href="/builder"
+              variant="text"
+              size="large"
+              sx={{
+                px: 3,
+                py: 1.5,
+                color: alpha('#fff', 0.7),
+                fontWeight: 500,
+                '&:hover': {
+                  color: '#fff',
+                  bgcolor: alpha('#fff', 0.05),
+                },
+              }}
+            >
+              Try the builder
+            </Button>
+          </Box>
 
           <Grid container spacing={3}>
             {[
-              { icon: <SpeedIcon sx={{ fontSize: 40 }} />, stat: '10x', label: 'Faster Development' },
-              { icon: <CodeIcon sx={{ fontSize: 40 }} />, stat: '90%', label: 'Less Code' },
-              { icon: <SecurityIcon sx={{ fontSize: 40 }} />, stat: '160+', label: 'API Endpoints' },
-              { icon: <SmartToyIcon sx={{ fontSize: 40 }} />, stat: '12+', label: 'AI Agents' },
+              { icon: <SpeedIcon sx={{ fontSize: 40 }} />, stat: 'Hours', label: 'from intake to production' },
+              { icon: <AccountTreeIcon sx={{ fontSize: 40 }} />, stat: 'Workflow', label: 'first-class (not bolt-on)' },
+              { icon: <SecurityIcon sx={{ fontSize: 40 }} />, stat: 'Audit-ready', label: 'by default' },
+              { icon: <SmartToyIcon sx={{ fontSize: 40 }} />, stat: 'AI assist', label: 'triage, route, summarize' },
             ].map((item, i) => (
-              <Grid item xs={12} md={4} key={i}>
+              <Grid item xs={12} sm={6} md={3} key={i}>
                 <Paper
                   sx={{
                     p: 3,
@@ -373,7 +470,7 @@ export default function WhyNetPadPage() {
                   <Typography variant="h3" fontWeight="bold" sx={{ my: 1, color: '#00ED64' }}>
                     {item.stat}
                   </Typography>
-                  <Typography variant="body1" sx={{ opacity: 0.8 }}>{item.label}</Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.85 }}>{item.label}</Typography>
                 </Paper>
               </Grid>
             ))}
@@ -471,33 +568,31 @@ export default function WhyNetPadPage() {
         </Container>
       </Box>
 
-      {/* Three Pillars Section */}
+      {/* Lifecycle Section */}
       <Box sx={{ py: 8, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="lg">
           <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
-            The Four Pillars of NetPad
+            Built around the document lifecycle
           </Typography>
-          <Typography variant="h6" textAlign="center" sx={{ mb: 6, color: alpha('#fff', 0.6) }}>
-            Forms, Workflows, Data Management, and AI & Conversational Experiences — all integrated
+          <Typography variant="h6" textAlign="center" sx={{ mb: 2, color: alpha('#fff', 0.6), maxWidth: 900, mx: 'auto' }}>
+            Capture → route → approve → automate → audit — with one data model and multiple interfaces.
+          </Typography>
+
+          <Typography variant="body1" textAlign="center" sx={{ mb: 6, color: alpha('#fff', 0.65), maxWidth: 900, mx: 'auto' }}>
+            NetPad is not “a form builder.” Forms are one way data enters the system. Workflows move it. Governance keeps it trustworthy.
           </Typography>
 
           <Grid container spacing={4}>
             {capabilityComparison.map((cap, i) => (
               <Grid item xs={12} sm={6} md={3} key={i}>
-                <Card
+                <SpotlightCard
+                  spotlightColor={hexToRgb(cap.color)}
+                  hoverBorderColor={alpha(cap.color, 0.5)}
                   sx={{
                     height: '100%',
-                    bgcolor: alpha('#fff', 0.03),
-                    border: '1px solid',
-                    borderColor: alpha('#fff', 0.1),
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      borderColor: alpha(cap.color, 0.5),
-                      bgcolor: alpha(cap.color, 0.05),
-                    },
+                    p: 3,
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                       <Box
                         sx={{
@@ -540,11 +635,148 @@ export default function WhyNetPadPage() {
                         </li>
                       ))}
                     </Box>
-                  </CardContent>
-                </Card>
+                </SpotlightCard>
               </Grid>
             ))}
           </Grid>
+        </Container>
+      </Box>
+
+      {/* ICP / Use Case Section */}
+      <Box sx={{ py: 8 }}>
+        <Container maxWidth="lg">
+          <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
+            Built for high-stakes operational work
+          </Typography>
+          <Typography variant="h6" textAlign="center" sx={{ mb: 6, color: alpha('#fff', 0.6), maxWidth: 900, mx: 'auto' }}>
+            The sweet spot is the messy middle: after intake, before the outcome — where approvals, accountability, and automation actually matter.
+          </Typography>
+
+          <Grid container spacing={4}>
+            {[
+              {
+                title: 'Security & compliance intake',
+                color: '#00ED64',
+                icon: <SecurityIcon />,
+                bullets: [
+                  'Exceptions, risk reviews, vendor approvals, policy attestations',
+                  'Routing + approvals with a built-in audit trail',
+                  'AI assists triage without removing human accountability',
+                ],
+              },
+              {
+                title: 'IT & access workflows',
+                color: '#2196F3',
+                icon: <AccountTreeIcon />,
+                bullets: [
+                  'Access requests, provisioning, onboarding/offboarding',
+                  'Human + system steps in one workflow',
+                  'Notifications, retries, and clear ownership by stage',
+                ],
+              },
+              {
+                title: 'RevOps & finance approvals',
+                color: '#E91E63',
+                icon: <SpeedIcon />,
+                bullets: [
+                  'Discount approvals, deal exceptions, spend approvals',
+                  'Visibility into “where is this stuck?”',
+                  'Structured data that stays queryable for reporting',
+                ],
+              },
+            ].map((item, i) => (
+              <Grid item xs={12} md={4} key={i}>
+                <SpotlightCard
+                  spotlightColor={hexToRgb(item.color)}
+                  hoverBorderColor={alpha(item.color, 0.5)}
+                  sx={{ height: '100%', p: 3 }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Box
+                      sx={{
+                        bgcolor: alpha(item.color, 0.2),
+                        color: item.color,
+                        p: 1.5,
+                        borderRadius: 2,
+                        display: 'flex',
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'white' }}>
+                      {item.title}
+                    </Typography>
+                  </Box>
+
+                  <Box component="ul" sx={{ pl: 2, mb: 0, mt: 1 }}>
+                    {item.bullets.map((b, j) => (
+                      <li key={j} style={{ marginBottom: 8 }}>
+                        <Typography variant="body2" sx={{ color: alpha('#fff', 0.7), lineHeight: 1.6 }}>
+                          {b}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </SpotlightCard>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Mid-page CTA - catches ops leads, architects, internal tools builders */}
+          <Box
+            sx={{
+              mt: 8,
+              p: 4,
+              borderRadius: 3,
+              bgcolor: alpha('#00ED64', 0.05),
+              border: '1px solid',
+              borderColor: alpha('#00ED64', 0.15),
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="h5" fontWeight="bold" sx={{ color: 'white', mb: 1 }}>
+              Ready to design your first workflow?
+            </Typography>
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.65), mb: 3, maxWidth: 600, mx: 'auto' }}>
+              Get access to NetPad and build your first intake-to-decision flow.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                component={Link}
+                href="/auth/login"
+                variant="contained"
+                sx={{
+                  px: 4,
+                  py: 1.25,
+                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                  color: '#001E2B',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
+                  },
+                }}
+              >
+                Get access
+              </Button>
+              <Button
+                component="a"
+                href="mailto:hello@netpad.io?subject=NetPad%20inquiry"
+                variant="text"
+                sx={{
+                  px: 3,
+                  py: 1.25,
+                  color: alpha('#fff', 0.7),
+                  fontWeight: 500,
+                  '&:hover': {
+                    color: '#fff',
+                    bgcolor: alpha('#fff', 0.05),
+                  },
+                }}
+              >
+                Talk to us
+              </Button>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
@@ -552,7 +784,7 @@ export default function WhyNetPadPage() {
       <Box sx={{ py: 8 }}>
         <Container maxWidth="md" sx={{ textAlign: 'center' }}>
           <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
-            The Bottom Line
+            Less glue code. More outcomes.
           </Typography>
 
           <Grid container spacing={4} sx={{ my: 4 }}>
@@ -567,13 +799,13 @@ export default function WhyNetPadPage() {
                 }}
               >
                 <Typography variant="h6" gutterBottom sx={{ color: '#ff8a80' }}>
-                  Building From Scratch
+                  Stitching it together
                 </Typography>
                 <Typography variant="h2" fontWeight="bold" sx={{ color: '#ff8a80' }}>
                   10-16 weeks
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 2, color: alpha('#fff', 0.6) }}>
-                  Forms + Workflows + Data + AI/Conversational
+                  Intake + workflow + data + governance
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.6) }}>
                   8,000+ lines of code
@@ -600,7 +832,7 @@ export default function WhyNetPadPage() {
                   1-2 days
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 2, color: alpha('#fff', 0.8) }}>
-                  All four capabilities integrated
+                  One lifecycle, multiple interfaces
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.8) }}>
                   ~100 lines of configuration
@@ -615,14 +847,33 @@ export default function WhyNetPadPage() {
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mt: 4 }}>
             <Button
               component={Link}
-              href="/builder"
-              variant="contained"
+              href="/examples"
+              variant="outlined"
               size="large"
-              startIcon={<RocketLaunchIcon />}
               sx={{
                 px: 4,
                 py: 1.5,
-                fontSize: '1.1rem',
+                fontSize: '1rem',
+                borderColor: alpha('#00ED64', 0.5),
+                color: '#00ED64',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#00ED64',
+                  bgcolor: alpha('#00ED64', 0.1),
+                },
+              }}
+            >
+              See real workflows
+            </Button>
+            <Button
+              component={Link}
+              href="/auth/login"
+              variant="contained"
+              size="large"
+              sx={{
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
                 background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
                 color: '#001E2B',
                 fontWeight: 600,
@@ -631,34 +882,12 @@ export default function WhyNetPadPage() {
                 },
               }}
             >
-              Start Building
-            </Button>
-            <Button
-              component="a"
-              href="https://github.com/mrlynn/netpad-v3"
-              target="_blank"
-              variant="outlined"
-              size="large"
-              startIcon={<GitHubIcon />}
-              sx={{
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                borderColor: alpha('#fff', 0.3),
-                color: 'white',
-                fontWeight: 600,
-                '&:hover': {
-                  borderColor: '#00ED64',
-                  bgcolor: alpha('#00ED64', 0.1),
-                },
-              }}
-            >
-              View on GitHub
+              Get access
             </Button>
           </Box>
 
           <Typography variant="body2" sx={{ mt: 4, color: alpha('#fff', 0.5) }}>
-            Free MongoDB Atlas cluster included. No credit card required.
+            MongoDB Atlas cluster included. Self-hostable.
           </Typography>
         </Container>
       </Box>
@@ -1166,7 +1395,7 @@ export default function WhyNetPadPage() {
         </Container>
       </Box>
 
-      {/* Footer */}
+      {/* Footer - quiet but clear */}
       <Box
         sx={{
           py: 4,
@@ -1175,16 +1404,68 @@ export default function WhyNetPadPage() {
         }}
       >
         <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-            <Image
-              src="/logo-250x250-trans.png"
-              alt="NetPad"
-              width={24}
-              height={24}
-            />
-            <Typography variant="body2" sx={{ color: alpha('#fff', 0.5) }}>
-              NetPad — The Complete MongoDB Data Platform
-            </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            {/* Left: Logo + tagline */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Image
+                src="/logo-250x250-trans.png"
+                alt="NetPad"
+                width={24}
+                height={24}
+              />
+              <Typography variant="body2" sx={{ color: alpha('#fff', 0.5) }}>
+                NetPad — The Complete MongoDB Data Platform
+              </Typography>
+            </Box>
+
+            {/* Right: Understated links */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Typography
+                component={Link}
+                href="/auth/login"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.5),
+                  textDecoration: 'none',
+                  '&:hover': { color: alpha('#fff', 0.8) },
+                }}
+              >
+                Sign in
+              </Typography>
+              <Typography
+                component={Link}
+                href="/auth/login"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.5),
+                  textDecoration: 'none',
+                  '&:hover': { color: alpha('#fff', 0.8) },
+                }}
+              >
+                Request access
+              </Typography>
+              <Typography
+                component="a"
+                href="https://github.com/mrlynn/netpad-v3"
+                target="_blank"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.5),
+                  textDecoration: 'none',
+                  '&:hover': { color: alpha('#fff', 0.8) },
+                }}
+              >
+                GitHub
+              </Typography>
+            </Box>
           </Box>
         </Container>
       </Box>

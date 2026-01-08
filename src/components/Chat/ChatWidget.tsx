@@ -97,7 +97,7 @@ export function ChatWidget() {
           zIndex: 1000,
         }}
       >
-        <Tooltip title="AI Form Assistant (⌘⇧A)" placement="left">
+        <Tooltip title="AI Assistant (⌘⇧A)" placement="left">
           <Badge
             badgeContent={unreadCount}
             color="primary"
@@ -226,7 +226,7 @@ export function ChatWidget() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <AIIcon sx={{ fontSize: 20 }} />
                     <Typography variant="subtitle1" fontWeight={600}>
-                      Form Assistant
+                      NetPad Assistant
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

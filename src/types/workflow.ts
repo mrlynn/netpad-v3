@@ -69,6 +69,17 @@ export interface WorkflowSettings {
   retryPolicy: RetryPolicy;
   errorHandling: 'stop' | 'continue' | 'rollback';
   timezone: string;              // For scheduled triggers
+  embedSettings?: WorkflowEmbedSettings;  // Embedding configuration
+}
+
+export interface WorkflowEmbedSettings {
+  allowPublicExecution: boolean;  // Allow public execution via slug
+  executionToken?: string;         // Optional token for authentication (hashed in DB)
+  rateLimit?: {
+    requestsPerHour: number;      // Rate limit for public executions
+    requestsPerDay: number;
+  };
+  allowedOrigins?: string[];      // CORS origins allowed to embed
 }
 
 export interface RetryPolicy {

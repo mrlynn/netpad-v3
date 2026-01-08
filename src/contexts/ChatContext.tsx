@@ -139,11 +139,12 @@ const FORM_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "Hi! I'm your form building assistant. I can help you:\n\n" +
-    "- **Add fields** - \"Add a rating field for customer satisfaction\"\n" +
-    "- **Suggest improvements** - \"What fields should I add?\"\n" +
-    "- **Explain features** - \"How do conditional fields work?\"\n" +
-    "- **Configure settings** - \"Make all fields required\"\n\n" +
+    "Hi! I'm your NetPad assistant. I can help you with:\n\n" +
+    "- **Forms** - Add fields, configure validation, set up conditional logic\n" +
+    "- **Workflows** - Build automation, connect triggers, configure nodes\n" +
+    "- **Data Management** - Browse collections, manage connections, import/export\n" +
+    "- **AI Features** - Create conversational forms, use AI agents, generate templates\n" +
+    "- **Platform** - Set up projects, manage teams, deploy applications\n\n" +
     "What would you like help with?",
   timestamp: new Date(),
 };
@@ -152,12 +153,12 @@ const WORKFLOW_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome-workflow',
   role: 'assistant',
   content:
-    "Hi! I'm your workflow building assistant. I can help you:\n\n" +
-    "- **Add nodes** - \"Add an email notification after form submission\"\n" +
-    "- **Connect steps** - \"Connect the trigger to the email node\"\n" +
-    "- **Configure nodes** - \"Set the delay to 5 minutes\"\n" +
-    "- **Explain concepts** - \"How do conditional branches work?\"\n" +
-    "- **Suggest workflows** - \"Create a workflow for form submissions\"\n\n" +
+    "Hi! I'm your NetPad assistant. I can help you with:\n\n" +
+    "- **Workflows** - Add nodes, connect steps, configure automation\n" +
+    "- **Forms** - Build forms, add fields, configure validation\n" +
+    "- **Data Management** - Browse collections, manage connections, query data\n" +
+    "- **AI Features** - Create conversational forms, use AI agents\n" +
+    "- **Platform** - Set up projects, manage teams, deploy applications\n\n" +
     "What would you like to build?",
   timestamp: new Date(),
 };

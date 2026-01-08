@@ -25,9 +25,15 @@ import {
   Close as CloseIcon,
   Settings as SettingsIcon,
   Save as SaveIcon,
+  Code as CodeIcon,
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { useWorkflow, useWorkflowEditor } from '@/contexts/WorkflowContext';
-import { WorkflowSettings, RetryPolicy } from '@/types/workflow';
+import { WorkflowSettings, RetryPolicy, WorkflowEmbedSettings } from '@/types/workflow';
+import { generateExecutionToken, hashExecutionToken, getTokenPrefix } from '@/lib/workflow/embedTokens';
+import { WorkflowEmbedCodeGenerator } from '../EmbedCodeGenerator';
 
 interface WorkflowSettingsPanelProps {
   open: boolean;
@@ -82,6 +88,9 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
     timezone: 'UTC',
   });
   const [hasChanges, setHasChanges] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'settings' | 'embed'>('settings');
 
   // Sync local state when workflow changes
   useEffect(() => {
@@ -101,6 +110,8 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
         timezone: 'UTC',
       });
       setHasChanges(false);
+      setNewToken(null);
+      setShowToken(false);
     }
   }, [workflow, open]);
 
@@ -132,7 +143,43 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
         settings,
       });
       setHasChanges(false);
+      setNewToken(null); // Clear new token after saving
     }
+  };
+
+  const handleGenerateToken = () => {
+    const token = generateExecutionToken();
+    setNewToken(token);
+    setShowToken(true);
+    
+    // Update settings with hashed token
+    const embedSettings: WorkflowEmbedSettings = {
+      ...settings.embedSettings,
+      allowPublicExecution: true,
+      executionToken: hashExecutionToken(token),
+    };
+    handleSettingChange('embedSettings', embedSettings);
+  };
+
+  const handleRemoveToken = () => {
+    const embedSettings: WorkflowEmbedSettings = {
+      ...settings.embedSettings,
+      executionToken: undefined,
+    };
+    handleSettingChange('embedSettings', embedSettings);
+    setNewToken(null);
+    setShowToken(false);
+  };
+
+  const handleEmbedSettingChange = <K extends keyof WorkflowEmbedSettings>(
+    key: K,
+    value: WorkflowEmbedSettings[K]
+  ) => {
+    const embedSettings: WorkflowEmbedSettings = {
+      ...(settings.embedSettings || {}),
+      [key]: value,
+    };
+    handleSettingChange('embedSettings', embedSettings);
   };
 
   const formatTime = (ms: number): string => {
@@ -172,9 +219,157 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
           </IconButton>
         </Box>
 
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant={activeTab === 'settings' ? 'contained' : 'text'}
+              onClick={() => setActiveTab('settings')}
+              size="small"
+            >
+              Settings
+            </Button>
+            <Button
+              variant={activeTab === 'embed' ? 'contained' : 'text'}
+              onClick={() => setActiveTab('embed')}
+              size="small"
+              startIcon={<CodeIcon />}
+            >
+              Embed
+            </Button>
+          </Box>
+        </Box>
+
         {/* Content */}
         <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-          {/* General Settings */}
+          {activeTab === 'embed' ? (
+            <>
+              {/* Embed Settings */}
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Public Execution
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.embedSettings?.allowPublicExecution || false}
+                    onChange={(e) =>
+                      handleEmbedSettingChange('allowPublicExecution', e.target.checked)
+                    }
+                  />
+                }
+                label="Allow public execution via slug"
+                sx={{ mb: 2 }}
+              />
+              <Alert severity="info" sx={{ mb: 2 }}>
+                When enabled, this workflow can be executed publicly using its slug without authentication.
+              </Alert>
+
+              {/* Execution Token */}
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 3 }}>
+                Execution Token (Optional)
+              </Typography>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Execution tokens provide an additional layer of security. If set, the token must be included in execution requests.
+              </Alert>
+
+              {settings.embedSettings?.executionToken && !newToken && (
+                <Box sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Current Token"
+                    value={showToken ? 'wf_exec_••••••••••••••••' : 'Token is set (hidden)'}
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <IconButton
+                          size="small"
+                          onClick={() => setShowToken(!showToken)}
+                          sx={{ mr: -1 }}
+                        >
+                          {showToken ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      ),
+                    }}
+                    sx={{ mb: 1 }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={handleRemoveToken}
+                  >
+                    Remove Token
+                  </Button>
+                </Box>
+              )}
+
+              {newToken && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    New Token Generated
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+                    {newToken}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Copy this token now. It will not be shown again after you save.
+                  </Typography>
+                </Alert>
+              )}
+
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={handleGenerateToken}
+                sx={{ mb: 3 }}
+              >
+                {settings.embedSettings?.executionToken ? 'Regenerate Token' : 'Generate Token'}
+              </Button>
+
+              {/* Rate Limiting */}
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Rate Limiting
+              </Typography>
+
+              <TextField
+                fullWidth
+                size="small"
+                label="Requests Per Hour"
+                type="number"
+                value={settings.embedSettings?.rateLimit?.requestsPerHour || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                  handleEmbedSettingChange('rateLimit', {
+                    ...settings.embedSettings?.rateLimit,
+                    requestsPerHour: value,
+                    requestsPerDay: settings.embedSettings?.rateLimit?.requestsPerDay || value ? (value * 24) : undefined,
+                  });
+                }}
+                helperText="Maximum number of executions per hour (optional)"
+                sx={{ mb: 2 }}
+              />
+
+              {/* Embed Code Generator */}
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Embed Code
+              </Typography>
+
+              {workflow && (
+                <WorkflowEmbedCodeGenerator
+                  workflowId={workflow.id}
+                  workflowSlug={workflow.slug}
+                  workflowName={workflow.name}
+                  executionToken={newToken || (settings.embedSettings?.executionToken ? '***' : undefined)}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {/* General Settings */}
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
             General
           </Typography>

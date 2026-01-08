@@ -26,7 +26,7 @@ const QUICK_SUGGESTIONS = [
 
 export function ChatInput() {
   const theme = useTheme();
-  const { sendMessage, isLoading, isOpen, formContext } = useChat();
+  const { sendMessage, isLoading, isOpen, formContext, activeContextType, messages } = useChat();
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +61,10 @@ export function ChatInput() {
 
   // Show field count context
   const fieldCount = formContext.fields.length;
+  
+  // Only show suggestion pills when in form context and no user messages yet
+  const userMessages = messages.filter(m => m.role === 'user');
+  const shouldShowSuggestions = activeContextType === 'form' && userMessages.length === 0;
 
   return (
     <Box
@@ -70,7 +74,7 @@ export function ChatInput() {
       }}
     >
       {/* Context indicator */}
-      {fieldCount > 0 && (
+      {fieldCount > 0 && activeContextType === 'form' && (
         <Box
           sx={{
             px: 2,
@@ -86,8 +90,8 @@ export function ChatInput() {
         </Box>
       )}
 
-      {/* Quick suggestions - show only when no messages have been sent */}
-      {fieldCount === 0 && (
+      {/* Quick suggestions - show only in form context when no messages have been sent */}
+      {shouldShowSuggestions && (
         <Box
           sx={{
             px: 2,
@@ -137,7 +141,13 @@ export function ChatInput() {
           fullWidth
           multiline
           maxRows={3}
-          placeholder="Ask me anything about your form..."
+          placeholder={
+            activeContextType === 'form'
+              ? "Ask me anything about your form..."
+              : activeContextType === 'workflow'
+              ? "Ask me anything about your workflow..."
+              : "Ask me anything about NetPad..."
+          }
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
