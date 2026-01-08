@@ -40,8 +40,12 @@ export function ChatWidget() {
   const pathname = usePathname();
   const theme = useTheme();
 
-  // Hide on public form pages and auth pages
-  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route));
+  // Check if embedded via URL params
+  const isEmbedded = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('embedded') === 'true';
+
+  // Hide on public form pages, auth pages, and when embedded
+  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route)) || isEmbedded;
 
   if (shouldHide) {
     return null;

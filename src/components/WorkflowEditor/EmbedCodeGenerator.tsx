@@ -38,12 +38,14 @@ interface EmbedCodeGeneratorProps {
   executionToken?: string;
 }
 
-type EmbedType = 'sdk' | 'link' | 'execution-ui';
+type EmbedType = 'sdk' | 'link' | 'execution-ui' | 'viewer';
 
 interface EmbedSettings {
   theme: 'light' | 'dark' | 'auto';
   hideHeader: boolean;
   hideBranding: boolean;
+  hideAssistant: boolean;
+  hideDebug: boolean;
   height: string;
   width: string;
   includeToken: boolean;
@@ -60,6 +62,8 @@ export function WorkflowEmbedCodeGenerator({
     theme: 'auto',
     hideHeader: false,
     hideBranding: false,
+    hideAssistant: true,
+    hideDebug: true,
     height: '600',
     width: '100%',
     includeToken: !!executionToken,
@@ -76,9 +80,12 @@ export function WorkflowEmbedCodeGenerator({
 
   const buildEmbedParams = () => {
     const params = new URLSearchParams();
+    params.append('embedded', 'true'); // Always mark as embedded
     if (settings.theme !== 'light') params.append('theme', settings.theme);
     if (settings.hideHeader) params.append('hideHeader', 'true');
     if (settings.hideBranding) params.append('hideBranding', 'true');
+    if (settings.hideAssistant) params.append('hideAssistant', 'true');
+    if (settings.hideDebug) params.append('hideDebug', 'true');
     return params.toString() ? `?${params.toString()}` : '';
   };
 
@@ -119,6 +126,35 @@ export function WorkflowEmbedCodeGenerator({
         }
       });
     });
+</script>`;
+
+      case 'viewer':
+        // Embed workflow viewer (read-only)
+        const viewerDataAttrs = [];
+        if (settings.theme !== 'light') viewerDataAttrs.push(`data-theme="${settings.theme}"`);
+        if (settings.hideHeader) viewerDataAttrs.push('data-hide-header="true"');
+        if (settings.hideBranding) viewerDataAttrs.push('data-hide-branding="true"');
+        if (settings.height !== '600') viewerDataAttrs.push(`data-height="${settings.height}px"`);
+
+        const viewerDataAttrsStr = viewerDataAttrs.length > 0 ? '\n  ' + viewerDataAttrs.join('\n  ') : '';
+
+        return `<!-- NetPad Workflow Viewer (Read-Only) -->
+<script src="${baseUrl}/workflow-embed.js"></script>
+<div
+  data-netpad-workflow-viewer="${workflowSlug}"${viewerDataAttrsStr}
+></div>
+
+<script>
+  // Or use JavaScript API
+  NetPad.embedViewer('container-id', '${workflowSlug}', {
+    theme: '${settings.theme}',
+    hideHeader: ${settings.hideHeader},
+    hideBranding: ${settings.hideBranding},
+    height: '${settings.height}px',
+    onLoad: function() {
+      console.log('Workflow viewer loaded');
+    }
+  });
 </script>`;
 
       case 'link':
@@ -208,6 +244,14 @@ export function WorkflowEmbedCodeGenerator({
     hideHeader: ${settings.hideHeader},
     hideBranding: ${settings.hideBranding}
   });
+
+  // Or embed workflow viewer (read-only visualization)
+  NetPad.embedViewer('container-id', '${workflowSlug}', {
+    theme: '${settings.theme}',
+    hideHeader: ${settings.hideHeader},
+    hideBranding: ${settings.hideBranding},
+    metadata: true  // Include stats, variables, etc.
+  });
 </script>`;
   };
 
@@ -267,6 +311,12 @@ export function WorkflowEmbedCodeGenerator({
           iconPosition="start"
         />
         <Tab
+          value="viewer"
+          label="Viewer (Read-Only)"
+          icon={<Code fontSize="small" />}
+          iconPosition="start"
+        />
+        <Tab
           value="link"
           label="Link"
           icon={<LinkIcon fontSize="small" />}
@@ -275,7 +325,7 @@ export function WorkflowEmbedCodeGenerator({
       </Tabs>
 
       {/* Settings */}
-      {(embedType === 'sdk' || embedType === 'execution-ui') && (
+      {(embedType === 'sdk' || embedType === 'execution-ui' || embedType === 'viewer') && (
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             <TextField
@@ -330,6 +380,30 @@ export function WorkflowEmbedCodeGenerator({
                 />
               }
               label="Hide Branding"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={settings.hideAssistant}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, hideAssistant: e.target.checked }))
+                  }
+                />
+              }
+              label="Hide Assistant"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={settings.hideDebug}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, hideDebug: e.target.checked }))
+                  }
+                />
+              }
+              label="Hide Debug Panel"
             />
             {executionToken && (
               <FormControlLabel

@@ -147,18 +147,25 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
     }
   };
 
-  const handleGenerateToken = () => {
-    const token = generateExecutionToken();
-    setNewToken(token);
-    setShowToken(true);
-    
-    // Update settings with hashed token
-    const embedSettings: WorkflowEmbedSettings = {
-      ...settings.embedSettings,
-      allowPublicExecution: true,
-      executionToken: hashExecutionToken(token),
-    };
-    handleSettingChange('embedSettings', embedSettings);
+  const handleGenerateToken = async () => {
+    try {
+      const token = generateExecutionToken();
+      setNewToken(token);
+      setShowToken(true);
+      
+      // Update settings with hashed token
+      const hashedToken = await hashExecutionToken(token);
+      const embedSettings: WorkflowEmbedSettings = {
+        ...settings.embedSettings,
+        allowPublicExecution: true,
+        executionToken: hashedToken,
+      };
+      handleSettingChange('embedSettings', embedSettings);
+    } catch (error) {
+      console.error('Failed to generate token:', error);
+      // Token generation failed, but we can still show the unhashed token
+      // The server will hash it when saving
+    }
   };
 
   const handleRemoveToken = () => {
@@ -252,6 +259,22 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
               <FormControlLabel
                 control={
                   <Switch
+                    checked={settings.embedSettings?.allowPublicViewing || false}
+                    onChange={(e) =>
+                      handleEmbedSettingChange('allowPublicViewing', e.target.checked)
+                    }
+                  />
+                }
+                label="Allow public viewing (read-only)"
+                sx={{ mb: 1 }}
+              />
+              <Alert severity="info" sx={{ mb: 2 }}>
+                When enabled, this workflow can be viewed publicly for documentation purposes. The workflow structure is visible but cannot be executed or edited.
+              </Alert>
+
+              <FormControlLabel
+                control={
+                  <Switch
                     checked={settings.embedSettings?.allowPublicExecution || false}
                     onChange={(e) =>
                       handleEmbedSettingChange('allowPublicExecution', e.target.checked)
@@ -259,10 +282,10 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
                   />
                 }
                 label="Allow public execution via slug"
-                sx={{ mb: 2 }}
+                sx={{ mb: 1 }}
               />
-              <Alert severity="info" sx={{ mb: 2 }}>
-                When enabled, this workflow can be executed publicly using its slug without authentication.
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                When enabled, this workflow can be executed publicly using its slug without authentication. Use execution tokens for additional security.
               </Alert>
 
               {/* Execution Token */}
@@ -634,6 +657,8 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
                   </Typography>
                 </Box>
               </Box>
+            </>
+          )}
             </>
           )}
         </Box>

@@ -74,6 +74,7 @@ export interface WorkflowSettings {
 
 export interface WorkflowEmbedSettings {
   allowPublicExecution: boolean;  // Allow public execution via slug
+  allowPublicViewing: boolean;    // Allow public read-only viewing via slug (for documentation)
   executionToken?: string;         // Optional token for authentication (hashed in DB)
   rateLimit?: {
     requestsPerHour: number;      // Rate limit for public executions

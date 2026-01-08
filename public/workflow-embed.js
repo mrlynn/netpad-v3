@@ -276,6 +276,146 @@
     };
   }
 
+  /**
+   * Build workflow viewer URL
+   */
+  function buildViewerUrl(workflowSlug, options) {
+    var url = BASE_URL + '/workflows/view/' + encodeURIComponent(workflowSlug);
+    var params = [];
+
+    if (options.theme && options.theme !== 'light') {
+      params.push('theme=' + encodeURIComponent(options.theme));
+    }
+    if (options.hideHeader) {
+      params.push('hideHeader=true');
+    }
+    if (options.hideBranding) {
+      params.push('hideBranding=true');
+    }
+    if (options.metadata) {
+      params.push('metadata=true');
+    }
+    params.push('embedded=true');
+
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    return url;
+  }
+
+  /**
+   * Create an iframe element for workflow viewer
+   */
+  function createViewerIframe(workflowSlug, options) {
+    var iframe = document.createElement('iframe');
+    iframe.src = buildViewerUrl(workflowSlug, options);
+    iframe.style.border = 'none';
+    iframe.style.width = options.width || '100%';
+    iframe.style.height = options.height || '100%';
+    iframe.style.minHeight = options.minHeight || '600px';
+    iframe.style.borderRadius = options.borderRadius || '8px';
+    iframe.style.display = 'block';
+    iframe.setAttribute('title', 'NetPad Workflow Viewer');
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('data-netpad-workflow-viewer', workflowSlug);
+
+    return iframe;
+  }
+
+  /**
+   * Embed workflow viewer (read-only visualization)
+   */
+  function embedViewer(containerOrId, workflowSlug, options) {
+    options = options || {};
+
+    var container;
+    if (typeof containerOrId === 'string') {
+      container = document.getElementById(containerOrId);
+    } else if (containerOrId instanceof HTMLElement) {
+      container = containerOrId;
+    }
+
+    if (!container) {
+      console.error('[NetPad Workflow] Container not found:', containerOrId);
+      return null;
+    }
+
+    if (!workflowSlug) {
+      console.error('[NetPad Workflow] Workflow slug is required');
+      return null;
+    }
+
+    var iframe = createViewerIframe(workflowSlug, options);
+    container.innerHTML = '';
+    container.appendChild(iframe);
+
+    // Set up message listener for iframe communication
+    var handler = function(event) {
+      if (event.origin !== BASE_URL) return;
+
+      var data = event.data;
+      if (!data || data.source !== 'netpad-workflow-viewer') return;
+      if (data.workflowSlug !== workflowSlug) return;
+
+      switch (data.type) {
+        case 'loaded':
+          if (options.onLoad) options.onLoad(data.payload);
+          break;
+
+        case 'error':
+          if (options.onError) {
+            options.onError(data.payload);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('message', handler);
+
+    return {
+      iframe: iframe,
+      destroy: function() {
+        window.removeEventListener('message', handler);
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      },
+      reload: function() {
+        iframe.src = buildViewerUrl(workflowSlug, options);
+      },
+    };
+  }
+
+  /**
+   * Auto-initialize workflow viewers from data attributes
+   */
+  function autoInitViewers() {
+    var elements = document.querySelectorAll('[data-netpad-workflow-viewer]');
+
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      var workflowSlug = el.getAttribute('data-netpad-workflow-viewer');
+
+      // Skip if already initialized
+      if (el.getAttribute('data-netpad-viewer-initialized')) continue;
+
+      // Read options from data attributes
+      var options = {
+        theme: el.getAttribute('data-theme') || undefined,
+        hideHeader: el.getAttribute('data-hide-header') === 'true',
+        hideBranding: el.getAttribute('data-hide-branding') === 'true',
+        height: el.getAttribute('data-height') || undefined,
+        width: el.getAttribute('data-width') || undefined,
+        minHeight: el.getAttribute('data-min-height') || undefined,
+        metadata: el.getAttribute('data-metadata') === 'true',
+      };
+
+      embedViewer(el, workflowSlug, options);
+      el.setAttribute('data-netpad-viewer-initialized', 'true');
+    }
+  }
+
   // Expose the API
   if (!window.NetPad) {
     window.NetPad = {};
@@ -285,5 +425,34 @@
   window.NetPad.getExecutionStatus = getExecutionStatus;
   window.NetPad.pollExecutionStatus = pollExecutionStatus;
   window.NetPad.embedExecution = embedExecution;
+  window.NetPad.embedViewer = embedViewer;
+  window.NetPad.initViewers = autoInitViewers;
   window.NetPad.workflowBaseUrl = BASE_URL;
+
+  // Auto-initialize viewers when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoInitViewers);
+  } else {
+    autoInitViewers();
+  }
+
+  // Also watch for dynamically added elements
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(function(mutations) {
+      var shouldInit = false;
+      mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+          shouldInit = true;
+        }
+      });
+      if (shouldInit) {
+        autoInitViewers();
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
 })();

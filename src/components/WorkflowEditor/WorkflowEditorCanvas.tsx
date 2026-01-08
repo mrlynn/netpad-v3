@@ -84,6 +84,7 @@ interface WorkflowEditorCanvasProps {
   onNodeDoubleClick?: (nodeId: string) => void;
   onEdgeDoubleClick?: (edgeId: string) => void;
   readOnly?: boolean;
+  isEmbedded?: boolean; // Hide UI elements when embedded
 }
 
 export function WorkflowEditorCanvas({
@@ -92,6 +93,7 @@ export function WorkflowEditorCanvas({
   onNodeDoubleClick,
   onEdgeDoubleClick,
   readOnly = false,
+  isEmbedded = false,
 }: WorkflowEditorCanvasProps) {
   const theme = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
@@ -786,39 +788,43 @@ export function WorkflowEditorCanvas({
             : 'rgba(0, 104, 74, 0.12)'  // Darker green dots in light mode
           }
         />
-        <Controls
-          showZoom
-          showFitView
-          showInteractive={!readOnly}
-          data-tour="workflow-controls"
-          style={{
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 8,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(0, 237, 100, 0.05)'
-              : theme.shadows[2],
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(0, 237, 100, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.08)',
-          }}
-        />
-        <MiniMap
-          nodeColor={minimapNodeColor}
-          maskColor={theme.palette.mode === 'dark' ? 'rgba(10, 14, 20, 0.8)' : 'rgba(248, 250, 249, 0.8)'}
-          position="bottom-left"
-          style={{
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 8,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(0, 237, 100, 0.05)'
-              : theme.shadows[2],
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(0, 237, 100, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.08)',
-          }}
-          pannable
-          zoomable
-        />
+        {!isEmbedded && (
+          <Controls
+            showZoom
+            showFitView
+            showInteractive={!readOnly}
+            data-tour="workflow-controls"
+            style={{
+              backgroundColor: theme.palette.background.paper,
+              borderRadius: 8,
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(0, 237, 100, 0.05)'
+                : theme.shadows[2],
+              border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(0, 237, 100, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.08)',
+            }}
+          />
+        )}
+        {!isEmbedded && (
+          <MiniMap
+            nodeColor={minimapNodeColor}
+            maskColor={theme.palette.mode === 'dark' ? 'rgba(10, 14, 20, 0.8)' : 'rgba(248, 250, 249, 0.8)'}
+            position="bottom-left"
+            style={{
+              backgroundColor: theme.palette.background.paper,
+              borderRadius: 8,
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(0, 237, 100, 0.05)'
+                : theme.shadows[2],
+              border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(0, 237, 100, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.08)',
+            }}
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
 
       {/* Empty State Dialog - show when workflow has no nodes and helper not dismissed */}

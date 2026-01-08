@@ -23,6 +23,8 @@ import { SubscriptionDevPanel, DevPanelPosition } from './SubscriptionDevPanel';
 const HIDDEN_ROUTES = [
   '/forms/', // Published form pages
   '/auth/',  // Auth pages
+  '/workflows/view/', // Embedded workflow viewer
+  '/workflows/executions/', // Embedded workflow execution viewer
 ];
 
 const STORAGE_KEY = 'devPanel';
@@ -76,8 +78,12 @@ export function DevPanelWrapper() {
     return null;
   }
 
-  // Hide on public form pages and auth pages
-  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route));
+  // Check if embedded via URL params
+  const isEmbedded = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('embedded') === 'true';
+
+  // Hide on public form pages, auth pages, workflow viewer/execution pages, and when embedded
+  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route)) || isEmbedded;
   if (shouldHide) {
     return null;
   }
