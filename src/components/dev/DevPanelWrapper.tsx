@@ -13,7 +13,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { IconButton, Tooltip, useTheme } from '@mui/material';
 import { Bug } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -62,10 +62,13 @@ function saveState(state: DevPanelState) {
 }
 
 export function DevPanelWrapper() {
+  // ALL hooks must be called before any early returns
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const theme = useTheme();
   const [state, setState] = useState<DevPanelState>(DEFAULT_STATE);
   const [mounted, setMounted] = useState(false);
+  const { currentOrgId, isLoading } = useOrganization();
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -78,17 +81,15 @@ export function DevPanelWrapper() {
     return null;
   }
 
-  // Check if embedded via URL params
-  const isEmbedded = typeof window !== 'undefined' && 
-    new URLSearchParams(window.location.search).get('embedded') === 'true';
+  // Check if embedded via URL params (only after mount to prevent hydration mismatch)
+  // During SSR, isEmbedded will be false, then on client mount it will be re-evaluated
+  const isEmbedded = mounted ? searchParams.get('embedded') === 'true' : false;
 
   // Hide on public form pages, auth pages, workflow viewer/execution pages, and when embedded
   const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route)) || isEmbedded;
   if (shouldHide) {
     return null;
   }
-
-  const { currentOrgId, isLoading } = useOrganization();
 
   // Don't render if no org selected or still loading
   if (isLoading || !currentOrgId) {

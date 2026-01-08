@@ -2,7 +2,6 @@
 
 import React, { useCallback, useRef, useMemo, useState, useEffect } from 'react';
 import ReactFlow, {
-  Background,
   Controls,
   MiniMap,
   Node,
@@ -33,6 +32,7 @@ import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/conte
 import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
 import { EmptyWorkflowState, WorkflowTemplate } from './Panels/EmptyWorkflowState';
 import { GeneratedWorkflow } from '@/lib/ai/types';
+import { NetPadBrandedBackground } from './NetPadBrandedBackground';
 
 // Node components
 import { BaseNode } from './Nodes/BaseNode';
@@ -687,11 +687,17 @@ export function WorkflowEditorCanvas({
         bottom: 0,
         // NetPad branded canvas background
         bgcolor: colorMode === 'dark' ? '#0a0e14' : '#F8FAF9',
-        // Subtle grid pattern overlay - NetPad identity
+        // Enhanced NetPad grid pattern overlay - signature identity
         backgroundImage: colorMode === 'dark'
-          ? netpadColors.gridPatternDark
-          : netpadColors.gridPatternLight,
-        backgroundSize: netpadColors.gridSize,
+          ? `${netpadColors.gridPatternDark}, 
+             radial-gradient(circle at 50% 50%, rgba(0, 237, 100, 0.03) 0%, transparent 50%),
+             linear-gradient(0deg, transparent 0%, rgba(0, 237, 100, 0.02) 50%, transparent 100%)`
+          : `${netpadColors.gridPatternLight}, 
+             radial-gradient(circle at 50% 50%, rgba(0, 104, 74, 0.05) 0%, transparent 50%),
+             linear-gradient(0deg, transparent 0%, rgba(0, 104, 74, 0.03) 50%, transparent 100%)`,
+        backgroundSize: `${netpadColors.gridSize}, 200% 200%, 100% 200px`,
+        backgroundPosition: '0 0, center, 0 0',
+        backgroundRepeat: 'repeat, no-repeat, repeat-y',
         // Override React Flow styles for dark mode
         '& .react-flow__node': {
           color: colorMode === 'dark' ? '#fff' : 'inherit',
@@ -704,9 +710,21 @@ export function WorkflowEditorCanvas({
         },
         '& .react-flow__edge-path': {
           stroke: colorMode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
+          strokeWidth: 2.5, // Slightly thicker for visibility
+          // NetPad signature: more visible glow on edges
+          filter: colorMode === 'dark'
+            ? 'drop-shadow(0 0 3px rgba(0, 237, 100, 0.4))'
+            : 'drop-shadow(0 0 2px rgba(0, 104, 74, 0.3))',
         },
         '& .react-flow__handle': {
           backgroundColor: colorMode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
+          width: 12,
+          height: 12,
+          // NetPad signature: more visible border and glow on handles
+          border: `3px solid ${colorMode === 'dark' ? 'rgba(0, 237, 100, 0.5)' : 'rgba(0, 104, 74, 0.4)'}`,
+          boxShadow: colorMode === 'dark'
+            ? '0 0 6px rgba(0, 237, 100, 0.5), inset 0 0 4px rgba(0, 237, 100, 0.3)'
+            : '0 0 4px rgba(0, 104, 74, 0.4), inset 0 0 3px rgba(0, 104, 74, 0.2)',
         },
         // Override handle positioning to ensure they're vertically centered on nodes
         '& .react-flow__handle.react-flow__handle-left': {
@@ -740,6 +758,13 @@ export function WorkflowEditorCanvas({
         },
         '& .react-flow__attribution': {
           display: 'none',
+        },
+        // Ensure ReactFlow doesn't block the logo
+        '& .react-flow__viewport': {
+          zIndex: 1,
+        },
+        '& .react-flow__renderer': {
+          zIndex: 1,
         },
       }}
     >
@@ -778,15 +803,11 @@ export function WorkflowEditorCanvas({
         selectionOnDrag={!readOnly}
         proOptions={{ hideAttribution: true }}
       >
-        <Background
+        <NetPadBrandedBackground
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          // NetPad branded dot color - subtle green tint
-          color={theme.palette.mode === 'dark'
-            ? 'rgba(0, 237, 100, 0.08)' // Subtle green dots in dark mode
-            : 'rgba(0, 104, 74, 0.12)'  // Darker green dots in light mode
-          }
+          isEmbedded={isEmbedded}
         />
         {!isEmbedded && (
           <Controls

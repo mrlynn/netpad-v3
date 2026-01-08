@@ -234,6 +234,7 @@ export function AppNavBar() {
       position="static"
       elevation={0}
       sx={{
+        borderRadius: 0, // Explicitly override theme for structural navigation element
         bgcolor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',

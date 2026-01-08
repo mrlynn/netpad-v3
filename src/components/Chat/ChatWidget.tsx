@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Box,
   Paper,
@@ -37,19 +37,11 @@ const HIDDEN_ROUTES = [
 ];
 
 export function ChatWidget() {
+  // ALL hooks must be called before any early returns
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const theme = useTheme();
-
-  // Check if embedded via URL params
-  const isEmbedded = typeof window !== 'undefined' && 
-    new URLSearchParams(window.location.search).get('embedded') === 'true';
-
-  // Hide on public form pages, auth pages, and when embedded
-  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route)) || isEmbedded;
-
-  if (shouldHide) {
-    return null;
-  }
+  const [mounted, setMounted] = useState(false);
   const {
     isOpen,
     openChat,
@@ -58,15 +50,18 @@ export function ChatWidget() {
     isLoading,
     clearMessages,
   } = useChat();
-
   const [isMinimized, setIsMinimized] = useState(false);
   const [view, setView] = useState<ChatView>('home');
   const containerRef = useRef<HTMLDivElement>(null);
-
   // Count unread messages (messages since last close)
   const [lastSeenCount, setLastSeenCount] = useState(messages.length);
-  const unreadCount = isOpen ? 0 : Math.max(0, messages.length - lastSeenCount);
 
+  // Only check embedded status after mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Update last seen count when chat opens
   useEffect(() => {
     if (isOpen) {
       setLastSeenCount(messages.length);
@@ -89,6 +84,19 @@ export function ChatWidget() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
+
+  // Check if embedded via URL params (only after mount to prevent hydration mismatch)
+  // During SSR, isEmbedded will be false, then on client mount it will be re-evaluated
+  const isEmbedded = mounted ? searchParams.get('embedded') === 'true' : false;
+
+  // Hide on public form pages, auth pages, and when embedded
+  const shouldHide = HIDDEN_ROUTES.some(route => pathname?.startsWith(route)) || isEmbedded;
+
+  if (shouldHide) {
+    return null;
+  }
+
+  const unreadCount = isOpen ? 0 : Math.max(0, messages.length - lastSeenCount);
 
   if (!isOpen) {
     // Floating action button when closed

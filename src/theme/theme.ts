@@ -384,6 +384,17 @@ const sharedComponents: ThemeOptions['components'] = {
 // Component overrides for dark mode
 const darkComponents: ThemeOptions['components'] = {
   ...sharedComponents,
+  MuiAppBar: {
+    defaultProps: {
+      elevation: 0,
+    },
+    styleOverrides: {
+      root: {
+        // Structural navigation bar - should be square (no rounded corners)
+        borderRadius: 0,
+      },
+    },
+  },
   MuiPaper: {
     defaultProps: {
       elevation: 0, // Prefer borders over shadows for calm UI
@@ -394,6 +405,11 @@ const darkComponents: ThemeOptions['components'] = {
         backgroundSize: netpadColors.gridSize,
         border: '1px solid rgba(110, 118, 129, 0.12)',
         borderRadius: 12,
+        // Structural containers (navbars, palettes, full-bleed bars) use the "square" prop
+        // so they sit flush against viewport edges without rounded corners.
+        '&.MuiPaper-square': {
+          borderRadius: 0,
+        },
         // Subtle inner highlight at top - signature NetPad styling
         boxShadow: 'inset 0 1px 0 rgba(0, 237, 100, 0.05)',
       },
@@ -510,6 +526,17 @@ const darkComponents: ThemeOptions['components'] = {
 // Component overrides for light mode
 const lightComponents: ThemeOptions['components'] = {
   ...sharedComponents,
+  MuiAppBar: {
+    defaultProps: {
+      elevation: 0,
+    },
+    styleOverrides: {
+      root: {
+        // Structural navigation bar - should be square (no rounded corners)
+        borderRadius: 0,
+      },
+    },
+  },
   MuiPaper: {
     defaultProps: {
       elevation: 0,
@@ -520,6 +547,11 @@ const lightComponents: ThemeOptions['components'] = {
         backgroundSize: netpadColors.gridSize,
         border: '1px solid rgba(0, 104, 74, 0.1)',
         borderRadius: 12,
+        // Structural containers (navbars, palettes, full-bleed bars) use the "square" prop
+        // so they sit flush against viewport edges without rounded corners.
+        '&.MuiPaper-square': {
+          borderRadius: 0,
+        },
         // Subtle top highlight for depth
         boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)',
       },

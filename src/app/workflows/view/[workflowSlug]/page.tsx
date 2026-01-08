@@ -87,9 +87,21 @@ function WorkflowViewerInner({ workflowSlug }: { workflowSlug: string }) {
         }
 
         // Load workflow into store
-        setWorkflow(data.workflow as WorkflowDocument);
+        const workflowData = data.workflow as WorkflowDocument;
+        setWorkflow(workflowData);
         setError(null);
-        postMessage('loaded', { workflow: data.workflow });
+        postMessage('loaded', { workflow: workflowData });
+        
+        // Debug: Log workflow data
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Workflow Viewer] Loaded workflow:', {
+            id: workflowData.id,
+            name: workflowData.name,
+            slug: workflowData.slug,
+            nodesCount: workflowData.canvas?.nodes?.length || 0,
+            edgesCount: workflowData.canvas?.edges?.length || 0,
+          });
+        }
       } catch (err: any) {
         const errorMessage = err.message || 'Failed to load workflow';
         setError(errorMessage);
@@ -152,21 +164,23 @@ function WorkflowViewerInner({ workflowSlug }: { workflowSlug: string }) {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: isEmbedded ? '600px' : '100vh',
+        height: isEmbedded ? '100%' : 'auto',
         bgcolor: 'background.default',
         display: 'flex',
         flexDirection: 'column',
         ...(isEmbedded && {
-          minHeight: 'auto',
           bgcolor: 'transparent',
         }),
       }}
     >
-      {/* Header */}
+      {/* Header - structural bar; should sit flush with container edges */}
       {!hideHeader && (
         <Paper
+          square
           elevation={0}
           sx={{
+            borderRadius: 0, // Explicitly override theme for structural element
             p: 2,
             borderBottom: '1px solid',
             borderColor: 'divider',
@@ -185,8 +199,80 @@ function WorkflowViewerInner({ workflowSlug }: { workflowSlug: string }) {
       )}
 
       {/* Workflow Canvas */}
-      <Box sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
-        <WorkflowEditorCanvas readOnly={true} isEmbedded={isEmbedded} />
+      <Box 
+        sx={{ 
+          flex: 1, 
+          position: 'relative', 
+          minHeight: isEmbedded ? '600px' : 0,
+          height: isEmbedded ? '100%' : 'auto',
+          width: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        {workflow?.canvas?.nodes?.length === 0 ? (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              minHeight: '400px',
+              color: 'text.secondary',
+            }}
+          >
+            <Typography variant="body1">
+              This workflow has no nodes to display.
+            </Typography>
+          </Box>
+        ) : (
+          <WorkflowEditorCanvas readOnly={true} isEmbedded={isEmbedded} />
+        )}
+        
+        {/* NetPad Branding Logo for Embedded Workflows - positioned within canvas bounds */}
+        {isEmbedded && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 12,
+              right: 12,
+              zIndex: 10000,
+              pointerEvents: 'none',
+              userSelect: 'none',
+              display: 'block',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.4)',
+              padding: '4px 8px',
+              borderRadius: 2,
+              backdropFilter: 'blur(6px)',
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 6px rgba(0, 0, 0, 0.4)' 
+                : '0 2px 6px rgba(0, 0, 0, 0.15)',
+              maxWidth: 'calc(100% - 24px)', // Ensure it doesn't overflow
+            }}
+          >
+            <Box
+              component="img"
+              src="/logo-simple.svg"
+              alt="NetPad"
+              sx={{
+                width: 80,
+                height: 'auto',
+                maxWidth: '100%',
+                opacity: 0.7,
+                display: 'block',
+                filter: theme.palette.mode === 'dark' 
+                  ? 'brightness(0) invert(1) opacity(0.6)' 
+                  : 'brightness(0) opacity(0.5)',
+              }}
+              onError={(e) => {
+                console.error('[Workflow Viewer] Logo failed to load:', e);
+                (e.target as HTMLImageElement).src = '/logo-sm.svg';
+              }}
+              onLoad={() => {
+                console.log('[Workflow Viewer] Logo loaded successfully');
+              }}
+            />
+          </Box>
+        )}
       </Box>
 
       {/* Branding */}

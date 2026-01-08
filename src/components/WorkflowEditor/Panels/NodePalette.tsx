@@ -319,9 +319,11 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
 
   return (
     <Paper
+      square
       elevation={0}
       data-tour="node-palette"
       sx={{
+        borderRadius: 0, // Explicitly override theme for structural element
         width: 280,
         height: '100%',
         display: 'flex',

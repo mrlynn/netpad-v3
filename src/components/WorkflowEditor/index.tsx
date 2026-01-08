@@ -512,11 +512,13 @@ function WorkflowEditorInner({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
-      {/* Toolbar */}
+      {/* Toolbar - structural bar under the global navbar, should be square at the top */}
       <Paper
+        square
         elevation={0}
         data-tour="workflow-toolbar"
         sx={{
+          borderRadius: 0, // Explicitly override theme for structural element
           borderBottom: `1px solid ${theme.palette.divider}`,
           zIndex: 10,
         }}
