@@ -46,6 +46,15 @@ export default function CookieConsentModal() {
     hideModal,
   } = useConsent();
 
+  // Don't show cookie consent in embedded contexts
+  const isEmbedded = typeof window !== 'undefined' && 
+    (new URLSearchParams(window.location.search).get('embedded') === 'true' ||
+     window.self !== window.top);
+  
+  if (isEmbedded || modalState === 'hidden') {
+    return null;
+  }
+
   // Local state for preference toggles
   const [localPrefs, setLocalPrefs] = useState<Omit<ConsentPreferences, 'essential'>>({
     functional: savedPreferences.functional,

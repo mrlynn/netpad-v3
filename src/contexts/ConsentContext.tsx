@@ -115,6 +115,25 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
 
   // Initialize consent state on mount
   useEffect(() => {
+    // Check if page is embedded - if so, suppress cookie consent banner
+    const isEmbedded = typeof window !== 'undefined' && 
+      (new URLSearchParams(window.location.search).get('embedded') === 'true' ||
+       window.self !== window.top); // Also check if in iframe
+    
+    if (isEmbedded) {
+      // For embeds, use minimal consent (essential only) and don't show banner
+      setPreferences({
+        essential: true,
+        functional: false,
+        analytics: false,
+        marketing: false,
+      });
+      setHasConsented(true);
+      setModalState('hidden');
+      setIsLoading(false);
+      return;
+    }
+
     // Get or create visitor ID
     let vid = getCookie(VISITOR_ID_COOKIE_NAME);
     if (!vid) {
