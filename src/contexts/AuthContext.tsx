@@ -14,6 +14,7 @@ interface User {
   trustedDeviceCount: number;
   createdAt: string;
   lastLoginAt?: string;
+  platformRole?: 'admin' | 'support' | null;
 }
 
 interface SessionInfo {

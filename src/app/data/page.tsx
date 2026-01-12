@@ -15,9 +15,14 @@ import { Box } from '@mui/material';
 
 export default function DataRedirect() {
   const router = useRouter();
-  const { organization } = useOrganization();
+  const { organization, isLoading } = useOrganization();
 
   useEffect(() => {
+    // Wait for organization context to finish loading
+    if (isLoading) {
+      return;
+    }
+
     if (!organization?.orgId) {
       router.replace('/settings');
       return;
@@ -43,7 +48,7 @@ export default function DataRedirect() {
           router.replace(`/orgs/${organization.orgId}/projects`);
         });
     }
-  }, [organization, router]);
+  }, [organization, router, isLoading]);
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>

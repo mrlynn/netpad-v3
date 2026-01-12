@@ -23,6 +23,7 @@ import {
   DEFAULT_WORKFLOW_STATS,
   createEmptyCanvas,
 } from '@/types/workflow';
+import { generateWorkflowThumbnail } from '@/lib/thumbnail/workflowThumbnail';
 
 // ============================================
 // ZUSTAND STORE (for undo/redo support)
@@ -416,6 +417,61 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
 );
 
 // ============================================
+// EDGE MIGRATION (for multi-output handles)
+// ============================================
+
+/**
+ * Logic node types that have multiple output handles
+ */
+const LOGIC_NODE_TYPES = ['conditional', 'switch', 'loop'];
+
+/**
+ * Migrates edges from legacy single 'output' handle to new multi-output handles
+ * for logic nodes. This ensures backward compatibility when loading older workflows.
+ */
+function migrateEdgesForMultiOutput(workflow: WorkflowDocument): WorkflowDocument {
+  const migratedEdges = workflow.canvas.edges.map(edge => {
+    // Find source node to check if it's a logic node
+    const sourceNode = workflow.canvas.nodes.find(n => n.id === edge.source);
+    if (!sourceNode) return edge;
+
+    // Only migrate if source is a logic node and sourceHandle is legacy 'output'
+    if (LOGIC_NODE_TYPES.includes(sourceNode.type) && edge.sourceHandle === 'output') {
+      // Map legacy 'output' to the appropriate default handle for each node type
+      const newHandle: Record<string, string> = {
+        'conditional': 'true',    // Default to 'true' branch
+        'loop': 'loop_body',      // Default to iteration body
+        'switch': 'default',      // Default to fallback case
+      };
+
+      return {
+        ...edge,
+        sourceHandle: newHandle[sourceNode.type] || edge.sourceHandle,
+      };
+    }
+
+    return edge;
+  });
+
+  // Only return new object if edges were actually changed
+  const edgesChanged = migratedEdges.some((edge, i) =>
+    edge.sourceHandle !== workflow.canvas.edges[i].sourceHandle
+  );
+
+  if (edgesChanged) {
+    return {
+      ...workflow,
+      canvas: {
+        ...workflow.canvas,
+        edges: migratedEdges,
+      },
+    };
+  }
+
+  return workflow;
+}
+
+// ============================================
 // CONTEXT (for API operations)
 // ============================================
 
@@ -523,7 +579,9 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || 'Failed to load workflow');
       }
 
-      store.getState().setWorkflow(data.workflow);
+      // Apply edge migration for multi-output handles (backward compatibility)
+      const migratedWorkflow = migrateEdgesForMultiOutput(data.workflow);
+      store.getState().setWorkflow(migratedWorkflow);
     } catch (error) {
       store.getState().setError(error instanceof Error ? error.message : 'Failed to load workflow');
     } finally {
@@ -562,6 +620,48 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       }
 
       store.getState().setWorkflow(data.workflow);
+
+      // Generate thumbnail in background (don't block UI)
+      const savedWorkflow = data.workflow;
+      if (savedWorkflow && orgId) {
+        // Use setTimeout to not block the UI
+        setTimeout(async () => {
+          console.log('[WorkflowContext] Starting thumbnail generation...');
+          try {
+            const thumbnailData = {
+              workflowName: savedWorkflow.name || 'Untitled Workflow',
+              workflowDescription: savedWorkflow.description,
+              nodes: savedWorkflow.canvas?.nodes || [],
+              edges: savedWorkflow.canvas?.edges || [],
+              primaryColor: '#9C27B0',
+              status: savedWorkflow.status,
+            };
+
+            const thumbnailUrl = await generateWorkflowThumbnail(
+              thumbnailData,
+              savedWorkflow.id,
+              orgId
+            );
+            if (thumbnailUrl) {
+              console.log('[WorkflowContext] Thumbnail generated successfully:', thumbnailUrl);
+              // Update the workflow in the store with the new thumbnail URL
+              const currentWorkflow = store.getState().workflow;
+              if (currentWorkflow && currentWorkflow.id === savedWorkflow.id) {
+                store.getState().setWorkflow({
+                  ...currentWorkflow,
+                  thumbnailUrl,
+                });
+              }
+            } else {
+              console.warn('[WorkflowContext] Thumbnail generation returned null');
+            }
+          } catch (err) {
+            // Thumbnail generation failure is not critical, just log it
+            console.error('[WorkflowContext] Thumbnail generation failed:', err);
+          }
+        }, 100);
+      }
+
       return true;
     } catch (error) {
       store.getState().setError(error instanceof Error ? error.message : 'Failed to save workflow');

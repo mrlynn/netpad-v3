@@ -18,7 +18,9 @@ import {
 import { Close, Edit, Visibility, VisibilityOff, Refresh } from '@mui/icons-material';
 import { FormConfiguration } from '@/types/form';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
+import { ConversationalFormChat } from '@/components/ConversationalForm';
 import { getResolvedTheme } from '@/lib/formThemes';
+import { ConversationState } from '@/types/conversational';
 
 export default function FormPreviewPage() {
   const params = useParams();
@@ -58,6 +60,22 @@ export default function FormPreviewPage() {
   const handleSubmit = async (formData: Record<string, any>) => {
     // In preview mode, we don't actually submit - just show what would happen
     alert('Preview Mode: Form would be submitted with the following data:\n\n' + JSON.stringify(formData, null, 2));
+  };
+
+  // Handle conversational form completion in preview mode
+  const handleConversationalComplete = (conversationState: ConversationState) => {
+    // In preview mode, show what would be submitted
+    const previewData = {
+      extractedData: conversationState.partialExtractions,
+      conversationMetadata: {
+        conversationId: conversationState.conversationId,
+        turnCount: conversationState.turnCount,
+        confidence: conversationState.confidence,
+        topicsCovered: conversationState.topics,
+        messages: conversationState.messages,
+      },
+    };
+    alert('Preview Mode: Conversational form would be submitted with:\n\n' + JSON.stringify(previewData, null, 2));
   };
 
   if (loading) {
@@ -262,11 +280,19 @@ export default function FormPreviewPage() {
 
         {/* Form Content */}
         <Paper sx={{ p: { xs: 2, md: 4 } }}>
-          <FormRenderer
-            form={form}
-            onSubmit={handleSubmit}
-            isPreview={true}
-          />
+          {form.formType === 'conversational' && form.conversationalConfig ? (
+            <ConversationalFormChat
+              formId={form.id || formId}
+              config={form.conversationalConfig}
+              onComplete={handleConversationalComplete}
+            />
+          ) : (
+            <FormRenderer
+              form={form}
+              onSubmit={handleSubmit}
+              isPreview={true}
+            />
+          )}
         </Paper>
 
         {/* Footer */}

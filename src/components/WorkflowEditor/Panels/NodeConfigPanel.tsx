@@ -42,22 +42,12 @@ import {
   Palette as PaletteIcon,
   Circle as CircleIcon,
 } from '@mui/icons-material';
-import { WorkflowNode, RetryPolicy } from '@/types/workflow';
+import { WorkflowNode, RetryPolicy, StickyNoteStyle } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
 import { DataContextPanel } from './DataContextPanel';
 import { ConditionBuilder, ConditionGroup, conditionGroupToExpression } from './ConditionBuilder';
 import { VariablePickerButton } from '../VariablePicker';
-
-// Sticky note color options (matching StickyNote.tsx)
-const STICKY_COLORS = [
-  { name: 'Yellow', value: '#FFF9C4', border: '#FBC02D' },
-  { name: 'Green', value: '#C8E6C9', border: '#66BB6A' },
-  { name: 'Blue', value: '#BBDEFB', border: '#42A5F5' },
-  { name: 'Pink', value: '#F8BBD0', border: '#EC407A' },
-  { name: 'Orange', value: '#FFE0B2', border: '#FFA726' },
-  { name: 'Purple', value: '#E1BEE7', border: '#AB47BC' },
-  { name: 'Gray', value: '#ECEFF1', border: '#78909C' },
-];
+import { STICKY_NOTE_PRESETS, getStyleFromConfig } from '../Nodes/StickyNote';
 
 interface NodeConfigPanelProps {
   open: boolean;
@@ -83,12 +73,12 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   ],
   'conditional': [
     { key: 'condition', label: 'Condition', type: 'condition-builder', description: 'Define conditions for branching' },
+    { key: 'includeElse', label: 'Include Else Output', type: 'boolean', description: 'Add a third "Else" output handle for fallback cases' },
   ],
   'switch': [
     { key: 'field', label: 'Field to Match', type: 'text', description: 'Data path to evaluate (e.g., "status", "user.role")' },
     { key: 'matchMode', label: 'Match Mode', type: 'select', options: ['exact', 'contains', 'regex', 'range'], description: 'How to compare values' },
-    { key: 'cases', label: 'Cases', type: 'code', description: 'Array of cases: [{ "value": "active", "output": "active-branch" }, ...]' },
-    { key: 'defaultOutput', label: 'Default Output', type: 'text', description: 'Output branch when no case matches (default: "default")' },
+    { key: 'cases', label: 'Cases', type: 'switch-cases', description: 'Define case values and their output branches' },
   ],
   'code': [
     { key: 'code', label: 'JavaScript Code', type: 'code', description: 'Code to execute. Use "input" for node inputs, "return" to output data.' },
@@ -193,9 +183,80 @@ const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
 interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'condition-builder';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'condition-builder' | 'switch-cases';
   options?: string[];
   description?: string;
+}
+
+// Switch case item type
+interface SwitchCase {
+  value: string;
+  label?: string;
+}
+
+// SwitchCasesEditor component for managing switch node cases
+function SwitchCasesEditor({
+  cases,
+  onChange,
+}: {
+  cases: SwitchCase[];
+  onChange: (cases: SwitchCase[]) => void;
+}) {
+  const theme = useTheme();
+
+  const addCase = () => {
+    onChange([...cases, { value: '', label: '' }]);
+  };
+
+  const updateCase = (index: number, field: 'value' | 'label', newValue: string) => {
+    const newCases = [...cases];
+    newCases[index] = { ...newCases[index], [field]: newValue };
+    onChange(newCases);
+  };
+
+  const removeCase = (index: number) => {
+    onChange(cases.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+        Switch Cases
+      </Typography>
+      {cases.map((caseItem, index) => (
+        <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Value to match"
+            value={caseItem.value}
+            onChange={(e) => updateCase(index, 'value', e.target.value)}
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            size="small"
+            placeholder="Label (optional)"
+            value={caseItem.label || ''}
+            onChange={(e) => updateCase(index, 'label', e.target.value)}
+            sx={{ flex: 1 }}
+          />
+          <IconButton size="small" onClick={() => removeCase(index)} color="error">
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ))}
+      <Button
+        size="small"
+        onClick={addCase}
+        variant="outlined"
+        sx={{ mt: 1 }}
+      >
+        + Add Case
+      </Button>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+        A "Default" output is always added automatically for unmatched values.
+      </Typography>
+    </Box>
+  );
 }
 
 // Default condition group
@@ -435,9 +496,15 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
   const isConditionalNode = selectedNode.type === 'conditional';
   const isStickyNote = selectedNode.type === 'sticky-note';
 
-  // Get current sticky note color
-  const currentStickyColor = config.bgColor as string || STICKY_COLORS[0].value;
-  const currentStickyColorObj = STICKY_COLORS.find(c => c.value === currentStickyColor) || STICKY_COLORS[0];
+  // Get current sticky note style
+  const currentStickyStyle = getStyleFromConfig(config);
+  const currentStickyPreset = STICKY_NOTE_PRESETS.find(
+    (p) =>
+      (p.style.bgColor === currentStickyStyle.bgColor && p.style.bgType === 'solid') ||
+      (p.style.bgType === 'gradient' &&
+        currentStickyStyle.bgType === 'gradient' &&
+        JSON.stringify(p.style.gradient) === JSON.stringify(currentStickyStyle.gradient))
+  );
 
   // Render config field based on type
   const renderConfigField = (field: ConfigField) => {
@@ -743,6 +810,14 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
             />
           </Box>
         );
+      case 'switch-cases':
+        return (
+          <SwitchCasesEditor
+            key={field.key}
+            cases={(value as SwitchCase[]) || []}
+            onChange={(newCases) => handleConfigChange(field.key, newCases)}
+          />
+        );
       default:
         return null;
     }
@@ -882,6 +957,26 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
                   }}
                 />
               )}
+
+              {/* Include Else Output Toggle */}
+              <Divider sx={{ my: 2 }} />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={Boolean(config.includeElse)}
+                    onChange={(e) => handleConfigChange('includeElse', e.target.checked)}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2">Include Else Output</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Add a third "Else" output handle for fallback cases
+                    </Typography>
+                  </Box>
+                }
+                sx={{ display: 'flex' }}
+              />
             </AccordionDetails>
           </Accordion>
         )}
@@ -922,39 +1017,111 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
                 }}
               />
 
-              {/* Color Selection */}
+              {/* Style Selection */}
               <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                Note Color
+                Note Style
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {STICKY_COLORS.map((color) => (
+
+              {/* Solid Colors */}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Solid Colors
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+                {STICKY_NOTE_PRESETS.slice(0, 8).map((preset) => (
                   <IconButton
-                    key={color.name}
-                    onClick={() => handleConfigChange('bgColor', color.value)}
+                    key={preset.name}
+                    onClick={() => {
+                      handleConfigChange('style', preset.style);
+                      if (preset.style.bgColor) {
+                        handleConfigChange('bgColor', preset.style.bgColor);
+                      }
+                    }}
                     size="small"
+                    title={preset.name}
                     sx={{
-                      p: 0.5,
-                      border: currentStickyColor === color.value ? `2px solid ${color.border}` : '2px solid transparent',
+                      p: 0.25,
+                      border: currentStickyPreset?.name === preset.name ? `2px solid ${preset.preview.border}` : '2px solid transparent',
                       borderRadius: 1,
-                      bgcolor: color.value,
-                      '&:hover': {
-                        bgcolor: color.value,
-                        opacity: 0.9,
-                      },
                     }}
                   >
-                    <CircleIcon
+                    <Box
                       sx={{
-                        fontSize: 24,
-                        color: color.border,
-                        opacity: currentStickyColor === color.value ? 1 : 0.6,
+                        width: 24,
+                        height: 24,
+                        borderRadius: 0.5,
+                        background: preset.preview.bg,
+                        border: `1px solid ${preset.preview.border}`,
                       }}
                     />
                   </IconButton>
                 ))}
               </Box>
+
+              {/* Gradients */}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Gradients
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+                {STICKY_NOTE_PRESETS.slice(8, 14).map((preset) => (
+                  <IconButton
+                    key={preset.name}
+                    onClick={() => handleConfigChange('style', preset.style)}
+                    size="small"
+                    title={preset.name}
+                    sx={{
+                      p: 0.25,
+                      border: currentStickyPreset?.name === preset.name ? `2px solid ${preset.preview.border}` : '2px solid transparent',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 0.5,
+                        background: preset.preview.bg,
+                        border: `1px solid ${preset.preview.border}`,
+                      }}
+                    />
+                  </IconButton>
+                ))}
+              </Box>
+
+              {/* Special Effects */}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                Special Effects
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                {STICKY_NOTE_PRESETS.slice(14).map((preset) => (
+                  <IconButton
+                    key={preset.name}
+                    onClick={() => handleConfigChange('style', preset.style)}
+                    size="small"
+                    title={preset.name}
+                    sx={{
+                      p: 0.25,
+                      border: currentStickyPreset?.name === preset.name ? `2px solid ${preset.preview.border}` : '2px solid transparent',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 0.5,
+                        background: preset.preview.bg,
+                        border: `1px solid ${preset.preview.border}`,
+                        ...(preset.style.borderStyle === 'glow' && {
+                          boxShadow: `0 0 4px ${preset.preview.border}`,
+                        }),
+                      }}
+                    />
+                  </IconButton>
+                ))}
+              </Box>
+
               <Typography variant="caption" color="text.secondary">
-                Current: {currentStickyColorObj.name}
+                Current: {currentStickyPreset?.name || 'Custom'}
               </Typography>
 
               {/* Size Info */}

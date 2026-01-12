@@ -15,6 +15,7 @@ import {
   SUBSCRIPTION_TIERS,
   OrganizationUsage,
 } from '@/types/platform';
+import type { ClusterInstanceSize } from '@/lib/atlas/types';
 
 // ============================================
 // Types
@@ -31,8 +32,10 @@ export type UsageLimitKey =
 
 export interface FeatureGateResult {
   hasAccess: boolean;
-  reason?: 'tier_required' | 'limit_reached' | 'not_configured' | 'loading';
+  reason?: 'tier_required' | 'limit_reached' | 'not_configured' | 'loading' | 'cluster_upgrade_required';
   requiredTier?: SubscriptionTier;
+  requiredClusterTier?: ClusterInstanceSize;
+  currentClusterTier?: ClusterInstanceSize | null;
   currentUsage?: number;
   limit?: number;
   remaining?: number;
@@ -69,7 +72,44 @@ interface CachedSubscriptionData {
   platformFeatures: PlatformFeature[];
   limits: TierLimits;
   usage: OrganizationUsage;
+  clusterTier?: ClusterInstanceSize | null;
   fetchedAt: number;
+}
+
+/**
+ * RAG features that require cluster tier checks
+ */
+const RAG_FEATURES: AIFeature[] = [
+  'rag_conversational_forms',
+  'rag_document_upload',
+  'rag_vector_search',
+];
+
+/**
+ * Minimum cluster tier required for RAG features
+ */
+const RAG_REQUIRED_CLUSTER_TIER: ClusterInstanceSize = 'M10';
+
+/**
+ * Cluster tier ordering for comparison
+ */
+const CLUSTER_TIER_ORDER: ClusterInstanceSize[] = ['M0', 'M2', 'M5', 'M10', 'M20', 'M30', 'M40', 'M50', 'M60'];
+
+/**
+ * Check if a cluster tier meets the minimum requirement
+ */
+function meetsClusterTierRequirement(
+  currentTier: ClusterInstanceSize | null | undefined,
+  requiredTier: ClusterInstanceSize
+): boolean {
+  if (!currentTier) return false;
+
+  const currentIndex = CLUSTER_TIER_ORDER.indexOf(currentTier);
+  const requiredIndex = CLUSTER_TIER_ORDER.indexOf(requiredTier);
+
+  if (currentIndex === -1 || requiredIndex === -1) return false;
+
+  return currentIndex >= requiredIndex;
 }
 
 let subscriptionCache: CachedSubscriptionData | null = null;
@@ -141,11 +181,9 @@ export function useFeatureGate(
       // Check if feature is available in this tier
       const isAIFeature = data.aiFeatures.includes(feature as AIFeature);
       const isPlatformFeature = data.platformFeatures.includes(feature as PlatformFeature);
-      const hasAccess = isAIFeature || isPlatformFeature;
+      const hasTierAccess = isAIFeature || isPlatformFeature;
 
-      if (hasAccess) {
-        setResult({ hasAccess: true });
-      } else {
+      if (!hasTierAccess) {
         // Find the lowest tier that has this feature
         const requiredTier = findRequiredTier(feature);
         setResult({
@@ -154,7 +192,30 @@ export function useFeatureGate(
           requiredTier,
           upgradeUrl: `/settings/billing?upgrade=${requiredTier}&feature=${feature}`,
         });
+        return;
       }
+
+      // For RAG features, also check cluster tier requirement
+      if (RAG_FEATURES.includes(feature as AIFeature)) {
+        const hasClusterAccess = meetsClusterTierRequirement(
+          data.clusterTier,
+          RAG_REQUIRED_CLUSTER_TIER
+        );
+
+        if (!hasClusterAccess) {
+          setResult({
+            hasAccess: false,
+            reason: 'cluster_upgrade_required',
+            requiredClusterTier: RAG_REQUIRED_CLUSTER_TIER,
+            currentClusterTier: data.clusterTier,
+            upgradeUrl: `/settings/cluster?upgrade=${RAG_REQUIRED_CLUSTER_TIER}&feature=${feature}`,
+          });
+          return;
+        }
+      }
+
+      // All checks passed
+      setResult({ hasAccess: true });
     }
 
     checkAccess();
@@ -687,4 +748,55 @@ export function getTierColor(tier: SubscriptionTier): string {
 export function isTierHigherThan(tier1: SubscriptionTier, tier2: SubscriptionTier): boolean {
   const order: SubscriptionTier[] = ['free', 'pro', 'team', 'enterprise'];
   return order.indexOf(tier1) > order.indexOf(tier2);
+}
+
+// ============================================
+// RAG Feature Gate Hooks
+// ============================================
+
+/**
+ * Result of RAG feature access check with detailed cluster info
+ */
+export interface RAGFeatureGateResult extends FeatureGateResult {
+  isRAGFeature: true;
+  clusterTierMet: boolean;
+}
+
+/**
+ * Check if the current organization has access to RAG features
+ * Provides detailed information about both subscription and cluster tier requirements
+ */
+export function useRAGFeatureGate(
+  feature: 'rag_conversational_forms' | 'rag_document_upload' | 'rag_vector_search',
+  orgId?: string
+): RAGFeatureGateResult {
+  const baseResult = useFeatureGate(feature, orgId);
+
+  // Determine if cluster tier is met
+  const clusterTierMet = baseResult.reason !== 'cluster_upgrade_required';
+
+  return {
+    ...baseResult,
+    isRAGFeature: true,
+    clusterTierMet,
+  };
+}
+
+/**
+ * Get human-readable cluster tier name
+ */
+export function getClusterTierDisplayName(tier: ClusterInstanceSize | null | undefined): string {
+  if (!tier) return 'Not provisioned';
+  return tier; // M10, M20, etc. are already readable
+}
+
+/**
+ * Get cluster tier upgrade URL
+ */
+export function getClusterUpgradeUrl(
+  currentTier: ClusterInstanceSize | null | undefined,
+  requiredTier: ClusterInstanceSize
+): string {
+  const current = currentTier || 'none';
+  return `/settings/cluster?upgrade=${requiredTier}&current=${current}`;
 }

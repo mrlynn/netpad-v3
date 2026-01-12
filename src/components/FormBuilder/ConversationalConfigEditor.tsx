@@ -35,7 +35,10 @@ import {
   LocalHospital,
   MedicalServices,
   RateReview,
+  MenuBook,
 } from '@mui/icons-material';
+import { RAGConfig, RAGRetrievalConfig, DEFAULT_RAG_RETRIEVAL_CONFIG } from '@/types/rag';
+import DocumentAttachmentPanel from './DocumentAttachmentPanel';
 import { FormType, FieldConfig } from '@/types/form';
 import {
   ConversationalFormConfig,
@@ -58,6 +61,10 @@ interface ConversationalConfigEditorProps {
   fieldConfigs: FieldConfig[];
   /** Optional callback to generate form fields from extraction schema */
   onGenerateFieldsFromSchema?: (schema: ExtractionSchema[]) => void;
+  /** Form ID (required for RAG document management) */
+  formId?: string;
+  /** Organization ID (required for RAG document management) */
+  organizationId?: string;
 }
 
 const DEFAULT_CONFIG: ConversationalFormConfig = {
@@ -142,6 +149,8 @@ export function ConversationalConfigEditor({
   onChange,
   fieldConfigs,
   onGenerateFieldsFromSchema,
+  formId,
+  organizationId,
 }: ConversationalConfigEditorProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['basics', 'topics']);
   const isConversational = formType === 'conversational';
@@ -299,6 +308,31 @@ export function ConversationalConfigEditor({
 
     onChange(templateConfig);
   };
+
+  // RAG Configuration helpers
+  const updateRAGConfig = (updates: Partial<RAGConfig>) => {
+    const currentRAG = config?.rag || {
+      enabled: false,
+      documents: [],
+      retrievalConfig: DEFAULT_RAG_RETRIEVAL_CONFIG,
+    };
+    updateConfig({
+      rag: { ...currentRAG, ...updates },
+    });
+  };
+
+  const updateRetrievalConfig = (updates: Partial<RAGRetrievalConfig>) => {
+    const currentRetrieval = config?.rag?.retrievalConfig || DEFAULT_RAG_RETRIEVAL_CONFIG;
+    updateRAGConfig({
+      retrievalConfig: { ...currentRetrieval, ...updates },
+    });
+  };
+
+  const handleRAGDocumentsChange = (documentIds: string[]) => {
+    updateRAGConfig({ documents: documentIds });
+  };
+
+  const ragEnabled = config?.rag?.enabled || false;
 
   return (
     <Box>
@@ -536,7 +570,7 @@ export function ConversationalConfigEditor({
         </Paper>
 
         {/* Topics Section */}
-        <Paper sx={{ mb: 2 }}>
+        <Paper sx={{ mb: 2, overflow: 'visible' }}>
           <Box
             sx={{
               p: 2,
@@ -562,12 +596,12 @@ export function ConversationalConfigEditor({
           </Box>
 
           <Collapse in={expandedSections.includes('topics')}>
-            <Box sx={{ p: 2, pt: 0 }}>
+            <Box sx={{ p: 2, pt: 0, overflow: 'visible' }}>
               {config?.topics?.map((topic, index) => (
                 <Paper
                   key={topic.id}
                   variant="outlined"
-                  sx={{ p: 2, mb: 2, bgcolor: 'action.hover' }}
+                  sx={{ p: 2, mb: 2, bgcolor: 'action.hover', overflow: 'visible', position: 'relative' }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                     <TextField
@@ -609,6 +643,13 @@ export function ConversationalConfigEditor({
                             priority: e.target.value as ConversationTopic['priority'],
                           })
                         }
+                        MenuProps={{
+                          PaperProps: {
+                            style: {
+                              maxHeight: 300,
+                            },
+                          },
+                        }}
                       >
                         {TOPIC_PRIORITIES.map((p) => (
                           <MenuItem key={p.value} value={p.value}>
@@ -636,6 +677,13 @@ export function ConversationalConfigEditor({
                             depth: e.target.value as ConversationTopic['depth'],
                           })
                         }
+                        MenuProps={{
+                          PaperProps: {
+                            style: {
+                              maxHeight: 300,
+                            },
+                          },
+                        }}
                       >
                         {TOPIC_DEPTHS.map((d) => (
                           <MenuItem key={d.value} value={d.value}>
@@ -653,6 +701,21 @@ export function ConversationalConfigEditor({
                         onChange={(e) =>
                           updateTopic(index, { extractionField: e.target.value || undefined })
                         }
+                        MenuProps={{
+                          PaperProps: {
+                            style: {
+                              maxHeight: 300,
+                            },
+                          },
+                          anchorOrigin: {
+                            vertical: 'bottom',
+                            horizontal: 'left',
+                          },
+                          transformOrigin: {
+                            vertical: 'top',
+                            horizontal: 'left',
+                          },
+                        }}
                       >
                         <MenuItem value="">None</MenuItem>
                         {config?.extractionSchema?.map((schema) => (
@@ -1043,6 +1106,155 @@ export function ConversationalConfigEditor({
               >
                 Add Field
               </Button>
+            </Box>
+          </Collapse>
+        </Paper>
+
+        {/* RAG / Knowledge Base Section */}
+        <Paper sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              p: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+            }}
+            onClick={() => toggleSection('rag')}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <MenuBook sx={{ color: '#00bcd4' }} />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Knowledge Base (RAG)
+              </Typography>
+              {ragEnabled && (
+                <Chip
+                  label="Enabled"
+                  size="small"
+                  color="info"
+                  sx={{ fontSize: '0.65rem' }}
+                />
+              )}
+            </Box>
+            {expandedSections.includes('rag') ? <ExpandLess /> : <ExpandMore />}
+          </Box>
+
+          <Collapse in={expandedSections.includes('rag')}>
+            <Box sx={{ p: 2, pt: 0 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Knowledge-Guided Conversations
+                </Typography>
+                <Typography variant="caption">
+                  Attach documents to give the AI access to your organization&apos;s knowledge base.
+                  The AI will use this context to provide accurate, sourced answers during conversations.
+                </Typography>
+              </Alert>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={ragEnabled}
+                    onChange={(e) => updateRAGConfig({ enabled: e.target.checked })}
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked': {
+                        color: '#00bcd4',
+                      },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        backgroundColor: '#00bcd4',
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Enable Knowledge-Guided Mode
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Use attached documents to ground AI responses
+                    </Typography>
+                  </Box>
+                }
+                sx={{ mb: 2 }}
+              />
+
+              {ragEnabled && (
+                <>
+                  {/* Document Management Panel */}
+                  {formId && organizationId ? (
+                    <Box sx={{ mb: 3 }}>
+                      <DocumentAttachmentPanel
+                        formId={formId}
+                        organizationId={organizationId}
+                        selectedDocuments={config?.rag?.documents || []}
+                        onDocumentsChange={handleRAGDocumentsChange}
+                        ragEnabled={ragEnabled}
+                      />
+                    </Box>
+                  ) : (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Save the form first to manage knowledge documents.
+                    </Alert>
+                  )}
+
+                  {/* Retrieval Configuration */}
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                      Retrieval Settings
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <TextField
+                        label="Max Chunks"
+                        type="number"
+                        value={config?.rag?.retrievalConfig?.maxChunks ?? DEFAULT_RAG_RETRIEVAL_CONFIG.maxChunks}
+                        onChange={(e) =>
+                          updateRetrievalConfig({
+                            maxChunks: parseInt(e.target.value) || DEFAULT_RAG_RETRIEVAL_CONFIG.maxChunks,
+                          })
+                        }
+                        size="small"
+                        sx={{ width: 120 }}
+                        inputProps={{ min: 1, max: 20 }}
+                        helperText="Per query"
+                      />
+                    </Box>
+
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        Minimum Relevance Score:{' '}
+                        {Math.round(
+                          (config?.rag?.retrievalConfig?.minScore ?? DEFAULT_RAG_RETRIEVAL_CONFIG.minScore) * 100
+                        )}
+                        %
+                      </Typography>
+                      <Slider
+                        value={
+                          (config?.rag?.retrievalConfig?.minScore ?? DEFAULT_RAG_RETRIEVAL_CONFIG.minScore) * 100
+                        }
+                        onChange={(_, value) =>
+                          updateRetrievalConfig({
+                            minScore: (value as number) / 100,
+                          })
+                        }
+                        min={50}
+                        max={95}
+                        step={5}
+                        marks={[
+                          { value: 50, label: '50%' },
+                          { value: 70, label: '70%' },
+                          { value: 95, label: '95%' },
+                        ]}
+                        sx={{ color: '#00bcd4' }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        Higher scores mean more relevant but fewer results
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </>
+              )}
             </Box>
           </Collapse>
         </Paper>

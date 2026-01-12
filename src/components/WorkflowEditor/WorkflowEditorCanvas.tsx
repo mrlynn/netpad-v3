@@ -37,6 +37,7 @@ import { NetPadBrandedBackground } from './NetPadBrandedBackground';
 // Node components
 import { BaseNode } from './Nodes/BaseNode';
 import { TriggerNode } from './Nodes/TriggerNode';
+import { LogicNode, getNodeOutputs } from './Nodes/LogicNode';
 import { StickyNote, STICKY_COLORS, DEFAULT_WIDTH, DEFAULT_HEIGHT } from './Nodes/StickyNote';
 
 // Custom node types mapping
@@ -48,11 +49,11 @@ const nodeTypes: NodeTypes = {
   'form-trigger': TriggerNode,
   'webhook-trigger': TriggerNode,
   'schedule-trigger': TriggerNode,
-  // Logic nodes
-  'conditional': BaseNode,
-  'switch': BaseNode,
-  'loop': BaseNode,
-  'delay': BaseNode,
+  // Logic nodes (multi-output)
+  'conditional': LogicNode,
+  'switch': LogicNode,
+  'loop': LogicNode,
+  'delay': BaseNode,  // delay keeps single output
   // Action nodes
   'http-request': BaseNode,
   'email-send': BaseNode,
@@ -115,7 +116,7 @@ export function WorkflowEditorCanvas({
   // Track the workflow ID to detect when we switch workflows
   const currentWorkflowIdRef = useRef<string | null>(null);
 
-  // Handle sticky note color change events
+  // Handle sticky note color change events (legacy)
   useEffect(() => {
     const handleColorChange = (event: CustomEvent<{ nodeId: string; color: string }>) => {
       const { nodeId, color } = event.detail;
@@ -130,6 +131,31 @@ export function WorkflowEditorCanvas({
     window.addEventListener('stickyNoteColorChange', handleColorChange as EventListener);
     return () => {
       window.removeEventListener('stickyNoteColorChange', handleColorChange as EventListener);
+    };
+  }, [workflowNodes, updateNode]);
+
+  // Handle sticky note style change events (new style system)
+  useEffect(() => {
+    const handleStyleChange = (event: CustomEvent<{ nodeId: string; style: Record<string, unknown> }>) => {
+      const { nodeId, style } = event.detail;
+      const node = workflowNodes.find(n => n.id === nodeId);
+      if (node) {
+        // Store the full style object and also set bgColor for backward compatibility
+        const newConfig: Record<string, unknown> = {
+          ...node.config,
+          style,
+        };
+        // Keep bgColor for backward compat with solid colors
+        if (style.bgType === 'solid' && style.bgColor) {
+          newConfig.bgColor = style.bgColor;
+        }
+        updateNode(nodeId, { config: newConfig });
+      }
+    };
+
+    window.addEventListener('stickyNoteStyleChange', handleStyleChange as EventListener);
+    return () => {
+      window.removeEventListener('stickyNoteStyleChange', handleStyleChange as EventListener);
     };
   }, [workflowNodes, updateNode]);
 
@@ -305,23 +331,41 @@ export function WorkflowEditorCanvas({
     });
   }, [workflow?.id, workflowNodes, readOnly, handleStickyNoteContentChange, convertToFlowNodes]);
 
+  // Logic node types that have multiple outputs
+  const LOGIC_NODE_TYPES = ['conditional', 'switch', 'loop'];
+
   // Convert workflow edges to React Flow format
   const convertToFlowEdges = useCallback((wfEdges: typeof workflowEdges): Edge[] => {
-    return wfEdges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      sourceHandle: edge.sourceHandle,
-      target: edge.target,
-      targetHandle: edge.targetHandle,
-      type: edge.type || 'default',
-      animated: edge.animated,
-      label: edge.condition?.label,
-      style: edge.style ? {
-        stroke: edge.style.stroke,
-        strokeWidth: edge.style.strokeWidth,
-      } : undefined,
-    }));
-  }, []);
+    return wfEdges.map((edge) => {
+      // Find source node to check if it's a logic node
+      const sourceNode = workflowNodes.find(n => n.id === edge.source);
+      const isLogicNode = sourceNode && LOGIC_NODE_TYPES.includes(sourceNode.type);
+
+      // Use sourceHandle as label for logic nodes (unless condition label already exists)
+      let edgeLabel = edge.condition?.label;
+      if (!edgeLabel && isLogicNode && edge.sourceHandle && edge.sourceHandle !== 'output') {
+        // Get the output definition to find the human-readable label
+        const outputs = getNodeOutputs(sourceNode.type, sourceNode.config || {});
+        const outputDef = outputs.find(o => o.id === edge.sourceHandle);
+        edgeLabel = outputDef?.label;
+      }
+
+      return {
+        id: edge.id,
+        source: edge.source,
+        sourceHandle: edge.sourceHandle,
+        target: edge.target,
+        targetHandle: edge.targetHandle,
+        type: edge.type || 'default',
+        animated: edge.animated,
+        label: edgeLabel,
+        style: edge.style ? {
+          stroke: edge.style.stroke,
+          strokeWidth: edge.style.strokeWidth,
+        } : undefined,
+      };
+    });
+  }, [workflowNodes]);
 
   // Local state for edges - React Flow controls this directly
   const [edges, setEdges] = useEdgesState(convertToFlowEdges(workflowEdges));
@@ -726,14 +770,20 @@ export function WorkflowEditorCanvas({
             ? '0 0 6px rgba(0, 237, 100, 0.5), inset 0 0 4px rgba(0, 237, 100, 0.3)'
             : '0 0 4px rgba(0, 104, 74, 0.4), inset 0 0 3px rgba(0, 104, 74, 0.2)',
         },
-        // Override handle positioning to ensure they're vertically centered on nodes
+        // Override handle positioning for standard nodes (left handles always centered)
         '& .react-flow__handle.react-flow__handle-left': {
           top: '50% !important',
           transform: 'translateY(-50%) !important',
         },
-        '& .react-flow__handle.react-flow__handle-right': {
+        // Right handles: center them by default, but exclude logic-node-handle class
+        // which has multiple stacked handles with explicit positioning
+        '& .react-flow__handle.react-flow__handle-right:not(.logic-node-handle)': {
           top: '50% !important',
           transform: 'translateY(-50%) !important',
+        },
+        // Logic node handles: respect their explicit positioning
+        '& .react-flow__handle.logic-node-handle': {
+          transform: 'none !important',
         },
         '& .react-flow__controls': {
           backgroundColor: theme.palette.background.paper,

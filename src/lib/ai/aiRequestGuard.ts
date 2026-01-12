@@ -117,15 +117,26 @@ export async function validateAIRequest(
   const orgId = user.organizations[0].orgId;
 
   // Check if user has access to the feature
-  const hasFeatureAccess = await hasAIFeature(orgId, feature);
-  if (!hasFeatureAccess) {
+  const featureAccess = await hasAIFeature(orgId, feature);
+  if (!featureAccess.allowed) {
+    // Determine the appropriate error code and message
+    const isClusterIssue = featureAccess.requiredClusterTier !== undefined;
+    const errorCode = isClusterIssue ? 'CLUSTER_UPGRADE_REQUIRED' : 'FEATURE_NOT_AVAILABLE';
+    const errorMessage = featureAccess.reason ||
+      (isClusterIssue
+        ? `This feature requires an Atlas ${featureAccess.requiredClusterTier}+ cluster.`
+        : `This AI feature is not available on your current plan. Please upgrade to access this feature.`);
+
     return {
       success: false,
       response: NextResponse.json(
         {
           success: false,
-          error: `This AI feature is not available on your current plan. Please upgrade to access this feature.`,
-          code: 'FEATURE_NOT_AVAILABLE',
+          error: errorMessage,
+          code: errorCode,
+          requiredTier: featureAccess.requiredTier,
+          requiredClusterTier: featureAccess.requiredClusterTier,
+          currentClusterTier: featureAccess.currentClusterTier,
         },
         { status: 403 }
       ),

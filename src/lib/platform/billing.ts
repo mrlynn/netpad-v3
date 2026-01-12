@@ -28,6 +28,8 @@ import {
   BillingEvent,
   AuditLogEntry,
 } from '@/types/platform';
+import { ClusterInstanceSize } from '@/lib/atlas/types';
+import { checkFeatureAccess, FEATURE_REQUIREMENTS } from './clusterChecks';
 
 // ============================================
 // Stripe Client & Environment Configuration
@@ -725,19 +727,73 @@ export async function incrementSubmissionUsage(
 // ============================================
 
 /**
+ * Result of an AI feature access check
+ */
+export interface AIFeatureAccessResult {
+  allowed: boolean;
+  reason?: string;
+  requiredTier?: SubscriptionTier;
+  requiredClusterTier?: ClusterInstanceSize;
+  currentClusterTier?: ClusterInstanceSize | null;
+}
+
+/**
  * Check if an organization has access to an AI feature
+ *
+ * This performs a two-tier check:
+ * 1. Subscription tier check - verifies the feature is included in the subscription
+ * 2. Cluster tier check - for RAG features, verifies M10+ cluster requirement
+ *
+ * @param orgId - Organization ID
+ * @param feature - AI feature to check access for
+ * @returns Access result with detailed information about requirements
  */
 export async function hasAIFeature(
   orgId: string,
   feature: AIFeature
-): Promise<boolean> {
+): Promise<AIFeatureAccessResult> {
   const org = await (await getOrganizationsCollection()).findOne({ orgId });
-  if (!org) return false;
+  if (!org) {
+    return {
+      allowed: false,
+      reason: 'Organization not found',
+    };
+  }
 
   const tier = org.subscription?.tier || 'free';
   const tierConfig = SUBSCRIPTION_TIERS[tier];
 
-  return tierConfig.aiFeatures.includes(feature);
+  // Check subscription tier first
+  if (!tierConfig.aiFeatures.includes(feature)) {
+    // Find the minimum tier that includes this feature
+    const tiersWithFeature = (['starter', 'team', 'enterprise'] as SubscriptionTier[]).filter(
+      (t) => SUBSCRIPTION_TIERS[t].aiFeatures.includes(feature)
+    );
+    const requiredTier = tiersWithFeature[0];
+
+    return {
+      allowed: false,
+      reason: `This feature requires a ${requiredTier || 'higher'} subscription`,
+      requiredTier,
+    };
+  }
+
+  // Check cluster tier requirements for RAG features
+  const featureRequirements = FEATURE_REQUIREMENTS[feature];
+  if (featureRequirements?.clusterTier) {
+    const clusterAccess = await checkFeatureAccess(orgId, feature);
+
+    if (!clusterAccess.hasAccess) {
+      return {
+        allowed: false,
+        reason: clusterAccess.reason || `This feature requires an ${featureRequirements.clusterTier}+ cluster`,
+        requiredClusterTier: clusterAccess.requiredClusterTier,
+        currentClusterTier: clusterAccess.currentClusterTier,
+      };
+    }
+  }
+
+  return { allowed: true };
 }
 
 /**

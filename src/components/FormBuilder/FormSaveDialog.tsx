@@ -167,6 +167,7 @@ export function FormSaveDialog({
               formDescription: description.trim() || undefined,
               fields: config.fieldConfigs,
               primaryColor: config.theme?.primaryColor || '#00ED64',
+              formType: config.formType,
             };
             console.log('[FormSaveDialog] Thumbnail data:', thumbnailData);
 

@@ -9,11 +9,11 @@ import {
   Badge,
 } from '@mui/material';
 import {
-  TableChart,
+  AccountTree,
   CloudQueue,
 } from '@mui/icons-material';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { DataBrowser } from './DataBrowser';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { DataExplorerTab } from './DataExplorerTab';
 import { DataInfrastructureTab } from './DataInfrastructureTab';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useClusterProvisioning } from '@/hooks/useClusterProvisioning';
@@ -47,6 +47,7 @@ function TabPanel(props: TabPanelProps) {
 
 function DataPageTabsContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { currentOrgId } = useOrganization();
   const { status: clusterStatus } = useClusterProvisioning(currentOrgId || undefined);
@@ -55,20 +56,20 @@ function DataPageTabsContent() {
   // Get initial tab from URL
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'browse') setTabValue(0);
+    if (tab === 'explorer') setTabValue(0);
     else if (tab === 'infrastructure') setTabValue(1);
-    // Legacy: redirect old connections tab to infrastructure
-    else if (tab === 'connections') {
-      setTabValue(1);
-      router.replace('/data?tab=infrastructure', { scroll: false });
+    // Legacy: redirect old browse/connections tab to explorer
+    else if (tab === 'browse' || tab === 'connections') {
+      setTabValue(0);
+      router.replace(`${pathname}?tab=explorer`, { scroll: false });
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, pathname]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    // Update URL
-    const tabs = ['browse', 'infrastructure'];
-    router.push(`/data?tab=${tabs[newValue]}`, { scroll: false });
+    // Update URL while preserving the current path (supports both /data and /orgs/.../data)
+    const tabs = ['explorer', 'infrastructure'];
+    router.push(`${pathname}?tab=${tabs[newValue]}`, { scroll: false });
   };
 
   // Check if cluster is provisioning (for badge)
@@ -108,9 +109,9 @@ function DataPageTabsContent() {
           }}
         >
           <Tab
-            icon={<TableChart sx={{ fontSize: 18 }} />}
+            icon={<AccountTree sx={{ fontSize: 18 }} />}
             iconPosition="start"
-            label="Browse"
+            label="Explorer"
             id="data-tab-0"
             aria-controls="data-tabpanel-0"
           />
@@ -148,7 +149,7 @@ function DataPageTabsContent() {
       {/* Tab Panels */}
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <TabPanel value={tabValue} index={0}>
-          <DataBrowser showConnectionPanel={false} onNeedConnection={() => setTabValue(1)} />
+          <DataExplorerTab onNeedConnection={() => setTabValue(1)} />
         </TabPanel>
         <TabPanel value={tabValue} index={1}>
           <DataInfrastructureTab />

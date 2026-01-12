@@ -19,16 +19,18 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
-import { Lock, Sparkles, Zap, Crown, TrendingUp } from 'lucide-react';
+import { Lock, Sparkles, Zap, Crown, TrendingUp, Server, Database } from 'lucide-react';
 import {
   useFeatureGate,
   useAIFeatureGate,
   useUsageLimit,
   getTierDisplayName,
   getTierColor,
+  getClusterTierDisplayName,
   UsageLimitKey,
 } from '@/hooks/useFeatureGate';
 import { AIFeature, PlatformFeature, SubscriptionTier } from '@/types/platform';
+import type { ClusterInstanceSize } from '@/lib/atlas/types';
 
 // ============================================
 // Types
@@ -87,15 +89,16 @@ export function FeatureGate({
   onUpgrade,
 }: FeatureGateProps) {
   const theme = useTheme();
-  const { hasAccess, reason, requiredTier, upgradeUrl } = useFeatureGate(feature, orgId);
+  const { hasAccess, reason, requiredTier, requiredClusterTier, currentClusterTier, upgradeUrl } = useFeatureGate(feature, orgId);
 
-  // Determine if this is an AI feature
+  // Determine if this is an AI feature or RAG feature
   const isAIFeature = feature.startsWith('ai_') || feature.startsWith('agent_');
+  const isRAGFeature = feature.startsWith('rag_');
 
   if (hasAccess) {
     return (
       <>
-        {showBadge && isAIFeature && <AIBadge variant="inline" />}
+        {showBadge && (isAIFeature || isRAGFeature) && <AIBadge variant="inline" />}
         {children}
       </>
     );
@@ -107,6 +110,24 @@ export function FeatureGate({
       <Box sx={{ opacity: 0.5 }}>
         {children}
       </Box>
+    );
+  }
+
+  // Cluster upgrade required (for RAG features)
+  if (reason === 'cluster_upgrade_required') {
+    if (fallback === 'hide') {
+      return null;
+    }
+    return (
+      <ClusterRequiredPrompt
+        requiredClusterTier={requiredClusterTier || 'M10'}
+        currentClusterTier={currentClusterTier}
+        feature={feature}
+        message={upgradeMessage}
+        upgradeUrl={upgradeUrl}
+        onUpgrade={onUpgrade}
+        compact={fallback === 'blur'}
+      />
     );
   }
 
@@ -578,6 +599,152 @@ function LimitReachedPrompt({
         sx={{ mt: 2 }}
       >
         Increase Limit
+      </Button>
+    </Paper>
+  );
+}
+
+interface ClusterRequiredPromptProps {
+  requiredClusterTier: ClusterInstanceSize;
+  currentClusterTier?: ClusterInstanceSize | null;
+  feature: string;
+  message?: string;
+  upgradeUrl?: string;
+  onUpgrade?: () => void;
+  compact?: boolean;
+}
+
+export function ClusterRequiredPrompt({
+  requiredClusterTier,
+  currentClusterTier,
+  feature,
+  message,
+  upgradeUrl,
+  onUpgrade,
+  compact = false,
+}: ClusterRequiredPromptProps) {
+  const theme = useTheme();
+
+  const featureLabel = useMemo(() => {
+    return feature
+      .replace(/^(rag_)/, '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }, [feature]);
+
+  const currentTierDisplay = getClusterTierDisplayName(currentClusterTier);
+  const defaultMessage = currentClusterTier
+    ? `${featureLabel} requires an Atlas ${requiredClusterTier}+ cluster. Your current cluster is ${currentTierDisplay}.`
+    : `${featureLabel} requires an Atlas ${requiredClusterTier}+ cluster with Vector Search capability.`;
+
+  const handleUpgrade = () => {
+    if (onUpgrade) {
+      onUpgrade();
+    } else {
+      window.location.href = upgradeUrl || '/settings/cluster';
+    }
+  };
+
+  if (compact) {
+    return (
+      <Box sx={{ textAlign: 'center', p: 2 }}>
+        <Database size={24} color={theme.palette.info.main} style={{ marginBottom: 8 }} />
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          {message || defaultMessage}
+        </Typography>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<Server size={16} />}
+          onClick={handleUpgrade}
+          sx={{
+            bgcolor: theme.palette.info.main,
+            '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.9) },
+          }}
+        >
+          Upgrade to {requiredClusterTier}
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Paper
+      sx={{
+        p: 3,
+        textAlign: 'center',
+        border: `1px dashed ${alpha(theme.palette.info.main, 0.3)}`,
+        bgcolor: alpha(theme.palette.info.main, 0.02),
+      }}
+    >
+      <Box
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          bgcolor: alpha(theme.palette.info.main, 0.1),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mx: 'auto',
+          mb: 2,
+        }}
+      >
+        <Database size={24} color={theme.palette.info.main} />
+      </Box>
+
+      <Typography variant="h6" gutterBottom>
+        Cluster Upgrade Required
+      </Typography>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {message || defaultMessage}
+      </Typography>
+
+      {currentClusterTier && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Chip
+            label={currentTierDisplay}
+            size="small"
+            sx={{
+              bgcolor: alpha(theme.palette.warning.main, 0.1),
+              color: theme.palette.warning.dark,
+            }}
+          />
+          <TrendingUp size={16} color={theme.palette.text.secondary} />
+          <Chip
+            label={requiredClusterTier}
+            size="small"
+            sx={{
+              bgcolor: alpha(theme.palette.success.main, 0.1),
+              color: theme.palette.success.dark,
+            }}
+          />
+        </Box>
+      )}
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>
+        Vector Search is a MongoDB Atlas feature that requires an M10+ dedicated cluster.
+      </Typography>
+
+      <Button
+        variant="contained"
+        startIcon={<Server size={16} />}
+        onClick={handleUpgrade}
+        sx={{
+          bgcolor: theme.palette.info.main,
+          '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.9) },
+        }}
+      >
+        Upgrade Cluster
       </Button>
     </Paper>
   );

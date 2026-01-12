@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   title: 'NetPad - Build MongoDB Forms & Workflows',
   description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.',
   icons: {
-    // Next.js automatically uses src/app/icon.png, but we also provide explicit metadata
-    // for better browser compatibility and to ensure it works on all pages
+    // Icon files are served from the public folder
+    // Explicit metadata for better browser compatibility
     icon: [
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },

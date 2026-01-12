@@ -61,6 +61,8 @@ export type HelpTopicId =
   // New features
   | 'conversational-forms'
   | 'conversational-templates'
+  | 'knowledge-guided-forms'
+  | 'rag-document-management'
   | 'projects-management'
   | 'deployment-vercel'
   | 'organizations'

@@ -67,6 +67,7 @@ interface WorkflowListItem {
   createdAt: string;
   updatedAt: string;
   projectId?: string;
+  thumbnailUrl?: string;
 }
 
 const STATUS_CONFIG: Record<WorkflowStatus, { color: string; icon: React.ReactElement; label: string }> = {
@@ -353,6 +354,53 @@ export default function WorkflowsPage() {
                       },
                     }}
                   >
+                    {/* Thumbnail Preview */}
+                    <Box
+                      sx={{
+                        height: 180,
+                        bgcolor: alpha(theme.palette.primary.main, 0.02),
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {workflow.thumbnailUrl ? (
+                        <Box
+                          component="img"
+                          src={workflow.thumbnailUrl}
+                          alt={`${workflow.name || 'Workflow'} preview`}
+                          sx={{
+                            width: '100%',
+                            height: 'auto',
+                            minHeight: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'top center',
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%',
+                            gap: 1,
+                            color: 'text.disabled',
+                          }}
+                        >
+                          <AccountTree sx={{ fontSize: 40, opacity: 0.3 }} />
+                          <Typography variant="caption" sx={{ opacity: 0.5 }}>
+                            No preview
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+
                     <CardContent sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                         <Box sx={{ flex: 1 }}>

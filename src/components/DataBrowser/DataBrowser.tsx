@@ -507,10 +507,34 @@ function DocumentEditDrawer({
 interface DataBrowserProps {
   showConnectionPanel?: boolean;
   onNeedConnection?: () => void;
+  // Optional overrides for when navigating from Data Explorer
+  initialDatabase?: string;
+  initialCollection?: string;
+  initialVaultId?: string;
 }
 
-export function DataBrowser({ showConnectionPanel: showSidebar = true, onNeedConnection }: DataBrowserProps) {
-  const { connectionString, databaseName, collection, activeVaultId } = usePipeline();
+export function DataBrowser({
+  showConnectionPanel: showSidebar = true,
+  onNeedConnection,
+  initialDatabase,
+  initialCollection,
+  initialVaultId,
+}: DataBrowserProps) {
+  const {
+    connectionString: ctxConnectionString,
+    databaseName: ctxDatabaseName,
+    collection: ctxCollection,
+    activeVaultId: ctxVaultId,
+  } = usePipeline();
+
+  // Use props if provided, otherwise fall back to context
+  const databaseName = initialDatabase || ctxDatabaseName;
+  const collection = initialCollection || ctxCollection;
+  const activeVaultId = initialVaultId || ctxVaultId;
+
+  // For connection string, we need to fetch from vault if using initialVaultId
+  const [fetchedConnectionString, setFetchedConnectionString] = useState<string | null>(null);
+  const connectionString = fetchedConnectionString || ctxConnectionString;
   const { currentOrgId } = useOrganization();
   const router = useRouter();
 
@@ -539,6 +563,26 @@ export function DataBrowser({ showConnectionPanel: showSidebar = true, onNeedCon
   const [editDocument, setEditDocument] = useState<Document | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Fetch connection string from vault when using initialVaultId
+  useEffect(() => {
+    if (initialVaultId && currentOrgId && !ctxConnectionString) {
+      const fetchConnectionString = async () => {
+        try {
+          const response = await fetch(
+            `/api/organizations/${currentOrgId}/vault/${initialVaultId}/decrypt`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            setFetchedConnectionString(data.connectionString);
+          }
+        } catch (err) {
+          console.error('Failed to fetch connection string:', err);
+        }
+      };
+      fetchConnectionString();
+    }
+  }, [initialVaultId, currentOrgId, ctxConnectionString]);
 
   const hasConnection = Boolean(connectionString && databaseName && collection);
   // Can export if we have a connection (either vault or direct)

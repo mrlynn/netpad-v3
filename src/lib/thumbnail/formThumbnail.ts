@@ -5,7 +5,7 @@
  * Creates consistent, readable thumbnails regardless of form configuration.
  */
 
-import { FieldConfig } from '@/types/form';
+import { FieldConfig, FormType } from '@/types/form';
 
 export interface ThumbnailOptions {
   /** Output width in pixels */
@@ -21,6 +21,8 @@ export interface FormThumbnailData {
   formDescription?: string;
   fields: FieldConfig[];
   primaryColor?: string;
+  /** Form type - affects thumbnail rendering */
+  formType?: FormType;
 }
 
 /**
@@ -49,27 +51,8 @@ export async function createFormThumbnailFromData(
     // Scale for retina
     ctx.scale(scale, scale);
 
-    // Debug: Log field info
-    console.log('[Thumbnail] Raw fields:', data.fields?.slice(0, 5).map(f => ({
-      label: f.label,
-      type: f.type,
-      included: f.included,
-      layout: f.layout,
-    })));
-
-    // Get only data fields (not layout fields) and limit to first 4
-    const dataFields = data.fields
-      ?.filter(f => {
-        const isDataField = f.included && !f.layout && f.type !== 'section-header' && f.type !== 'divider' && f.type !== 'spacer' && f.type !== 'description';
-        return isDataField;
-      })
-      .slice(0, 4) || [];
-
-    console.log('[Thumbnail] Filtered dataFields:', dataFields.length, dataFields.map(f => f.label));
-
     const primaryColor = data.primaryColor || '#00ED64';
-    const totalIncludedFields = data.fields?.filter(f => f.included && !f.layout).length || 0;
-    const moreFieldsCount = Math.max(0, totalIncludedFields - 4);
+    const isConversational = data.formType === 'conversational';
 
     // Draw background
     ctx.fillStyle = '#ffffff';
@@ -99,45 +82,102 @@ export async function createFormThumbnailFromData(
 
     yOffset += 8;
 
-    // Draw fields
-    const fieldHeight = 38;
-    const fieldSpacing = 6;
-
-    dataFields.forEach((field, index) => {
-      if (yOffset + fieldHeight > height - 20) return; // Don't overflow
-
-      // Field label
-      ctx.fillStyle = '#333333';
+    // Handle conversational forms differently
+    if (isConversational) {
+      // Draw conversational form indicator
+      ctx.fillStyle = primaryColor;
       ctx.font = '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      const label = truncateText(ctx, field.label, width - 50);
-      ctx.fillText(label, 16, yOffset + 12);
+      ctx.fillText('💬 Conversational Form', 16, yOffset);
+      yOffset += 24;
 
-      // Required asterisk
-      if (field.required) {
-        const labelWidth = ctx.measureText(label).width;
-        ctx.fillStyle = '#dc2626';
-        ctx.fillText(' *', 16 + labelWidth, yOffset + 12);
-      }
-
-      // Field input placeholder
-      ctx.fillStyle = '#f5f5f5';
-      roundRect(ctx, 16, yOffset + 16, width - 32, 20, 4);
+      // Draw chat bubble visual
+      const bubbleY = yOffset;
+      const bubbleHeight = 60;
+      
+      // User message bubble (left side)
+      ctx.fillStyle = '#f0f0f0';
+      roundRect(ctx, 16, bubbleY, width * 0.6, 28, 12);
       ctx.fill();
+      ctx.fillStyle = '#666666';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Hello, I need help...', 24, bubbleY + 18);
 
-      // Field border
-      ctx.strokeStyle = '#e0e0e0';
-      ctx.lineWidth = 1;
-      roundRect(ctx, 16, yOffset + 16, width - 32, 20, 4);
+      // AI response bubble (right side, with accent color)
+      ctx.fillStyle = primaryColor;
+      ctx.globalAlpha = 0.1;
+      roundRect(ctx, width - width * 0.6 - 16, bubbleY + 32, width * 0.6, 28, 12);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, width - width * 0.6 - 16, bubbleY + 32, width * 0.6, 28, 12);
       ctx.stroke();
+      ctx.fillStyle = '#333333';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('I can help with that.', width - width * 0.6 - 8, bubbleY + 50);
+    } else {
+      // Standard form: draw fields
+      // Debug: Log field info
+      console.log('[Thumbnail] Raw fields:', data.fields?.slice(0, 5).map(f => ({
+        label: f.label,
+        type: f.type,
+        included: f.included,
+        layout: f.layout,
+      })));
 
-      yOffset += fieldHeight + fieldSpacing;
-    });
+      // Get only data fields (not layout fields) and limit to first 4
+      const dataFields = data.fields
+        ?.filter(f => {
+          const isDataField = f.included && !f.layout && f.type !== 'section-header' && f.type !== 'divider' && f.type !== 'spacer' && f.type !== 'description';
+          return isDataField;
+        })
+        .slice(0, 4) || [];
 
-    // Draw "more fields" indicator if needed
-    if (moreFieldsCount > 0 && yOffset + 20 <= height) {
-      ctx.fillStyle = '#999999';
-      ctx.font = 'italic 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`+${moreFieldsCount} more fields...`, 16, yOffset + 10);
+      console.log('[Thumbnail] Filtered dataFields:', dataFields.length, dataFields.map(f => f.label));
+
+      const totalIncludedFields = data.fields?.filter(f => f.included && !f.layout).length || 0;
+      const moreFieldsCount = Math.max(0, totalIncludedFields - 4);
+
+      // Draw fields
+      const fieldHeight = 38;
+      const fieldSpacing = 6;
+
+      dataFields.forEach((field, index) => {
+        if (yOffset + fieldHeight > height - 20) return; // Don't overflow
+
+        // Field label
+        ctx.fillStyle = '#333333';
+        ctx.font = '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        const label = truncateText(ctx, field.label, width - 50);
+        ctx.fillText(label, 16, yOffset + 12);
+
+        // Required asterisk
+        if (field.required) {
+          const labelWidth = ctx.measureText(label).width;
+          ctx.fillStyle = '#dc2626';
+          ctx.fillText(' *', 16 + labelWidth, yOffset + 12);
+        }
+
+        // Field input placeholder
+        ctx.fillStyle = '#f5f5f5';
+        roundRect(ctx, 16, yOffset + 16, width - 32, 20, 4);
+        ctx.fill();
+
+        // Field border
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 1;
+        roundRect(ctx, 16, yOffset + 16, width - 32, 20, 4);
+        ctx.stroke();
+
+        yOffset += fieldHeight + fieldSpacing;
+      });
+
+      // Draw "more fields" indicator if needed
+      if (moreFieldsCount > 0 && yOffset + 20 <= height) {
+        ctx.fillStyle = '#999999';
+        ctx.font = 'italic 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`+${moreFieldsCount} more fields...`, 16, yOffset + 10);
+      }
     }
 
     // Draw subtle border around the whole thumbnail

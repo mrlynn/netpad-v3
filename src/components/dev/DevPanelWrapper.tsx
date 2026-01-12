@@ -17,6 +17,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { IconButton, Tooltip, useTheme } from '@mui/material';
 import { Bug } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { SubscriptionDevPanel, DevPanelPosition } from './SubscriptionDevPanel';
 
 // Routes where the dev panel should NOT appear (public/embedded contexts)
@@ -69,6 +70,7 @@ export function DevPanelWrapper() {
   const [state, setState] = useState<DevPanelState>(DEFAULT_STATE);
   const [mounted, setMounted] = useState(false);
   const { currentOrgId, isLoading } = useOrganization();
+  const { user } = useAuth();
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -76,8 +78,10 @@ export function DevPanelWrapper() {
     setMounted(true);
   }, []);
 
-  // Don't render in production
-  if (process.env.NODE_ENV === 'production') {
+  // In production, only show for platform admins
+  // In development, show for everyone
+  const isPlatformAdmin = user?.platformRole === 'admin';
+  if (process.env.NODE_ENV === 'production' && !isPlatformAdmin) {
     return null;
   }
 

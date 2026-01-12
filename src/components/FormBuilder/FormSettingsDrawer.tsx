@@ -402,6 +402,8 @@ export function FormSettingsDrawer({
             onChange={onConversationalConfigChange}
             fieldConfigs={fieldConfigs}
             onGenerateFieldsFromSchema={onGenerateFieldsFromSchema}
+            formId={formId}
+            organizationId={organizationId}
           />
         </Box>
       </TabPanel>

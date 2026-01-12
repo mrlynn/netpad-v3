@@ -1,8 +1,10 @@
 /**
  * SubscriptionDevPanel
  *
- * Development-only panel for testing subscription tiers and feature gates.
- * Only renders in development mode (NODE_ENV !== 'production').
+ * Panel for testing subscription tiers and feature gates.
+ * Access is controlled by DevPanelWrapper:
+ * - In development: shown to all authenticated users
+ * - In production: only shown to platform admins (platformRole === 'admin')
  *
  * Features:
  * - Compact collapsed state (similar to Vercel/Next.js dev popup)
@@ -32,6 +34,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -45,6 +49,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   ArrowDownRight,
+  Trash2,
+  Database,
+  FolderX,
 } from 'lucide-react';
 import { SubscriptionTier, SUBSCRIPTION_TIERS } from '@/types/platform';
 import { getTierColor } from '@/hooks/useFeatureGate';
@@ -85,11 +92,11 @@ export function SubscriptionDevPanel({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [positionMenuAnchor, setPositionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [activeTab, setActiveTab] = useState<'subscription' | 'reset'>('subscription');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<any>(null);
 
-  // Don't render in production
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
+  // Note: Access control (dev vs production, platform admin check) is handled by DevPanelWrapper
 
   // Position styles - compact positioning
   const positionStyles = {
@@ -218,7 +225,7 @@ export function SubscriptionDevPanel({
         sx={{
           position: 'fixed',
           ...positionStyles[position],
-          width: expanded ? 280 : 'auto',
+          width: expanded ? 320 : 'auto',
           zIndex: 9999,
           border: `1.5px solid ${theme.palette.warning.main}`,
           overflow: 'hidden',
@@ -297,20 +304,45 @@ export function SubscriptionDevPanel({
 
       {/* Collapsible Content */}
       <Collapse in={expanded}>
-        <Box sx={{ p: 2 }}>
-          {/* Alerts */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {success}
-            </Alert>
-          )}
+        <Box>
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="fullWidth"
+            sx={{
+              minHeight: 36,
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                minHeight: 36,
+                fontSize: '0.7rem',
+                textTransform: 'none',
+              },
+            }}
+          >
+            <Tab label="Subscription" value="subscription" />
+            <Tab label="Reset" value="reset" />
+          </Tabs>
 
-          {/* Tier Switcher */}
+          {/* Tab Content */}
+          <Box sx={{ p: 2, maxHeight: 400, overflowY: 'auto' }}>
+            {/* Alerts */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+            {success && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {success}
+              </Alert>
+            )}
+
+            {/* Subscription Tab */}
+            {activeTab === 'subscription' && (
+              <>
+                {/* Tier Switcher */}
           <Typography variant="caption" color="text.secondary" gutterBottom>
             Switch Tier
           </Typography>
@@ -403,17 +435,56 @@ export function SubscriptionDevPanel({
             </>
           )}
 
-          {/* Refresh */}
-          <Button
-            size="small"
-            fullWidth
-            onClick={fetchInfo}
-            disabled={loading}
-            sx={{ mt: 1.5 }}
-            startIcon={<RefreshCw size={12} />}
-          >
-            Refresh
-          </Button>
+                {/* Refresh */}
+                <Button
+                  size="small"
+                  fullWidth
+                  onClick={fetchInfo}
+                  disabled={loading}
+                  sx={{ mt: 1.5 }}
+                  startIcon={<RefreshCw size={12} />}
+                >
+                  Refresh
+                </Button>
+              </>
+            )}
+
+            {/* Reset Tab */}
+            {activeTab === 'reset' && (
+              <ResetSection
+                orgId={orgId}
+                loading={resetLoading}
+                result={resetResult}
+                onReset={async (options) => {
+                  setResetLoading(true);
+                  setResetResult(null);
+                  setError(null);
+                  setSuccess(null);
+                  
+                  try {
+                    const res = await fetch('/api/dev/reset', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(options),
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                      throw new Error(data.error || 'Reset failed');
+                    }
+                    
+                    setResetResult(data);
+                    setSuccess(`Reset completed: ${data.operations.length} operations`);
+                    setTimeout(() => setSuccess(null), 5000);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Reset failed');
+                  } finally {
+                    setResetLoading(false);
+                  }
+                }}
+              />
+            )}
+          </Box>
         </Box>
       </Collapse>
       </Paper>
@@ -468,6 +539,224 @@ function formatKey(key: string): string {
     .replace(/_/g, ' ')
     .replace(/^\w/, (c) => c.toUpperCase())
     .trim();
+}
+
+// ============================================
+// Reset Section Component
+// ============================================
+
+interface ResetSectionProps {
+  orgId: string;
+  loading: boolean;
+  result: any;
+  onReset: (options: any) => Promise<void>;
+}
+
+function ResetSection({ orgId, loading, result, onReset }: ResetSectionProps) {
+  const [options, setOptions] = useState({
+    clearForms: false,
+    clearWorkflows: false,
+    clearClusters: false,
+    clearVaults: false,
+    clearUsage: false,
+    clearLegacyStorage: false,
+  });
+
+  const handleReset = async (type: 'org' | 'all' | 'selected') => {
+    const resetOptions: any = { orgId };
+
+    if (type === 'org') {
+      // Reset everything for this org
+      resetOptions.clearForms = true;
+      resetOptions.clearWorkflows = true;
+      resetOptions.clearClusters = false; // Be careful with clusters
+      resetOptions.clearVaults = true;
+      resetOptions.clearUsage = true;
+    } else if (type === 'all') {
+      // Reset everything possible
+      resetOptions.clearForms = true;
+      resetOptions.clearWorkflows = true;
+      resetOptions.clearClusters = false; // Don't auto-delete clusters
+      resetOptions.clearVaults = true;
+      resetOptions.clearUsage = true;
+      resetOptions.clearLegacyStorage = true;
+    } else {
+      // Use selected options
+      Object.assign(resetOptions, options);
+    }
+
+    await onReset(resetOptions);
+  };
+
+  return (
+    <>
+      <Alert severity="warning" sx={{ mb: 2, fontSize: '0.7rem' }}>
+        <Typography variant="caption" fontWeight={600}>
+          DESTRUCTIVE OPERATIONS
+        </Typography>
+        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+          These operations cannot be undone. Use with caution!
+        </Typography>
+      </Alert>
+
+      {/* Quick Actions */}
+      <Typography variant="caption" color="text.secondary" gutterBottom>
+        Quick Reset
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          color="error"
+          onClick={() => handleReset('org')}
+          disabled={loading || !orgId}
+          startIcon={<FolderX size={14} />}
+          fullWidth
+          sx={{ fontSize: '0.7rem' }}
+        >
+          Reset This Org
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          color="error"
+          onClick={() => handleReset('selected')}
+          disabled={loading || !orgId}
+          startIcon={<Trash2 size={14} />}
+          fullWidth
+          sx={{ fontSize: '0.7rem' }}
+        >
+          Reset Selected
+        </Button>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Options */}
+      <Typography variant="caption" color="text.secondary" gutterBottom>
+        Reset Options
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
+        {[
+          { key: 'clearForms', label: 'Forms & Submissions', requiresOrg: true },
+          { key: 'clearWorkflows', label: 'Workflows & Executions', requiresOrg: true },
+          { key: 'clearVaults', label: 'Connection Vaults', requiresOrg: true },
+          { key: 'clearUsage', label: 'Usage Counters', requiresOrg: true },
+          { key: 'clearLegacyStorage', label: 'Legacy Storage', requiresOrg: false },
+        ].map(({ key, label, requiresOrg }) => (
+          <Box
+            key={key}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.7rem',
+            }}
+          >
+            <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+              {label}
+            </Typography>
+            <Button
+              size="small"
+              variant={options[key as keyof typeof options] ? 'contained' : 'outlined'}
+              {...(options[key as keyof typeof options] ? { color: 'error' as const } : {})}
+              onClick={() =>
+                setOptions((prev) => ({
+                  ...prev,
+                  [key]: !prev[key as keyof typeof options],
+                }))
+              }
+              disabled={loading || (requiresOrg && !orgId)}
+              sx={{
+                minWidth: 60,
+                fontSize: '0.65rem',
+                height: 24,
+                px: 1,
+              }}
+            >
+              {options[key as keyof typeof options] ? 'ON' : 'OFF'}
+            </Button>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Cluster Reset (Separate, More Dangerous) */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="caption" color="error" gutterBottom>
+        ⚠️ Dangerous: Cluster Deletion
+      </Typography>
+      <Button
+        size="small"
+        variant="outlined"
+        color="error"
+        onClick={async () => {
+          await onReset({
+            orgId,
+            clearClusters: true,
+            clearVaults: true,
+          });
+        }}
+        disabled={loading || !orgId}
+        startIcon={<Database size={14} />}
+        fullWidth
+        sx={{ fontSize: '0.7rem', mt: 1 }}
+      >
+        Delete Cluster (Including Vaults)
+      </Button>
+
+      {/* Results */}
+      {result && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="caption" color="text.secondary" gutterBottom>
+            Last Reset Results
+          </Typography>
+          <Box sx={{ fontSize: '0.65rem', color: 'text.secondary', mt: 0.5 }}>
+            {result.success ? (
+              <>
+                <Typography variant="caption" color="success" display="block">
+                  ✓ Success
+                </Typography>
+                {result.operations?.length > 0 && (
+                  <Box component="ul" sx={{ pl: 2, mt: 0.5, mb: 0.5 }}>
+                    {result.operations.slice(0, 3).map((op: string, i: number) => (
+                      <li key={i}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem' }}>
+                          {op}
+                        </Typography>
+                      </li>
+                    ))}
+                    {result.operations.length > 3 && (
+                      <Typography variant="caption" sx={{ fontSize: '0.65rem' }}>
+                        +{result.operations.length - 3} more
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <>
+                <Typography variant="caption" color="error" display="block">
+                  ✗ Failed
+                </Typography>
+                {result.errors?.length > 0 && (
+                  <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
+                    {result.errors.map((err: string, i: number) => (
+                      <li key={i}>
+                        <Typography variant="caption" color="error" sx={{ fontSize: '0.65rem' }}>
+                          {err}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
+        </>
+      )}
+    </>
+  );
 }
 
 export default SubscriptionDevPanel;

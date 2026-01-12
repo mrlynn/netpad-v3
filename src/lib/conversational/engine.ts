@@ -23,6 +23,13 @@ import {
 } from './state';
 import { getTemplateById } from './templates';
 import { PromptStrategy, DefaultPromptStrategy } from './strategies/prompt';
+import {
+  processWithRAG,
+  isRAGEnabled,
+  RAGProcessingResult,
+  RAGTurnContext,
+  RAGSource,
+} from './ragIntegration';
 
 /**
  * Get the prompt strategy for a config
@@ -176,6 +183,78 @@ export class ConversationEngine {
       guidance,
       shouldComplete: completionCheck.shouldComplete,
     };
+  }
+
+  /**
+   * Process user message with RAG enhancement (async)
+   *
+   * This method performs RAG retrieval if configured and enhances the
+   * guidance with relevant document context.
+   *
+   * @param userMessage - The user's message
+   * @param organizationId - Organization ID for RAG retrieval
+   * @returns Promise with messages, state, guidance, completion status, and RAG info
+   */
+  async processUserMessageWithRAG(
+    userMessage: string,
+    organizationId: string
+  ): Promise<{
+    messages: Message[];
+    state: ConversationState;
+    guidance: string;
+    shouldComplete: boolean;
+    ragContext: RAGTurnContext | null;
+    ragSources: RAGSource[];
+  }> {
+    // First, process the message normally
+    const baseResult = this.processUserMessage(userMessage);
+
+    // Check if RAG is enabled
+    if (!isRAGEnabled(this.config)) {
+      return {
+        ...baseResult,
+        ragContext: null,
+        ragSources: [],
+      };
+    }
+
+    // Process with RAG
+    const ragResult = await processWithRAG(
+      userMessage,
+      this.state,
+      this.config,
+      baseResult.guidance,
+      { organizationId }
+    );
+
+    // Update state with RAG telemetry
+    this.state = {
+      ...this.state,
+      ragTelemetry: ragResult.telemetry,
+    };
+
+    return {
+      messages: baseResult.messages,
+      state: this.state,
+      guidance: ragResult.enhancedGuidance,
+      shouldComplete: baseResult.shouldComplete,
+      ragContext: ragResult.turnContext,
+      ragSources: ragResult.sources,
+    };
+  }
+
+  /**
+   * Check if RAG is enabled for this conversation
+   */
+  isRAGEnabled(): boolean {
+    return isRAGEnabled(this.config);
+  }
+
+  /**
+   * Get the RAG configuration
+   */
+  getRAGConfig() {
+    return this.config.rag;
   }
 
   /**

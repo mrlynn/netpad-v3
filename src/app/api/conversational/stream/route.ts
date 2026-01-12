@@ -22,6 +22,12 @@ import {
 import { getExtractionSchemaForConfig } from '@/lib/conversational/schemas';
 import { saveConversationState, loadConversationState } from '@/lib/conversational/persistence';
 import { ConversationState, ConversationalFormConfig } from '@/types/conversational';
+import {
+  processWithRAG,
+  isRAGEnabled,
+  RAGTurnContext,
+  RAGSource,
+} from '@/lib/conversational/ragIntegration';
 
 /**
  * Create SSE response for streaming
@@ -277,6 +283,43 @@ export async function POST(request: NextRequest) {
       enhancedGuidance += `\n\nIMPORTANT: You are approaching the conversation limit (${turnsRemaining} turns remaining, ${Math.round(minutesRemaining)} minutes remaining). Begin wrapping up the conversation gracefully. Summarize what has been collected and ask for any final critical information. Do not start new topics.`;
     }
 
+    // Process with RAG if enabled
+    let ragContext: RAGTurnContext | null = null;
+    let ragSources: RAGSource[] = [];
+
+    if (isRAGEnabled(body.config)) {
+      try {
+        console.log('[Conversational Stream] RAG enabled, processing with retrieval');
+        const ragResult = await processWithRAG(
+          body.message,
+          state,
+          body.config,
+          enhancedGuidance,
+          {
+            organizationId: guard.context.orgId,
+          }
+        );
+
+        enhancedGuidance = ragResult.enhancedGuidance;
+        ragContext = ragResult.turnContext;
+        ragSources = ragResult.sources;
+
+        // Update state with RAG telemetry
+        if (ragResult.ragTriggered) {
+          state.ragTelemetry = ragResult.telemetry;
+          console.log('[Conversational Stream] RAG retrieval complete:', {
+            chunksRetrieved: ragContext?.chunks?.length || 0,
+            sourcesAvailable: ragSources.length,
+            latencyMs: ragContext?.latencyMs,
+          });
+        }
+      } catch (ragError: any) {
+        // Log RAG error but continue without it
+        console.error('[Conversational Stream] RAG processing error:', ragError);
+        // Don't fail the conversation - just proceed without RAG context
+      }
+    }
+
     // Build messages for LLM with guidance
     const systemMessage = engineMessages.find(m => m.role === 'system');
     const conversationMessages = engineMessages.filter(m => m.role !== 'system');
@@ -499,6 +542,25 @@ export async function POST(request: NextRequest) {
               },
             })}\n\n`;
             controller.enqueue(new TextEncoder().encode(stateUpdate));
+
+            // Send RAG sources event if we have sources
+            if (ragSources && ragSources.length > 0) {
+              const ragSourcesEvent = `data: ${JSON.stringify({
+                type: 'rag_sources',
+                sources: ragContext?.chunks?.map((chunk) => ({
+                  chunkId: chunk.chunkId,
+                  documentId: chunk.documentId,
+                  text: chunk.text,
+                  score: chunk.score,
+                  metadata: chunk.metadata,
+                  document: chunk.document,
+                })) || [],
+              })}\n\n`;
+              controller.enqueue(new TextEncoder().encode(ragSourcesEvent));
+              console.log('[Conversational Stream] Sent RAG sources event:', {
+                sourceCount: ragSources.length,
+              });
+            }
           }
 
           controller.close();

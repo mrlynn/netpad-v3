@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { useConversationalForm, ConversationalMessage } from '@/hooks/useConversationalForm';
 import { TopicCoverage, ConversationalFormConfig, ConversationState } from '@/types/conversational';
+import { SourceCitation } from './SourceCitation';
 
 /**
  * Props for ConversationalFormChat
@@ -62,6 +63,7 @@ function MessageBubble({
   message: ConversationalMessage;
 }) {
   const isUser = message.role === 'user';
+  const hasSources = !isUser && message.ragSources && message.ragSources.length > 0;
 
   return (
     <Box
@@ -124,6 +126,15 @@ function MessageBubble({
             />
           )}
         </Typography>
+
+        {/* RAG Source Citations */}
+        {hasSources && !message.isStreaming && (
+          <SourceCitation
+            sources={message.ragSources!}
+            sx={{ mt: 1 }}
+          />
+        )}
+
         <Typography
           variant="caption"
           sx={{

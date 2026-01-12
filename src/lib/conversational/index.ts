@@ -8,3 +8,4 @@ export * from './prompts';
 export * from './engine';
 export * from './extraction';
 export * from './mapping';
+export * from './ragIntegration';

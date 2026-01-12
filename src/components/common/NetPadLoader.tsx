@@ -3,7 +3,7 @@
 /**
  * NetPadLoader - Branded loading component
  *
- * A signature loading animation featuring the NetPad logo icon with
+ * A signature loading animation featuring the NetPad robot head logo with
  * animated elements and rotating friendly loading messages.
  * Theme-aware: adapts colors and effects for dark and light modes.
  */
@@ -48,20 +48,13 @@ const LOADING_PHRASES = [
 
 // Theme-aware color helpers
 const getLoaderColors = (isDark: boolean) => ({
-  // Primary stroke color - darker green for light mode
+  // Primary color for the robot
   primary: isDark ? netpadColors.primary : netpadColors.secondary,
-  // Accent color - cyan-green works in both
+  // Accent color for spinner gradient
   accent: isDark ? netpadColors.accent : netpadColors.secondaryLight,
-  // Node fill colors
-  nodePrimary: isDark ? netpadColors.primary : netpadColors.secondary,
-  nodeAccent: isDark ? netpadColors.accent : netpadColors.accent,
   // Glow/shadow colors
-  glowPrimary: isDark
-    ? 'rgba(0, 237, 100, 0.4)'
-    : 'rgba(0, 104, 74, 0.2)',
-  glowSecondary: isDark
-    ? 'rgba(0, 212, 170, 0.2)'
-    : 'rgba(0, 150, 107, 0.15)',
+  glowPrimary: isDark ? 'rgba(0, 237, 100, 0.4)' : 'rgba(0, 104, 74, 0.2)',
+  glowSecondary: isDark ? 'rgba(0, 212, 170, 0.2)' : 'rgba(0, 150, 107, 0.15)',
   glowPrimaryStrong: isDark
     ? 'rgba(0, 237, 100, 0.6)'
     : 'rgba(0, 104, 74, 0.35)',
@@ -69,40 +62,6 @@ const getLoaderColors = (isDark: boolean) => ({
     ? 'rgba(0, 212, 170, 0.4)'
     : 'rgba(0, 150, 107, 0.25)',
 });
-
-// Stacked rectangles animation - slight shift
-const stackShift = keyframes`
-  0%, 100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(-2px, 2px);
-  }
-`;
-
-// Network path pulse animation
-const pathPulse = keyframes`
-  0%, 100% {
-    stroke-dashoffset: 0;
-    opacity: 0.8;
-  }
-  50% {
-    stroke-dashoffset: 20;
-    opacity: 1;
-  }
-`;
-
-// Node pulse animation
-const nodePulse = keyframes`
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.3);
-    opacity: 1;
-  }
-`;
 
 // Fade in/out for text
 const fadeInOut = keyframes`
@@ -117,6 +76,26 @@ const fadeInOut = keyframes`
   100% {
     opacity: 0;
     transform: translateY(-4px);
+  }
+`;
+
+// Antenna bob animation
+const antennaBob = keyframes`
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+`;
+
+// Eye blink animation
+const eyeBlink = keyframes`
+  0%, 45%, 55%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.1);
   }
 `;
 
@@ -145,9 +124,8 @@ function getRandomPhrase(exclude?: string): string {
 }
 
 /**
- * NetPad Logo Icon - Animated SVG
- * Based on the stacked rounded rectangles with network path design
- * Theme-aware colors and effects
+ * NetPad Logo - Animated SVG
+ * Uses the netpad-logo.svg file with theme-aware effects
  */
 function NetPadLogoIcon({
   size,
@@ -158,7 +136,6 @@ function NetPadLogoIcon({
   animate?: boolean;
   isDark: boolean;
 }) {
-  const strokeWidth = size < 50 ? 2 : size < 80 ? 2.5 : 3;
   const colors = getLoaderColors(isDark);
 
   // Theme-aware pulse glow animation
@@ -173,110 +150,16 @@ function NetPadLogoIcon({
 
   return (
     <Box
-      component="svg"
-      viewBox="0 0 100 100"
+      component="img"
+      src="/netpad-logo.svg"
+      alt="NetPad Logo"
       sx={{
         width: size,
         height: size,
+        objectFit: 'contain',
         animation: animate ? `${pulseGlow} 2s ease-in-out infinite` : 'none',
       }}
-    >
-      {/* Stacked rounded rectangles (representing "pad") */}
-      <rect
-        x="32"
-        y="18"
-        width="50"
-        height="50"
-        rx="10"
-        fill="none"
-        stroke={colors.primary}
-        strokeWidth={strokeWidth}
-        opacity={0.4}
-        style={{
-          animation: animate ? `${stackShift} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0s',
-        }}
-      />
-      <rect
-        x="26"
-        y="24"
-        width="50"
-        height="50"
-        rx="10"
-        fill="none"
-        stroke={colors.primary}
-        strokeWidth={strokeWidth}
-        opacity={0.6}
-        style={{
-          animation: animate ? `${stackShift} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0.1s',
-        }}
-      />
-      <rect
-        x="20"
-        y="30"
-        width="50"
-        height="50"
-        rx="10"
-        fill="none"
-        stroke={colors.primary}
-        strokeWidth={strokeWidth}
-        opacity={0.9}
-        style={{
-          animation: animate ? `${stackShift} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0.2s',
-        }}
-      />
-
-      {/* Network path (representing "net") */}
-      <path
-        d="M35 62 C35 50 45 42 55 42 L65 42 C72 42 78 36 78 28"
-        fill="none"
-        stroke={colors.accent}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeDasharray="80"
-        style={{
-          animation: animate ? `${pathPulse} 2s ease-in-out infinite` : 'none',
-        }}
-      />
-
-      {/* Network nodes */}
-      <circle
-        cx="35"
-        cy="62"
-        r={size < 50 ? 3 : 4}
-        fill={colors.nodePrimary}
-        style={{
-          animation: animate ? `${nodePulse} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0s',
-          transformOrigin: '35px 62px',
-        }}
-      />
-      <circle
-        cx="55"
-        cy="42"
-        r={size < 50 ? 3 : 4}
-        fill={colors.nodeAccent}
-        style={{
-          animation: animate ? `${nodePulse} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0.3s',
-          transformOrigin: '55px 42px',
-        }}
-      />
-      <circle
-        cx="78"
-        cy="28"
-        r={size < 50 ? 3 : 4}
-        fill={colors.nodePrimary}
-        style={{
-          animation: animate ? `${nodePulse} 1.5s ease-in-out infinite` : 'none',
-          animationDelay: '0.6s',
-          transformOrigin: '78px 28px',
-        }}
-      />
-    </Box>
+    />
   );
 }
 
@@ -289,12 +172,24 @@ export function NetPadLoader({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dimension = sizeMap[size];
-  const [currentPhrase, setCurrentPhrase] = useState(() => getRandomPhrase());
+  // Use deterministic initial phrase to avoid hydration mismatch
+  // Will switch to random phrases after mount (client-side only)
+  const [currentPhrase, setCurrentPhrase] = useState(LOADING_PHRASES[0]);
   const [phraseKey, setPhraseKey] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set mounted flag after hydration
+  useEffect(() => {
+    setIsMounted(true);
+    // Set initial random phrase after mount to avoid hydration mismatch
+    if (!message && showPhrases) {
+      setCurrentPhrase(getRandomPhrase());
+    }
+  }, [message, showPhrases]);
 
   // Rotate phrases every 2.5 seconds if no custom message
   useEffect(() => {
-    if (message || !showPhrases) return;
+    if (message || !showPhrases || !isMounted) return;
 
     const interval = setInterval(() => {
       setCurrentPhrase((prev) => getRandomPhrase(prev));
@@ -302,7 +197,7 @@ export function NetPadLoader({
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [message, showPhrases]);
+  }, [message, showPhrases, isMounted]);
 
   const displayMessage = message || (showPhrases ? currentPhrase : null);
 

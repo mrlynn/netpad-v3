@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box,
@@ -26,13 +26,13 @@ import {
   Snackbar,
   Alert,
   useTheme as useMuiTheme,
+  Theme,
 } from '@mui/material';
 import {
   Add,
   Search,
   Edit,
   Delete,
-  Visibility,
   ContentCopy,
   BarChart,
   MoreVert,
@@ -64,122 +64,26 @@ interface SavedForm {
   thumbnailUrl?: string;
 }
 
-export default function FormsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const theme = useMuiTheme();
-  const orgId = params.orgId as string;
-  const projectId = params.projectId as string;
+interface FormCardProps {
+  form: SavedForm;
+  theme: Theme;
+  orgId: string;
+  projectId: string;
+  onMenuOpen: (event: React.MouseEvent<HTMLElement>, formId: string) => void;
+  onCopyLink: (form: SavedForm) => void;
+  formatDate: (dateString?: string) => string;
+}
 
-  const [forms, setForms] = useState<SavedForm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement | null; formId: string | null }>({
-    el: null,
-    formId: null,
-  });
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-
-  useEffect(() => {
-    if (orgId && projectId) {
-      loadForms();
-    }
-  }, [orgId, projectId]);
-
-  const loadForms = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/forms/list?orgId=${orgId}&projectId=${projectId}`);
-      const data = await response.json();
-
-      if (data.success && data.forms) {
-        // Enrich forms with response counts
-        const enrichedForms = await Promise.all(
-          data.forms.map(async (form: SavedForm) => {
-            try {
-              const statsRes = await fetch(`/api/forms/${form.id}/responses?statsOnly=true&pageSize=1`);
-              const statsData = await statsRes.json();
-              return {
-                ...form,
-                responseCount: statsData.success ? statsData.stats?.total || 0 : 0,
-              };
-            } catch {
-              return { ...form, responseCount: 0 };
-            }
-          })
-        );
-        setForms(enrichedForms);
-      }
-    } catch (error) {
-      console.error('Error loading forms:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (formId: string) => {
-    if (!confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
-      const data = await response.json();
-
-      if (data.success) {
-        setSnackbar({ open: true, message: 'Form deleted successfully', severity: 'success' });
-        loadForms();
-      } else {
-        setSnackbar({ open: true, message: 'Failed to delete form', severity: 'error' });
-      }
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error deleting form', severity: 'error' });
-    }
-
-    handleMenuClose();
-  };
-
-  const handleCopyLink = (form: SavedForm) => {
-    const baseUrl = window.location.origin;
-    const formUrl = `${baseUrl}/forms/${form.slug || form.id}`;
-    navigator.clipboard.writeText(formUrl);
-    setSnackbar({ open: true, message: 'Link copied to clipboard!', severity: 'success' });
-    handleMenuClose();
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, formId: string) => {
-    setMenuAnchor({ el: event.currentTarget, formId });
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchor({ el: null, formId: null });
-  };
-
-  const filteredForms = forms.filter((form) => {
-    const matchesSearch =
-      (form.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (form.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (form.collection || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-
-  const publishedForms = filteredForms.filter((f) => f.isPublished);
-  const draftForms = filteredForms.filter((f) => !f.isPublished);
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const FormCard = ({ form }: { form: SavedForm }) => (
+const FormCard = memo(function FormCard({
+  form,
+  theme,
+  orgId,
+  projectId,
+  onMenuOpen,
+  onCopyLink,
+  formatDate
+}: FormCardProps) {
+  return (
     <Card
       sx={{
         height: '100%',
@@ -265,7 +169,7 @@ export default function FormsPage() {
               </Typography>
             )}
           </Box>
-          <IconButton size="small" onClick={(e) => handleMenuOpen(e, form.id)}>
+          <IconButton size="small" onClick={(e) => onMenuOpen(e, form.id)}>
             <MoreVert fontSize="small" />
           </IconButton>
         </Box>
@@ -370,7 +274,7 @@ export default function FormsPage() {
           </Tooltip>
         )}
         <Tooltip title="Copy form link">
-          <IconButton size="small" onClick={() => handleCopyLink(form)} sx={{ color: 'text.secondary' }}>
+          <IconButton size="small" onClick={() => onCopyLink(form)} sx={{ color: 'text.secondary' }}>
             <ContentCopy sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
@@ -397,6 +301,124 @@ export default function FormsPage() {
       </CardActions>
     </Card>
   );
+});
+
+export default function FormsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const theme = useMuiTheme();
+  const orgId = params.orgId as string;
+  const projectId = params.projectId as string;
+
+  const [forms, setForms] = useState<SavedForm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement | null; formId: string | null }>({
+    el: null,
+    formId: null,
+  });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  useEffect(() => {
+    if (orgId && projectId) {
+      loadForms();
+    }
+  }, [orgId, projectId]);
+
+  const loadForms = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/forms/list?orgId=${orgId}&projectId=${projectId}`);
+      const data = await response.json();
+
+      if (data.success && data.forms) {
+        // Enrich forms with response counts
+        const enrichedForms = await Promise.all(
+          data.forms.map(async (form: SavedForm) => {
+            try {
+              const statsRes = await fetch(`/api/forms/${form.id}/responses?statsOnly=true&pageSize=1`);
+              const statsData = await statsRes.json();
+              return {
+                ...form,
+                responseCount: statsData.success ? statsData.stats?.total || 0 : 0,
+              };
+            } catch {
+              return { ...form, responseCount: 0 };
+            }
+          })
+        );
+        setForms(enrichedForms);
+      }
+    } catch (error) {
+      console.error('Error loading forms:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (formId: string) => {
+    if (!confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
+      const data = await response.json();
+
+      if (data.success) {
+        setSnackbar({ open: true, message: 'Form deleted successfully', severity: 'success' });
+        loadForms();
+      } else {
+        setSnackbar({ open: true, message: 'Failed to delete form', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error deleting form', severity: 'error' });
+    }
+
+    handleMenuClose();
+  };
+
+  const handleCopyLink = (form: SavedForm) => {
+    const baseUrl = window.location.origin;
+    const formUrl = `${baseUrl}/forms/${form.slug || form.id}`;
+    navigator.clipboard.writeText(formUrl);
+    setSnackbar({ open: true, message: 'Link copied to clipboard!', severity: 'success' });
+    handleMenuClose();
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, formId: string) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setMenuAnchor({ el: event.currentTarget, formId });
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor({ el: null, formId: null });
+  };
+
+  const filteredForms = forms.filter((form) => {
+    const matchesSearch =
+      (form.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (form.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (form.collection || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const publishedForms = filteredForms.filter((f) => f.isPublished);
+  const draftForms = filteredForms.filter((f) => !f.isPublished);
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -563,7 +585,15 @@ export default function FormsPage() {
                 <Grid container spacing={3}>
                   {publishedForms.map((form) => (
                     <Grid item xs={12} sm={6} md={4} key={form.id}>
-                      <FormCard form={form} />
+                      <FormCard
+                        form={form}
+                        theme={theme}
+                        orgId={orgId}
+                        projectId={projectId}
+                        onMenuOpen={handleMenuOpen}
+                        onCopyLink={handleCopyLink}
+                        formatDate={formatDate}
+                      />
                     </Grid>
                   ))}
                 </Grid>
@@ -599,7 +629,15 @@ export default function FormsPage() {
                 <Grid container spacing={3}>
                   {draftForms.map((form) => (
                     <Grid item xs={12} sm={6} md={4} key={form.id}>
-                      <FormCard form={form} />
+                      <FormCard
+                        form={form}
+                        theme={theme}
+                        orgId={orgId}
+                        projectId={projectId}
+                        onMenuOpen={handleMenuOpen}
+                        onCopyLink={handleCopyLink}
+                        formatDate={formatDate}
+                      />
                     </Grid>
                   ))}
                 </Grid>
@@ -613,12 +651,14 @@ export default function FormsPage() {
         anchorEl={menuAnchor.el}
         open={Boolean(menuAnchor.el)}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            bgcolor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            minWidth: 180,
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              minWidth: 180,
+            },
           },
         }}
       >

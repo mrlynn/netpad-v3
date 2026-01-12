@@ -49,6 +49,10 @@ export interface WorkflowDocument {
 
   // Analytics
   stats: WorkflowStats;
+
+  // Thumbnail
+  thumbnailUrl?: string;
+  thumbnailUpdatedAt?: string;
 }
 
 export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived';
@@ -182,6 +186,54 @@ export interface EdgeStyle {
 }
 
 // ============================================
+// STICKY NOTE STYLE TYPES
+// ============================================
+
+/**
+ * Gradient definition for sticky note backgrounds
+ */
+export interface GradientDefinition {
+  type: 'linear' | 'radial';
+  angle?: number;              // For linear gradients (0-360 degrees)
+  colors: string[];            // At least 2 color stops
+}
+
+/**
+ * Enhanced styling options for sticky notes/annotations
+ */
+export interface StickyNoteStyle {
+  // Background options
+  bgType: 'solid' | 'gradient';
+  bgColor?: string;            // For solid backgrounds (hex color)
+  gradient?: GradientDefinition;
+
+  // Border options
+  borderColor?: string;        // Custom border color (auto-derived if not set)
+  borderStyle?: 'solid' | 'dashed' | 'none' | 'glow';
+  borderWidth?: number;        // Border width in pixels
+
+  // Visual effects
+  opacity?: number;            // 0-1, background opacity
+  blur?: boolean;              // Glass/frosted effect (for semi-transparent)
+
+  // Text
+  textColor?: 'auto' | 'light' | 'dark' | string; // Auto picks based on bg luminance
+}
+
+/**
+ * Preset style definition for quick selection
+ */
+export interface StickyNotePreset {
+  name: string;
+  style: StickyNoteStyle;
+  preview: {
+    bg: string;                // CSS background value for preview
+    border: string;            // Border color for preview
+    text: 'light' | 'dark';    // Text color mode for preview
+  };
+}
+
+// ============================================
 // NODE DEFINITIONS (Registry)
 // ============================================
 
@@ -237,6 +289,32 @@ export interface PortDefinition {
   description?: string;
   schema?: JSONSchemaDefinition;
 }
+
+/**
+ * Output handle definition for multi-output nodes (logic nodes)
+ */
+export interface OutputHandleDefinition {
+  id: string;           // Handle ID (e.g., 'true', 'false', 'default')
+  label: string;        // Display label
+  description?: string; // Tooltip description
+  color?: string;       // Optional handle color
+}
+
+/**
+ * Static output configurations for logic nodes
+ * Switch node outputs are dynamic (derived from config.cases)
+ */
+export const LOGIC_NODE_OUTPUTS: Record<string, OutputHandleDefinition[]> = {
+  'conditional': [
+    { id: 'true', label: 'Yes', description: 'Executes when condition is true', color: '#4CAF50' },
+    { id: 'false', label: 'No', description: 'Executes when condition is false', color: '#f44336' },
+  ],
+  'loop': [
+    { id: 'loop_body', label: 'Each Item', description: 'Executes for each iteration' },
+    { id: 'completed', label: 'Done', description: 'Executes after all iterations complete', color: '#4CAF50' },
+  ],
+  // switch is dynamic - derived from config.cases
+};
 
 /**
  * Base node definition that all node types extend

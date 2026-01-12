@@ -4,8 +4,9 @@ import { cookies } from 'next/headers';
 import { sessionOptions, ensureSessionId, SavedForm } from '@/lib/session';
 import { FormConfiguration, FormVersion } from '@/types/form';
 import { randomBytes } from 'crypto';
-import { getForms, saveForm, publishForm, getPublishedFormById, getVersionsForForm, addFormVersion } from '@/lib/storage';
+import { getForms, saveForm, publishForm, getVersionsForForm, addFormVersion } from '@/lib/storage';
 import { checkFieldLimit } from '@/lib/platform/billing';
+import { getOrgFormsCollection } from '@/lib/platform/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -157,8 +158,49 @@ export async function POST(request: NextRequest) {
       organizationId: savedForm.organizationId,
     });
 
-    // Save to file storage
+    // Save to file storage (platform database - session-based)
     await saveForm(sessionId, savedForm);
+
+    // Also save to organization database if organizationId is provided
+    // This ensures the form appears in the organization's forms list
+    if (savedForm.organizationId) {
+      try {
+        const orgFormsCollection = await getOrgFormsCollection(savedForm.organizationId);
+
+        // Prepare the org form document
+        const orgFormDoc = {
+          formId: savedForm.id,
+          name: savedForm.name,
+          description: savedForm.description,
+          slug: savedForm.slug,
+          projectId: savedForm.projectId,
+          fieldConfigs: savedForm.fieldConfigs,
+          variables: savedForm.variables,
+          theme: savedForm.theme,
+          dataSource: savedForm.dataSource,
+          connectionString: savedForm.connectionString,
+          database: savedForm.database,
+          collection: savedForm.collection,
+          isPublished: savedForm.isPublished,
+          publishedAt: savedForm.publishedAt,
+          createdAt: savedForm.createdAt,
+          updatedAt: savedForm.updatedAt,
+          thumbnailUrl: savedForm.thumbnailUrl,
+          conversationalConfig: savedForm.conversationalConfig,
+        };
+
+        await orgFormsCollection.updateOne(
+          { formId: savedForm.id },
+          { $set: orgFormDoc },
+          { upsert: true }
+        );
+
+        console.log('[API forms-save] Form saved to organization database:', savedForm.organizationId);
+      } catch (orgError) {
+        console.error('[API forms-save] Failed to save to organization database:', orgError);
+        // Don't fail the request if org save fails - the form is still saved to platform DB
+      }
+    }
 
     // Create a new version on each save
     const existingVersions = await getVersionsForForm(sessionId, savedForm.id);

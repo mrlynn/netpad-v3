@@ -1417,6 +1417,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="number"
             label={config.label}
             placeholder={config.placeholder}
@@ -1429,6 +1430,50 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             inputProps={{
               min: config.validation?.min,
               max: config.validation?.max,
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
             }}
           />
         );
@@ -1510,12 +1555,57 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="date"
             label={config.label}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
             InputLabelProps={{ shrink: true }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
+            }}
           />
         );
 
@@ -1523,12 +1613,57 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="email"
             label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
+            }}
           />
         );
 
@@ -1536,12 +1671,57 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="url"
             label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
+            }}
           />
         );
 
@@ -1636,6 +1816,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="time"
             label={config.label}
             placeholder={config.placeholder}
@@ -1645,6 +1826,50 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             InputLabelProps={{ shrink: true }}
             inputProps={{
               step: minuteStep * 60, // step is in seconds
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
             }}
           />
         );
@@ -2046,9 +2271,54 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  variant={inputVariant as 'outlined' | 'filled' | 'standard'}
                   label={config.label}
                   required={config.required}
                   placeholder={config.placeholder || 'Select an option'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                      '& fieldset': {
+                        borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                      },
+                      '&:hover fieldset': {
+                        borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.primaryColor || '#00ED64',
+                        borderWidth: '2px',
+                      },
+                    },
+                    '& .MuiFilledInput-root': {
+                      borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                      backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                      '&:hover': {
+                        backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                      },
+                      '&::before': {
+                        borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                      },
+                      '&:hover::before': {
+                        borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                      },
+                      '&.Mui-focused::after': {
+                        borderBottomColor: theme.primaryColor || '#00ED64',
+                        borderBottomWidth: '2px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: theme.textSecondaryColor || '#5C6C75',
+                      '&.Mui-focused': {
+                        color: theme.primaryColor || '#00ED64',
+                      },
+                    },
+                    '& .MuiInputBase-input': {
+                      color: theme.textColor || '#001E2B',
+                    },
+                  }}
                 />
               )}
             />
@@ -2057,8 +2327,18 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <FormControl fullWidth required={config.required}>
-            <InputLabel>{config.label}</InputLabel>
+            <InputLabel
+              sx={{
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              }}
+            >
+              {config.label}
+            </InputLabel>
             <Select
+              variant={inputVariant as 'outlined' | 'filled' | 'standard'}
               value={value || ''}
               label={config.label}
               onChange={(e) => {
@@ -2067,6 +2347,22 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
               }}
               onFocus={() => trackFieldFocus(config.path)}
               onBlur={() => trackFieldBlur(config.path, !!value)}
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+                '& .MuiSelect-select': {
+                  color: theme.textColor || '#001E2B',
+                },
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+              }}
             >
               {config.validation?.clearable !== false && (
                 <MenuItem value="">
@@ -3142,6 +3438,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
+            variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
@@ -3154,6 +3451,51 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             required={config.required}
             multiline={(value?.length || 0) > 100}
             rows={(value?.length || 0) > 100 ? 4 : 1}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                '& fieldset': {
+                  borderColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.primaryColor || '#00ED64',
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiFilledInput-root': {
+                borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
+                backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.5),
+                '&:hover': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                },
+                '&.Mui-focused': {
+                  backgroundColor: alpha(theme.surfaceColor || '#F9FBFA', 0.8),
+                  borderColor: theme.primaryColor || '#00ED64',
+                },
+                '&::before': {
+                  borderBottomColor: alpha(theme.textColor || '#001E2B', 0.2),
+                },
+                '&:hover::before': {
+                  borderBottomColor: alpha(theme.primaryColor || '#00ED64', 0.5),
+                },
+                '&.Mui-focused::after': {
+                  borderBottomColor: theme.primaryColor || '#00ED64',
+                  borderBottomWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.textSecondaryColor || '#5C6C75',
+                '&.Mui-focused': {
+                  color: theme.primaryColor || '#00ED64',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.textColor || '#001E2B',
+              },
+            }}
             inputProps={{
               maxLength: config.validation?.maxLength,
             }}

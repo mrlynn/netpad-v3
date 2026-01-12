@@ -15,6 +15,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import {
   Check,
@@ -78,6 +80,10 @@ const aiFeatureNames: Record<AIFeature, string> = {
   agent_compliance_audit: 'Compliance Audit Agent',
   agent_response_insights: 'Response Insights Agent',
   agent_auto_translation: 'Auto Translation Agent',
+  // RAG features
+  rag_conversational_forms: 'Knowledge-Guided Conversational Forms',
+  rag_document_upload: 'Document Upload for RAG',
+  rag_vector_search: 'Vector Search',
 };
 
 // Platform feature display names
@@ -164,12 +170,14 @@ const tierHighlights: Record<SubscriptionTier, string[]> = {
     '10,000 submissions/month',
     '500 AI generations/month',
     '100 AI agent sessions',
+    'Knowledge-Guided Conversational Forms (RAG)*',
     'Field-level encryption',
     'Unlimited data retention',
   ],
   enterprise: [
     'Everything in Team, plus:',
     'Unlimited everything',
+    'Knowledge-Guided Conversational Forms (RAG)*',
     'SSO / SAML authentication (Coming Soon)',
     'Custom domain (Coming Soon)',
     'Compliance audit agent',
@@ -435,32 +443,58 @@ export default function PricingPage() {
                     {/* Key Features */}
                     <Divider sx={{ borderColor: alpha('#fff', 0.1), mb: 2 }} />
                     <List dense sx={{ flex: 1 }}>
-                      {tierHighlights[tier].map((highlight, index) => (
-                        <ListItem key={index} sx={{ px: 0, py: 0.5 }}>
-                          {index === 0 && tier !== 'free' ? (
-                            <ListItemText
-                              primary={highlight}
-                              primaryTypographyProps={{
-                                variant: 'body2',
-                                sx: { color: alpha('#fff', 0.5), fontStyle: 'italic' },
-                              }}
-                            />
-                          ) : (
-                            <>
-                              <ListItemIcon sx={{ minWidth: 28 }}>
-                                <Check sx={{ fontSize: 18, color: meta.color }} />
-                              </ListItemIcon>
+                      {tierHighlights[tier].map((highlight, index) => {
+                        const isRAGFeature = highlight.includes('RAG');
+                        const isFirstItem = index === 0 && tier !== 'free';
+                        return (
+                          <ListItem key={index} sx={{ px: 0, py: 0.5 }}>
+                            {isFirstItem ? (
                               <ListItemText
                                 primary={highlight}
                                 primaryTypographyProps={{
                                   variant: 'body2',
-                                  sx: { color: alpha('#fff', 0.8) },
+                                  sx: { color: alpha('#fff', 0.5), fontStyle: 'italic' },
                                 }}
                               />
-                            </>
-                          )}
-                        </ListItem>
-                      ))}
+                            ) : (
+                              <>
+                                <ListItemIcon sx={{ minWidth: 28 }}>
+                                  <Check sx={{ fontSize: 18, color: meta.color }} />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <Box>
+                                      {highlight}
+                                      {isRAGFeature && (
+                                        <Tooltip
+                                          title="Requires MongoDB Atlas M10+ cluster for Vector Search"
+                                          arrow
+                                        >
+                                          <Typography
+                                            component="span"
+                                            variant="caption"
+                                            sx={{
+                                              ml: 0.5,
+                                              color: '#2196F3',
+                                              cursor: 'help',
+                                            }}
+                                          >
+                                            *
+                                          </Typography>
+                                        </Tooltip>
+                                      )}
+                                    </Box>
+                                  }
+                                  primaryTypographyProps={{
+                                    variant: 'body2',
+                                    sx: { color: alpha('#fff', 0.8) },
+                                  }}
+                                />
+                              </>
+                            )}
+                          </ListItem>
+                        );
+                      })}
                     </List>
                   </Paper>
                 </Grid>
@@ -635,36 +669,110 @@ export default function PricingPage() {
                 </Grid>
 
                 {/* Feature Rows */}
-                {(Object.keys(aiFeatureNames) as AIFeature[]).map((feature, index) => (
-                  <Grid
-                    container
-                    key={feature}
-                    sx={{
-                      borderBottom: '1px solid',
-                      borderColor: alpha('#fff', 0.05),
-                      bgcolor: index % 2 === 0 ? 'transparent' : alpha('#fff', 0.02),
-                    }}
-                  >
-                    <Grid item xs={4} sx={{ p: 2 }}>
-                      <Typography variant="body2" sx={{ color: alpha('#fff', 0.8) }}>
-                        {aiFeatureNames[feature]}
-                      </Typography>
+                {(Object.keys(aiFeatureNames) as AIFeature[]).map((feature, index) => {
+                  const isRAGFeature = feature.startsWith('rag_');
+                  return (
+                    <Grid
+                      container
+                      key={feature}
+                      sx={{
+                        borderBottom: '1px solid',
+                        borderColor: alpha('#fff', 0.05),
+                        bgcolor: index % 2 === 0 ? 'transparent' : alpha('#fff', 0.02),
+                      }}
+                    >
+                      <Grid item xs={4} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: alpha('#fff', 0.8) }}>
+                          {aiFeatureNames[feature]}
+                        </Typography>
+                        {isRAGFeature && (
+                          <Tooltip
+                            title="Requires MongoDB Atlas M10+ cluster for Vector Search"
+                            arrow
+                          >
+                            <Typography
+                              component="span"
+                              variant="caption"
+                              sx={{
+                                color: '#2196F3',
+                                cursor: 'help',
+                                fontWeight: 700,
+                              }}
+                            >
+                              *
+                            </Typography>
+                          </Tooltip>
+                        )}
+                      </Grid>
+                      {tiers.map((tier) => {
+                        const hasFeature = SUBSCRIPTION_TIERS[tier].aiFeatures.includes(feature);
+                        return (
+                          <Grid item xs={2} key={tier} sx={{ p: 2, textAlign: 'center' }}>
+                            {hasFeature ? (
+                              <Check sx={{ fontSize: 20, color: '#00ED64' }} />
+                            ) : (
+                              <Close sx={{ fontSize: 20, color: alpha('#fff', 0.2) }} />
+                            )}
+                          </Grid>
+                        );
+                      })}
                     </Grid>
-                    {tiers.map((tier) => {
-                      const hasFeature = SUBSCRIPTION_TIERS[tier].aiFeatures.includes(feature);
-                      return (
-                        <Grid item xs={2} key={tier} sx={{ p: 2, textAlign: 'center' }}>
-                          {hasFeature ? (
-                            <Check sx={{ fontSize: 20, color: '#00ED64' }} />
-                          ) : (
-                            <Close sx={{ fontSize: 20, color: alpha('#fff', 0.2) }} />
-                          )}
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                ))}
+                  );
+                })}
               </Box>
+            </Box>
+            
+            {/* RAG Features Note */}
+            <Box sx={{ p: 3, pt: 2 }}>
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  bgcolor: alpha('#2196F3', 0.1),
+                  border: '1px solid',
+                  borderColor: alpha('#2196F3', 0.3),
+                  color: alpha('#fff', 0.9),
+                  '& .MuiAlert-icon': {
+                    color: '#2196F3',
+                  },
+                }}
+              >
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                  Knowledge-Guided Conversational Forms (RAG) Requirements*
+                </Typography>
+                <Typography variant="body2" component="div" sx={{ color: alpha('#fff', 0.8) }}>
+                  Features marked with an asterisk (*) require:
+                  <List dense sx={{ pl: 2, mb: 0, mt: 0.5 }}>
+                    <ListItem disablePadding sx={{ pb: 0.5 }}>
+                      <ListItemIcon sx={{ minWidth: 20, color: '#2196F3' }}>
+                        <Check sx={{ fontSize: 16 }} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Team plan or higher" 
+                        primaryTypographyProps={{ variant: 'body2', sx: { color: alpha('#fff', 0.8) } }}
+                      />
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemIcon sx={{ minWidth: 20, color: '#2196F3' }}>
+                        <Check sx={{ fontSize: 16 }} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="MongoDB Atlas M10 or higher cluster (required for Vector Search)" 
+                        primaryTypographyProps={{ variant: 'body2', sx: { color: alpha('#fff', 0.8) } }}
+                      />
+                    </ListItem>
+                  </List>
+                  <Typography variant="body2" sx={{ mt: 1.5, color: alpha('#fff', 0.8) }}>
+                    Upgrade your Atlas cluster directly in the{' '}
+                    <Link 
+                      href="https://cloud.mongodb.com/" 
+                      target="_blank"
+                      style={{ color: '#2196F3', textDecoration: 'underline' }}
+                    >
+                      MongoDB Atlas Console
+                    </Link>.
+                  </Typography>
+                </Typography>
+              </Alert>
             </Box>
           </Paper>
 
@@ -816,6 +924,10 @@ export default function PricingPage() {
               {
                 q: 'Is my data secure?',
                 a: 'Absolutely. Connection strings are encrypted at rest with AES-256. Team and Enterprise plans include MongoDB Queryable Encryption for field-level encryption.',
+              },
+              {
+                q: 'What are Knowledge-Guided Conversational Forms (RAG)?',
+                a: 'RAG features allow conversational forms to answer questions using builder-supplied documents. This requires Team plan or higher and a MongoDB Atlas M10+ cluster (for Vector Search). You can upgrade your Atlas cluster directly in the MongoDB Atlas Console.',
               },
             ].map((faq, index) => (
               <Grid item xs={12} md={6} key={index}>

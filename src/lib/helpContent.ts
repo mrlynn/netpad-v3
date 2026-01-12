@@ -3469,7 +3469,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'An IT helpdesk conversational form greets the user, asks about their issue, gathers details about affected systems and urgency, and extracts structured ticket data that can be automatically routed to the right team.',
       },
     ],
-    relatedTopics: ['conversational-templates', 'form-builder', 'form-publishing'],
+    relatedTopics: ['conversational-templates', 'knowledge-guided-forms', 'form-builder', 'form-publishing'],
     keywords: [
       'conversational',
       'AI form',
@@ -3479,6 +3479,8 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'extraction',
       'topics',
       'persona',
+      'knowledge base',
+      'RAG',
     ],
   },
 
@@ -3549,7 +3551,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Use template categories (Support, Feedback, Intake, Application, General) to organize your templates. Filter by category in the template selector to quickly find the right template.',
       },
     ],
-    relatedTopics: ['conversational-forms', 'form-builder'],
+    relatedTopics: ['conversational-forms', 'knowledge-guided-forms', 'form-builder'],
     keywords: [
       'template',
       'conversational template',
@@ -3558,6 +3560,220 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'patient intake',
       'clone template',
       'admin',
+    ],
+  },
+
+  'knowledge-guided-forms': {
+    id: 'knowledge-guided-forms',
+    title: 'Knowledge-Guided Forms',
+    description:
+      'Enhance conversational forms with RAG (Retrieval-Augmented Generation) to provide AI responses grounded in your uploaded documents and knowledge base.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Knowledge-Guided Forms?',
+      },
+      {
+        type: 'text',
+        content:
+          'Knowledge-guided forms combine conversational AI with your organization\'s knowledge base. By uploading documents like policies, FAQs, manuals, and guides, the AI can provide accurate, contextual responses based on your actual content rather than general knowledge.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Benefits',
+      },
+      {
+        type: 'list',
+        content: [
+          'Accurate responses - AI answers are grounded in your documents',
+          'Reduced hallucination - Responses cite actual sources',
+          'Consistent information - Everyone gets the same accurate answers',
+          'Easy updates - Upload new documents to keep knowledge current',
+          'Source citations - Users can see where information comes from',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'How It Works',
+      },
+      {
+        type: 'list',
+        content: [
+          'Upload documents (PDF, DOCX, TXT, MD) to your form',
+          'Documents are automatically chunked and embedded using vector search',
+          'When users ask questions, relevant chunks are retrieved',
+          'The AI uses retrieved context to provide accurate, sourced answers',
+          'Citations show users which documents informed the response',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Enabling Knowledge-Guided Mode',
+      },
+      {
+        type: 'list',
+        content: [
+          'Open a conversational form in the editor',
+          'Navigate to the AI Configuration section',
+          'Toggle "Enable Knowledge-Guided Mode"',
+          'Upload documents in the Knowledge Base panel',
+          'Configure retrieval settings (max chunks, minimum score)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Requirements',
+      },
+      {
+        type: 'list',
+        content: [
+          'Team plan or higher subscription',
+          'MongoDB Atlas M10+ cluster (for vector search)',
+          'Supported document types: PDF, DOCX, TXT, MD',
+          'Maximum document size: 10MB per file',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Start with high-quality documents like official policies, FAQs, and procedures. Well-structured documents with clear headings produce better retrieval results.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Knowledge-guided forms require a MongoDB Atlas M10+ cluster for vector search capabilities. Free tier (M0) and shared clusters (M2/M5) do not support this feature.',
+      },
+      {
+        type: 'example',
+        content:
+          'An HR onboarding form can be enhanced with the employee handbook, benefits guide, and company policies. When new hires ask about PTO policies or health insurance options, the AI responds with accurate, cited information from your actual documents.',
+      },
+    ],
+    relatedTopics: ['conversational-forms', 'rag-document-management', 'organizations'],
+    keywords: [
+      'RAG',
+      'knowledge base',
+      'document upload',
+      'vector search',
+      'embeddings',
+      'citations',
+      'grounded AI',
+      'context',
+      'retrieval',
+    ],
+  },
+
+  'rag-document-management': {
+    id: 'rag-document-management',
+    title: 'Document Management for RAG',
+    description:
+      'Upload, manage, and organize documents that power knowledge-guided conversational forms.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Document Types',
+      },
+      {
+        type: 'text',
+        content:
+          'Knowledge-guided forms support various document types to build your knowledge base. Each document is processed, chunked, and embedded for semantic search.',
+      },
+      {
+        type: 'list',
+        content: [
+          'PDF - Policies, manuals, reports (text-based PDFs work best)',
+          'DOCX - Word documents, guides, procedures',
+          'TXT - Plain text files, logs, notes',
+          'MD - Markdown documentation, README files',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Uploading Documents',
+      },
+      {
+        type: 'list',
+        content: [
+          'Open the Knowledge Base panel in your conversational form',
+          'Click "Upload Document" or drag and drop files',
+          'Add metadata: title, description, source type, tags',
+          'Documents are automatically processed in the background',
+          'Status shows: pending → processing → ready (or error)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Source Types',
+      },
+      {
+        type: 'text',
+        content:
+          'Categorize documents by source type to help organize your knowledge base and improve retrieval relevance.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Policy - Official policies and compliance documents',
+          'Contract - Agreements, terms, legal documents',
+          'Guide - How-to guides and tutorials',
+          'Manual - Technical manuals and specifications',
+          'FAQ - Frequently asked questions',
+          'Other - General documents',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Document Processing',
+      },
+      {
+        type: 'text',
+        content:
+          'When you upload a document, it goes through several processing steps:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Text Extraction - Content is extracted from the document',
+          'Chunking - Text is split into smaller, overlapping chunks (~1000 characters)',
+          'Embedding - Each chunk is converted to a vector representation',
+          'Indexing - Vectors are stored for fast semantic search',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Managing Documents',
+      },
+      {
+        type: 'list',
+        content: [
+          'View all documents and their processing status',
+          'Filter by status (ready, processing, error)',
+          'Delete documents to remove from knowledge base',
+          'Re-upload to update document content',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'For best results, use text-based PDFs rather than scanned images. Split very large documents into logical sections. Include descriptive titles and tags to improve organization.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Deleting a document removes it from the knowledge base immediately. This cannot be undone. Consider downloading important documents before deletion.',
+      },
+    ],
+    relatedTopics: ['knowledge-guided-forms', 'conversational-forms', 'mongodb-connection'],
+    keywords: [
+      'document upload',
+      'PDF',
+      'DOCX',
+      'knowledge base',
+      'chunking',
+      'embedding',
+      'processing',
+      'source type',
+      'RAG documents',
     ],
   },
 

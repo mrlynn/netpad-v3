@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
           trustedDeviceCount: authUser?.trustedDevices?.length || 0,
           createdAt: platformUser?.createdAt || authUser?.createdAt,
           lastLoginAt: platformUser?.lastLoginAt || authUser?.lastLoginAt,
+          platformRole: platformUser?.platformRole || null,
         },
         session: {
           isPasskeyAuth: session.isPasskeyAuth || false,

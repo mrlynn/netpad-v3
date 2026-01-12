@@ -17,10 +17,10 @@ import {
   Chip,
   IconButton,
   Grid,
-  CircularProgress,
   Alert,
   Stack,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -103,8 +103,8 @@ export function ProjectList({
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <NetPadLoader size="large" />
       </Box>
     );
   }

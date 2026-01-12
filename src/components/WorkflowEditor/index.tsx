@@ -62,6 +62,7 @@ import { useChat, WorkflowActionHandlers } from '@/contexts/ChatContext';
 import { WorkflowBuilderContext } from '@/types/chat';
 import { nanoid } from 'nanoid';
 import { WorkflowNode, WorkflowEdge } from '@/types/workflow';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -505,7 +506,7 @@ function WorkflowEditorInner({
           width: '100%',
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="large" fullPage={false} />
       </Box>
     );
   }

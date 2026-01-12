@@ -567,7 +567,11 @@ export type AIFeature =
   | 'agent_response_processing'
   | 'agent_compliance_audit'
   | 'agent_response_insights'
-  | 'agent_auto_translation';
+  | 'agent_auto_translation'
+  // Layer 4: Knowledge-Guided Features (RAG)
+  | 'rag_conversational_forms'      // Main RAG feature for conversational forms
+  | 'rag_document_upload'           // Document management for RAG
+  | 'rag_vector_search';            // Vector search capabilities
 
 export type PlatformFeature =
   | 'custom_branding'
@@ -606,6 +610,24 @@ export interface TierLimits {
   autoProvisionedCluster?: boolean;   // Whether tier gets auto-provisioned M0 cluster
   clusterStorageMb?: number;          // 512 for M0
   clusterMaxConnections?: number;     // 500 for M0
+}
+
+/**
+ * Feature requirements beyond subscription tier
+ */
+export interface FeatureRequirements {
+  /** Minimum cluster tier required (e.g., 'M10' for vector search) */
+  clusterTier?: import('@/lib/atlas/types').ClusterInstanceSize;
+  /** Atlas feature required (e.g., 'vector_search') */
+  atlasFeature?: string;
+}
+
+/**
+ * Feature metadata for gating (optional - for future use)
+ */
+export interface FeatureMetadata {
+  feature: AIFeature | PlatformFeature;
+  requirements?: FeatureRequirements;
 }
 
 export interface TierFeatures {
@@ -704,6 +726,10 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'agent_response_processing',
       'agent_response_insights',
       'agent_auto_translation',
+      // RAG features (require M10+ cluster)
+      'rag_conversational_forms',
+      'rag_document_upload',
+      'rag_vector_search',
     ],
     platformFeatures: [
       'custom_branding',
@@ -745,6 +771,10 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'agent_compliance_audit',
       'agent_response_insights',
       'agent_auto_translation',
+      // RAG features (require M10+ cluster)
+      'rag_conversational_forms',
+      'rag_document_upload',
+      'rag_vector_search',
     ],
     platformFeatures: [
       'custom_branding',

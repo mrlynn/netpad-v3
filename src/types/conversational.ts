@@ -29,6 +29,8 @@ export interface TopicCoverage {
 /**
  * Conversation state
  */
+import { RAGTelemetry } from '@/types/rag';
+
 export interface ConversationState {
   /** Unique conversation ID */
   conversationId: string;
@@ -56,7 +58,14 @@ export interface ConversationState {
   completedAt?: Date;
   /** Error message if status is 'error' */
   error?: string;
+  /** RAG telemetry (if RAG is enabled) */
+  ragTelemetry?: RAGTelemetry;
 }
+
+/**
+ * RAG configuration for conversational forms
+ */
+import { RAGConfig } from '@/types/rag';
 
 /**
  * Conversational form configuration
@@ -83,6 +92,8 @@ export interface ConversationalFormConfig {
    * @deprecated Use templateId: 'it-helpdesk' instead
    */
   useITHelpdeskTemplate?: boolean;
+  /** RAG configuration for knowledge-guided conversations */
+  rag?: RAGConfig;
 }
 
 /**

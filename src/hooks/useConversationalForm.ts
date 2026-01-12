@@ -8,6 +8,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { ConversationState, ConversationalFormConfig, TopicCoverage } from '@/types/conversational';
 // Import directly from state to avoid pulling in server-side dependencies (persistence uses MongoDB)
 import { createConversationState } from '@/lib/conversational/state';
+import { RetrievedChunk } from '@/types/rag';
 
 /**
  * SSE event types from the streaming endpoint
@@ -63,7 +64,12 @@ interface SSEErrorEvent {
   code?: string;
 }
 
-type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSECompleteEvent | SSEErrorEvent;
+interface SSERAGSourcesEvent {
+  type: 'rag_sources';
+  sources: RetrievedChunk[];
+}
+
+type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSECompleteEvent | SSEErrorEvent | SSERAGSourcesEvent;
 
 /**
  * Message in the conversation
@@ -74,6 +80,8 @@ export interface ConversationalMessage {
   content: string;
   timestamp: Date;
   isStreaming?: boolean;
+  /** RAG sources for assistant messages (if RAG is enabled) */
+  ragSources?: RetrievedChunk[];
 }
 
 /**
@@ -410,6 +418,15 @@ export function useConversationalForm(
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId ? { ...m, isStreaming: false } : m
+          )
+        );
+        break;
+
+      case 'rag_sources':
+        // Attach RAG sources to the current assistant message
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, ragSources: event.sources } : m
           )
         );
         break;
