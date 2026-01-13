@@ -11,7 +11,7 @@ import {
   alpha,
   Divider,
   Badge,
-  TextField
+  TextField,
 } from '@mui/material';
 import {
   Close,
@@ -25,6 +25,11 @@ import {
   Shield,
   Bolt,
   Chat,
+  Rocket,
+  Extension,
+  Storage,
+  Code,
+  Lock,
 } from '@mui/icons-material';
 import { FormTheme, MultiPageConfig, FormLifecycle, FormVariable, FieldConfig, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
 import { FormHooksConfig } from '@/types/formHooks';
@@ -40,6 +45,7 @@ import { BotProtectionEditor, DraftSettingsEditor } from './BotProtectionEditor'
 import { EmbedCodeGenerator } from './EmbedCodeGenerator';
 import { ConversationalConfigEditor } from './ConversationalConfigEditor';
 import { ConversationalFormConfig } from '@/types/conversational';
+import { SettingsSection, SettingsItem } from '@/components/Settings';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -169,60 +175,31 @@ export function FormSettingsDrawer({
   const hasProtection = botProtection?.enabled || draftSettings?.enabled;
   const hasHooks = !!(hooksConfig?.prefill?.fromUrlParams || hooksConfig?.onSuccess?.message || hooksConfig?.onSuccess?.redirect || hooksConfig?.onSuccess?.webhook || hooksConfig?.onError?.message);
 
+  // New consolidated tabs structure (4 tabs)
   const tabs = [
     {
       label: 'Publish',
-      icon: <Publish fontSize="small" />,
+      icon: <Rocket fontSize="small" />,
       badge: hasPublishing ? '✓' : undefined,
       color: '#00ED64'
     },
     {
-      label: 'Search',
-      icon: <Search fontSize="small" />,
-      badge: hasSearch ? '✓' : undefined,
-      color: '#2196f3'
-    },
-    {
-      label: 'AI Chat',
-      icon: <Chat fontSize="small" />,
-      badge: hasConversational ? '✓' : undefined,
-      color: '#00ED64'
-    },
-    {
-      label: 'Theme',
+      label: 'Appearance',
       icon: <Palette fontSize="small" />,
-      badge: hasTheme ? '✓' : undefined,
+      badge: (hasTheme || hasMultiPage) ? '✓' : undefined,
       color: '#E91E63'
     },
     {
-      label: 'Pages',
-      icon: <Pages fontSize="small" />,
-      badge: hasMultiPage ? (multiPageConfig?.pages?.length || 0).toString() : undefined,
-      color: '#e91e63'
-    },
-    {
-      label: 'Lifecycle',
-      icon: <Speed fontSize="small" />,
-      badge: hasLifecycle ? '✓' : undefined,
+      label: 'Behavior',
+      icon: <Settings fontSize="small" />,
+      badge: (hasLifecycle || variablesCount > 0 || hasProtection) ? '✓' : undefined,
       color: '#9c27b0'
     },
     {
-      label: 'Variables',
-      icon: <DataObject fontSize="small" />,
-      badge: variablesCount > 0 ? variablesCount.toString() : undefined,
-      color: '#9c27b0'
-    },
-    {
-      label: 'Actions',
-      icon: <Bolt fontSize="small" />,
-      badge: hasHooks ? '✓' : undefined,
-      color: '#ff9800'
-    },
-    {
-      label: 'Protection',
-      icon: <Shield fontSize="small" />,
-      badge: hasProtection ? '✓' : undefined,
-      color: '#ff5722'
+      label: 'Integrations',
+      icon: <Extension fontSize="small" />,
+      badge: (hasSearch || hasConversational || hasHooks) ? '✓' : undefined,
+      color: '#2196f3'
     }
   ];
 
@@ -314,172 +291,372 @@ export function FormSettingsDrawer({
       </Box>
 
       {/* Tab Panels */}
+      {/* Tab 0: Publish - Data Storage + Access Control + Embed */}
       <TabPanel value={activeTab} index={0}>
         <Box sx={{ p: 2 }}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
             Form Details
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
-            <TextField
+            <SettingsItem
               label="Form Title"
-              value={formName}
-              onChange={(e) => onFormNameChange(e.target.value)}
-              fullWidth
-              size="small"
-              placeholder="Enter form title"
-              helperText="This title will be displayed at the top of your published form"
-            />
-            <TextField
+              description="This title will be displayed at the top of your published form"
+            >
+              <TextField
+                value={formName}
+                onChange={(e) => onFormNameChange(e.target.value)}
+                fullWidth
+                size="small"
+                placeholder="Enter form title"
+              />
+            </SettingsItem>
+            <SettingsItem
               label="Description"
-              value={formDescription || ''}
-              onChange={(e) => onFormDescriptionChange(e.target.value)}
-              fullWidth
-              size="small"
-              multiline
-              rows={2}
-              placeholder="Optional description for your form"
-              helperText="Shown below the title on the published form"
-            />
+              description="Shown below the title on the published form"
+            >
+              <TextField
+                value={formDescription || ''}
+                onChange={(e) => onFormDescriptionChange(e.target.value)}
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+                placeholder="Optional description for your form"
+              />
+            </SettingsItem>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 2 }} />
 
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Data Storage
-          </Typography>
-          <DataSourceEditor
-            value={dataSource}
-            organizationId={organizationId}
-            projectId={projectId}
-            onChange={onDataSourceChange}
-          />
+          <SettingsSection
+            title="Data Storage"
+            description="Where form submissions are saved"
+            icon={<Storage fontSize="small" />}
+            color="#00ED64"
+            defaultExpanded={true}
+          >
+            <DataSourceEditor
+              value={dataSource}
+              organizationId={organizationId}
+              projectId={projectId}
+              onChange={onDataSourceChange}
+            />
+          </SettingsSection>
 
-          <Divider sx={{ my: 3 }} />
-
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Access Control
-          </Typography>
-          <AccessControlEditor
-            value={accessControl}
-            onChange={onAccessControlChange}
-          />
+          <SettingsSection
+            title="Access Control"
+            description="Control who can view and submit the form"
+            icon={<Lock fontSize="small" />}
+            color="#00ED64"
+            defaultExpanded={true}
+          >
+            <AccessControlEditor
+              value={accessControl}
+              onChange={onAccessControlChange}
+            />
+          </SettingsSection>
 
           {/* Embed Code Generator - only show if form is published */}
           {isPublished && formId && formSlug && (
-            <>
-              <Divider sx={{ my: 3 }} />
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                Embed Form
-              </Typography>
+            <SettingsSection
+              title="Embed Form"
+              description="Get the code to embed this form on your website"
+              icon={<Code fontSize="small" />}
+              color="#00ED64"
+              defaultExpanded={false}
+            >
               <EmbedCodeGenerator
                 formId={formId}
                 formSlug={formSlug}
                 formName={formName}
               />
-            </>
+            </SettingsSection>
           )}
         </Box>
       </TabPanel>
 
+      {/* Tab 1: Appearance - Theme + Pages */}
       <TabPanel value={activeTab} index={1}>
         <Box sx={{ p: 2 }}>
-          <SearchConfigEditor
-            formType={formType}
-            onFormTypeChange={onFormTypeChange}
-            config={searchConfig}
-            onChange={onSearchConfigChange}
-            fieldConfigs={fieldConfigs}
-          />
+          <SettingsSection
+            title="Theme"
+            description="Customize the appearance and styling of your form"
+            icon={<Palette fontSize="small" />}
+            color="#E91E63"
+            defaultExpanded={true}
+            badge={hasTheme ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#E91E63',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <ThemeConfigEditor
+              config={themeConfig}
+              onChange={(theme) => {
+                console.log('[FormSettingsDrawer] Theme changed:', {
+                  theme,
+                  pageBackgroundColor: theme?.pageBackgroundColor,
+                  pageBackgroundGradient: theme?.pageBackgroundGradient,
+                });
+                onThemeChange(theme);
+              }}
+              formTitle={formName}
+              formDescription={formDescription}
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Pages"
+            description="Organize your form into multiple pages"
+            icon={<Pages fontSize="small" />}
+            color="#E91E63"
+            defaultExpanded={true}
+            badge={hasMultiPage ? (
+              <Badge
+                badgeContent={multiPageConfig?.pages?.length || 0}
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#e91e63',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <PageConfigEditor
+              config={multiPageConfig}
+              onChange={onMultiPageChange}
+              fieldConfigs={fieldConfigs}
+            />
+          </SettingsSection>
         </Box>
       </TabPanel>
 
+      {/* Tab 2: Behavior - Lifecycle + Variables + Protection */}
       <TabPanel value={activeTab} index={2}>
         <Box sx={{ p: 2 }}>
-          <ConversationalConfigEditor
-            formType={formType}
-            onFormTypeChange={onFormTypeChange}
-            config={conversationalConfig}
-            onChange={onConversationalConfigChange}
-            fieldConfigs={fieldConfigs}
-            onGenerateFieldsFromSchema={onGenerateFieldsFromSchema}
-            formId={formId}
-            organizationId={organizationId}
-          />
+          <SettingsSection
+            title="Lifecycle"
+            description="Configure create and edit workflows for form submissions"
+            icon={<Speed fontSize="small" />}
+            color="#9c27b0"
+            defaultExpanded={true}
+            badge={hasLifecycle ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#9c27b0',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <LifecycleConfigEditor
+              config={lifecycleConfig}
+              onChange={onLifecycleChange}
+              fieldConfigs={fieldConfigs}
+              collection={collection || ''}
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Variables"
+            description="Define variables that can be used throughout your form"
+            icon={<DataObject fontSize="small" />}
+            color="#9c27b0"
+            defaultExpanded={true}
+            badge={variablesCount > 0 ? (
+              <Badge
+                badgeContent={variablesCount}
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#9c27b0',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <VariablesPanel
+              variables={variables}
+              onVariablesChange={onVariablesChange}
+              fieldConfigs={fieldConfigs}
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Protection"
+            description="Bot protection and draft saving settings"
+            icon={<Shield fontSize="small" />}
+            color="#9c27b0"
+            defaultExpanded={false}
+            badge={hasProtection ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#ff5722',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <BotProtectionEditor
+              config={botProtection}
+              onChange={onBotProtectionChange}
+            />
+
+            <Divider sx={{ my: 3 }} />
+
+            <DraftSettingsEditor
+              config={draftSettings}
+              onChange={onDraftSettingsChange}
+            />
+          </SettingsSection>
         </Box>
       </TabPanel>
 
+      {/* Tab 3: Integrations - Search + AI Chat + Actions */}
       <TabPanel value={activeTab} index={3}>
         <Box sx={{ p: 2 }}>
-          <ThemeConfigEditor
-            config={themeConfig}
-            onChange={(theme) => {
-              console.log('[FormSettingsDrawer] Theme changed:', {
-                theme,
-                pageBackgroundColor: theme?.pageBackgroundColor,
-                pageBackgroundGradient: theme?.pageBackgroundGradient,
-              });
-              onThemeChange(theme);
-            }}
-            formTitle={formName}
-            formDescription={formDescription}
-          />
-        </Box>
-      </TabPanel>
+          <SettingsSection
+            title="Search"
+            description="Enable search functionality for your form submissions"
+            icon={<Search fontSize="small" />}
+            color="#2196f3"
+            defaultExpanded={true}
+            badge={hasSearch ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#2196f3',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <SearchConfigEditor
+              formType={formType}
+              onFormTypeChange={onFormTypeChange}
+              config={searchConfig}
+              onChange={onSearchConfigChange}
+              fieldConfigs={fieldConfigs}
+            />
+          </SettingsSection>
 
-      <TabPanel value={activeTab} index={4}>
-        <Box sx={{ p: 2 }}>
-          <PageConfigEditor
-            config={multiPageConfig}
-            onChange={onMultiPageChange}
-            fieldConfigs={fieldConfigs}
-          />
-        </Box>
-      </TabPanel>
+          <SettingsSection
+            title="AI Chat"
+            description="Enable conversational AI chat interface for your form"
+            icon={<Chat fontSize="small" />}
+            color="#2196f3"
+            defaultExpanded={true}
+            badge={hasConversational ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#00ED64',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <ConversationalConfigEditor
+              formType={formType}
+              onFormTypeChange={onFormTypeChange}
+              config={conversationalConfig}
+              onChange={onConversationalConfigChange}
+              fieldConfigs={fieldConfigs}
+              onGenerateFieldsFromSchema={onGenerateFieldsFromSchema}
+              formId={formId}
+              organizationId={organizationId}
+            />
+          </SettingsSection>
 
-      <TabPanel value={activeTab} index={5}>
-        <Box sx={{ p: 2 }}>
-          <LifecycleConfigEditor
-            config={lifecycleConfig}
-            onChange={onLifecycleChange}
-            fieldConfigs={fieldConfigs}
-            collection={collection || ''}
-          />
-        </Box>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={6}>
-        <Box sx={{ p: 2 }}>
-          <VariablesPanel
-            variables={variables}
-            onVariablesChange={onVariablesChange}
-            fieldConfigs={fieldConfigs}
-          />
-        </Box>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={7}>
-        <Box sx={{ p: 2 }}>
-          <HooksSettingsEditor
-            config={hooksConfig}
-            onChange={onHooksConfigChange}
-            fieldConfigs={fieldConfigs}
-          />
-        </Box>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={8}>
-        <Box sx={{ p: 2 }}>
-          <BotProtectionEditor
-            config={botProtection}
-            onChange={onBotProtectionChange}
-          />
-
-          <Divider sx={{ my: 3 }} />
-
-          <DraftSettingsEditor
-            config={draftSettings}
-            onChange={onDraftSettingsChange}
-          />
+          <SettingsSection
+            title="Actions / Hooks"
+            description="Configure automated actions and webhooks"
+            icon={<Bolt fontSize="small" />}
+            color="#2196f3"
+            defaultExpanded={true}
+            badge={hasHooks ? (
+              <Badge
+                badgeContent="✓"
+                color="primary"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: '#ff9800',
+                    color: '#fff',
+                    fontSize: '0.65rem',
+                    minWidth: 16,
+                    height: 16
+                  }
+                }}
+              >
+                <Box sx={{ width: 0 }} />
+              </Badge>
+            ) : undefined}
+          >
+            <HooksSettingsEditor
+              config={hooksConfig}
+              onChange={onHooksConfigChange}
+              fieldConfigs={fieldConfigs}
+            />
+          </SettingsSection>
         </Box>
       </TabPanel>
     </Drawer>

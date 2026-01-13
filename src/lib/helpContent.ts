@@ -106,6 +106,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
+          'Start with templates - Use pre-built form templates for common use cases',
           'Automatic schema detection from sample documents',
           'Configure field types, labels, and validation rules',
           'Add conditional logic to show/hide fields',
@@ -122,7 +123,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Use the Document Preview panel on the right to see how your form data will be structured when inserted into MongoDB.',
       },
     ],
-    relatedTopics: ['field-configuration', 'form-library', 'multi-page-forms'],
+    relatedTopics: ['template-gallery', 'field-configuration', 'form-library', 'multi-page-forms'],
     keywords: ['form', 'builder', 'create', 'schema'],
   },
 
@@ -3245,6 +3246,42 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
         content:
           'A ticket search form might have filters for urgency level, category, and department—each populated dynamically with values from existing tickets, showing counts like "Hardware (45)" so users know how many results to expect.',
       },
+      {
+        type: 'heading',
+        content: 'Search Form Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'Start quickly with pre-built search form templates that demonstrate best practices for search forms. Templates are available for common use cases like customer search, order search, and support ticket search.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Customer Search - Search customers by name, email, company, status, and creation date',
+          'Order Search - Filter orders by status, date range, customer, order number, and total amount',
+          'Support Ticket Search - Search tickets by status, priority, category, reporter, and date',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'When using a search form template, the formType and searchConfig are automatically configured. You can customize the search fields, operators, and result display settings in the Form Settings drawer.',
+      },
+      {
+        type: 'heading',
+        content: 'Using Search Templates',
+      },
+      {
+        type: 'list',
+        content: [
+          'Select a search form template from the template gallery',
+          'The template includes fields and search configuration',
+          'Customize the search fields and operators as needed',
+          'Connect to your MongoDB collection to start searching',
+          'Smart dropdowns will automatically populate from your data',
+        ],
+      },
     ],
     relatedTopics: ['smart-dropdowns', 'form-builder', 'response-management', 'lookup-fields'],
     keywords: [
@@ -3422,13 +3459,29 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
-          'Create a new form and select "Conversational" as the form type',
-          'Choose a template (e.g., IT Helpdesk, Customer Feedback) or start from scratch',
+          'Create a new form (or open an existing form)',
+          'Open Form Settings (Settings button or keyboard shortcut)',
+          'Go to the Form Type section and enable "Conversational" mode',
+          'In the Conversational Configuration panel, choose a template (e.g., IT Helpdesk, Customer Feedback) or start from scratch',
           'Define topics the conversation should cover',
           'Configure the extraction schema for structured output',
           'Set conversation limits (max turns, duration, confidence threshold)',
           'Customize the AI persona (professional, friendly, empathetic)',
         ],
+      },
+      {
+        type: 'heading',
+        content: 'Conversational Form Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'Conversational forms use a separate template system from regular form templates. When you enable conversational mode, you\'ll see template options directly in the conversational configuration panel. Templates are pre-configured with topics, extraction schemas, and personas.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Unlike regular form templates (which include fields), conversational templates include conversation topics, extraction schemas, and AI persona configurations. They\'re accessed through Form Settings when conversational mode is enabled, not from the main template gallery.',
       },
       {
         type: 'heading',
@@ -4050,6 +4103,121 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'database connection',
       'secure storage',
       'team sharing',
+    ],
+  },
+
+  'template-gallery': {
+    id: 'template-gallery',
+    title: 'Template Gallery',
+    description:
+      'Use pre-built templates to quickly create forms and workflows. Browse by category, preview templates, and customize them to fit your needs.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Templates?',
+      },
+      {
+        type: 'text',
+        content:
+          'Templates are pre-configured forms and workflows that you can use as starting points. They include common field configurations, validation rules, and structure for popular use cases like contact forms, job applications, event registration, and more.',
+      },
+      {
+        type: 'heading',
+        content: 'Using Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'When creating a new form or workflow, you\'ll see the template gallery. You can:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Browse templates by category (Business, Events, Feedback, Support, etc.)',
+          'Search for specific templates using the search bar',
+          'Preview template details including fields, complexity, and estimated setup time',
+          'Click "Use Template" to apply the template immediately',
+          'Click "Customize" to load the template and make changes before applying',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Categories',
+      },
+      {
+        type: 'list',
+        content: [
+          'Business: Contact forms, job applications, lead capture, quote requests',
+          'Events: Registration, RSVP, volunteer signup, webinar registration',
+          'Feedback: Customer satisfaction, NPS surveys, product feedback',
+          'Support: Support tickets, appointment booking',
+          'E-commerce: Order forms, return requests',
+          'Healthcare: Patient intake, health screening (with encryption support)',
+          'Finance: Expense reports, financial applications (with encryption)',
+          'Education: Course enrollment, scholarship applications',
+          'Real Estate: Property inquiries, rental applications',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Preview',
+      },
+      {
+        type: 'text',
+        content:
+          'Click on any template card to see a detailed preview showing:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Template description and category',
+          'Complete list of fields with types and validation',
+          'Complexity level (simple, moderate, advanced)',
+          'Estimated setup time',
+          'Field count and structure',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Workflow Templates',
+      },
+      {
+        type: 'text',
+        content:
+          'Workflow templates provide pre-configured workflows for common automation scenarios:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form Processing: Form to email, form to database',
+          'Data Processing: Scheduled sync, data pipelines',
+          'Integrations: Webhook processors, API monitoring',
+          'AI Workflows: Text classification, data extraction',
+          'Logic: Conditional routing, batch processing',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Templates are starting points - you can modify any field, add new ones, or remove fields you don\'t need. Templates help you get started quickly while maintaining full flexibility.',
+      },
+      {
+        type: 'tip',
+        content:
+          'After applying a template, you\'ll be prompted to name your form and configure the target MongoDB collection. The template fields will be ready to customize.',
+      },
+    ],
+    relatedTopics: ['form-builder', 'workflow-nodes', 'field-configuration'],
+    keywords: [
+      'template',
+      'gallery',
+      'pre-built',
+      'starter',
+      'preset',
+      'category',
+      'preview',
+      'customize',
+      'quick start',
     ],
   },
 };

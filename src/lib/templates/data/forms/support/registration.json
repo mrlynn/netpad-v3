@@ -1,0 +1,44 @@
+{
+  "id": "registration",
+  "name": "Event Registration",
+  "description": "Attendee info",
+  "icon": "🎫",
+  "category": "events",
+  "fields": [
+    {
+      "path": "firstName",
+      "label": "First Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "lastName",
+      "label": "Last Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone Number",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "dietaryRestrictions",
+      "label": "Dietary Restrictions",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

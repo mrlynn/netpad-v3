@@ -682,7 +682,7 @@ export function WYSIWYGFieldCard({
         '&:active': draggable ? { cursor: 'grabbing' } : {},
       }}
     >
-      {/* Hover toolbar */}
+      {/* Hover toolbar - overlay pattern, no layout shift */}
       <Fade in={isHovered || isSelected}>
         <Box
           sx={{
@@ -694,12 +694,17 @@ export function WYSIWYGFieldCard({
             gap: 0.5,
             bgcolor: 'background.paper',
             borderRadius: 1,
-            boxShadow: 2,
+            boxShadow: 3,
             px: 0.5,
             py: 0.25,
-            zIndex: 10,
+            zIndex: 100,
+            pointerEvents: 'auto',
+            // Ensure toolbar overlays content without affecting layout
+            opacity: (isHovered || isSelected) ? 1 : 0,
+            transition: 'opacity 0.15s ease',
           }}
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           {draggable && (
             <Tooltip title="Drag to reorder" placement="top">
@@ -841,7 +846,7 @@ export function WYSIWYGFieldCard({
       )}
 
       {/* Field content - cleaner Google Forms style */}
-      <Box sx={{ pt: isHovered || isSelected ? 3.5 : 0, transition: 'padding 0.15s ease' }}>
+      <Box>
         {/* Simplified Question Label Display */}
         {!isLayout && (
           <Typography

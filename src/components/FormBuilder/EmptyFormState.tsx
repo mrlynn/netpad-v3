@@ -33,10 +33,13 @@ import { QuestionTypePicker } from './QuestionTypePicker';
 import { FieldConfig } from '@/types/form';
 import AIFormGeneratorDialog, { AIGenerationConnectionContext } from './AIFormGeneratorDialog';
 import { useAIFormGenerator } from '@/hooks/useAI';
+import { TemplateGallery } from '@/components/Templates';
+import type { FormTemplate } from '@/lib/templates/loader';
 
 interface EmptyFormStateProps {
   onAddField: (field: FieldConfig) => void;
-  onAddTemplate?: (fields: FieldConfig[], templateName: string) => void;
+  // Updated to accept full template for formType and searchConfig support
+  onAddTemplate?: (template: FormTemplate) => void;
   onOpenLibrary: () => void;
   onConnectDatabase?: () => void;
   hasConnection: boolean;
@@ -45,6 +48,9 @@ interface EmptyFormStateProps {
 }
 
 // Form templates for quick start - organized by category
+// DEPRECATED: Templates are now loaded from JSON files via the template loader
+// See: src/lib/templates/loader.ts
+/* 
 const TEMPLATES = [
   // === BUSINESS & PROFESSIONAL ===
   {
@@ -457,8 +463,11 @@ const TEMPLATES = [
     ],
   },
 ];
+*/
 
 // Category definitions with labels and icons
+// DEPRECATED: Categories are now loaded from the template loader
+/*
 const TEMPLATE_CATEGORIES = [
   { id: 'all', label: 'All', icon: '📋' },
   { id: 'business', label: 'Business', icon: '💼' },
@@ -471,6 +480,7 @@ const TEMPLATE_CATEGORIES = [
   { id: 'education', label: 'Education', icon: '🎓' },
   { id: 'realestate', label: 'Real Estate', icon: '🏠' },
 ];
+*/
 
 // Example prompts for quick start
 const HERO_EXAMPLE_PROMPTS = [
@@ -495,7 +505,6 @@ export function EmptyFormState({
 }: EmptyFormStateProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Hero prompt state
   const [heroPrompt, setHeroPrompt] = useState('');
@@ -552,7 +561,20 @@ export function EmptyFormState({
   useEffect(() => {
     if (generatedForm && generatedForm.fieldConfigs && generatedForm.fieldConfigs.length > 0) {
       if (onAddTemplate) {
-        onAddTemplate(generatedForm.fieldConfigs, generatedForm.name || 'AI Generated Form');
+        // Create a template-like object from the generated form
+        // AI-generated forms are typically data-entry forms, but preserve any formType/searchConfig if present
+        const template: FormTemplate = {
+          id: 'ai-generated',
+          name: generatedForm.name || 'AI Generated Form',
+          description: generatedForm.description || '',
+          icon: '✨',
+          category: 'general',
+          fields: generatedForm.fieldConfigs || [],
+          formType: generatedForm.formType,
+          searchConfig: generatedForm.searchConfig,
+          conversationalConfig: generatedForm.conversationalConfig,
+        };
+        onAddTemplate(template);
       } else {
         generatedForm.fieldConfigs.forEach((field, index) => {
           setTimeout(() => {
@@ -574,22 +596,16 @@ export function EmptyFormState({
     }
   };
 
-  // Filter templates by selected category
-  const filteredTemplates = selectedCategory === 'all'
-    ? TEMPLATES
-    : TEMPLATES.filter(t => t.category === selectedCategory);
-
-  const handleTemplateSelect = (template: typeof TEMPLATES[0]) => {
-    const fields = template.fields.map(field => ({
-      ...field,
-      source: 'custom' as const,
-    })) as FieldConfig[];
-
+  const handleTemplateSelect = (template: FormTemplate) => {
     if (onAddTemplate) {
-      // Use batch template handler if available
-      onAddTemplate(fields, template.name);
+      // Pass the full template to preserve formType, searchConfig, etc.
+      onAddTemplate(template);
     } else {
       // Fallback to adding fields one by one (legacy behavior)
+      const fields = template.fields.map(field => ({
+        ...field,
+        source: 'custom' as const,
+      })) as FieldConfig[];
       fields.forEach((field, index) => {
         setTimeout(() => {
           onAddField(field);
@@ -607,6 +623,8 @@ export function EmptyFormState({
         justifyContent: 'center',
         p: 3,
         bgcolor: 'background.default',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}
     >
       <Paper
@@ -614,22 +632,28 @@ export function EmptyFormState({
         sx={{
           width: '100%',
           maxWidth: 700,
+          maxHeight: 'calc(100vh - 48px)',
           borderRadius: 3,
           overflow: 'hidden',
           border: '1px solid',
           borderColor: 'divider',
+          display: 'flex',
+          flexDirection: 'column',
+          my: 'auto',
         }}
       >
-        {/* Hero AI Prompt Section */}
-        <Box
-          sx={{
-            p: 4,
-            textAlign: 'center',
-            background: `linear-gradient(135deg, ${alpha('#00ED64', 0.15)} 0%, ${alpha('#00ED64', 0.03)} 100%)`,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
+        {/* Hero AI Prompt Section - Hide when manual options are expanded */}
+        <Collapse in={!showManualOptions}>
+          <Box
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              background: `linear-gradient(135deg, ${alpha('#00ED64', 0.15)} 0%, ${alpha('#00ED64', 0.03)} 100%)`,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              flexShrink: 0,
+            }}
+          >
           {/* AI Icon */}
           <Box
             sx={{
@@ -839,6 +863,7 @@ export function EmptyFormState({
             </Box>
           </Box>
         </Box>
+        </Collapse>
 
         {/* Divider with "or start manually" */}
         <Box
@@ -850,6 +875,7 @@ export function EmptyFormState({
             py: 1.5,
             bgcolor: alpha('#000', 0.02),
             cursor: 'pointer',
+            flexShrink: 0,
             '&:hover': {
               bgcolor: alpha('#000', 0.04),
             },
@@ -875,17 +901,19 @@ export function EmptyFormState({
 
         {/* Collapsible Manual Options */}
         <Collapse in={showManualOptions}>
-          {/* Quick action buttons */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 1,
-              p: 2,
-              justifyContent: 'center',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: '0 1 auto', minHeight: 0, maxHeight: '60vh', overflow: 'hidden' }}>
+            {/* Quick action buttons */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1,
+                p: 2,
+                justifyContent: 'center',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                flexShrink: 0,
+              }}
+            >
             <Button
               variant="outlined"
               size="small"
@@ -958,29 +986,30 @@ export function EmptyFormState({
             >
               Advanced AI
             </Button>
-          </Box>
+            </Box>
 
-          {/* Tabs */}
-          <Tabs
-            value={activeTab}
-            onChange={(_, v) => setActiveTab(v)}
-            variant="fullWidth"
-            sx={{
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 500,
-                minHeight: 48,
-              },
-              '& .Mui-selected': {
-                color: '#00ED64',
-              },
-              '& .MuiTabs-indicator': {
-                bgcolor: '#00ED64',
-              },
-            }}
-          >
+            {/* Tabs */}
+            <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              variant="fullWidth"
+              sx={{
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                flexShrink: 0,
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  minHeight: 48,
+                },
+                '& .Mui-selected': {
+                  color: '#00ED64',
+                },
+                '& .MuiTabs-indicator': {
+                  bgcolor: '#00ED64',
+                },
+              }}
+            >
             <Tab
               icon={<Add sx={{ fontSize: 18 }} />}
               iconPosition="start"
@@ -993,205 +1022,42 @@ export function EmptyFormState({
             />
           </Tabs>
 
-          {/* Tab Content */}
-          <Box sx={{ minHeight: 300 }}>
-            {activeTab === 0 && (
-            <Box
-              sx={{
-                height: 400,
-                overflowY: 'auto',
-                '&::-webkit-scrollbar': {
-                  width: 6,
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  bgcolor: 'divider',
-                  borderRadius: 3,
-                },
-              }}
-            >
-              <QuestionTypePicker onSelect={onAddField} />
-            </Box>
-          )}
-
-          {activeTab === 1 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: 400 }}>
-              {/* Category Filter Chips */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 0.75,
-                  p: 1.5,
-                  pb: 1,
-                  overflowX: 'auto',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  flexShrink: 0,
-                  '&::-webkit-scrollbar': {
-                    height: 4,
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    bgcolor: 'divider',
-                    borderRadius: 2,
-                  },
-                }}
-              >
-                {TEMPLATE_CATEGORIES.map((cat) => {
-                  const count = cat.id === 'all'
-                    ? TEMPLATES.length
-                    : TEMPLATES.filter(t => t.category === cat.id).length;
-                  return (
-                    <Chip
-                      key={cat.id}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <span>{cat.icon}</span>
-                          <span>{cat.label}</span>
-                          <Box
-                            component="span"
-                            sx={{
-                              ml: 0.5,
-                              px: 0.75,
-                              py: 0.125,
-                              borderRadius: 1,
-                              bgcolor: selectedCategory === cat.id
-                                ? alpha('#fff', 0.2)
-                                : alpha('#000', 0.08),
-                              fontSize: 11,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {count}
-                          </Box>
-                        </Box>
-                      }
-                      onClick={() => setSelectedCategory(cat.id)}
-                      sx={{
-                        height: 32,
-                        borderRadius: 2,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        bgcolor: selectedCategory === cat.id
-                          ? '#00ED64'
-                          : 'transparent',
-                        color: selectedCategory === cat.id
-                          ? '#000'
-                          : 'text.primary',
-                        border: '1px solid',
-                        borderColor: selectedCategory === cat.id
-                          ? '#00ED64'
-                          : 'divider',
-                        fontWeight: selectedCategory === cat.id ? 600 : 400,
-                        '&:hover': {
-                          bgcolor: selectedCategory === cat.id
-                            ? '#00ED64'
-                            : alpha('#00ED64', 0.08),
-                          borderColor: '#00ED64',
-                        },
-                        '& .MuiChip-label': {
-                          px: 1,
-                        },
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-
-              {/* Scrollable Template Grid */}
-              <Box
-                sx={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  p: 2,
-                  '&::-webkit-scrollbar': {
-                    width: 6,
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    bgcolor: 'divider',
-                    borderRadius: 3,
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                  {filteredTemplates.map((template) => (
-                    <Paper
-                      key={template.id}
-                      elevation={0}
-                      onClick={() => handleTemplateSelect(template)}
-                      sx={{
-                        flex: '1 1 calc(50% - 6px)',
-                        minWidth: 180,
-                        maxWidth: 'calc(50% - 6px)',
-                        p: 1.5,
-                        cursor: 'pointer',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 2,
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          borderColor: alpha('#00ED64', 0.5),
-                          bgcolor: alpha('#00ED64', 0.03),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha('#00ED64', 0.1)}`,
-                        },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
-                        <Typography sx={{ fontSize: 24 }}>{template.icon}</Typography>
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              fontWeight: 600,
-                              mb: 0.25,
-                              fontSize: 13,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {template.name}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                              display: 'block',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              fontSize: 11,
-                            }}
-                          >
-                            {template.description}
-                          </Typography>
-                          <Chip
-                            label={`${template.fields.length} fields`}
-                            size="small"
-                            sx={{
-                              fontSize: 10,
-                              height: 16,
-                              mt: 0.75,
-                              '& .MuiChip-label': { px: 0.75 },
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    </Paper>
-                  ))}
+            {/* Tab Content */}
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {activeTab === 0 && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    minHeight: 0,
+                    '&::-webkit-scrollbar': {
+                      width: 6,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      bgcolor: 'divider',
+                      borderRadius: 3,
+                    },
+                  }}
+                >
+                  <QuestionTypePicker onSelect={onAddField} />
                 </Box>
+              )}
 
-                {filteredTemplates.length === 0 && (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No templates in this category
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
+              {activeTab === 1 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  <TemplateGallery
+                    onTemplateSelect={handleTemplateSelect}
+                    onTemplateCustomize={(template) => {
+                      // For now, customize does the same as select
+                      // In the future, this could open template in editor mode
+                      handleTemplateSelect(template);
+                    }}
+                    variant="compact"
+                  />
+                </Box>
+              )}
             </Box>
-          )}
-
-        </Box>
+          </Box>
         </Collapse>
       </Paper>
 

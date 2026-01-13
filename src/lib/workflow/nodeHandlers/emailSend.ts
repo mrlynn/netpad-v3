@@ -78,9 +78,14 @@ const handler: NodeHandler = async (context: ExtendedNodeContext) => {
   // Extract email configuration
   const to = resolvedConfig.to as string | string[] | undefined;
   const subject = resolvedConfig.subject as string | undefined;
-  const body = resolvedConfig.body as string | undefined;
+  const bodyRaw = resolvedConfig.body;
   const from = (resolvedConfig.from as string | undefined) || process.env.FROM_EMAIL;
   const replyTo = resolvedConfig.replyTo as string | undefined;
+
+  // Convert body to string (handles objects, arrays, etc. from variable substitution)
+  const body = bodyRaw !== undefined && bodyRaw !== null
+    ? (typeof bodyRaw === 'string' ? bodyRaw : JSON.stringify(bodyRaw))
+    : undefined;
 
   // Validate required fields
   if (!to) {
@@ -123,7 +128,7 @@ const handler: NodeHandler = async (context: ExtendedNodeContext) => {
     // Get SMTP transporter
     const transport = getTransporter();
 
-    // Determine if body is HTML or plain text
+    // Determine if body is HTML or plain text (body is now guaranteed to be a string)
     const isHtml = body.trim().startsWith('<') || body.includes('<br') || body.includes('<p>');
 
     // Build email options

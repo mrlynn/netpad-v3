@@ -1,0 +1,23 @@
+{
+  "id": "form-to-email",
+  "name": "Form to Email",
+  "description": "Send email when form is submitted",
+  "icon": "📧",
+  "category": "forms",
+  "nodeCount": 2,
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Form Submission",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send Email",
+      "position": { "x": 250, "y": 250 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 }
+  ]
+}

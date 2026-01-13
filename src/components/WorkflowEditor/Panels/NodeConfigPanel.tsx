@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import {
   Box,
   Drawer,
@@ -45,236 +46,28 @@ import {
 import { WorkflowNode, RetryPolicy, StickyNoteStyle } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
 import { DataContextPanel } from './DataContextPanel';
-import { ConditionBuilder, ConditionGroup, conditionGroupToExpression } from './ConditionBuilder';
+// ConditionBuilder types imported by LogicNodeEditor
 import { VariablePickerButton } from '../VariablePicker';
 import { STICKY_NOTE_PRESETS, getStyleFromConfig } from '../Nodes/StickyNote';
+import { TriggerNodeEditor } from '../NodeEditors/TriggerNodeEditor';
+import { LogicNodeEditor } from '../NodeEditors/LogicNodeEditor';
+import { IntegrationNodeEditor } from '../NodeEditors/IntegrationNodeEditor';
+import { ActionNodeEditor } from '../NodeEditors/ActionNodeEditor';
+import { DataNodeEditor } from '../NodeEditors/DataNodeEditor';
+import { AINodeEditor } from '../NodeEditors/AINodeEditor';
+import { CustomNodeEditor } from '../NodeEditors/CustomNodeEditor';
 
 interface NodeConfigPanelProps {
   open: boolean;
   onClose: () => void;
 }
 
-// Node type specific config fields
-const NODE_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
-  'manual-trigger': [],
-  'form-trigger': [
-    { key: 'formId', label: 'Form ID', type: 'form-select', description: 'Select the form that triggers this workflow' },
-    { key: 'waitForValidation', label: 'Wait for Validation', type: 'boolean', description: 'Wait for form validation before triggering' },
-    { key: 'includeMetadata', label: 'Include Submission Metadata', type: 'boolean', description: 'Include IP, user agent, and timing info' },
-  ],
-  'webhook-trigger': [
-    { key: 'path', label: 'Webhook Path', type: 'text', description: 'Custom path for the webhook endpoint' },
-    { key: 'method', label: 'HTTP Method', type: 'select', options: ['POST', 'GET', 'PUT', 'DELETE'], description: 'Allowed HTTP method' },
-    { key: 'secret', label: 'Secret Key', type: 'password', description: 'Secret for webhook validation' },
-  ],
-  'schedule-trigger': [
-    { key: 'schedule', label: 'Cron Expression', type: 'text', description: 'Cron expression (e.g., "0 9 * * *" for 9 AM daily)' },
-    { key: 'timezone', label: 'Timezone', type: 'text', description: 'Timezone for the schedule (e.g., "America/New_York")' },
-  ],
-  'conditional': [
-    { key: 'condition', label: 'Condition', type: 'condition-builder', description: 'Define conditions for branching' },
-    { key: 'includeElse', label: 'Include Else Output', type: 'boolean', description: 'Add a third "Else" output handle for fallback cases' },
-  ],
-  'switch': [
-    { key: 'field', label: 'Field to Match', type: 'text', description: 'Data path to evaluate (e.g., "status", "user.role")' },
-    { key: 'matchMode', label: 'Match Mode', type: 'select', options: ['exact', 'contains', 'regex', 'range'], description: 'How to compare values' },
-    { key: 'cases', label: 'Cases', type: 'switch-cases', description: 'Define case values and their output branches' },
-  ],
-  'code': [
-    { key: 'code', label: 'JavaScript Code', type: 'code', description: 'Code to execute. Use "input" for node inputs, "return" to output data.' },
-    { key: 'timeout', label: 'Timeout (ms)', type: 'number', description: 'Max execution time (default: 5000, max: 30000)' },
-  ],
-  'loop': [
-    { key: 'iterateOver', label: 'Iterate Over', type: 'text', description: 'Path to array to iterate (e.g., nodes.formTrigger.data.items)' },
-    { key: 'itemVariable', label: 'Item Variable Name', type: 'text', description: 'Variable name for current item (default: "item")' },
-  ],
-  'delay': [
-    { key: 'duration', label: 'Duration (ms)', type: 'number', description: 'Wait time in milliseconds' },
-    { key: 'until', label: 'Wait Until', type: 'text', description: 'ISO date string to wait until (alternative to duration)' },
-  ],
-  'http-request': [
-    { key: 'url', label: 'URL', type: 'text', description: 'The URL to request (use {{variable}} for dynamic values)' },
-    { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], description: 'HTTP method' },
-    { key: 'headers', label: 'Headers', type: 'code', description: 'Request headers as JSON' },
-    { key: 'body', label: 'Body', type: 'code', description: 'Request body (for POST/PUT/PATCH)' },
-    { key: 'timeout', label: 'Timeout (ms)', type: 'number', description: 'Request timeout in milliseconds' },
-  ],
-  'mongodb-query': [
-    { key: 'connectionId', label: 'Connection', type: 'connection-select', description: 'Select a MongoDB connection from the vault' },
-    { key: 'database', label: 'Database', type: 'text', description: 'Database name (optional, uses connection default)' },
-    { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
-    { key: 'operation', label: 'Operation', type: 'select', options: ['find', 'findOne', 'aggregate', 'count'], description: 'Query operation' },
-    { key: 'query', label: 'Query/Pipeline', type: 'code', description: 'MongoDB query or aggregation pipeline as JSON (use {{variable}} for dynamic values)' },
-    { key: 'options', label: 'Options', type: 'code', description: 'Query options (sort, limit, projection) as JSON' },
-  ],
-  'mongodb-write': [
-    { key: 'connectionId', label: 'Connection', type: 'connection-select', description: 'Select a MongoDB connection from the vault' },
-    { key: 'database', label: 'Database', type: 'text', description: 'Database name (optional, uses connection default)' },
-    { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
-    { key: 'operation', label: 'Operation', type: 'select', options: ['insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'replaceOne'], description: 'Write operation' },
-    { key: 'filter', label: 'Filter', type: 'code', description: 'Filter query for update/delete operations (use {{variable}} for dynamic values)' },
-    { key: 'document', label: 'Document/Update', type: 'code', description: 'Document to insert, or update operators ($set, $inc, etc.)' },
-    { key: 'options', label: 'Options', type: 'code', description: 'Write options (upsert, etc.) as JSON' },
-  ],
-  'google-sheets': [
-    { key: 'connectionId', label: 'Google Credentials', type: 'connection-select', description: 'Select Google credentials from the vault' },
-    { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'text', description: 'Google Sheets spreadsheet ID (from the URL)' },
-    { key: 'action', label: 'Action', type: 'select', options: ['append_row', 'read_range', 'update_range', 'clear_range', 'get_spreadsheet_info'], description: 'Operation to perform' },
-    { key: 'range', label: 'Range', type: 'text', description: 'Sheet range (e.g., "Sheet1!A1:D10" or just "Sheet1")' },
-    { key: 'values', label: 'Values', type: 'code', description: 'Data to write (for append/update). Use {{variable}} for dynamic values' },
-    { key: 'valueInputOption', label: 'Value Input Option', type: 'select', options: ['USER_ENTERED', 'RAW'], description: 'How values are interpreted (USER_ENTERED parses formulas)' },
-    { key: 'insertDataOption', label: 'Insert Data Option', type: 'select', options: ['INSERT_ROWS', 'OVERWRITE'], description: 'How new data is inserted (for append)' },
-    { key: 'majorDimension', label: 'Major Dimension', type: 'select', options: ['ROWS', 'COLUMNS'], description: 'How values are organized (default: ROWS)' },
-  ],
-  'email-send': [
-    { key: 'to', label: 'To', type: 'text', description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)' },
-    { key: 'subject', label: 'Subject', type: 'text', description: 'Email subject (supports {{variables}})' },
-    { key: 'body', label: 'Body', type: 'code', description: 'Email body (HTML supported, use {{variables}})' },
-    { key: 'from', label: 'From', type: 'text', description: 'Sender email address' },
-  ],
-  'transform': [
-    { key: 'expression', label: 'Transform Expression', type: 'code', description: 'JavaScript expression to transform data' },
-  ],
-  'filter': [
-    { key: 'inputField', label: 'Input Array Field', type: 'text', description: 'Path to array to filter (default: "items")' },
-    { key: 'conditions', label: 'Filter Conditions', type: 'code', description: 'Array of conditions: [{ "field": "status", "operator": "equals", "value": "active" }]' },
-    { key: 'combineWith', label: 'Combine With', type: 'select', options: ['and', 'or'], description: 'How to combine multiple conditions' },
-  ],
-  'ai-prompt': [
-    { key: 'prompt', label: 'Prompt', type: 'code', description: 'The prompt to send (use {{variables}} for dynamic content)' },
-    { key: 'model', label: 'Model', type: 'select', options: ['gpt-4', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'], description: 'AI model to use' },
-    { key: 'temperature', label: 'Temperature', type: 'number', description: 'Creativity level (0-1)' },
-  ],
-  'ai-classify': [
-    { key: 'prompt', label: 'Classification Prompt', type: 'code', description: 'Describe what to classify and how' },
-    { key: 'categories', label: 'Categories', type: 'text', description: 'Comma-separated list of categories' },
-    { key: 'model', label: 'Model', type: 'select', options: ['gpt-4', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'], description: 'AI model to use' },
-  ],
-  'ai-extract': [
-    { key: 'prompt', label: 'Extraction Prompt', type: 'code', description: 'Describe what data to extract' },
-    { key: 'schema', label: 'Output Schema', type: 'code', description: 'JSON schema for extracted data structure' },
-    { key: 'model', label: 'Model', type: 'select', options: ['gpt-4', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'], description: 'AI model to use' },
-  ],
-  'atlas-cluster': [
-    { key: 'credentialId', label: 'Atlas Credentials', type: 'connection-select', description: 'Select Atlas Admin API credentials from integrations' },
-    { key: 'operation', label: 'Operation', type: 'select', options: ['list', 'get_status', 'create', 'delete', 'list_projects'], description: 'Cluster operation to perform' },
-    { key: 'projectId', label: 'Atlas Project ID', type: 'text', description: 'The Atlas project ID (required for cluster operations)' },
-    { key: 'clusterName', label: 'Cluster Name', type: 'text', description: 'Target cluster name (required for single cluster operations)' },
-    { key: 'clusterConfig', label: 'Cluster Config (JSON)', type: 'code', description: 'Configuration for create: { "provider": "AWS", "region": "US_EAST_1" }' },
-  ],
-  'atlas-data-api': [
-    { key: 'credentialId', label: 'Data API Credentials', type: 'connection-select', description: 'Select Atlas Data API credentials from integrations' },
-    { key: 'dataSource', label: 'Data Source', type: 'text', description: 'Cluster name or data source identifier' },
-    { key: 'database', label: 'Database', type: 'text', description: 'Database name' },
-    { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
-    { key: 'operation', label: 'Operation', type: 'select', options: ['find', 'findOne', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'aggregate'], description: 'Data operation to perform' },
-    { key: 'filter', label: 'Filter (JSON)', type: 'code', description: 'Query filter for find/update/delete operations' },
-    { key: 'document', label: 'Document (JSON)', type: 'code', description: 'Document for insertOne operation' },
-    { key: 'documents', label: 'Documents (JSON Array)', type: 'code', description: 'Documents array for insertMany operation' },
-    { key: 'update', label: 'Update (JSON)', type: 'code', description: 'Update operations for updateOne/updateMany (e.g., { "$set": {...} })' },
-    { key: 'pipeline', label: 'Pipeline (JSON Array)', type: 'code', description: 'Aggregation pipeline for aggregate operation' },
-    { key: 'options', label: 'Options (JSON)', type: 'code', description: 'Additional options: { "sort": {...}, "limit": 10, "projection": {...}, "upsert": true }' },
-  ],
-  'sticky-note': [
-    { key: 'content', label: 'Note Content', type: 'code', description: 'Markdown content for the sticky note' },
-  ],
-};
-
-interface ConfigField {
-  key: string;
-  label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'condition-builder' | 'switch-cases';
-  options?: string[];
-  description?: string;
-}
-
-// Switch case item type
-interface SwitchCase {
-  value: string;
-  label?: string;
-}
-
-// SwitchCasesEditor component for managing switch node cases
-function SwitchCasesEditor({
-  cases,
-  onChange,
-}: {
-  cases: SwitchCase[];
-  onChange: (cases: SwitchCase[]) => void;
-}) {
-  const theme = useTheme();
-
-  const addCase = () => {
-    onChange([...cases, { value: '', label: '' }]);
-  };
-
-  const updateCase = (index: number, field: 'value' | 'label', newValue: string) => {
-    const newCases = [...cases];
-    newCases[index] = { ...newCases[index], [field]: newValue };
-    onChange(newCases);
-  };
-
-  const removeCase = (index: number) => {
-    onChange(cases.filter((_, i) => i !== index));
-  };
-
-  return (
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-        Switch Cases
-      </Typography>
-      {cases.map((caseItem, index) => (
-        <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-          <TextField
-            size="small"
-            placeholder="Value to match"
-            value={caseItem.value}
-            onChange={(e) => updateCase(index, 'value', e.target.value)}
-            sx={{ flex: 1 }}
-          />
-          <TextField
-            size="small"
-            placeholder="Label (optional)"
-            value={caseItem.label || ''}
-            onChange={(e) => updateCase(index, 'label', e.target.value)}
-            sx={{ flex: 1 }}
-          />
-          <IconButton size="small" onClick={() => removeCase(index)} color="error">
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ))}
-      <Button
-        size="small"
-        onClick={addCase}
-        variant="outlined"
-        sx={{ mt: 1 }}
-      >
-        + Add Case
-      </Button>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        A "Default" output is always added automatically for unmatched values.
-      </Typography>
-    </Box>
-  );
-}
-
-// Default condition group
-function createDefaultConditionGroup(): ConditionGroup {
-  return {
-    id: Math.random().toString(36).substring(2, 10),
-    logic: 'and',
-    conditions: [],
-  };
-}
-
 export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
   const theme = useTheme();
+  const params = useParams();
+  const orgId = params.orgId as string | undefined;
   const { selectedNode, nodes, edges } = useWorkflowEditor();
   const { updateNode, removeNode } = useWorkflowActions();
-
-  // Tab state for conditional nodes
-  const [conditionTab, setConditionTab] = useState<'visual' | 'code'>('visual');
 
   // Local state for editing
   const [label, setLabel] = useState('');
@@ -288,9 +81,6 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
     backoffMultiplier: 2,
     initialDelayMs: 1000,
   });
-
-  // Condition builder state
-  const [conditionGroup, setConditionGroup] = useState<ConditionGroup>(createDefaultConditionGroup());
 
   // Forms list for form-select dropdown
   interface FormOption {
@@ -314,11 +104,11 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
 
   // Fetch available forms when panel opens
   useEffect(() => {
-    if (open && selectedNode?.type === 'form-trigger') {
+    if (open && selectedNode?.type === 'form-trigger' && orgId) {
       const fetchForms = async () => {
         setFormsLoading(true);
         try {
-          const response = await fetch('/api/forms/list');
+          const response = await fetch(`/api/forms/list?orgId=${orgId}`);
           const data = await response.json();
           if (data.success && data.forms) {
             setAvailableForms(data.forms.map((f: any) => ({
@@ -336,7 +126,7 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
       };
       fetchForms();
     }
-  }, [open, selectedNode?.type]);
+  }, [open, selectedNode?.type, orgId]);
 
   // Fetch available connections when panel opens for nodes that need them
   useEffect(() => {
@@ -432,12 +222,7 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
         setRetryPolicy(selectedNode.retryPolicy);
       }
 
-      // Parse condition for conditional nodes
-      if (selectedNode.type === 'conditional' && selectedNode.config?.conditionGroup) {
-        setConditionGroup(selectedNode.config.conditionGroup as ConditionGroup);
-      } else {
-        setConditionGroup(createDefaultConditionGroup());
-      }
+      // Conditional node state is now managed by LogicNodeEditor
     }
   }, [selectedNode]);
 
@@ -445,23 +230,13 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
   const handleSave = () => {
     if (!selectedNode) return;
 
-    let finalConfig = { ...config };
-
-    // For conditional nodes, save both the condition group and generated expression
-    if (selectedNode.type === 'conditional') {
-      finalConfig = {
-        ...finalConfig,
-        conditionGroup,
-        condition: conditionGroupToExpression(conditionGroup),
-      };
-    }
-
+    // Config is already updated by LogicNodeEditor for conditional nodes
     updateNode(selectedNode.id, {
       label: label || undefined,
       notes: notes || undefined,
       enabled,
       timeout: timeout || undefined,
-      config: finalConfig,
+      config: config,
       retryPolicy: retryEnabled ? retryPolicy : undefined,
     });
 
@@ -492,9 +267,18 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
     return null;
   }
 
-  const configSchema = NODE_CONFIG_SCHEMAS[selectedNode.type] || [];
   const isConditionalNode = selectedNode.type === 'conditional';
   const isStickyNote = selectedNode.type === 'sticky-note';
+  const isTriggerNode = ['manual-trigger', 'form-trigger', 'webhook-trigger', 'schedule-trigger'].includes(selectedNode.type);
+  const isLogicNode = ['conditional', 'switch', 'loop', 'delay'].includes(selectedNode.type);
+  const isIntegrationNode = ['http-request', 'mongodb-query', 'mongodb-write', 'google-sheets', 'atlas-cluster', 'atlas-data-api'].includes(selectedNode.type);
+  const isActionNode = ['email-send', 'notification'].includes(selectedNode.type);
+  const isDataNode = ['transform', 'filter'].includes(selectedNode.type);
+  const isAINode = ['ai-prompt', 'ai-classify', 'ai-extract'].includes(selectedNode.type);
+  const isCustomNode = ['code'].includes(selectedNode.type);
+  
+  // Determine if node has config (all node types except conditional and sticky-note use editors)
+  const hasConfig = !isConditionalNode && !isStickyNote && (isTriggerNode || isLogicNode || isIntegrationNode || isActionNode || isDataNode || isAINode || isCustomNode);
 
   // Get current sticky note style
   const currentStickyStyle = getStyleFromConfig(config);
@@ -506,322 +290,6 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
         JSON.stringify(p.style.gradient) === JSON.stringify(currentStickyStyle.gradient))
   );
 
-  // Render config field based on type
-  const renderConfigField = (field: ConfigField) => {
-    const value = config[field.key];
-
-    // Skip condition field for conditional nodes - we use the visual builder
-    if (field.type === 'condition-builder') {
-      return null;
-    }
-
-    switch (field.type) {
-      case 'text':
-      case 'password':
-        return (
-          <TextField
-            key={field.key}
-            fullWidth
-            size="small"
-            label={field.label}
-            type={field.type === 'password' ? 'password' : 'text'}
-            value={(value as string) || ''}
-            onChange={(e) => handleConfigChange(field.key, e.target.value)}
-            helperText={field.description}
-            sx={{ mb: 2 }}
-            InputProps={{
-              endAdornment: field.type !== 'password' && (
-                <InputAdornment position="end">
-                  <VariablePickerButton
-                    nodeId={selectedNode.id}
-                    onInsert={(variable) => {
-                      const currentValue = (value as string) || '';
-                      handleConfigChange(field.key, currentValue + variable);
-                    }}
-                  />
-                </InputAdornment>
-              ),
-            }}
-          />
-        );
-      case 'number':
-        return (
-          <TextField
-            key={field.key}
-            fullWidth
-            size="small"
-            label={field.label}
-            type="number"
-            value={value ?? ''}
-            onChange={(e) => handleConfigChange(field.key, e.target.value ? Number(e.target.value) : undefined)}
-            helperText={field.description}
-            sx={{ mb: 2 }}
-          />
-        );
-      case 'boolean':
-        return (
-          <FormControlLabel
-            key={field.key}
-            control={
-              <Switch
-                checked={Boolean(value)}
-                onChange={(e) => handleConfigChange(field.key, e.target.checked)}
-              />
-            }
-            label={
-              <Box>
-                <Typography variant="body2">{field.label}</Typography>
-                {field.description && (
-                  <Typography variant="caption" color="text.secondary">
-                    {field.description}
-                  </Typography>
-                )}
-              </Box>
-            }
-            sx={{ mb: 2, display: 'flex' }}
-          />
-        );
-      case 'select':
-        return (
-          <FormControl key={field.key} fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel>{field.label}</InputLabel>
-            <Select
-              value={(value as string) || ''}
-              label={field.label}
-              onChange={(e) => handleConfigChange(field.key, e.target.value)}
-            >
-              {field.options?.map((opt) => (
-                <MenuItem key={opt} value={opt}>
-                  {opt}
-                </MenuItem>
-              ))}
-            </Select>
-            {field.description && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
-                {field.description}
-              </Typography>
-            )}
-          </FormControl>
-        );
-      case 'form-select':
-        // Find the currently selected form for display
-        const selectedForm = availableForms.find(f => f.id === value || f.slug === value);
-        // Check if the current value looks like a valid form ID (not just text)
-        const currentValueIsValidId = typeof value === 'string' && (
-          availableForms.some(f => f.id === value || f.slug === value) ||
-          /^[a-f0-9]{32}$/.test(value) // UUID-like form ID pattern
-        );
-        return (
-          <Box key={field.key} sx={{ mb: 2 }}>
-            <Autocomplete
-              options={availableForms}
-              loading={formsLoading}
-              value={selectedForm || null}
-              onChange={(_, newValue) => {
-                if (newValue) {
-                  // Use form ID when selecting from dropdown
-                  handleConfigChange(field.key, newValue.id);
-                } else {
-                  handleConfigChange(field.key, '');
-                }
-              }}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, val) => option.id === val.id}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start !important' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.name}
-                    </Typography>
-                    {option.isPublished && (
-                      <Chip
-                        label="Published"
-                        size="small"
-                        sx={{
-                          height: 18,
-                          fontSize: '0.65rem',
-                          bgcolor: alpha(theme.palette.success.main, 0.1),
-                          color: theme.palette.success.main,
-                        }}
-                      />
-                    )}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                    ID: {option.id}
-                    {option.slug && ` • Slug: ${option.slug}`}
-                  </Typography>
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={field.label}
-                  size="small"
-                  helperText={field.description}
-                  placeholder="Select a form from the dropdown"
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {formsLoading ? <CircularProgress color="inherit" size={18} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                />
-              )}
-            />
-            {typeof value === 'string' && value.length > 0 && (
-              <Box sx={{ mt: 1, p: 1, bgcolor: currentValueIsValidId ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.warning.main, 0.1), borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: currentValueIsValidId ? 'success.main' : 'warning.main' }}>
-                  Form ID: {value}
-                </Typography>
-                {!currentValueIsValidId && (
-                  <Typography variant="caption" display="block" color="warning.main" sx={{ mt: 0.5 }}>
-                    Warning: This does not look like a valid form ID. Please select a form from the dropdown.
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </Box>
-        );
-      case 'connection-select':
-        // Find the currently selected connection for display
-        const selectedConnection = availableConnections.find(c => c.vaultId === value);
-        // Check if the current value looks like a valid vault ID
-        const currentValueIsValidVaultId = typeof value === 'string' && (
-          availableConnections.some(c => c.vaultId === value) ||
-          /^vault_[a-zA-Z0-9]+$/.test(value)
-        );
-        return (
-          <Box key={field.key} sx={{ mb: 2 }}>
-            <Autocomplete
-              options={availableConnections}
-              loading={connectionsLoading}
-              value={selectedConnection || null}
-              onChange={(_, newValue) => {
-                if (newValue) {
-                  // Use vault ID when selecting from dropdown
-                  handleConfigChange(field.key, newValue.vaultId);
-                } else {
-                  handleConfigChange(field.key, '');
-                }
-              }}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, val) => option.vaultId === val.vaultId}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start !important' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.name}
-                    </Typography>
-                    <Chip
-                      label={option.status}
-                      size="small"
-                      sx={{
-                        height: 18,
-                        fontSize: '0.65rem',
-                        bgcolor: option.status === 'active'
-                          ? alpha(theme.palette.success.main, 0.1)
-                          : alpha(theme.palette.warning.main, 0.1),
-                        color: option.status === 'active'
-                          ? theme.palette.success.main
-                          : theme.palette.warning.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                    Database: {option.database}
-                  </Typography>
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={field.label}
-                  size="small"
-                  helperText={field.description}
-                  placeholder="Select a connection from the vault"
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {connectionsLoading ? <CircularProgress color="inherit" size={18} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                />
-              )}
-            />
-            {typeof value === 'string' && value.length > 0 && (
-              <Box sx={{ mt: 1, p: 1, bgcolor: currentValueIsValidVaultId ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.warning.main, 0.1), borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: currentValueIsValidVaultId ? 'success.main' : 'warning.main' }}>
-                  Vault ID: {value}
-                </Typography>
-                {!currentValueIsValidVaultId && (
-                  <Typography variant="caption" display="block" color="warning.main" sx={{ mt: 0.5 }}>
-                    Warning: This does not look like a valid vault ID. Please select a connection from the dropdown.
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </Box>
-        );
-      case 'code':
-        return (
-          <Box key={field.key} sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {field.label}
-              </Typography>
-              <VariablePickerButton
-                nodeId={selectedNode.id}
-                onInsert={(variable) => {
-                  const currentValue = typeof value === 'string' ? value : JSON.stringify(value, null, 2) || '';
-                  handleConfigChange(field.key, currentValue + variable);
-                }}
-              />
-            </Box>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              size="small"
-              value={typeof value === 'string' ? value : JSON.stringify(value, null, 2) || ''}
-              onChange={(e) => {
-                try {
-                  // Try to parse as JSON
-                  const parsed = JSON.parse(e.target.value);
-                  handleConfigChange(field.key, parsed);
-                } catch {
-                  // Store as string if not valid JSON
-                  handleConfigChange(field.key, e.target.value);
-                }
-              }}
-              helperText={field.description}
-              placeholder="Use {{nodes.nodeId.field}} to reference data from other nodes"
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem',
-                },
-              }}
-            />
-          </Box>
-        );
-      case 'switch-cases':
-        return (
-          <SwitchCasesEditor
-            key={field.key}
-            cases={(value as SwitchCase[]) || []}
-            onChange={(newCases) => handleConfigChange(field.key, newCases)}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <Drawer
@@ -919,45 +387,17 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
-              {/* Tab toggle for visual/code */}
-              <Box sx={{ mb: 2 }}>
-                <ToggleButtonGroup
-                  value={conditionTab}
-                  exclusive
-                  onChange={(_, value) => value && setConditionTab(value)}
-                  size="small"
-                  fullWidth
-                >
-                  <ToggleButton value="visual">Visual Builder</ToggleButton>
-                  <ToggleButton value="code">Code</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              {conditionTab === 'visual' ? (
-                <ConditionBuilder
-                  conditions={conditionGroup}
-                  onChange={setConditionGroup}
-                  availableFields={availableFields}
-                />
-              ) : (
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  size="small"
-                  label="Condition Expression"
-                  value={(config.condition as string) || conditionGroupToExpression(conditionGroup)}
-                  onChange={(e) => handleConfigChange('condition', e.target.value)}
-                  helperText="JavaScript expression that returns true/false"
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      fontFamily: 'monospace',
-                      fontSize: '0.85rem',
-                    },
-                  }}
-                />
-              )}
-
+              <LogicNodeEditor
+                node={selectedNode}
+                config={config}
+                onConfigChange={handleConfigChange}
+                availableForms={availableForms}
+                formsLoading={formsLoading}
+                availableConnections={availableConnections}
+                connectionsLoading={connectionsLoading}
+                nodeId={selectedNode.id}
+                availableFields={availableFields}
+              />
               {/* Include Else Output Toggle */}
               <Divider sx={{ my: 2 }} />
               <FormControlLabel
@@ -1141,7 +581,7 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
         )}
 
         {/* Node-Specific Config */}
-        {configSchema.length > 0 && !isConditionalNode && (
+        {hasConfig && (
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandIcon />}>
               <CodeIcon sx={{ mr: 1, fontSize: 20 }} />
@@ -1150,7 +590,85 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
-              {configSchema.map(renderConfigField)}
+              {isTriggerNode ? (
+                <TriggerNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isLogicNode ? (
+                <LogicNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                  availableFields={availableFields}
+                />
+              ) : isIntegrationNode ? (
+                <IntegrationNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isActionNode ? (
+                <ActionNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isDataNode ? (
+                <DataNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isAINode ? (
+                <AINodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isCustomNode ? (
+                <CustomNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : null}
             </AccordionDetails>
           </Accordion>
         )}

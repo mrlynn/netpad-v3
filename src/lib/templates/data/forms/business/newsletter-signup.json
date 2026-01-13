@@ -1,0 +1,37 @@
+{
+  "id": "newsletter-signup",
+  "name": "Newsletter Signup",
+  "description": "Email subscription",
+  "icon": "📰",
+  "category": "business",
+  "fields": [
+    {
+      "path": "email",
+      "label": "Email Address",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "firstName",
+      "label": "First Name",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "interests",
+      "label": "Topics of Interest",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "consent",
+      "label": "I agree to receive marketing emails",
+      "type": "boolean",
+      "included": true,
+      "required": true
+    }
+  ]
+}

@@ -251,6 +251,30 @@ export function PipelineCanvas() {
           size={1}
           color={alpha('#6e7681', 0.2)}
         />
+        {/* Large centered NetPad logo watermark */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 0,
+          }}
+        >
+          <Box
+            component="img"
+            src="/netpad-logo.svg"
+            alt=""
+            sx={{
+              width: 200,
+              height: 200,
+              opacity: 0.035,
+              filter: 'brightness(0) invert(1)',
+            }}
+          />
+        </Box>
         <Controls position="top-left" />
         <MiniMap
           position="bottom-right"

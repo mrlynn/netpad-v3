@@ -1,0 +1,53 @@
+{
+  "id": "application",
+  "name": "Job Application",
+  "description": "Resume & details",
+  "icon": "💼",
+  "category": "business",
+  "complexity": "moderate",
+  "estimatedTime": "5 minutes",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "position",
+      "label": "Position Applying For",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "experience",
+      "label": "Years of Experience",
+      "type": "number",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "coverLetter",
+      "label": "Cover Letter",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

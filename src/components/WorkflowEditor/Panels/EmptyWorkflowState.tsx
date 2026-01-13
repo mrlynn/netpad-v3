@@ -47,6 +47,8 @@ import {
 import { NodeCategory } from '@/types/workflow';
 import { useAIWorkflowGenerator } from '@/hooks/useAI';
 import { GeneratedWorkflow } from '@/lib/ai/types';
+import { WorkflowTemplateGallery } from '@/components/Templates';
+import { WorkflowTemplate, loadWorkflowTemplates, getWorkflowTemplateCategories } from '@/lib/templates/loader';
 
 // Node definition for the picker
 interface NodeTypeOption {
@@ -225,26 +227,13 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   annotations: { label: 'Annotations', icon: <CategoryIcon />, color: '#9E9E9E' },
 };
 
-// Workflow template definition
-interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: string;
-  nodeCount: number;
-  nodes: Array<{
-    type: string;
-    label: string;
-    position: { x: number; y: number };
-  }>;
-  edges: Array<{
-    source: number;
-    target: number;
-  }>;
-}
+// Workflow template definition - using type from loader
+// Note: WorkflowTemplate is exported from '@/lib/templates/loader'
+// This local interface is kept for backward compatibility with the hardcoded templates
+// TODO: Remove when workflow templates are extracted to JSON files
 
 // Pre-built workflow templates
+// TODO: Extract to JSON files similar to form templates
 const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   // Form Processing
   {
@@ -449,6 +438,8 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
 ];
 
 // Template categories
+// DEPRECATED: Categories are now loaded from template loader
+// See: src/lib/templates/loader.ts getWorkflowTemplateCategories()
 const TEMPLATE_CATEGORIES = [
   { id: 'all', label: 'All', icon: '📋' },
   { id: 'forms', label: 'Forms', icon: '📝' },
@@ -508,11 +499,6 @@ export function EmptyWorkflowState({
     }
   };
 
-  // Filter templates by category
-  const filteredTemplates = selectedCategory === 'all'
-    ? WORKFLOW_TEMPLATES
-    : WORKFLOW_TEMPLATES.filter(t => t.category === selectedCategory);
-
   // Filter nodes by category
   const filteredNodes = selectedNodeCategory === 'all'
     ? NODE_OPTIONS
@@ -543,6 +529,9 @@ export function EmptyWorkflowState({
           borderColor: 'divider',
           bgcolor: 'background.paper',
           boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          maxHeight: 'calc(100vh - 96px)',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Header */}
@@ -554,6 +543,7 @@ export function EmptyWorkflowState({
             borderBottom: '1px solid',
             borderColor: 'divider',
             position: 'relative',
+            flexShrink: 0,
           }}
         >
           {/* Close Button */}
@@ -594,6 +584,7 @@ export function EmptyWorkflowState({
           sx={{
             borderBottom: '1px solid',
             borderColor: 'divider',
+            flexShrink: 0,
             '& .MuiTab-root': {
               textTransform: 'none',
               fontWeight: 500,
@@ -625,7 +616,7 @@ export function EmptyWorkflowState({
         </Tabs>
 
         {/* Tab Content */}
-        <Box sx={{ minHeight: 350 }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {/* Tab 0: Node Types */}
           {activeTab === 0 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', height: 400 }}>
@@ -755,150 +746,19 @@ export function EmptyWorkflowState({
 
           {/* Tab 1: Templates */}
           {activeTab === 1 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: 400 }}>
-              {/* Category Filter */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 0.75,
-                  p: 1.5,
-                  pb: 1,
-                  overflowX: 'auto',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  flexShrink: 0,
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <WorkflowTemplateGallery
+                templates={loadWorkflowTemplates()}
+                categories={getWorkflowTemplateCategories()}
+                selectedCategory={selectedCategory}
+                onTemplateSelect={onLoadTemplate}
+                onTemplateCustomize={(template) => {
+                  // For now, customize does the same as select
+                  // In the future, this could open template in editor mode
+                  onLoadTemplate(template);
                 }}
-              >
-                {TEMPLATE_CATEGORIES.map((cat) => {
-                  const count = cat.id === 'all'
-                    ? WORKFLOW_TEMPLATES.length
-                    : WORKFLOW_TEMPLATES.filter(t => t.category === cat.id).length;
-                  return (
-                    <Chip
-                      key={cat.id}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <span>{cat.icon}</span>
-                          <span>{cat.label}</span>
-                          <Box
-                            component="span"
-                            sx={{
-                              ml: 0.5,
-                              px: 0.75,
-                              py: 0.125,
-                              borderRadius: 1,
-                              bgcolor: selectedCategory === cat.id
-                                ? alpha('#fff', 0.2)
-                                : alpha('#000', 0.08),
-                              fontSize: 11,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {count}
-                          </Box>
-                        </Box>
-                      }
-                      onClick={() => setSelectedCategory(cat.id)}
-                      sx={{
-                        height: 32,
-                        borderRadius: 2,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        bgcolor: selectedCategory === cat.id
-                          ? '#9C27B0'
-                          : 'transparent',
-                        color: selectedCategory === cat.id
-                          ? '#fff'
-                          : 'text.primary',
-                        border: '1px solid',
-                        borderColor: selectedCategory === cat.id
-                          ? '#9C27B0'
-                          : 'divider',
-                        '&:hover': {
-                          bgcolor: selectedCategory === cat.id
-                            ? '#9C27B0'
-                            : alpha('#9C27B0', 0.08),
-                          borderColor: '#9C27B0',
-                        },
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-
-              {/* Template Grid */}
-              <Box
-                sx={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  p: 2,
-                  '&::-webkit-scrollbar': { width: 6 },
-                  '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 3 },
-                }}
-              >
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                  {filteredTemplates.map((template) => (
-                    <Paper
-                      key={template.id}
-                      elevation={0}
-                      onClick={() => onLoadTemplate(template)}
-                      sx={{
-                        flex: '1 1 calc(50% - 6px)',
-                        minWidth: 200,
-                        maxWidth: 'calc(50% - 6px)',
-                        p: 1.5,
-                        cursor: 'pointer',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 2,
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          borderColor: alpha('#9C27B0', 0.5),
-                          bgcolor: alpha('#9C27B0', 0.03),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha('#9C27B0', 0.1)}`,
-                        },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
-                        <Typography sx={{ fontSize: 24 }}>{template.icon}</Typography>
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              fontWeight: 600,
-                              mb: 0.25,
-                              fontSize: 13,
-                            }}
-                          >
-                            {template.name}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                              display: 'block',
-                              fontSize: 11,
-                              mb: 0.5,
-                            }}
-                          >
-                            {template.description}
-                          </Typography>
-                          <Chip
-                            label={`${template.nodeCount} nodes`}
-                            size="small"
-                            sx={{
-                              fontSize: 10,
-                              height: 16,
-                              '& .MuiChip-label': { px: 0.75 },
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    </Paper>
-                  ))}
-                </Box>
-              </Box>
+                variant="compact"
+              />
             </Box>
           )}
 
@@ -1092,6 +952,3 @@ export function EmptyWorkflowState({
 }
 
 export default EmptyWorkflowState;
-
-// Export template type for use in parent component
-export type { WorkflowTemplate };

@@ -1,0 +1,65 @@
+{
+  "id": "quote-request",
+  "name": "Quote Request",
+  "description": "Service pricing inquiry",
+  "icon": "💰",
+  "category": "business",
+  "fields": [
+    {
+      "path": "contactName",
+      "label": "Contact Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone Number",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "company",
+      "label": "Company/Organization",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "serviceType",
+      "label": "Service Type",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "projectDescription",
+      "label": "Project Description",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "budget",
+      "label": "Budget Range",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "timeline",
+      "label": "Desired Timeline",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

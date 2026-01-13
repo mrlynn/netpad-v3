@@ -1,0 +1,58 @@
+{
+  "id": "course-enrollment",
+  "name": "Course Enrollment",
+  "description": "Student registration",
+  "icon": "🎓",
+  "category": "education",
+  "fields": [
+    {
+      "path": "studentName",
+      "label": "Student Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "dateOfBirth",
+      "label": "Date of Birth",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "courseName",
+      "label": "Course Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "previousEducation",
+      "label": "Previous Education",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "specialNeeds",
+      "label": "Special Accommodations Needed",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

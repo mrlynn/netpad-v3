@@ -1,0 +1,58 @@
+{
+  "id": "product-feedback",
+  "name": "Product Feedback",
+  "description": "Feature & bug reports",
+  "icon": "🔧",
+  "category": "feedback",
+  "fields": [
+    {
+      "path": "feedbackType",
+      "label": "Feedback Type",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "feature",
+      "label": "Feature/Area",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "description",
+      "label": "Description",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "expectedBehavior",
+      "label": "Expected Behavior",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "actualBehavior",
+      "label": "Actual Behavior",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "priority",
+      "label": "Priority Level",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "email",
+      "label": "Contact Email",
+      "type": "email",
+      "included": true,
+      "required": false
+    }
+  ]
+}

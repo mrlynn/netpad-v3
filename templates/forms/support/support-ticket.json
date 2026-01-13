@@ -1,0 +1,58 @@
+{
+  "id": "support-ticket",
+  "name": "Support Ticket",
+  "description": "Help desk request",
+  "icon": "🎧",
+  "category": "support",
+  "fields": [
+    {
+      "path": "name",
+      "label": "Your Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "category",
+      "label": "Issue Category",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "priority",
+      "label": "Priority",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "subject",
+      "label": "Subject",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "description",
+      "label": "Description of Issue",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "stepsToReproduce",
+      "label": "Steps to Reproduce",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

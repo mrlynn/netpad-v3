@@ -1,0 +1,65 @@
+{
+  "id": "property-inquiry",
+  "name": "Property Inquiry",
+  "description": "Real estate interest",
+  "icon": "🏡",
+  "category": "realestate",
+  "fields": [
+    {
+      "path": "name",
+      "label": "Your Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "propertyAddress",
+      "label": "Property Address of Interest",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "inquiryType",
+      "label": "Are you looking to buy or rent?",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "budget",
+      "label": "Budget Range",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "preApproved",
+      "label": "Are you pre-approved for financing?",
+      "type": "boolean",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "bestTimeToContact",
+      "label": "Best Time to Contact",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

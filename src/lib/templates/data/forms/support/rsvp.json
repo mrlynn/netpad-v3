@@ -1,0 +1,55 @@
+{
+  "id": "rsvp",
+  "name": "RSVP Form",
+  "description": "Event attendance",
+  "icon": "🎉",
+  "category": "events",
+  "fields": [
+    {
+      "path": "name",
+      "label": "Your Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "attending",
+      "label": "Will you be attending?",
+      "type": "boolean",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "guestCount",
+      "label": "Number of Guests",
+      "type": "number",
+      "included": true,
+      "required": false,
+      "validation": {
+        "min": 0,
+        "max": 10
+      }
+    },
+    {
+      "path": "mealPreference",
+      "label": "Meal Preference",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "specialRequests",
+      "label": "Special Requests",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

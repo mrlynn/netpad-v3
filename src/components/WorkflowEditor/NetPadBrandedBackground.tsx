@@ -136,11 +136,40 @@ export function NetPadBrandedBackground({
           pointerEvents: 'none',
           userSelect: 'none',
           opacity: isEmbedded ? 0.06 : 0.03,
-          background: `radial-gradient(circle at top left, 
-            ${colorMode === 'dark' ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 150, 107, 0.2)'} 0%, 
+          background: `radial-gradient(circle at top left,
+            ${colorMode === 'dark' ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 150, 107, 0.2)'} 0%,
             transparent 60%)`,
         }}
       />
+
+      {/* Large centered NetPad logo watermark */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Box
+          component="img"
+          src="/netpad-logo.svg"
+          alt=""
+          sx={{
+            width: isEmbedded ? 280 : 200,
+            height: isEmbedded ? 280 : 200,
+            opacity: isEmbedded ? 0.06 : 0.035,
+            filter: colorMode === 'dark'
+              ? 'brightness(0) invert(1)'
+              : 'brightness(0)',
+          }}
+        />
+      </Box>
     </>
   );
 }

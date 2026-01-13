@@ -1,0 +1,29 @@
+{
+  "id": "form-notification",
+  "name": "Form with Notification",
+  "description": "Form submission with email & notification",
+  "icon": "🔔",
+  "category": "forms",
+  "nodeCount": 3,
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Form Submission",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send Email",
+      "position": { "x": 150, "y": 250 }
+    },
+    {
+      "type": "notification",
+      "label": "Push Notification",
+      "position": { "x": 350, "y": 250 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 0, "target": 2 }
+  ]
+}

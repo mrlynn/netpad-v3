@@ -6,8 +6,6 @@ import {
   Typography,
   TextField,
   Button,
-  Card,
-  CardContent,
   Avatar,
   Chip,
   Divider,
@@ -34,6 +32,7 @@ import {
   LinkOff,
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
+import { SettingsSection, SettingsItem } from './index';
 
 export function ProfileSettings() {
   const { user, registerPasskey, isLoading } = useAuth();
@@ -77,72 +76,82 @@ export function ProfileSettings() {
 
   return (
     <Box>
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-        Profile Settings
-      </Typography>
 
       {/* Profile Card */}
-      <Card sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
-            <Avatar
-              sx={{
-                width: 80,
-                height: 80,
-                fontSize: '2rem',
-                bgcolor: '#00ED64',
-                color: '#001E2B',
-              }}
+      <SettingsSection
+        title="Profile Information"
+        description="Update your display name and email"
+        icon={<Person fontSize="small" />}
+        color="#00ED64"
+        defaultExpanded={true}
+      >
+        <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', mb: 2 }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              fontSize: '2rem',
+              bgcolor: '#00ED64',
+              color: '#001E2B',
+            }}
+          >
+            {(user.displayName || user.email)[0].toUpperCase()}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <SettingsItem
+              label="Display Name"
+              description="How your name appears to other users"
             >
-              {(user.displayName || user.email)[0].toUpperCase()}
-            </Avatar>
-            <Box sx={{ flex: 1 }}>
               <TextField
-                label="Display Name"
                 fullWidth
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                sx={{ mb: 2 }}
+                placeholder="Enter your display name"
               />
+            </SettingsItem>
+            <SettingsItem
+              label="Email"
+              description="Your account email address"
+            >
               <TextField
-                label="Email"
                 fullWidth
                 value={user.email}
                 disabled
-                sx={{ mb: 2 }}
                 InputProps={{
                   startAdornment: <Email sx={{ mr: 1, color: 'text.secondary' }} />,
                 }}
               />
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
-                >
-                  {saving ? <CircularProgress size={20} /> : 'Save Changes'}
-                </Button>
-                {saveSuccess && (
-                  <Chip
-                    icon={<CheckCircle />}
-                    label="Saved!"
-                    color="success"
-                    size="small"
-                  />
-                )}
-              </Box>
+            </SettingsItem>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleSaveProfile}
+                disabled={saving}
+                sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
+              >
+                {saving ? <CircularProgress size={20} /> : 'Save Changes'}
+              </Button>
+              {saveSuccess && (
+                <Chip
+                  icon={<CheckCircle />}
+                  label="Saved!"
+                  color="success"
+                  size="small"
+                />
+              )}
             </Box>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </SettingsSection>
 
       {/* Authentication Methods */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-        Authentication Methods
-      </Typography>
-
-      <Card sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
+      <SettingsSection
+        title="Authentication Methods"
+        description="Manage how you sign in to your account"
+        icon={<Key fontSize="small" />}
+        color="#00ED64"
+        defaultExpanded={true}
+      >
         <List>
           {/* Passkey */}
           <ListItem>
@@ -249,14 +258,16 @@ export function ProfileSettings() {
             </ListItemSecondaryAction>
           </ListItem>
         </List>
-      </Card>
+      </SettingsSection>
 
       {/* Security */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-        Security
-      </Typography>
-
-      <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+      <SettingsSection
+        title="Security"
+        description="Manage security settings and account access"
+        icon={<Key fontSize="small" />}
+        color="#00ED64"
+        defaultExpanded={false}
+      >
         <List>
           <ListItem>
             <ListItemIcon>
@@ -290,7 +301,7 @@ export function ProfileSettings() {
             </ListItemSecondaryAction>
           </ListItem>
         </List>
-      </Card>
+      </SettingsSection>
     </Box>
   );
 }

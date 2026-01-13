@@ -25,7 +25,8 @@ const tourStepsMap: Record<TourType, TourStep[]> = {
 };
 
 // Detect the appropriate tour type based on current context
-function detectTourType(): TourType {
+// Returns null if no valid tour context is detected (e.g., landing page)
+function detectTourType(): TourType | null {
   // Check for workflow editor elements first (most specific)
   if (document.querySelector('[data-tour="workflow-toolbar"]') ||
       document.querySelector('[data-tour="node-palette"]')) {
@@ -41,13 +42,32 @@ function detectTourType(): TourType {
       document.querySelector('[data-tour="pipeline-canvas"]')) {
     return 'pipeline-builder';
   }
-  // Default fallback - check URL path
+  
+  // Fallback - check URL path (be specific, only on actual feature pages)
   if (typeof window !== 'undefined') {
     const path = window.location.pathname;
-    if (path.includes('/workflow')) return 'workflow-editor';
-    if (path.includes('/form')) return 'form-builder';
+    
+    // Landing page or root - don't show a tour
+    if (path === '/' || path === '') {
+      return null;
+    }
+    
+    // Only trigger tours on specific feature pages
+    if (path.includes('/workflows/') && path.match(/\/workflows\/[^/]+$/)) {
+      // Workflow editor page (has workflowId in path)
+      return 'workflow-editor';
+    }
+    if (path.includes('/builder') || (path.includes('/forms/') && !path.endsWith('/forms'))) {
+      // Form builder page
+      return 'form-builder';
+    }
+    
+    // Other pages (settings, data explorer, etc.) - no tour
+    return null;
   }
-  return 'pipeline-builder';
+  
+  // No valid context detected - don't show a tour
+  return null;
 }
 
 export function TourProvider({ children }: { children: ReactNode }) {
@@ -67,7 +87,11 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // Start the appropriate tour based on current context
   const startContextualTour = useCallback(() => {
     const tourType = detectTourType();
-    startTour(tourType);
+    // Only start tour if we detected a valid context
+    // Don't start tours on landing pages or pages without tour context
+    if (tourType) {
+      startTour(tourType);
+    }
   }, [startTour]);
 
   // Register the start tour callback with HelpContext

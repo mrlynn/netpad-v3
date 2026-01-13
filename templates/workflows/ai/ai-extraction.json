@@ -1,0 +1,35 @@
+{
+  "id": "ai-extraction",
+  "name": "AI Data Extraction",
+  "description": "Extract structured data from text",
+  "icon": "📊",
+  "category": "ai",
+  "nodeCount": 4,
+  "nodes": [
+    {
+      "type": "webhook-trigger",
+      "label": "Receive Data",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "ai-extract",
+      "label": "Extract Fields",
+      "position": { "x": 250, "y": 250 }
+    },
+    {
+      "type": "transform",
+      "label": "Format",
+      "position": { "x": 250, "y": 400 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Store",
+      "position": { "x": 250, "y": 550 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3 }
+  ]
+}

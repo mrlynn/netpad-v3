@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Button,
   Dialog,
@@ -35,6 +35,7 @@ import {
 import { FormConfiguration, FormDataSource } from '@/types/form';
 import { saveFormConfiguration } from '@/lib/formStorage';
 import { usePipeline } from '@/contexts/PipelineContext';
+import { QuickPublishPopover } from './QuickPublishPopover';
 
 interface QuickPublishButtonProps {
   formConfig: Omit<FormConfiguration, 'createdAt' | 'updatedAt'> & {
@@ -55,7 +56,8 @@ export function QuickPublishButton({
   disabled = false,
 }: QuickPublishButtonProps) {
   const { connectionString } = usePipeline();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [showStorageWarning, setShowStorageWarning] = useState(false);
   const [formName, setFormName] = useState(formConfig.name || '');
   const [publishing, setPublishing] = useState(false);
@@ -69,36 +71,33 @@ export function QuickPublishButton({
   const hasLegacyConnection = !!(connectionString && formConfig.database && formConfig.collection);
   const hasValidStorage = hasDataSource || hasLegacyConnection;
 
-  const handleQuickPublish = async () => {
-    // If no data storage configured, show warning
-    if (!hasValidStorage) {
+  const handleQuickPublishClick = () => {
+    // If no data storage configured and no org context, show warning
+    if (!hasValidStorage && !formConfig.organizationId) {
       setShowStorageWarning(true);
       return;
     }
 
-    // If no name, open dialog to get one
-    if (!formName.trim()) {
-      setDialogOpen(true);
-      return;
-    }
-
-    await doPublish();
+    // Open popover
+    setPopoverOpen(true);
   };
 
-  const doPublish = async () => {
-    if (!formName.trim()) {
+  const handlePublish = async (name: string, dataSource?: FormDataSource) => {
+    if (!name.trim()) {
       setError('Please enter a form name');
       return;
     }
 
     setPublishing(true);
     setError(null);
+    setFormName(name);
 
     try {
       const config: FormConfiguration = {
         ...formConfig,
-        name: formName.trim(),
+        name: name.trim(),
         connectionString: connectionString || undefined,
+        dataSource: dataSource || formConfig.dataSource,
       };
 
       // Debug: Log theme being published
@@ -135,6 +134,9 @@ export function QuickPublishButton({
         // Embed code will use these values
       }
 
+      // Close popover
+      setPopoverOpen(false);
+
       // Notify parent
       onPublished?.({
         id: data.form.id,
@@ -143,8 +145,16 @@ export function QuickPublishButton({
       });
     } catch (err: any) {
       setError(err.message);
+      // Keep popover open on error so user can retry
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handlePopoverClose = () => {
+    if (!publishing) {
+      setPopoverOpen(false);
+      setError(null);
     }
   };
 
@@ -179,11 +189,6 @@ export function QuickPublishButton({
     }
   };
 
-  const handleClose = () => {
-    setDialogOpen(false);
-    setPublishedUrl(null);
-    setError(null);
-  };
 
   // If already published, show different state
   if (formConfig.isPublished && formConfig.slug) {
@@ -226,10 +231,11 @@ export function QuickPublishButton({
   return (
     <>
       <Button
+        ref={buttonRef}
         variant="contained"
         size="small"
         startIcon={publishing ? <CircularProgress size={16} color="inherit" /> : <Rocket />}
-        onClick={handleQuickPublish}
+        onClick={handleQuickPublishClick}
         disabled={disabled || publishing}
         sx={{
           background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
@@ -247,10 +253,28 @@ export function QuickPublishButton({
         {publishing ? 'Publishing...' : 'Publish'}
       </Button>
 
-      {/* Quick Publish Dialog */}
+      {/* Quick Publish Popover */}
+      <QuickPublishPopover
+        open={popoverOpen}
+        anchorEl={buttonRef.current}
+        onClose={handlePopoverClose}
+        formName={formName}
+        formConfigDataSource={formConfig.dataSource}
+        organizationId={formConfig.organizationId}
+        projectId={formConfig.projectId}
+        onPublish={handlePublish}
+        onConfigureStorage={() => {
+          setPopoverOpen(false);
+          onConfigureStorage?.();
+        }}
+        publishing={publishing}
+        error={error}
+      />
+
+      {/* Success Dialog - Show after publishing */}
       <Dialog
-        open={dialogOpen}
-        onClose={handleClose}
+        open={!!publishedUrl}
+        onClose={() => setPublishedUrl(null)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -260,109 +284,7 @@ export function QuickPublishButton({
           },
         }}
       >
-        {!publishedUrl ? (
-          // Step 1: Enter name and publish
-          <>
-            <DialogTitle sx={{ pb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Rocket sx={{ color: '#fff' }} />
-                </Box>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Publish Your Form
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Make it live and shareable in seconds
-                  </Typography>
-                </Box>
-              </Box>
-            </DialogTitle>
-
-            <DialogContent>
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-                  {error}
-                </Alert>
-              )}
-
-              <TextField
-                label="Form Name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                fullWidth
-                required
-                autoFocus
-                placeholder="e.g., Contact Form, Event Registration"
-                sx={{ mt: 1 }}
-                helperText="Give your form a name so you can find it later"
-              />
-
-              <Box
-                sx={{
-                  mt: 3,
-                  p: 2,
-                  borderRadius: 2,
-                  bgcolor: alpha('#9c27b0', 0.05),
-                  border: '1px solid',
-                  borderColor: alpha('#9c27b0', 0.2),
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Your form will be published at:
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontFamily: 'monospace',
-                    mt: 0.5,
-                    color: '#9c27b0',
-                    fontWeight: 500,
-                  }}
-                >
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/forms/
-                  {formName.trim()
-                    ? formName
-                        .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/(^-|-$)/g, '')
-                        .slice(0, 30)
-                    : 'your-form-name'}
-                </Typography>
-              </Box>
-            </DialogContent>
-
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button
-                onClick={doPublish}
-                variant="contained"
-                disabled={!formName.trim() || publishing}
-                startIcon={publishing ? <CircularProgress size={16} /> : <Rocket />}
-                sx={{
-                  background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
-                  px: 4,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #7b1fa2 0%, #ab47bc 100%)',
-                  },
-                }}
-              >
-                {publishing ? 'Publishing...' : 'Publish Now'}
-              </Button>
-            </DialogActions>
-          </>
-        ) : (
-          // Step 2: Show published URL with share options
+        {publishedUrl && (
           <>
             <DialogTitle sx={{ pb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

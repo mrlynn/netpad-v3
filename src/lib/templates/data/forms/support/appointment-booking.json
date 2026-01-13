@@ -1,0 +1,58 @@
+{
+  "id": "appointment-booking",
+  "name": "Appointment Booking",
+  "description": "Schedule meetings",
+  "icon": "📅",
+  "category": "support",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone Number",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "preferredDate",
+      "label": "Preferred Date",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "preferredTime",
+      "label": "Preferred Time",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "serviceType",
+      "label": "Service Type",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "notes",
+      "label": "Additional Notes",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

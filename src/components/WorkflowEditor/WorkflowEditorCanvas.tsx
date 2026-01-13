@@ -30,7 +30,8 @@ import { HelpOutline } from '@mui/icons-material';
 import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
-import { EmptyWorkflowState, WorkflowTemplate } from './Panels/EmptyWorkflowState';
+import { EmptyWorkflowState } from './Panels/EmptyWorkflowState';
+import { WorkflowTemplate } from '@/lib/templates/loader';
 import { GeneratedWorkflow } from '@/lib/ai/types';
 import { NetPadBrandedBackground } from './NetPadBrandedBackground';
 

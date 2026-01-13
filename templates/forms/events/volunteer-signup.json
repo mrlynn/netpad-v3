@@ -1,0 +1,58 @@
+{
+  "id": "volunteer-signup",
+  "name": "Volunteer Signup",
+  "description": "Volunteer application",
+  "icon": "🤝",
+  "category": "events",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "availability",
+      "label": "Availability",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "skills",
+      "label": "Skills & Experience",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "interests",
+      "label": "Areas of Interest",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "emergencyContact",
+      "label": "Emergency Contact",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

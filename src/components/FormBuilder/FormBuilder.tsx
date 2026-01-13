@@ -5,7 +5,6 @@ import {
   Box,
   Typography,
   Button,
-  CircularProgress,
   Alert,
   alpha,
   Snackbar,
@@ -43,6 +42,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { usePathname } from 'next/navigation';
 import { parseOrgProjectFromPath } from '@/lib/routing';
 import { formNameToCollectionName } from '@/lib/utils/collectionNaming';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -109,7 +109,13 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   const [advancedMode, setAdvancedMode] = useState(false);
   const [newFormDialogOpen, setNewFormDialogOpen] = useState(false);
   const [pendingField, setPendingField] = useState<FieldConfig | null>(null);
-  const [pendingTemplate, setPendingTemplate] = useState<{ name: string; fields: FieldConfig[] } | null>(null);
+  const [pendingTemplate, setPendingTemplate] = useState<{
+    name: string;
+    fields: FieldConfig[];
+    formType?: FormType;
+    searchConfig?: SearchConfig;
+    conversationalConfig?: import('@/types/conversational').ConversationalFormConfig;
+  } | null>(null);
 
   // File input ref for importing forms
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -769,7 +775,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
     if (fieldConfigs.length === 0) {
       setPendingField(field);
       if (templateName) {
-        setPendingTemplate({ name: templateName, fields: [field] });
+        setPendingTemplate({ name: templateName, fields: [field], formType: 'data-entry' });
       }
       setNewFormDialogOpen(true);
     } else {
@@ -780,11 +786,23 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   };
 
   // Handle adding a template with all fields at once
-  const handleAddTemplate = (fields: FieldConfig[], templateName: string) => {
-    if (fields.length === 0) return;
+  // Updated to accept full template to support formType and searchConfig
+  const handleAddTemplate = (template: import('@/lib/templates/loader').FormTemplate) => {
+    if (!template.fields || template.fields.length === 0) return;
 
-    // Store all fields for batch addition after form naming
-    setPendingTemplate({ name: templateName, fields });
+    const fields = template.fields.map(field => ({
+      ...field,
+      source: 'custom' as const,
+    })) as FieldConfig[];
+
+    // Store template metadata including formType and searchConfig
+    setPendingTemplate({
+      name: template.name,
+      fields,
+      formType: template.formType,
+      searchConfig: template.searchConfig,
+      conversationalConfig: template.conversationalConfig,
+    });
     setPendingField(fields[0]); // Keep first field for backwards compatibility
     setNewFormDialogOpen(true);
   };
@@ -806,6 +824,17 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
 
     // Add the pending field(s)
     if (pendingTemplate && pendingTemplate.fields.length > 0) {
+      // Apply template configuration (formType, searchConfig, etc.)
+      if (pendingTemplate.formType) {
+        setFormType(pendingTemplate.formType);
+      }
+      if (pendingTemplate.searchConfig) {
+        setSearchConfig(pendingTemplate.searchConfig);
+      }
+      if (pendingTemplate.conversationalConfig) {
+        setConversationalConfig(pendingTemplate.conversationalConfig);
+      }
+
       // Add all template fields
       pendingTemplate.fields.forEach((field, index) => {
         addCustomField(field);
@@ -934,7 +963,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
               <Public sx={{ fontSize: 16, color: 'success.main' }} />
             </Tooltip>
           )}
-          {isLoading && <CircularProgress size={14} />}
+          {isLoading && <NetPadLoader size="small" showPhrases={false} />}
 
           {/* Connection status */}
           <ConnectionStatusChip
@@ -1137,12 +1166,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
             bgcolor: 'background.default'
           }}
         >
-          <Box sx={{ textAlign: 'center' }}>
-            <CircularProgress sx={{ mb: 2 }} />
-            <Typography variant="body2" color="text.secondary">
-              Loading collection schema...
-            </Typography>
-          </Box>
+          <NetPadLoader size="medium" message="Loading collection schema..." />
         </Box>
       ) : fieldConfigs.length === 0 ? (
         // New simplified empty state - no fields yet
@@ -1198,7 +1222,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
             onOpenAddDialog={() => setAddQuestionDialogOpen(true)}
           />
 
-          {/* Field Configuration Drawer - overlays content */}
+          {/* Field Configuration Drawer - right-side panel (better UX than bottom panel) */}
           <FieldConfigDrawer
             open={!!selectedFieldConfig}
             config={selectedFieldConfig}

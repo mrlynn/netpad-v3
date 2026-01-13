@@ -1,0 +1,29 @@
+{
+  "id": "scheduled-sync",
+  "name": "Scheduled Data Sync",
+  "description": "Periodically sync data from API",
+  "icon": "🔄",
+  "category": "data",
+  "nodeCount": 3,
+  "nodes": [
+    {
+      "type": "schedule-trigger",
+      "label": "Daily Schedule",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "http-request",
+      "label": "Fetch Data",
+      "position": { "x": 250, "y": 250 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save to DB",
+      "position": { "x": 250, "y": 400 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 }
+  ]
+}

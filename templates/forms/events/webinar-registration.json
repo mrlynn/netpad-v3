@@ -1,0 +1,51 @@
+{
+  "id": "webinar-registration",
+  "name": "Webinar Registration",
+  "description": "Online event signup",
+  "icon": "💻",
+  "category": "events",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "company",
+      "label": "Company",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "role",
+      "label": "Your Role",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "questions",
+      "label": "Questions for the Speaker",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "timezone",
+      "label": "Your Timezone",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

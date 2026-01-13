@@ -1,0 +1,90 @@
+{
+  "id": "financial-application-encrypted",
+  "name": "Financial Application (Encrypted)",
+  "description": "PCI-compliant with QE",
+  "icon": "🏦",
+  "category": "finance",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Legal Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email Address",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone Number",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "ssn",
+      "label": "Social Security Number",
+      "type": "string",
+      "included": true,
+      "required": true,
+      "validation": {
+        "pattern": "^\\d{3}-\\d{2}-\\d{4}$"
+      },
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Indexed",
+        "queryType": "equality"
+      }
+    },
+    {
+      "path": "annualIncome",
+      "label": "Annual Income ($)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Indexed",
+        "queryType": "range"
+      }
+    },
+    {
+      "path": "employerName",
+      "label": "Current Employer",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "bankAccountNumber",
+      "label": "Bank Account Number",
+      "type": "string",
+      "included": true,
+      "required": true,
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Indexed",
+        "queryType": "equality"
+      }
+    },
+    {
+      "path": "routingNumber",
+      "label": "Routing Number",
+      "type": "string",
+      "included": true,
+      "required": true,
+      "validation": {
+        "pattern": "^\\d{9}$"
+      },
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Unindexed"
+      }
+    }
+  ]
+}

@@ -218,9 +218,36 @@ function WorkflowViewerInner({ workflowSlug }: { workflowSlug: string }) {
               height: '100%',
               minHeight: '400px',
               color: 'text.secondary',
+              position: 'relative',
             }}
           >
-            <Typography variant="body1">
+            {/* Large centered NetPad logo watermark for empty state */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                userSelect: 'none',
+                zIndex: 0,
+              }}
+            >
+              <Box
+                component="img"
+                src="/netpad-logo.svg"
+                alt=""
+                sx={{
+                  width: 200,
+                  height: 200,
+                  opacity: 0.035,
+                  filter: theme.palette.mode === 'dark'
+                    ? 'brightness(0) invert(1)'
+                    : 'brightness(0)',
+                }}
+              />
+            </Box>
+            <Typography variant="body1" sx={{ position: 'relative', zIndex: 1 }}>
               This workflow has no nodes to display.
             </Typography>
           </Box>

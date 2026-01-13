@@ -7,7 +7,6 @@ import {
   Container,
   Paper,
   Typography,
-  CircularProgress,
   Alert,
   alpha,
   IconButton,
@@ -21,6 +20,7 @@ import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { ConversationalFormChat } from '@/components/ConversationalForm';
 import { getResolvedTheme } from '@/lib/formThemes';
 import { ConversationState } from '@/types/conversational';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 export default function FormPreviewPage() {
   const params = useParams();
@@ -88,7 +88,7 @@ export default function FormPreviewPage() {
           minHeight: '100vh',
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="medium" message="Loading form preview..." />
       </Box>
     );
   }
@@ -143,7 +143,31 @@ export default function FormPreviewPage() {
   };
 
   return (
-    <Box sx={pageBackgroundStyles}>
+    <Box sx={{ ...pageBackgroundStyles, position: 'relative' }}>
+      {/* Large centered NetPad logo watermark */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          zIndex: 0,
+        }}
+      >
+        <Box
+          component="img"
+          src="/netpad-logo.svg"
+          alt=""
+          sx={{
+            width: 240,
+            height: 240,
+            opacity: 0.025,
+          }}
+        />
+      </Box>
+
       {/* Preview Banner */}
       {showPreviewBanner && (
         <Box
@@ -304,6 +328,58 @@ export default function FormPreviewPage() {
           </Box>
         )}
       </Container>
+
+      {/* Built with NetPad Badge - Bottom Right */}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 20,
+          right: 20,
+          zIndex: 1100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 1.5,
+          py: 0.75,
+          borderRadius: 2,
+          bgcolor: alpha('#000', 0.7),
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: alpha('#000', 0.85),
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+          },
+        }}
+        component="a"
+        href="https://netpad.io"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Box
+          component="img"
+          src="/netpad-logo.svg"
+          alt="NetPad"
+          sx={{
+            width: 20,
+            height: 20,
+            filter: 'brightness(0) invert(1)',
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '0.7rem',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Built with NetPad
+        </Typography>
+      </Box>
     </Box>
   );
 }

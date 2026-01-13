@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Box, CircularProgress, Typography, alpha, Button, Paper } from '@mui/material';
 import { Business } from '@mui/icons-material';
 import { FormBuilder } from '@/components/FormBuilder/FormBuilder';
@@ -7,6 +8,7 @@ import { OnboardingWizard, WelcomeScreen, WelcomeModal } from '@/components/Onbo
 import { useRequireOrganization, useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWelcomeModal } from '@/hooks/useWelcomeModal';
+import { useTour } from '@/contexts/TourContext';
 
 interface FormBuilderViewProps {
   initialFormId?: string;
@@ -17,6 +19,29 @@ export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
   const { isLoading, needsOrg, needsSelection } = useRequireOrganization();
   const { refreshOrganizations, organizations, selectOrganization } = useOrganization();
   const { showWelcome, dismissWelcome } = useWelcomeModal();
+  const { startTour, hasCompletedTour, isTourActive } = useTour();
+
+  // Auto-start form builder tour on first visit
+  useEffect(() => {
+    // Only trigger if:
+    // 1. User is authenticated (not in welcome/onboarding flow)
+    // 2. Org is selected (not in org selection state)
+    // 3. Tour is not already active
+    // 4. User hasn't completed the form-builder tour
+    if (
+      isAuthenticated &&
+      !needsOrg &&
+      !needsSelection &&
+      !isTourActive &&
+      !hasCompletedTour('form-builder')
+    ) {
+      // Small delay to ensure UI is fully rendered
+      const timer = setTimeout(() => {
+        startTour('form-builder');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, needsOrg, needsSelection, isTourActive, hasCompletedTour, startTour]);
 
   // Show loading state while checking org status
   if (isLoading) {

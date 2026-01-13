@@ -1,0 +1,82 @@
+{
+  "id": "rental-application",
+  "name": "Rental Application",
+  "description": "Tenant application",
+  "icon": "🏠",
+  "category": "realestate",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Legal Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "currentAddress",
+      "label": "Current Address",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "employer",
+      "label": "Current Employer",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "monthlyIncome",
+      "label": "Monthly Income ($)",
+      "type": "number",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "moveInDate",
+      "label": "Desired Move-in Date",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "occupants",
+      "label": "Number of Occupants",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1
+      }
+    },
+    {
+      "path": "pets",
+      "label": "Do you have pets?",
+      "type": "boolean",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "references",
+      "label": "Previous Landlord Reference",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

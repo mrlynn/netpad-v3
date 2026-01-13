@@ -1,0 +1,65 @@
+{
+  "id": "health-screening",
+  "name": "Health Screening",
+  "description": "Medical questionnaire",
+  "icon": "🩺",
+  "category": "healthcare",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "dateOfBirth",
+      "label": "Date of Birth",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "symptoms",
+      "label": "Current Symptoms",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "symptomDuration",
+      "label": "How long have you had these symptoms?",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "medications",
+      "label": "Current Medications",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "recentTravel",
+      "label": "Recent Travel (last 14 days)?",
+      "type": "boolean",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "exposureContact",
+      "label": "Contact with sick individuals?",
+      "type": "boolean",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "additionalInfo",
+      "label": "Additional Information",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

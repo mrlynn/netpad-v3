@@ -51,6 +51,7 @@ import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
 
 import { WorkflowProvider, useWorkflow, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
+import { useTour } from '@/contexts/TourContext';
 import { cleanWorkflowForExport } from '@/lib/templates/export';
 import { WorkflowEditorCanvas } from './WorkflowEditorCanvas';
 import { NodePalette } from './Panels/NodePalette';
@@ -106,6 +107,24 @@ function WorkflowEditorInner({
     selectedNodeId,
     selectedEdgeId,
   } = useWorkflowEditor();
+
+  // Tour integration
+  const { startTour, hasCompletedTour, isTourActive } = useTour();
+
+  // Auto-start workflow editor tour on first visit
+  useEffect(() => {
+    // Only trigger if:
+    // 1. Workflow is loaded (we're not in loading/error state)
+    // 2. Tour is not already active
+    // 3. User hasn't completed the workflow-editor tour
+    if (!isLoading && workflow && !isTourActive && !hasCompletedTour('workflow-editor')) {
+      // Small delay to ensure UI is fully rendered
+      const timer = setTimeout(() => {
+        startTour('workflow-editor');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, workflow, isTourActive, hasCompletedTour, startTour]);
 
   // Get workflow actions for chat integration
   const {

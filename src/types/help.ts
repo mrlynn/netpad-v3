@@ -66,4 +66,5 @@ export type HelpTopicId =
   | 'projects-management'
   | 'deployment-vercel'
   | 'organizations'
-  | 'connection-vault';
+  | 'connection-vault'
+  | 'template-gallery';

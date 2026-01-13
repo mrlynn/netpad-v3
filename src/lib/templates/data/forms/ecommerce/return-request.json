@@ -1,0 +1,58 @@
+{
+  "id": "return-request",
+  "name": "Return Request",
+  "description": "Product returns",
+  "icon": "📦",
+  "category": "ecommerce",
+  "fields": [
+    {
+      "path": "orderNumber",
+      "label": "Order Number",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "customerEmail",
+      "label": "Email Used for Order",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "productName",
+      "label": "Product to Return",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "returnReason",
+      "label": "Reason for Return",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "condition",
+      "label": "Product Condition",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "preferredResolution",
+      "label": "Preferred Resolution",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "additionalComments",
+      "label": "Additional Comments",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

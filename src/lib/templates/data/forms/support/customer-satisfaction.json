@@ -1,0 +1,67 @@
+{
+  "id": "customer-satisfaction",
+  "name": "Customer Satisfaction",
+  "description": "CSAT survey",
+  "icon": "😊",
+  "category": "feedback",
+  "fields": [
+    {
+      "path": "overallSatisfaction",
+      "label": "Overall Satisfaction (1-5)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "path": "productQuality",
+      "label": "Product Quality (1-5)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "path": "customerService",
+      "label": "Customer Service (1-5)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "path": "valueForMoney",
+      "label": "Value for Money (1-5)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "path": "mostLiked",
+      "label": "What did you like most?",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "improvements",
+      "label": "Suggestions for improvement",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "scholarship-application",
+  "name": "Scholarship Application",
+  "description": "Financial aid request",
+  "icon": "📚",
+  "category": "education",
+  "fields": [
+    {
+      "path": "fullName",
+      "label": "Full Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "currentSchool",
+      "label": "Current School/University",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "gpa",
+      "label": "GPA",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 0,
+        "max": 4
+      }
+    },
+    {
+      "path": "fieldOfStudy",
+      "label": "Field of Study",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "financialNeed",
+      "label": "Statement of Financial Need",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "achievements",
+      "label": "Academic/Extracurricular Achievements",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "essay",
+      "label": "Personal Essay",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

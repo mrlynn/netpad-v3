@@ -3,9 +3,13 @@
  *
  * Handles substitution of template variables in workflow node configurations.
  * Supports patterns like:
- * - {{nodes.formTrigger.data.fieldName}}
- * - {{trigger.payload.data}}
- * - {{variables.myVar}}
+ * - {{nodes.formTrigger.data.fieldName}} - Access output from a specific node
+ * - {{trigger.payload.data.fieldName}} - Access form submission data
+ * - {{variables.myVar}} - Access workflow variables
+ * - {{fieldName}} - Short-form for trigger.payload.data.fieldName (convenience)
+ *
+ * Short-form variables (without prefix) automatically resolve from
+ * trigger.payload.data, making it easier to reference form fields.
  */
 
 export interface SubstitutionContext {
@@ -18,12 +22,10 @@ export interface SubstitutionContext {
 }
 
 /**
- * Resolve a dot-notation path from the context
- * e.g., "nodes.formTrigger.data.name" -> value at that path
+ * Resolve a dot-notation path from an object
  */
-export function resolvePath(context: SubstitutionContext, path: string): unknown {
-  const parts = path.split('.');
-  let current: unknown = context;
+function resolvePathFromObject(obj: unknown, parts: string[]): unknown {
+  let current: unknown = obj;
 
   for (const part of parts) {
     if (current === null || current === undefined) {
@@ -36,6 +38,35 @@ export function resolvePath(context: SubstitutionContext, path: string): unknown
   }
 
   return current;
+}
+
+/**
+ * Resolve a dot-notation path from the context
+ * e.g., "nodes.formTrigger.data.name" -> value at that path
+ *
+ * Also supports short-form variables (e.g., "fullName") which will
+ * automatically resolve from trigger.payload.data for convenience.
+ */
+export function resolvePath(context: SubstitutionContext, path: string): unknown {
+  const parts = path.split('.');
+
+  // First, try resolving from the full context (standard behavior)
+  const resolved = resolvePathFromObject(context, parts);
+  if (resolved !== undefined) {
+    return resolved;
+  }
+
+  // If not found and it's a simple path (no dots or doesn't start with known prefixes),
+  // try resolving from trigger.payload.data for form submission convenience
+  const knownPrefixes = ['nodes', 'trigger', 'variables'];
+  if (!knownPrefixes.includes(parts[0]) && context.trigger?.payload?.data) {
+    const triggerDataResolved = resolvePathFromObject(context.trigger.payload.data, parts);
+    if (triggerDataResolved !== undefined) {
+      return triggerDataResolved;
+    }
+  }
+
+  return undefined;
 }
 
 /**

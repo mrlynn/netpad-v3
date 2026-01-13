@@ -168,9 +168,33 @@ export function WYSIWYGFormEditor({
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', position: 'relative' }}>
+      {/* Large centered NetPad logo watermark */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          zIndex: 0,
+        }}
+      >
+        <Box
+          component="img"
+          src="/netpad-logo.svg"
+          alt=""
+          sx={{
+            width: 180,
+            height: 180,
+            opacity: 0.03,
+          }}
+        />
+      </Box>
+
       {/* Scrollable form area - Google Forms style centered */}
-      <Box sx={{ flex: 1, overflow: 'auto', py: 3, px: 2 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', py: 3, px: 2, position: 'relative', zIndex: 1 }}>
         {/* Form Header with inline editable title - matches published form */}
         {/* data-thumbnail-target is used by FormBuilder to capture preview for thumbnails */}
         <Box sx={{ maxWidth: 700, mx: 'auto', mb: 3 }} data-thumbnail-target="true">

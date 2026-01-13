@@ -56,6 +56,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 import { OrganizationSelector } from './OrganizationSelector';
 import { ProjectSelectorNav } from './ProjectSelectorNav';
+import { RecentItemsMenu } from './RecentItemsMenu';
 import { getOrgProjectUrl, parseOrgProjectFromPath } from '@/lib/routing';
 
 interface NavItem {
@@ -483,6 +484,11 @@ export function AppNavBar() {
                   )}
                 </Menu>
               </>
+            )}
+
+            {/* Recent Items */}
+            {isAuthenticated && (
+              <RecentItemsMenu />
             )}
 
             {/* MongoDB Status - Icon with popover */}

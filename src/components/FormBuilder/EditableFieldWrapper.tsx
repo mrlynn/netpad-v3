@@ -88,23 +88,29 @@ export function EditableFieldWrapper({
         },
       }}
     >
-      {/* Editing toolbar - appears on hover */}
+      {/* Editing toolbar - overlay pattern, positioned above field, no layout shift */}
       <Fade in={isHovered && !isEditingLabel}>
         <Box
           sx={{
             position: 'absolute',
-            top: -16,
+            top: -40,
             right: 8,
             display: 'flex',
             alignItems: 'center',
             gap: 0.5,
             bgcolor: 'background.paper',
             borderRadius: 1,
-            boxShadow: 2,
+            boxShadow: 3,
             px: 0.5,
             py: 0.25,
-            zIndex: 10,
+            zIndex: 100,
+            pointerEvents: 'auto',
+            // Ensure toolbar overlays content without affecting layout
+            opacity: (isHovered && !isEditingLabel) ? 1 : 0,
+            transition: 'opacity 0.15s ease',
           }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           <Tooltip title="Edit label" placement="top">
             <IconButton

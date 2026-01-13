@@ -1,0 +1,68 @@
+{
+  "id": "expense-report",
+  "name": "Expense Report",
+  "description": "Expense submission",
+  "icon": "🧾",
+  "category": "finance",
+  "fields": [
+    {
+      "path": "employeeName",
+      "label": "Employee Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "employeeId",
+      "label": "Employee ID",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "department",
+      "label": "Department",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "expenseDate",
+      "label": "Expense Date",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "category",
+      "label": "Expense Category",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "amount",
+      "label": "Amount ($)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 0
+      }
+    },
+    {
+      "path": "description",
+      "label": "Description",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "businessPurpose",
+      "label": "Business Purpose",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

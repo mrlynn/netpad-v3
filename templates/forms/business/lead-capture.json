@@ -1,0 +1,58 @@
+{
+  "id": "lead-capture",
+  "name": "Lead Capture",
+  "description": "Sales lead generation",
+  "icon": "🎯",
+  "category": "business",
+  "fields": [
+    {
+      "path": "firstName",
+      "label": "First Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "lastName",
+      "label": "Last Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Work Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "company",
+      "label": "Company Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "jobTitle",
+      "label": "Job Title",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "companySize",
+      "label": "Company Size",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "interest",
+      "label": "What are you interested in?",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

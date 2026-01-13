@@ -1,0 +1,23 @@
+{
+  "id": "form-to-mongodb",
+  "name": "Form to Database",
+  "description": "Save form data to MongoDB",
+  "icon": "💾",
+  "category": "forms",
+  "nodeCount": 2,
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Form Submission",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save to MongoDB",
+      "position": { "x": 250, "y": 250 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 }
+  ]
+}

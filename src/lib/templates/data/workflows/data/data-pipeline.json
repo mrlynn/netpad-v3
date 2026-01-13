@@ -1,0 +1,35 @@
+{
+  "id": "data-pipeline",
+  "name": "Data Transform Pipeline",
+  "description": "Query, transform, and save data",
+  "icon": "⚙️",
+  "category": "data",
+  "nodeCount": 4,
+  "nodes": [
+    {
+      "type": "manual-trigger",
+      "label": "Start",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "mongodb-query",
+      "label": "Query Data",
+      "position": { "x": 250, "y": 250 }
+    },
+    {
+      "type": "transform",
+      "label": "Transform",
+      "position": { "x": 250, "y": 400 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save Results",
+      "position": { "x": 250, "y": 550 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3 }
+  ]
+}

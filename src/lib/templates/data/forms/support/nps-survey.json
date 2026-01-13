@@ -1,0 +1,48 @@
+{
+  "id": "nps-survey",
+  "name": "NPS Survey",
+  "description": "Net Promoter Score",
+  "icon": "📊",
+  "category": "feedback",
+  "fields": [
+    {
+      "path": "score",
+      "label": "How likely are you to recommend us? (0-10)",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 0,
+        "max": 10
+      }
+    },
+    {
+      "path": "reason",
+      "label": "What is the primary reason for your score?",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "improvements",
+      "label": "What could we do better?",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "followUp",
+      "label": "May we contact you for follow-up?",
+      "type": "boolean",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "email",
+      "label": "Email (optional)",
+      "type": "email",
+      "included": true,
+      "required": false
+    }
+  ]
+}

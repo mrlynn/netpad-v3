@@ -7,7 +7,6 @@ import {
   Container,
   Paper,
   Typography,
-  CircularProgress,
   Alert,
   ToggleButtonGroup,
   ToggleButton,
@@ -30,6 +29,7 @@ import { mapExtractedDataToFormFields, validateMappedData } from '@/lib/conversa
 import { getExtractionSchemaForConfig } from '@/lib/conversational/schemas';
 import { ConversationState } from '@/types/conversational';
 import { useAuth } from '@/contexts/AuthContext';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface SearchResult {
   _id: string;
@@ -215,7 +215,7 @@ export default function PublicFormPage() {
           minHeight: '100vh',
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="medium" message="Loading form..." />
       </Box>
     );
   }
@@ -326,7 +326,47 @@ export default function PublicFormPage() {
     return (
       <Container maxWidth="sm" sx={{ py: 8 }}>
         <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ mb: 2, color: '#00ED64' }}>
+          {/* NetPad Logo with success animation */}
+          <Box
+            sx={{
+              mb: 3,
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                bgcolor: alpha('#00ED64', 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'pulse 2s ease-in-out infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': {
+                    boxShadow: '0 0 0 0 rgba(0, 237, 100, 0.4)',
+                  },
+                  '50%': {
+                    boxShadow: '0 0 0 12px rgba(0, 237, 100, 0)',
+                  },
+                },
+              }}
+            >
+              <Box
+                component="img"
+                src="/netpad-logo.svg"
+                alt="Success"
+                sx={{
+                  width: 36,
+                  height: 36,
+                }}
+              />
+            </Box>
+          </Box>
+
+          <Typography variant="h5" sx={{ mb: 2, color: '#00ED64', fontWeight: 600 }}>
             Thank You!
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -338,6 +378,36 @@ export default function PublicFormPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
               Redirecting in {redirectCountdown} second{redirectCountdown !== 1 ? 's' : ''}...
             </Typography>
+          )}
+
+          {/* Powered by NetPad footer */}
+          {form.branding?.showPoweredBy !== false && !hideBranding && (
+            <Box
+              sx={{
+                mt: 4,
+                pt: 3,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.75,
+              }}
+            >
+              <Box
+                component="img"
+                src="/netpad-logo.svg"
+                alt="NetPad"
+                sx={{
+                  width: 14,
+                  height: 14,
+                  opacity: 0.5,
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                Powered by NetPad
+              </Typography>
+            </Box>
           )}
         </Paper>
       </Container>

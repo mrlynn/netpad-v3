@@ -34,6 +34,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useConsent } from '@/contexts/ConsentContext';
 import { CATEGORY_INFO } from '@/types/consent';
 import { useAuth } from '@/contexts/AuthContext';
+import { SettingsSection, SettingsToggle } from './index';
 
 export function PrivacySettings() {
   const theme = useTheme();
@@ -166,22 +167,13 @@ export function PrivacySettings() {
   return (
     <Box>
       {/* Cookie Preferences Section */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 3,
-          border: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.2),
-          borderRadius: 2,
-        }}
+      <SettingsSection
+        title="Cookie Preferences"
+        description="Control which cookies are used to enhance your experience"
+        icon={<CookieIcon fontSize="small" />}
+        color="#00ED64"
+        defaultExpanded={true}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <CookieIcon sx={{ color: theme.palette.primary.main }} />
-          <Typography variant="h6" fontWeight={600}>
-            Cookie Preferences
-          </Typography>
-        </Box>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Manage how we use cookies and similar technologies. Essential cookies are
@@ -222,76 +214,31 @@ export function PrivacySettings() {
         </Box>
 
         {/* Functional */}
-        <Box
-          sx={{
-            p: 2,
-            mb: 2,
-            borderRadius: 1,
-            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography fontWeight={600}>{CATEGORY_INFO.functional.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {CATEGORY_INFO.functional.description}
-              </Typography>
-            </Box>
-            <Switch
-              checked={localPrefs.functional}
-              onChange={() => handleToggle('functional')}
-              color="primary"
-            />
-          </Box>
-        </Box>
+        <SettingsToggle
+          label={CATEGORY_INFO.functional.title}
+          description={CATEGORY_INFO.functional.description}
+          checked={localPrefs.functional}
+          onChange={() => handleToggle('functional')}
+          spacing={2}
+        />
 
         {/* Analytics */}
-        <Box
-          sx={{
-            p: 2,
-            mb: 2,
-            borderRadius: 1,
-            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography fontWeight={600}>{CATEGORY_INFO.analytics.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {CATEGORY_INFO.analytics.description}
-              </Typography>
-            </Box>
-            <Switch
-              checked={localPrefs.analytics}
-              onChange={() => handleToggle('analytics')}
-              color="primary"
-            />
-          </Box>
-        </Box>
+        <SettingsToggle
+          label={CATEGORY_INFO.analytics.title}
+          description={CATEGORY_INFO.analytics.description}
+          checked={localPrefs.analytics}
+          onChange={() => handleToggle('analytics')}
+          spacing={2}
+        />
 
         {/* Marketing */}
-        <Box
-          sx={{
-            p: 2,
-            mb: 2,
-            borderRadius: 1,
-            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography fontWeight={600}>{CATEGORY_INFO.marketing.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {CATEGORY_INFO.marketing.description}
-              </Typography>
-            </Box>
-            <Switch
-              checked={localPrefs.marketing}
-              onChange={() => handleToggle('marketing')}
-              color="primary"
-            />
-          </Box>
-        </Box>
+        <SettingsToggle
+          label={CATEGORY_INFO.marketing.title}
+          description={CATEGORY_INFO.marketing.description}
+          checked={localPrefs.marketing}
+          onChange={() => handleToggle('marketing')}
+          spacing={2}
+        />
 
         {hasChanges && (
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
@@ -332,30 +279,16 @@ export function PrivacySettings() {
         >
           View detailed cookie information
         </Button>
-      </Paper>
+      </SettingsSection>
 
       {/* Data Rights Section */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 3,
-          border: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.2),
-          borderRadius: 2,
-        }}
+      <SettingsSection
+        title="Your Data Rights"
+        description="Under GDPR and CCPA, you have the right to access, export, and delete your personal data"
+        icon={<PrivacyTipIcon fontSize="small" />}
+        color="#00ED64"
+        defaultExpanded={true}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <PrivacyTipIcon sx={{ color: theme.palette.primary.main }} />
-          <Typography variant="h6" fontWeight={600}>
-            Your Data Rights
-          </Typography>
-        </Box>
-
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Under GDPR and CCPA, you have the right to access, export, and delete your
-          personal data.
-        </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box
@@ -413,7 +346,7 @@ export function PrivacySettings() {
             </Button>
           </Box>
         </Box>
-      </Paper>
+      </SettingsSection>
 
       {/* Delete Account Dialog */}
       <Dialog

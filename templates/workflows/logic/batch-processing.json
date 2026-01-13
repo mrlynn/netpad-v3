@@ -1,0 +1,35 @@
+{
+  "id": "batch-processing",
+  "name": "Batch Processing",
+  "description": "Process items in a loop",
+  "icon": "🔁",
+  "category": "logic",
+  "nodeCount": 4,
+  "nodes": [
+    {
+      "type": "mongodb-query",
+      "label": "Get Items",
+      "position": { "x": 250, "y": 100 }
+    },
+    {
+      "type": "loop",
+      "label": "For Each",
+      "position": { "x": 250, "y": 250 }
+    },
+    {
+      "type": "transform",
+      "label": "Process",
+      "position": { "x": 250, "y": 400 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Update",
+      "position": { "x": 250, "y": 550 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3 }
+  ]
+}

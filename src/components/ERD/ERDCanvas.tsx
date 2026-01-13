@@ -16,7 +16,7 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Paper, Typography, alpha, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, alpha, CircularProgress, useTheme } from '@mui/material';
 import { CollectionNode } from './CollectionNode';
 
 // Define nodeTypes outside component and memoize
@@ -36,6 +36,8 @@ interface ERDCanvasProps {
 }
 
 function ERDCanvasInner({ collections, isLoading }: ERDCanvasProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   
@@ -120,6 +122,30 @@ function ERDCanvasInner({ collections, isLoading }: ERDCanvasProps) {
         maxZoom={2}
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        {/* Large centered NetPad logo watermark */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 0,
+          }}
+        >
+          <Box
+            component="img"
+            src="/netpad-logo.svg"
+            alt=""
+            sx={{
+              width: 200,
+              height: 200,
+              opacity: 0.035,
+              filter: isDark ? 'brightness(0) invert(1)' : 'brightness(0)',
+            }}
+          />
+        </Box>
         <Controls />
         <MiniMap
           nodeColor={(node) => {

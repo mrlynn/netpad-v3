@@ -1,0 +1,61 @@
+{
+  "id": "order-form",
+  "name": "Order Form",
+  "description": "Product ordering",
+  "icon": "🛒",
+  "category": "ecommerce",
+  "fields": [
+    {
+      "path": "customerName",
+      "label": "Customer Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "phone",
+      "label": "Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "productName",
+      "label": "Product",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "quantity",
+      "label": "Quantity",
+      "type": "number",
+      "included": true,
+      "required": true,
+      "validation": {
+        "min": 1
+      }
+    },
+    {
+      "path": "shippingAddress",
+      "label": "Shipping Address",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "specialInstructions",
+      "label": "Special Instructions",
+      "type": "string",
+      "included": true,
+      "required": false
+    }
+  ]
+}

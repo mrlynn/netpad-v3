@@ -1,0 +1,82 @@
+{
+  "id": "patient-intake-encrypted",
+  "name": "Patient Intake (Encrypted)",
+  "description": "HIPAA-compliant with QE",
+  "icon": "🏥",
+  "category": "healthcare",
+  "fields": [
+    {
+      "path": "firstName",
+      "label": "First Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "lastName",
+      "label": "Last Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "dateOfBirth",
+      "label": "Date of Birth",
+      "type": "date",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "ssn",
+      "label": "Social Security Number",
+      "type": "string",
+      "included": true,
+      "required": true,
+      "validation": {
+        "pattern": "^\\d{3}-\\d{2}-\\d{4}$"
+      },
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Indexed",
+        "queryType": "equality"
+      }
+    },
+    {
+      "path": "insuranceId",
+      "label": "Insurance ID",
+      "type": "string",
+      "included": true,
+      "required": true,
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Indexed",
+        "queryType": "equality"
+      }
+    },
+    {
+      "path": "medicalHistory",
+      "label": "Medical History",
+      "type": "string",
+      "included": true,
+      "required": false,
+      "encryption": {
+        "enabled": true,
+        "algorithm": "Unindexed"
+      }
+    },
+    {
+      "path": "allergies",
+      "label": "Known Allergies",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "emergencyContact",
+      "label": "Emergency Contact Phone",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}

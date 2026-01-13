@@ -1,0 +1,39 @@
+{
+  "id": "contact",
+  "name": "Contact Form",
+  "description": "Name, email, message",
+  "icon": "📧",
+  "category": "business",
+  "complexity": "simple",
+  "estimatedTime": "2 minutes",
+  "fields": [
+    {
+      "path": "name",
+      "label": "Your Name",
+      "type": "string",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "email",
+      "label": "Email Address",
+      "type": "email",
+      "included": true,
+      "required": true
+    },
+    {
+      "path": "subject",
+      "label": "Subject",
+      "type": "string",
+      "included": true,
+      "required": false
+    },
+    {
+      "path": "message",
+      "label": "Message",
+      "type": "string",
+      "included": true,
+      "required": true
+    }
+  ]
+}
