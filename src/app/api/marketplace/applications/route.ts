@@ -297,30 +297,51 @@ export async function POST(request: NextRequest) {
         // Add current version to history if not already there
         const currentVersionInHistory = versions.find(v => v.version === existing.manifest.version);
         if (!currentVersionInHistory && existing.manifest.version) {
+          // Convert changelog array to string if it exists
+          let changelogStr: string | undefined;
+          if (existing.manifest.changelog && Array.isArray(existing.manifest.changelog)) {
+            changelogStr = existing.manifest.changelog
+              .map(entry => `### ${entry.version} (${entry.date})\n${entry.changes.map(c => `- ${c}`).join('\n')}`)
+              .join('\n\n');
+          }
           versions.push({
             version: existing.manifest.version,
             releaseId: existing.sourceReleaseId,
-            changelog: existing.manifest.changelog,
+            changelog: changelogStr,
             publishedAt: existing.publishedAt ? new Date(existing.publishedAt) : new Date(),
             publishedBy: existing.publishedBy || 'unknown',
           });
         }
         
         // Add new version to history
+        const newManifest = publishableBundle.manifest as ApplicationManifest;
+        let newChangelogStr: string | undefined;
+        if (newManifest.changelog && Array.isArray(newManifest.changelog)) {
+          newChangelogStr = newManifest.changelog
+            .map(entry => `### ${entry.version} (${entry.date})\n${entry.changes.map(c => `- ${c}`).join('\n')}`)
+            .join('\n\n');
+        }
         versions.push({
           version: version,
           releaseId: releaseId,
-          changelog: (publishableBundle.manifest as ApplicationManifest).changelog,
+          changelog: newChangelogStr,
           publishedAt: new Date(),
           publishedBy: session.userId,
         });
       }
     } else {
       // New application - initialize version history with first version
+      const initialManifest = publishableBundle.manifest as ApplicationManifest;
+      let initialChangelogStr: string | undefined;
+      if (initialManifest.changelog && Array.isArray(initialManifest.changelog)) {
+        initialChangelogStr = initialManifest.changelog
+          .map(entry => `### ${entry.version} (${entry.date})\n${entry.changes.map(c => `- ${c}`).join('\n')}`)
+          .join('\n\n');
+      }
       versions = [{
         version: version,
         releaseId: releaseId,
-        changelog: (publishableBundle.manifest as ApplicationManifest).changelog,
+        changelog: initialChangelogStr,
         publishedAt: new Date(),
         publishedBy: session.userId,
       }];
