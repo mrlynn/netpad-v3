@@ -144,6 +144,7 @@ export async function updateInstallationStatus(
   installationId: string,
   updates: {
     status?: InstalledApplication['status'];
+    installedVersion?: string;
     latestAvailableVersion?: string;
     updateAvailable?: InstalledApplication['updateAvailable'];
     lastCheckedAt?: Date;
