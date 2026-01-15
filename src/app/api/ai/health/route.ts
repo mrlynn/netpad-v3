@@ -195,7 +195,9 @@ export async function GET() {
     }
   }
 
-  const httpStatus = health.status === 'healthy' || health.status === 'degraded' || health.status === 'not_configured' 
+  // At this point, if status was 'not_configured', we would have returned early
+  // So status can only be 'healthy' | 'degraded' | 'unhealthy'
+  const httpStatus = health.status === 'healthy' || health.status === 'degraded' 
     ? 200 
     : 503;
 
