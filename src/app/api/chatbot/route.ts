@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
   
   try {
     // Import the chat handler dynamically to avoid circular dependencies
-    const { POST as chatHandler } = await import('../ai/chat/route');
+    const chatRoute = await import('../ai/chat/route');
+    const chatHandler = chatRoute.POST;
     
     // Call the chat handler and get its response
     const response = await chatHandler(request);
