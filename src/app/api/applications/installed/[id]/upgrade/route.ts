@@ -409,19 +409,6 @@ export async function POST(
       }
     }
 
-    const { id } = await params;
-    const body = await request.json();
-    const { orgId } = body;
-    if (orgId) {
-      try {
-        await updateInstallationStatus(orgId, id, {
-          status: 'error',
-        });
-      } catch {
-        // Ignore
-      }
-    }
-
     return NextResponse.json(
       { error: error.message || 'Failed to upgrade installation' },
       { status: 500 }

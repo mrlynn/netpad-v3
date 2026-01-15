@@ -183,46 +183,6 @@ export async function GET(
 }
 
 /**
- * POST /api/auth/cli/device-flow/:deviceCode/authorize
- * Called by the web callback after OAuth completes
- */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ deviceCode: string }> }
-) {
-  try {
-    const { deviceCode } = await params;
-    const body = await request.json();
-    const { code, state: oauthState } = body;
-
-    const deviceFlowState = deviceFlowStore.get(deviceCode);
-    if (!deviceFlowState || deviceFlowState.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Invalid device code' },
-        { status: 400 }
-      );
-    }
-
-    // Handle OAuth callback
-    const result = await handleOAuthCallback(deviceFlowState.provider, code, oauthState);
-
-    // Update device flow state
-    deviceFlowState.status = 'authorized';
-    deviceFlowState.userId = result.user.userId;
-    deviceFlowState.email = result.user.email;
-    deviceFlowState.accessToken = 'pending'; // Will be replaced with session token
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[Device Flow] Authorization error:', error);
-    return NextResponse.json(
-      { error: 'Failed to authorize', details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-/**
  * Generate a user-friendly 8-character code
  */
 function generateUserCode(): string {
