@@ -24,9 +24,10 @@ import ReactMarkdown from 'react-markdown';
 interface ChatMessagesProps {
   messages: ChatMessage[];
   isLoading: boolean;
+  onExecuteAction?: (messageId: string, action: ChatAction) => void;
 }
 
-export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, onExecuteAction }: ChatMessagesProps) {
   const theme = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,12 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Get executeAction from context if not provided (for backwards compatibility)
+  // If onExecuteAction is provided (standalone mode), use it; otherwise use context
+  // Note: useChat() works because the app is wrapped in ChatProvider in ClientLayout
+  const context = useChat();
+  const executeAction = onExecuteAction || context.executeAction;
 
   return (
     <Box
@@ -50,7 +57,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
       }}
     >
       {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
+        <MessageBubble key={message.id} message={message} onExecuteAction={executeAction} />
       ))}
       {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
@@ -67,11 +74,13 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onExecuteAction?: (messageId: string, action: ChatAction) => void;
 }
 
-function MessageBubble({ message }: MessageBubbleProps) {
+function MessageBubble({ message, onExecuteAction }: MessageBubbleProps) {
   const theme = useTheme();
-  const { executeAction } = useChat();
+  const { executeAction: contextExecuteAction } = useChat();
+  const executeAction = onExecuteAction || contextExecuteAction;
   const isUser = message.role === 'user';
   const isStreaming = message.isStreaming;
 

@@ -401,6 +401,28 @@ export default function LandingPage() {
               All connected to MongoDB. Powered by AI. No code required.
             </Typography>
 
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                opacity: 0.6, 
+                maxWidth: 700, 
+                mx: 'auto',
+                mb: 4,
+                textAlign: 'center'
+              }}
+            >
+              <Link 
+                href="/manifesto" 
+                style={{ 
+                  color: '#00ED64', 
+                  textDecoration: 'none',
+                  fontWeight: 500
+                }}
+              >
+                Our philosophy and values →
+              </Link>
+            </Typography>
+
             {/* Primary CTAs - deliberate, not pushy */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mb: 4 }}>
               <Button
@@ -1954,7 +1976,7 @@ console.log('Output:', result.execution.result?.output);`}
 {`// Claude Desktop config
 {
   "mcpServers": {
-    "netpad-forms": {
+    "netpad": {
       "command": "npx",
       "args": ["@netpad/mcp-server"]
     }
@@ -2535,6 +2557,18 @@ $ netpad login --api-key np_live_xxx`}
                 }}
               >
                 Why NetPad?
+              </Typography>
+              <Typography
+                component={Link}
+                href="/manifesto"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Manifesto
               </Typography>
               <Typography
                 component={Link}

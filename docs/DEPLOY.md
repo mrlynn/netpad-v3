@@ -35,7 +35,9 @@ These variables enable additional features:
 | `MONGODB_DATABASE` | Database name (default: `forms`) | Custom database name |
 | `NEXT_PUBLIC_APP_URL` | Public URL of your app | OAuth callbacks |
 | `APP_URL` | Server-side URL | Webhooks, cron jobs |
-| `OPENAI_API_KEY` | OpenAI API key | AI form/workflow generation |
+| `OPENAI_API_KEY` | OpenAI API key | AI form/workflow generation (cloud deployments) |
+| `OLLAMA_BASE_URL` | Ollama API base URL | Self-hosted LLM (e.g., `http://localhost:11434`) |
+| `OLLAMA_MODEL` | Ollama model name | Model to use with Ollama (default: `llama3.2`) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob token | File uploads |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | Google login |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth secret | Google login |
@@ -164,8 +166,20 @@ You should see:
 
 ### AI Features
 
+**Option 1: OpenAI (Cloud Deployments)**
 1. Get an OpenAI API key from [platform.openai.com](https://platform.openai.com)
 2. Add `OPENAI_API_KEY` to Vercel environment variables
+
+**Option 2: Ollama (Self-Hosted Deployments)**
+1. Install and run Ollama on your infrastructure: [ollama.ai](https://ollama.ai)
+2. Pull a model: `ollama pull llama3.2`
+3. Add to environment variables:
+   ```bash
+   OLLAMA_BASE_URL=http://localhost:11434  # or your Ollama server URL
+   OLLAMA_MODEL=llama3.2  # optional, defaults to llama3.2
+   ```
+
+**Note:** NetPad will automatically use Ollama if `OLLAMA_BASE_URL` is set, otherwise it falls back to OpenAI. This allows self-hosted deployments to use local LLMs without exposing data to external services.
 
 ### File Uploads
 

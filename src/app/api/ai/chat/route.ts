@@ -6,7 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createDefaultProvider, Message } from '@/lib/ai/providers';
+import { ProviderError } from '@/lib/ai/providers/base';
 import { validateAIRequestWithGuestAccess, recordAIUsage, recordGuestUsage } from '@/lib/ai/aiRequestGuard';
 import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext, WorkflowBuilderContext } from '@/types/chat';
 import { getSearchFormsCapability, getTemplateGalleryCapability, getConversationalFormsCapability, getNpmPackagesCapability, getApplicationContractsCapability } from '@/lib/ai/chatCapabilities';
@@ -667,11 +668,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    // Get AI provider (supports OpenAI for cloud, Ollama for self-hosted)
+    const provider = createDefaultProvider();
+    if (!provider) {
       return NextResponse.json(
-        { success: false, error: 'AI service is not configured' },
+        { success: false, error: 'AI service is not configured. Set OPENAI_API_KEY for cloud or OLLAMA_BASE_URL for self-hosted.' },
         { status: 503 }
       );
     }
@@ -698,8 +699,6 @@ export async function POST(request: NextRequest) {
       guardContext = guard.context;
     }
 
-    const openai = new OpenAI({ apiKey });
-
     // Determine which system prompt to use
     let systemPrompt: string;
     if (isContactQuery) {
@@ -711,8 +710,8 @@ export async function POST(request: NextRequest) {
       systemPrompt = buildSystemPrompt(body.context || { fields: [], currentView: 'other' });
     }
 
-    // Build messages array
-    const messages: OpenAI.ChatCompletionMessageParam[] = [
+    // Build messages array using provider's Message format
+    const messages: Message[] = [
       {
         role: 'system',
         content: systemPrompt,
@@ -723,7 +722,7 @@ export async function POST(request: NextRequest) {
     if (body.conversationHistory && Array.isArray(body.conversationHistory)) {
       for (const msg of body.conversationHistory.slice(-10)) {
         messages.push({
-          role: msg.role,
+          role: msg.role as 'system' | 'user' | 'assistant',
           content: msg.content,
         });
       }
@@ -735,15 +734,33 @@ export async function POST(request: NextRequest) {
       content: body.message,
     });
 
-    // Call OpenAI
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Fast and cost-effective for chat
-      messages,
-      temperature: 0.7,
-      max_tokens: isContactQuery ? 500 : 1000, // Shorter responses for support queries
-    });
+    // Call provider (works with both OpenAI and Ollama)
+    let responseContent = '';
+    try {
+      const stream = provider.streamChat(messages, {
+        temperature: 0.7,
+        maxTokens: isContactQuery ? 500 : 1000, // Shorter responses for support queries
+      });
 
-    const responseContent = completion.choices[0]?.message?.content || '';
+      // Collect all chunks from the stream
+      for await (const chunk of stream) {
+        responseContent += chunk;
+      }
+    } catch (error) {
+      if (error instanceof ProviderError) {
+        console.error(`[Chat API] Provider error (${error.provider}):`, error.message);
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message || 'AI service error',
+            code: error.code,
+          },
+          { status: error.statusCode || 500 }
+        );
+      }
+      throw error;
+    }
+
     const { message, action } = parseActionFromResponse(responseContent);
 
     // Record usage only for form/workflow queries (not contact/support)

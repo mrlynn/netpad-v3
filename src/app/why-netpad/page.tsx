@@ -403,8 +403,21 @@ export default function WhyNetPadPage() {
             built in.
           </Typography>
 
-          <Typography variant="body1" sx={{ color: alpha('#fff', 0.65), maxWidth: 850, mb: 4 }}>
+          <Typography variant="body1" sx={{ color: alpha('#fff', 0.65), maxWidth: 850, mb: 2 }}>
             Forms are one interface. The product is the <b>document lifecycle</b>: capture → route → approve → automate → audit.
+          </Typography>
+
+          <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), maxWidth: 850, mb: 4 }}>
+            <Link 
+              href="/manifesto" 
+              style={{ 
+                color: '#00ED64', 
+                textDecoration: 'none',
+                fontWeight: 500
+              }}
+            >
+              Read our manifesto →
+            </Link>
           </Typography>
 
           {/* Primary CTA - deliberate, not pushy */}
@@ -1373,7 +1386,7 @@ export default function WhyNetPadPage() {
                           <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto' }}>
 {`{
   "mcpServers": {
-    "netpad-forms": {
+    "netpad": {
       "command": "npx",
       "args": ["@netpad/mcp-server"]
     }

@@ -2351,7 +2351,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     id: 'mcp-server',
     title: 'MCP Server (@netpad/mcp-server)',
     description:
-      'Model Context Protocol server that enables Claude and other AI tools to help build NetPad forms and applications through natural language.',
+      'Model Context Protocol server with 75 AI-powered tools for building NetPad forms, applications, workflows, and data-driven experiences.',
     content: [
       {
         type: 'heading',
@@ -2360,7 +2360,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'text',
         content:
-          'The @netpad/mcp-server package is a Model Context Protocol (MCP) server that integrates with AI assistants like Claude Desktop and Cursor IDE. It provides 22+ AI-powered tools for generating forms, scaffolding applications, and integrating with MongoDB.',
+          'The @netpad/mcp-server package (v2.0.0) is a comprehensive Model Context Protocol (MCP) server that integrates with AI assistants like Claude Desktop and Cursor IDE. It provides 75 AI-powered tools across 7 categories for building forms, applications, workflows, conversational experiences, and MongoDB integrations.',
       },
       {
         type: 'heading',
@@ -2422,6 +2422,23 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       },
       {
         type: 'heading',
+        content: 'Tool Categories (75 tools)',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form Building (6 tools) - Generate forms, fields, conditional logic, computed fields',
+          'Application Management (7 tools) - Create applications, contracts, releases',
+          'Marketplace & npm (8 tools) - Publish, search, and install applications',
+          'Workflow Automation (10 tools) - Build workflows with 25+ node types',
+          'Conversational & Search Forms (11 tools) - AI-powered data collection and RAG',
+          'Enhanced Templates (5 tools) - Access 25+ form templates',
+          'Data Browser (12 tools) - MongoDB queries, aggregations, schema analysis',
+          'Reference & Helper (16 tools) - Documentation, best practices, debugging',
+        ],
+      },
+      {
+        type: 'heading',
         content: 'Form Building Tools',
       },
       {
@@ -2437,45 +2454,71 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       },
       {
         type: 'heading',
-        content: 'Application Development Tools',
+        content: 'Application Management Tools',
       },
       {
         type: 'list',
         content: [
-          'scaffold_nextjs_app - Generate complete Next.js applications with forms',
-          'generate_workflow_integration - Generate code for workflow integration',
-          'generate_mongodb_query - Generate MongoDB queries for form data',
-          'generate_api_route - Generate Next.js API routes for form operations',
-          'generate_react_code - Generate React components that render forms',
+          'create_application - Generate code to create new applications',
+          'generate_application_contract - Define API contracts for applications',
+          'generate_application_release - Create versioned releases',
+          'list_application_templates - Browse application templates',
+          'publish_to_marketplace - Publish applications to marketplace',
         ],
       },
       {
         type: 'heading',
-        content: 'Reference Tools',
+        content: 'Workflow Automation Tools',
       },
       {
         type: 'list',
         content: [
-          'list_field_types - List all 28+ supported field types',
-          'list_operators - List conditional logic operators',
-          'list_formula_functions - List formula functions for computed fields',
-          'list_validation_options - List validation rule options',
-          'list_theme_options - List theme customization options',
+          'create_workflow - Generate complete workflow configurations',
+          'add_workflow_node - Add nodes to workflows',
+          'connect_workflow_nodes - Connect nodes with edges',
+          'list_workflow_node_types - Browse 25+ available node types',
+          'list_workflow_templates - Get pre-built workflow templates',
         ],
       },
       {
         type: 'heading',
-        content: 'Helper Tools',
+        content: 'Conversational & Search Form Tools',
       },
       {
         type: 'list',
         content: [
-          'get_use_case_template - Get pre-built templates (lead capture, event registration, etc.)',
-          'suggest_form_fields - Get field recommendations based on use case',
-          'get_best_practices - Get guidelines for form design and security',
-          'debug_form_config - Analyze form configuration for issues',
-          'explain_error - Explain error codes and provide solutions',
-          'get_documentation - Access comprehensive documentation topics',
+          'create_conversational_form - Create AI-powered conversational forms',
+          'configure_rag_settings - Enable RAG with document retrieval',
+          'create_search_form - Build MongoDB search interfaces',
+          'list_search_operators - Browse search operators by field type',
+          'list_conversational_templates - IT helpdesk, feedback, intake templates',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'list_form_templates - Browse 25+ form templates across 10 categories',
+          'get_form_template - Get detailed template configuration',
+          'create_form_from_template - Create forms with customizations',
+          'Categories: Business, Events, Feedback, Support, Healthcare, Education, etc.',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Data Browser Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'generate_connection_config - Configure MongoDB connections',
+          'generate_data_browser_query - Generate find, aggregate, distinct queries',
+          'generate_aggregation_pipeline - Build complex aggregation pipelines',
+          'generate_index_recommendations - Get index suggestions',
+          'generate_schema_analysis - Analyze collection schemas',
         ],
       },
       {
@@ -2485,31 +2528,35 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'text',
         content:
-          'Once configured, you can ask Claude to help you build forms using natural language:',
+          'Once configured, you can ask Claude to help you build comprehensive applications:',
       },
       {
         type: 'example',
         content:
-          '"Create a contact form with name, email, phone, and message fields. Make the email and message required, and add a dropdown for inquiry type."',
+          '"Create a customer feedback application with an NPS survey form and a workflow that sends thank-you emails and saves responses to MongoDB."',
       },
       {
         type: 'tip',
         content:
-          'The MCP server provides built-in prompts for common use cases. Try asking Claude to "create a contact form" or "create a survey form" to use these templates.',
+          'The MCP server provides 25+ form templates, 5 workflow templates, and 4 conversational form templates. Ask Claude to "list form templates" or "create a form from the patient-intake template".',
       },
       {
         type: 'heading',
-        content: 'Available Resources',
+        content: 'Available Resources (16 resources)',
       },
       {
         type: 'list',
         content: [
           'netpad://docs/readme - Main documentation',
           'netpad://docs/quick-start - Quick start guide',
-          'netpad://docs/examples - Code examples',
           'netpad://reference/field-types - Field type reference',
-          'netpad://reference/operators - Operator reference',
-          'netpad://reference/formulas - Formula function reference',
+          'netpad://reference/application-templates - Application templates',
+          'netpad://reference/workflow-nodes - Workflow node types',
+          'netpad://reference/form-templates - 25+ form templates',
+          'netpad://reference/conversational-templates - Conversational form templates',
+          'netpad://reference/search-operators - Search operators',
+          'netpad://reference/connection-types - MongoDB connection types',
+          'netpad://reference/query-templates - Query templates',
         ],
       },
     ],
@@ -2524,6 +2571,12 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'scaffolding',
       'package',
       'npm',
+      'applications',
+      'workflows',
+      'conversational',
+      'rag',
+      'templates',
+      'marketplace',
     ],
   },
 

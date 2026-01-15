@@ -316,7 +316,7 @@ const ${form.slug.replace(/-/g, '')}FormData = {
   projectId: '${projectId}',
   organizationId: '${organizationId}',
   fieldConfigs: ${JSON.stringify(form.fields, null, 2)},
-  ${form.multiPage ? `multiPage: { enabled: true, pages: ${JSON.stringify((form as any).pages)} },` : ''}
+  ${(form as any).multiPage ? `multiPage: { enabled: true, pages: ${JSON.stringify((form as any).pages)} },` : ''}
 };
 
 await fetch('/api/forms', {

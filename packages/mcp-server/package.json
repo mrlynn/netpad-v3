@@ -1,7 +1,7 @@
 {
   "name": "@netpad/mcp-server",
   "version": "2.0.0",
-  "description": "MCP server for AI-assisted NetPad application development - 58 tools for forms, workflows, applications, marketplace, npm, conversational forms, and search interfaces",
+  "description": "MCP server for AI-assisted NetPad application development - 75 tools for forms, workflows, applications, marketplace, npm, conversational forms, search interfaces, 25+ templates, and MongoDB data browser",
   "author": "MongoDB",
   "license": "Apache-2.0",
   "type": "module",

@@ -73,25 +73,30 @@ export function createProvider(config: ProviderConfig): LLMProvider {
 
 /**
  * Create default provider from environment variables
+ * 
+ * Priority order:
+ * 1. Ollama (OLLAMA_BASE_URL) - for self-hosted deployments
+ * 2. OpenAI (OPENAI_API_KEY) - for cloud deployments
+ * 3. OpenRouter (OPENROUTER_API_KEY) - alternative option
  */
 export function createDefaultProvider(): LLMProvider | null {
-  // Check for OpenAI first (primary)
+  // Check for self-hosted (Ollama) first - takes precedence for self-hosted deployments
+  const ollamaURL = process.env.OLLAMA_BASE_URL;
+  if (ollamaURL) {
+    return createProvider({
+      type: 'ollama',
+      baseURL: ollamaURL,
+      defaultModel: process.env.OLLAMA_MODEL || 'llama3.2',
+    });
+  }
+
+  // Check for OpenAI (cloud deployments)
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
     return createProvider({
       type: 'openai',
       apiKey: openaiKey,
       defaultModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    });
-  }
-
-  // Check for self-hosted (Ollama)
-  const ollamaURL = process.env.OLLAMA_BASE_URL;
-  if (ollamaURL) {
-    return createProvider({
-      type: 'ollama',
-      baseURL: ollamaURL,
-      defaultModel: process.env.OLLAMA_MODEL || 'llama2',
     });
   }
 
@@ -111,23 +116,28 @@ export function createDefaultProvider(): LLMProvider | null {
 
 /**
  * Get provider configuration from environment
+ * 
+ * Priority order:
+ * 1. Ollama (OLLAMA_BASE_URL) - for self-hosted deployments
+ * 2. OpenAI (OPENAI_API_KEY) - for cloud deployments
+ * 3. OpenRouter (OPENROUTER_API_KEY) - alternative option
  */
 export function getProviderConfigFromEnv(): ProviderConfig | null {
-  // OpenAI (primary)
+  // Ollama (self-hosted) - takes precedence for self-hosted deployments
+  if (process.env.OLLAMA_BASE_URL) {
+    return {
+      type: 'ollama',
+      baseURL: process.env.OLLAMA_BASE_URL,
+      defaultModel: process.env.OLLAMA_MODEL || 'llama3.2',
+    };
+  }
+
+  // OpenAI (cloud deployments)
   if (process.env.OPENAI_API_KEY) {
     return {
       type: 'openai',
       apiKey: process.env.OPENAI_API_KEY,
       defaultModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    };
-  }
-
-  // Ollama (self-hosted)
-  if (process.env.OLLAMA_BASE_URL) {
-    return {
-      type: 'ollama',
-      baseURL: process.env.OLLAMA_BASE_URL,
-      defaultModel: process.env.OLLAMA_MODEL || 'llama2',
     };
   }
 

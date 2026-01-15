@@ -15,6 +15,7 @@ import {
   KeyboardVoice as VoiceIcon,
 } from '@mui/icons-material';
 import { useChat } from '@/contexts/ChatContext';
+import { FormBuilderContext } from '@/types/chat';
 
 // Quick suggestion chips
 const QUICK_SUGGESTIONS = [
@@ -24,9 +25,29 @@ const QUICK_SUGGESTIONS = [
   'How do I add validation?',
 ];
 
-export function ChatInput() {
+interface ChatInputProps {
+  // Optional props for standalone mode (when not using ChatContext)
+  sendMessage?: (message: string) => Promise<void>;
+  isLoading?: boolean;
+  formContext?: FormBuilderContext;
+  activeContextType?: 'form' | 'workflow' | 'none';
+  messages?: ChatMessage[];
+  placeholder?: string;
+}
+
+export function ChatInput(props?: ChatInputProps) {
   const theme = useTheme();
-  const { sendMessage, isLoading, isOpen, formContext, activeContextType, messages } = useChat();
+  // Always call useChat (required by React hooks rule)
+  // It will work if ChatContext is available, otherwise we'll use props
+  const context = useChat();
+  
+  // Use props if provided (standalone mode), otherwise use context
+  const sendMessage = props?.sendMessage || context.sendMessage;
+  const isLoading = props?.isLoading ?? context.isLoading;
+  const isOpen = props ? true : context.isOpen; // If props provided, assume open
+  const formContext = props?.formContext || context.formContext;
+  const activeContextType = props?.activeContextType ?? context.activeContextType;
+  const messages = props?.messages || context.messages;
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -142,11 +163,12 @@ export function ChatInput() {
           multiline
           maxRows={3}
           placeholder={
-            activeContextType === 'form'
+            props?.placeholder ||
+            (activeContextType === 'form'
               ? "Ask me anything about your form..."
               : activeContextType === 'workflow'
               ? "Ask me anything about your workflow..."
-              : "Ask me anything about NetPad..."
+              : "Ask me anything about NetPad...")
           }
           value={input}
           onChange={(e) => setInput(e.target.value)}

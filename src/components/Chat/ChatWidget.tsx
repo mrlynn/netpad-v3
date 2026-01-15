@@ -22,6 +22,8 @@ import {
   AutoAwesome as AIIcon,
   Home as HomeIcon,
   Forum as MessagesIcon,
+  Cloud as CloudIcon,
+  Memory as MemoryIcon,
 } from '@mui/icons-material';
 import { useChat } from '@/contexts/ChatContext';
 import { ChatMessages } from './ChatMessages';
@@ -55,6 +57,8 @@ export function ChatWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
   // Count unread messages (messages since last close)
   const [lastSeenCount, setLastSeenCount] = useState(messages.length);
+  // AI Provider info
+  const [providerInfo, setProviderInfo] = useState<{ name: string; type: string; model?: string } | null>(null);
 
   // Only check embedded status after mount to avoid hydration mismatch
   useEffect(() => {
@@ -67,6 +71,26 @@ export function ChatWidget() {
       setLastSeenCount(messages.length);
     }
   }, [isOpen, messages.length]);
+
+  // Fetch provider info when chat opens
+  useEffect(() => {
+    if (isOpen && mounted) {
+      fetch('/api/ai/provider-info')
+        .then(res => res.json())
+        .then(data => {
+          if (data.configured && data.provider) {
+            setProviderInfo({
+              name: data.provider.name,
+              type: data.provider.type,
+              model: data.provider.model,
+            });
+          }
+        })
+        .catch(() => {
+          // Silently fail - provider info is optional
+        });
+    }
+  }, [isOpen, mounted]);
 
   // Handle clicking outside to minimize (optional)
   useEffect(() => {
@@ -188,9 +212,16 @@ export function ChatWidget() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <AIIcon sx={{ fontSize: 20 }} />
-              <Typography variant="subtitle1" fontWeight={600}>
-                Assistant
-              </Typography>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Assistant
+                </Typography>
+                {providerInfo && (
+                  <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.8, display: 'block', lineHeight: 1 }}>
+                    {providerInfo.name}
+                  </Typography>
+                )}
+              </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Tooltip title="Expand">
@@ -235,11 +266,47 @@ export function ChatWidget() {
                     color: 'white',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <AIIcon sx={{ fontSize: 20 }} />
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      NetPad Assistant
-                    </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <AIIcon sx={{ fontSize: 20 }} />
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        NetPad Assistant
+                      </Typography>
+                    </Box>
+                    {providerInfo && (
+                      <Tooltip
+                        title={`Powered by ${providerInfo.name}${providerInfo.model ? ` (${providerInfo.model})` : ''}`}
+                        arrow
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            ml: 4,
+                            opacity: 0.85,
+                          }}
+                        >
+                          {providerInfo.type === 'ollama' && (
+                            <MemoryIcon sx={{ fontSize: 12 }} />
+                          )}
+                          {providerInfo.type === 'openai' && (
+                            <CloudIcon sx={{ fontSize: 12 }} />
+                          )}
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: '0.65rem',
+                              fontWeight: 500,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                            }}
+                          >
+                            {providerInfo.name}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    )}
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Tooltip title="Clear chat">

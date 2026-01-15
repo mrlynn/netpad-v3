@@ -104,12 +104,29 @@ import {
   getTemplatesByCategory,
   getTemplateById,
   searchTemplates,
-  applyTemplateCustomizations,
   generateFormConfigFromTemplate,
   generateCreateFormFromTemplateCode,
   type FormTemplate,
   type TemplateCustomizations,
 } from './template-tools.js';
+import {
+  CONNECTION_TYPES,
+  QUERY_TEMPLATES,
+  generateConnectionConfigCode,
+  generateDataBrowserQueryCode,
+  generateAggregationPipelineCode,
+  generateIndexRecommendation,
+  generateSchemaAnalysisCode,
+  generateDataExportCode,
+  getQueryTemplate,
+  listQueryTemplates,
+  generateConnectionTestCode,
+  generateListDatabasesCode,
+  generateListCollectionsCode,
+  type ConnectionConfig,
+  type DataBrowserQueryOptions,
+  type AggregationPipelineOptions,
+} from './data-browser-tools.js';
 
 const server = new McpServer({
   name: '@netpad/mcp-server',
@@ -2506,6 +2523,306 @@ server.resource(
         uri: 'netpad://reference/template-categories',
         mimeType: 'application/json',
         text: JSON.stringify(TEMPLATE_CATEGORIES, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
+// DATA BROWSER & CONNECTION TOOLS (Phase 7 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List connection types
+server.tool(
+  'list_connection_types',
+  'List all supported MongoDB connection types with setup instructions.',
+  {},
+  async () => {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          connectionTypes: Object.values(CONNECTION_TYPES),
+          total: Object.keys(CONNECTION_TYPES).length,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Generate connection configuration
+server.tool(
+  'generate_connection_config',
+  'Generate MongoDB connection configuration for the connection vault.',
+  {
+    name: z.string().describe('Descriptive name for the connection'),
+    type: z.enum(['atlas', 'self-hosted', 'atlas-data-api']).describe('Connection type'),
+    description: z.string().optional().describe('Description of this connection'),
+    settings: z.object({
+      useSSL: z.boolean().optional().describe('Use SSL/TLS'),
+      retryWrites: z.boolean().optional().describe('Enable retry writes'),
+      maxPoolSize: z.number().optional().describe('Maximum connection pool size'),
+      connectTimeoutMS: z.number().optional().describe('Connection timeout in milliseconds'),
+    }).optional().describe('Connection settings'),
+  },
+  async (config) => {
+    const code = generateConnectionConfigCode(config as ConnectionConfig);
+    const connectionType = CONNECTION_TYPES[config.type];
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Connection Configuration: ${config.name}\n\n### Type: ${connectionType.name}\n\n${connectionType.description}\n\n### Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: List query templates
+server.tool(
+  'list_query_templates',
+  'List all available MongoDB query templates for common operations.',
+  {},
+  async () => {
+    const templates = listQueryTemplates();
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          templates,
+          total: templates.length,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Get query template
+server.tool(
+  'get_query_template',
+  'Get a specific query template with example code.',
+  {
+    templateId: z.string().describe('Template ID (e.g., "find-all", "aggregate-group-count")'),
+  },
+  async ({ templateId }) => {
+    const template = getQueryTemplate(templateId);
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: `Query template "${templateId}" not found`,
+            availableTemplates: listQueryTemplates(),
+          }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(template, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Generate data browser query
+server.tool(
+  'generate_data_browser_query',
+  'Generate MongoDB queries for browsing and analyzing data.',
+  {
+    database: z.string().describe('Database name'),
+    collection: z.string().describe('Collection name'),
+    operation: z.enum(['find', 'aggregate', 'distinct', 'count', 'findOne']).describe('Query operation'),
+    description: z.string().describe('What you want to query (natural language)'),
+    filter: z.record(z.string(), z.any()).optional().describe('Query filter or aggregation pipeline'),
+    projection: z.record(z.string(), z.any()).optional().describe('Fields to include/exclude'),
+    sort: z.record(z.string(), z.number()).optional().describe('Sort order'),
+    limit: z.number().optional().describe('Maximum documents to return'),
+    skip: z.number().optional().describe('Documents to skip'),
+  },
+  async (options) => {
+    const code = generateDataBrowserQueryCode(options as DataBrowserQueryOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Data Browser Query\n\n### ${options.description}\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate aggregation pipeline
+server.tool(
+  'generate_aggregation_pipeline',
+  'Generate a MongoDB aggregation pipeline for complex data analysis.',
+  {
+    database: z.string().describe('Database name'),
+    collection: z.string().describe('Collection name'),
+    description: z.string().describe('What the aggregation should do'),
+    stages: z.array(z.string()).optional().describe('Pipeline stages as JSON strings'),
+  },
+  async (options) => {
+    const code = generateAggregationPipelineCode(options as AggregationPipelineOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Aggregation Pipeline\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate index recommendations
+server.tool(
+  'generate_index_recommendations',
+  'Generate index recommendations based on query patterns.',
+  {
+    collection: z.string().describe('Collection name'),
+    queryPatterns: z.array(z.string()).describe('List of query patterns (e.g., "find by email", "sort by createdAt")'),
+  },
+  async ({ collection, queryPatterns }) => {
+    const recommendations = generateIndexRecommendation(collection, queryPatterns);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Index Recommendations for ${collection}\n\n\`\`\`json\n${JSON.stringify(recommendations, null, 2)}\n\`\`\`\n\n### Create Indexes\n\n\`\`\`javascript\n${recommendations.map(r =>
+          `db.${collection}.createIndex({ ${r.fields.map(f => `"${f}": 1`).join(', ')} })  // ${r.reason}`
+        ).join('\n')}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate schema analysis code
+server.tool(
+  'generate_schema_analysis',
+  'Generate code to analyze the schema of a MongoDB collection.',
+  {
+    database: z.string().describe('Database name'),
+    collection: z.string().describe('Collection name'),
+  },
+  async ({ database, collection }) => {
+    const code = generateSchemaAnalysisCode(database, collection);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Schema Analysis Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate data export code
+server.tool(
+  'generate_data_export',
+  'Generate code to export data from a MongoDB collection.',
+  {
+    database: z.string().describe('Database name'),
+    collection: z.string().describe('Collection name'),
+    format: z.enum(['json', 'csv', 'xlsx']).describe('Export format'),
+    filter: z.record(z.string(), z.any()).optional().describe('Filter to apply'),
+  },
+  async ({ database, collection, format, filter }) => {
+    const code = generateDataExportCode(database, collection, format, filter);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Data Export Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate connection test code
+server.tool(
+  'generate_connection_test',
+  'Generate code to test a MongoDB connection.',
+  {
+    connectionId: z.string().describe('Connection ID to test'),
+  },
+  async ({ connectionId }) => {
+    const code = generateConnectionTestCode(connectionId);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Connection Test Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate list databases code
+server.tool(
+  'generate_list_databases',
+  'Generate code to list databases for a connection.',
+  {
+    connectionId: z.string().describe('Connection ID'),
+  },
+  async ({ connectionId }) => {
+    const code = generateListDatabasesCode(connectionId);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## List Databases Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate list collections code
+server.tool(
+  'generate_list_collections',
+  'Generate code to list collections in a database.',
+  {
+    connectionId: z.string().describe('Connection ID'),
+    database: z.string().describe('Database name'),
+  },
+  async ({ connectionId, database }) => {
+    const code = generateListCollectionsCode(connectionId, database);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## List Collections Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Resource: Connection Types Reference
+server.resource(
+  'netpad-connection-types',
+  'netpad://reference/connection-types',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/connection-types',
+        mimeType: 'application/json',
+        text: JSON.stringify(CONNECTION_TYPES, null, 2),
+      },
+    ],
+  })
+);
+
+// Resource: Query Templates Reference
+server.resource(
+  'netpad-query-templates',
+  'netpad://reference/query-templates',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/query-templates',
+        mimeType: 'application/json',
+        text: JSON.stringify(QUERY_TEMPLATES, null, 2),
       },
     ],
   })
