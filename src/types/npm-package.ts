@@ -205,6 +205,8 @@ export interface InstallPackageRequest {
   orgId: string;
   projectId: string;
   applicationId?: string;  // Optional, for updates
+  overwriteExisting?: boolean;  // Optional, whether to overwrite existing installation
+  installDependencies?: boolean;  // Optional, whether to install dependencies
 }
 
 /**
