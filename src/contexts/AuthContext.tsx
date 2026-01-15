@@ -5,6 +5,7 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 
 interface User {
   _id: string;
+  userId?: string; // Platform userId (user_xxx format)
   email: string;
   displayName?: string;
   avatarUrl?: string;

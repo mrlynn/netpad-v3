@@ -28,6 +28,10 @@ import {
   Divider,
   alpha,
   useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
 } from '@mui/material';
 import {
   Add,
@@ -67,6 +71,7 @@ interface WorkflowListItem {
   createdAt: string;
   updatedAt: string;
   projectId?: string;
+  applicationId?: string;
   thumbnailUrl?: string;
 }
 
@@ -93,6 +98,12 @@ export default function WorkflowsPage() {
   const [newWorkflowName, setNewWorkflowName] = useState('');
   const [newWorkflowDescription, setNewWorkflowDescription] = useState('');
   const [creating, setCreating] = useState(false);
+  const [applications, setApplications] = useState<Array<{ applicationId: string; name: string; isDefault?: boolean }>>([]);
+  const [applicationId, setApplicationId] = useState<string>('');
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [templates, setTemplates] = useState<Array<{ templateId: string; name: string; version: string; tags?: string[] }>>([]);
+  const [templateId, setTemplateId] = useState<string>('');
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement; workflow: WorkflowListItem } | null>(null);
@@ -124,6 +135,67 @@ export default function WorkflowsPage() {
     fetchWorkflows();
   }, [orgId, projectId]);
 
+  // Fetch applications for this project (for application selector)
+  useEffect(() => {
+    if (!orgId || !projectId) {
+      setApplications([]);
+      return;
+    }
+
+    const loadApplications = async () => {
+      try {
+        setLoadingApplications(true);
+        const response = await fetch(`/api/applications?orgId=${orgId}&projectId=${projectId}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.applications)) {
+          const apps = data.applications as Array<{ applicationId: string; name: string; isDefault?: boolean }>;
+          setApplications(apps);
+
+          // Default to the project's default application if none selected
+          if (!applicationId) {
+            const defaultApp = apps.find((a) => a.isDefault);
+            if (defaultApp) {
+              setApplicationId(defaultApp.applicationId);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[WorkflowsPage] Failed to load applications:', err);
+      } finally {
+        setLoadingApplications(false);
+      }
+    };
+
+    loadApplications();
+  }, [orgId, projectId, applicationId]);
+
+  // Fetch workflow templates for this org (for template selector)
+  useEffect(() => {
+    if (!orgId) {
+      setTemplates([]);
+      return;
+    }
+
+    const loadTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const response = await fetch(`/api/workflow-templates?orgId=${orgId}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.templates)) {
+          setTemplates(data.templates);
+        }
+      } catch (err) {
+        console.error('[WorkflowsPage] Failed to load templates:', err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    loadTemplates();
+  }, [orgId]);
+
   // Create workflow
   const handleCreateWorkflow = async () => {
     if (!orgId || !projectId || !newWorkflowName.trim()) {
@@ -140,6 +212,8 @@ export default function WorkflowsPage() {
           projectId,
           name: newWorkflowName.trim(),
           description: newWorkflowDescription.trim() || undefined,
+          applicationId: applicationId || undefined,
+          templateId: templateId || undefined,
         }),
       });
 
@@ -149,7 +223,11 @@ export default function WorkflowsPage() {
         throw new Error(data.error || 'Failed to create workflow');
       }
 
-      router.push(getOrgProjectUrl(orgId, projectId, 'workflows', data.workflow.id));
+      // Include applicationId in URL if it was selected
+      const workflowUrl = applicationId 
+        ? `${getOrgProjectUrl(orgId, projectId, 'workflows', data.workflow.id)}?applicationId=${applicationId}`
+        : getOrgProjectUrl(orgId, projectId, 'workflows', data.workflow.id);
+      router.push(workflowUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create workflow');
     } finally {
@@ -157,6 +235,7 @@ export default function WorkflowsPage() {
       setCreateDialogOpen(false);
       setNewWorkflowName('');
       setNewWorkflowDescription('');
+      setTemplateId('');
     }
   };
 
@@ -449,7 +528,7 @@ export default function WorkflowsPage() {
                         variant="outlined"
                         startIcon={<Edit />}
                         component={Link}
-                        href={getOrgProjectUrl(orgId, projectId, 'workflows', workflow.id)}
+                        href={workflow.applicationId ? `${getOrgProjectUrl(orgId, projectId, 'workflows', workflow.id)}?applicationId=${workflow.applicationId}` : getOrgProjectUrl(orgId, projectId, 'workflows', workflow.id)}
                         sx={{
                           borderColor: alpha('#9C27B0', 0.5),
                           color: '#9C27B0',
@@ -494,7 +573,68 @@ export default function WorkflowsPage() {
             value={newWorkflowDescription}
             onChange={(e) => setNewWorkflowDescription(e.target.value)}
           />
-        </DialogContent>
+            <FormControl
+              fullWidth
+              sx={{ mt: 2 }}
+              disabled={loadingApplications || applications.length === 0}
+            >
+              <InputLabel>Application</InputLabel>
+              <Select
+                value={applicationId || ''}
+                label="Application"
+                onChange={(e) => setApplicationId(e.target.value as string)}
+              >
+                {applications.map((app) => (
+                  <MenuItem key={app.applicationId} value={app.applicationId}>
+                    {app.name}
+                    {app.isDefault ? ' (Default)' : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                {applications.length === 0
+                  ? 'No applications yet - a default application will be created automatically'
+                  : 'Select which application this workflow belongs to'}
+              </FormHelperText>
+            </FormControl>
+
+            {/* Template Selector */}
+            <FormControl
+              fullWidth
+              sx={{ mt: 2 }}
+              disabled={loadingTemplates}
+            >
+              <InputLabel>Template (optional)</InputLabel>
+              <Select
+                value={templateId || ''}
+                label="Template (optional)"
+                onChange={(e) => setTemplateId(e.target.value as string)}
+              >
+                <MenuItem value="">
+                  <em>None - Start from blank</em>
+                </MenuItem>
+                {templates.map((template) => (
+                  <MenuItem key={template.templateId} value={template.templateId}>
+                    {template.name}
+                    {template.tags && template.tags.length > 0 && (
+                      <Chip
+                        label={template.tags[0]}
+                        size="small"
+                        sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+                      />
+                    )}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                {loadingTemplates
+                  ? 'Loading templates...'
+                  : templates.length === 0
+                  ? 'No templates available - start from blank or seed templates with: npm run seed:workflow-templates'
+                  : 'Select a template to pre-populate the workflow canvas'}
+              </FormHelperText>
+            </FormControl>
+          </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
           <Button
@@ -524,7 +664,7 @@ export default function WorkflowsPage() {
       >
         <MenuItem
           component={Link}
-          href={menuAnchor ? getOrgProjectUrl(orgId, projectId, 'workflows', menuAnchor.workflow.id) : '#'}
+          href={menuAnchor ? (menuAnchor.workflow.applicationId ? `${getOrgProjectUrl(orgId, projectId, 'workflows', menuAnchor.workflow.id)}?applicationId=${menuAnchor.workflow.applicationId}` : getOrgProjectUrl(orgId, projectId, 'workflows', menuAnchor.workflow.id)) : '#'}
           onClick={handleMenuClose}
         >
           <ListItemIcon>

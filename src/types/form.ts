@@ -892,6 +892,7 @@ export interface FormConfiguration {
   // NEW: Organization ownership
   organizationId?: string;        // Which org owns this form
   projectId?: string;             // Which project this form belongs to (required in production)
+  applicationId?: string;         // Which application this form belongs to (required - will be set to default if not provided)
   createdBy?: string;             // User who created the form
 
   // ============================================

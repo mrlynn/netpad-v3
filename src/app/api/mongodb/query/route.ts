@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { getClient } from '@/lib/mongodb/clientCache';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -52,61 +52,59 @@ export async function POST(request: NextRequest) {
     const queryLimit = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 50));
     const querySkip = Math.max(0, parseInt(String(skip), 10) || 0);
 
-    const client = new MongoClient(connectionString);
+    // Use cached client for better performance
+    const client = await getClient(connectionString);
+    const db = client.db(databaseName);
+    const coll = db.collection(collection);
 
-    try {
-      await client.connect();
-      const db = client.db(databaseName);
-      const coll = db.collection(collection);
+    // Build the MongoDB query from the provided filters
+    const mongoQuery = buildMongoQuery(query);
 
-      // Build the MongoDB query from the provided filters
-      const mongoQuery = buildMongoQuery(query);
+    // Execute query with pagination
+    let cursor = coll.find(mongoQuery);
 
-      // Execute query with pagination
-      let cursor = coll.find(mongoQuery);
-
-      // Apply projection if provided
-      if (projection && typeof projection === 'object') {
-        cursor = cursor.project(projection);
-      }
-
-      // Apply sort if provided
-      if (sort && typeof sort === 'object') {
-        cursor = cursor.sort(sort);
-      } else {
-        // Default sort by _id descending (newest first)
-        cursor = cursor.sort({ _id: -1 });
-      }
-
-      // Apply pagination
-      cursor = cursor.skip(querySkip).limit(queryLimit);
-
-      const documents = await cursor.toArray();
-
-      // Get total count for pagination
-      const totalCount = await coll.countDocuments(mongoQuery);
-
-      await client.close();
-
-      return NextResponse.json({
-        success: true,
-        documents,
-        count: documents.length,
-        totalCount,
-        page: Math.floor(querySkip / queryLimit) + 1,
-        totalPages: Math.ceil(totalCount / queryLimit),
-        query: mongoQuery // Return the constructed query for debugging
-      });
-    } catch (error: any) {
-      await client.close().catch(() => {});
-      throw error;
+    // Apply projection if provided
+    if (projection && typeof projection === 'object') {
+      cursor = cursor.project(projection);
     }
-  } catch (error: any) {
+
+    // Apply sort if provided
+    if (sort && typeof sort === 'object') {
+      cursor = cursor.sort(sort);
+    } else {
+      // Default sort by _id descending (newest first)
+      cursor = cursor.sort({ _id: -1 });
+    }
+
+    // Apply pagination
+    cursor = cursor.skip(querySkip).limit(queryLimit);
+
+    // Execute query and count in parallel for better performance
+    const [documents, totalCount] = await Promise.all([
+      cursor.toArray(),
+      // Use estimatedDocumentCount for empty queries (faster), countDocuments otherwise
+      Object.keys(mongoQuery).length === 0
+        ? coll.estimatedDocumentCount()
+        : coll.countDocuments(mongoQuery),
+    ]);
+
+    // Note: Don't close client - it's cached and reused
+
+    return NextResponse.json({
+      success: true,
+      documents,
+      count: documents.length,
+      totalCount,
+      page: Math.floor(querySkip / queryLimit) + 1,
+      totalPages: Math.ceil(totalCount / queryLimit),
+      query: mongoQuery // Return the constructed query for debugging
+    });
+  } catch (error: unknown) {
     console.error('Query error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to query documents'
+        error: error instanceof Error ? error.message : 'Failed to query documents'
       },
       { status: 500 }
     );

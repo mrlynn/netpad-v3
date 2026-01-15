@@ -156,16 +156,17 @@ export function ChatInput() {
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 2,
-              bgcolor: alpha(theme.palette.action.hover, 0.5),
+              bgcolor: theme.palette.background.paper,
               '& fieldset': {
-                borderColor: 'transparent',
+                borderColor: theme.palette.divider,
+                borderWidth: 1,
               },
               '&:hover fieldset': {
-                borderColor: theme.palette.divider,
+                borderColor: theme.palette.primary.main,
               },
               '&.Mui-focused fieldset': {
                 borderColor: theme.palette.primary.main,
-                borderWidth: 1,
+                borderWidth: 2,
               },
             },
             '& .MuiInputBase-input': {

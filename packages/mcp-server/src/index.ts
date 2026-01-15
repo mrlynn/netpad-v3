@@ -30,10 +30,90 @@ import {
   BEST_PRACTICES,
   USE_CASE_TEMPLATES,
 } from './application-tools.js';
+import {
+  APPLICATION_TEMPLATES,
+  generateCreateApplicationCode,
+  generateApplicationConfig,
+  generateApplicationContract,
+  generateContractFromForms,
+  generateApplicationRelease,
+  generateReleaseCreationCode,
+  generateExportBundleStructure,
+  type ApplicationTemplateId,
+  type ContractInput,
+  type ContractOutput,
+  type ContractSideEffect,
+  type ContractEvent,
+} from './application-management-tools.js';
+import {
+  MARKETPLACE_CATEGORIES,
+  SAMPLE_MARKETPLACE_APPS,
+  generatePublishToMarketplaceCode,
+  generatePublishConfig,
+  searchMarketplace,
+  generateSearchMarketplaceCode,
+  generateInstallFromMarketplaceCode,
+  generateNpmPackageJson,
+  generateSyncToNpmCode,
+  generateImportFromNpmCode,
+  validateNpmPackageName,
+  type MarketplaceSearchOptions,
+  type PublishOptions,
+  type InstallOptions,
+  type NpmSyncOptions,
+  type NpmImportOptions,
+} from './marketplace-tools.js';
+import {
+  WORKFLOW_NODE_TYPES,
+  WORKFLOW_TEMPLATES,
+  generateCreateWorkflowCode,
+  generateWorkflowConfig,
+  generateAddNodeCode,
+  generateConnectNodesCode,
+  generateConfigureTriggerCode,
+  generateTestWorkflowCode,
+  generateGetExecutionHistoryCode,
+  getNodeCategories,
+  getNodesByCategory,
+  type WorkflowNodeConfig,
+  type WorkflowEdgeConfig,
+  type TriggerConfig,
+  type CreateWorkflowOptions,
+  type TestWorkflowOptions,
+} from './workflow-tools.js';
+import {
+  CONVERSATIONAL_TEMPLATES,
+  SEARCH_OPERATORS,
+  generateCreateConversationalFormCode,
+  generateConfigureRAGCode,
+  generateAddRAGDocumentCode,
+  generateCreateSearchFormCode,
+  generateConfigureSearchOperatorsCode,
+  generateTestConversationalFormCode,
+  generateTestSearchFormCode,
+  generateConversationalFormConfig,
+  generateSearchFormConfig,
+  getOperatorsForFieldType,
+  type ConversationalFormOptions,
+  type RAGConfigOptions,
+  type SearchFormOptions,
+} from './conversational-search-tools.js';
+import {
+  FORM_TEMPLATES,
+  TEMPLATE_CATEGORIES,
+  getTemplatesByCategory,
+  getTemplateById,
+  searchTemplates,
+  applyTemplateCustomizations,
+  generateFormConfigFromTemplate,
+  generateCreateFormFromTemplateCode,
+  type FormTemplate,
+  type TemplateCustomizations,
+} from './template-tools.js';
 
 const server = new McpServer({
   name: '@netpad/mcp-server',
-  version: '0.1.0',
+  version: '2.0.0',
 });
 
 // ============================================================================
@@ -1057,6 +1137,1379 @@ function explainError(error: string, context?: string): string {
 ${context ? `\n**Context:** ${context}` : ''}
 `;
 }
+
+// ============================================================================
+// APPLICATION MANAGEMENT TOOLS (Phase 1 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List application templates
+server.tool(
+  'list_application_templates',
+  'List all available application templates for creating new NetPad applications. Templates include pre-configured forms, workflows, and settings.',
+  {
+    category: z.string().optional().describe('Filter by category (e.g., "lead-generation", "events", "surveys", "hr", "ecommerce")'),
+  },
+  async ({ category }) => {
+    let templates = Object.values(APPLICATION_TEMPLATES);
+    if (category) {
+      templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+    }
+
+    const summary = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      formsCount: t.structure.forms.length,
+      workflowsCount: t.structure.workflows.length,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(Object.values(APPLICATION_TEMPLATES).map(t => t.category))],
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Get application template details
+server.tool(
+  'get_application_template',
+  'Get detailed information about a specific application template including its forms, workflows, and field configurations.',
+  {
+    templateId: z.enum(['contact-form', 'lead-capture', 'event-registration', 'feedback-survey', 'job-application', 'order-form', 'blank']).describe('The template ID'),
+  },
+  async ({ templateId }) => {
+    const template = APPLICATION_TEMPLATES[templateId as ApplicationTemplateId];
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Template "${templateId}" not found` }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(template, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Create application (generates code)
+server.tool(
+  'create_application',
+  'Generate code to create a new NetPad application. Can use a template or start from scratch. Returns API code and configuration.',
+  {
+    name: z.string().describe('Name of the application'),
+    description: z.string().optional().describe('Description of the application'),
+    slug: z.string().optional().describe('URL-friendly slug (auto-generated if not provided)'),
+    templateId: z.enum(['contact-form', 'lead-capture', 'event-registration', 'feedback-survey', 'job-application', 'order-form', 'blank']).optional().describe('Template to use'),
+    icon: z.string().optional().describe('Icon name or emoji'),
+    color: z.string().optional().describe('Color hex code (e.g., "#00ED64")'),
+    tags: z.array(z.string()).optional().describe('Tags for categorization'),
+    projectId: z.string().describe('Project ID to create application in'),
+    organizationId: z.string().describe('Organization ID'),
+  },
+  async (options) => {
+    const code = generateCreateApplicationCode(options);
+    const config = generateApplicationConfig(options);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Application Creation Code\n\n${code}\n\n## Application Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate application contract
+server.tool(
+  'generate_application_contract',
+  'Generate an application contract that defines the public API surface, inputs, outputs, and behavioral guarantees.',
+  {
+    applicationId: z.string().describe('Application ID'),
+    version: z.string().describe('Semantic version (e.g., "1.0.0")'),
+    inputs: z.array(z.object({
+      key: z.string().describe('Input field key'),
+      type: z.enum(['string', 'number', 'boolean', 'object', 'array']).describe('Data type'),
+      required: z.boolean().describe('Whether the input is required'),
+      description: z.string().optional().describe('Description of the input'),
+      source: z.enum(['form', 'api', 'webhook', 'config']).optional().describe('Source of the input'),
+    })).optional().describe('Input contract fields'),
+    outputs: z.array(z.object({
+      key: z.string().describe('Output field key'),
+      type: z.enum(['string', 'number', 'boolean', 'object', 'array']).describe('Data type'),
+      guaranteed: z.boolean().describe('Whether the output is always present'),
+      description: z.string().optional().describe('Description of the output'),
+    })).optional().describe('Output contract fields'),
+    sideEffects: z.array(z.object({
+      type: z.enum(['write', 'api_call', 'notification', 'workflow_trigger']).describe('Type of side effect'),
+      target: z.string().describe('Target (e.g., collection name, API endpoint)'),
+      description: z.string().optional().describe('Description'),
+    })).optional().describe('Side effects'),
+    events: z.array(z.object({
+      name: z.string().describe('Event name'),
+      description: z.string().optional().describe('Event description'),
+    })).optional().describe('Events the application emits'),
+  },
+  async ({ applicationId, version, inputs, outputs, sideEffects, events }) => {
+    const contract = generateApplicationContract({
+      applicationId,
+      version,
+      inputs: inputs as ContractInput[],
+      outputs: outputs as ContractOutput[],
+      sideEffects: sideEffects as ContractSideEffect[],
+      events: events as ContractEvent[],
+    });
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Application Contract\n\n\`\`\`json\n${JSON.stringify(contract, null, 2)}\n\`\`\`\n\n### Contract API Code\n\n\`\`\`typescript
+// Create contract via API
+const response = await fetch(\`/api/applications/\${applicationId}/contracts\`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': \`Bearer \${process.env.NETPAD_API_KEY}\`,
+  },
+  body: JSON.stringify(${JSON.stringify(contract, null, 2)}),
+});
+\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate contract from forms (infer from existing forms)
+server.tool(
+  'infer_contract_from_forms',
+  'Infer an application contract from existing form configurations. Useful for generating contracts for applications with existing forms.',
+  {
+    applicationId: z.string().describe('Application ID'),
+    version: z.string().describe('Contract version'),
+    forms: z.array(z.object({
+      name: z.string().describe('Form name'),
+      slug: z.string().describe('Form slug'),
+      fields: z.array(z.object({
+        path: z.string(),
+        label: z.string(),
+        type: z.string(),
+        required: z.boolean().optional(),
+      })).describe('Form fields'),
+    })).describe('Forms to infer contract from'),
+  },
+  async ({ applicationId, version, forms }) => {
+    const contract = generateContractFromForms(applicationId, version, forms);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Inferred Contract\n\n\`\`\`json\n${JSON.stringify(contract, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate application release
+server.tool(
+  'generate_application_release',
+  'Generate an application release manifest for versioned deployment. Releases snapshot the current state of forms and workflows.',
+  {
+    applicationId: z.string().describe('Application ID'),
+    version: z.string().describe('Release version (e.g., "1.0.0")'),
+    changelog: z.string().optional().describe('Release notes/changelog'),
+    forms: z.array(z.object({
+      formId: z.string(),
+      role: z.enum(['primary', 'secondary']),
+    })).optional().describe('Forms to include in release'),
+    workflows: z.array(z.object({
+      workflowId: z.string(),
+      role: z.enum(['core', 'extension']),
+    })).optional().describe('Workflows to include in release'),
+    contractId: z.string().optional().describe('Contract ID for this release'),
+  },
+  async (options) => {
+    const release = generateApplicationRelease(options);
+    const code = generateReleaseCreationCode(options);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Release Manifest\n\n\`\`\`json\n${JSON.stringify(release, null, 2)}\n\`\`\`\n\n## Release Creation Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Generate export bundle structure
+server.tool(
+  'generate_export_bundle',
+  'Generate an application export bundle structure for sharing or marketplace publishing.',
+  {
+    applicationName: z.string().describe('Name of the application'),
+  },
+  async ({ applicationName }) => {
+    const bundle = generateExportBundleStructure(applicationName);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Export Bundle Structure\n\n\`\`\`json\n${JSON.stringify(bundle, null, 2)}\n\`\`\`\n\n### Usage\n\nFill in the bundle structure with your application components, then use the export API:\n\n\`\`\`typescript
+// Export application
+const response = await fetch(\`/api/applications/\${applicationId}/export\`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': \`Bearer \${process.env.NETPAD_API_KEY}\`,
+  },
+});
+const bundle = await response.json();
+\`\`\``,
+      }],
+    };
+  }
+);
+
+// Resource: Application Templates Reference
+server.resource(
+  'netpad-app-templates',
+  'netpad://reference/application-templates',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/application-templates',
+        mimeType: 'application/json',
+        text: JSON.stringify(APPLICATION_TEMPLATES, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
+// MARKETPLACE & NPM TOOLS (Phase 2 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List marketplace categories
+server.tool(
+  'list_marketplace_categories',
+  'List all available marketplace categories for applications.',
+  {},
+  async () => {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          categories: MARKETPLACE_CATEGORIES,
+          total: MARKETPLACE_CATEGORIES.length,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Search marketplace
+server.tool(
+  'search_marketplace',
+  'Search the NetPad marketplace for applications. Returns matching applications with download counts, ratings, and metadata.',
+  {
+    query: z.string().optional().describe('Search query'),
+    category: z.string().optional().describe('Filter by category (e.g., "lead-generation", "surveys", "events")'),
+    tags: z.array(z.string()).optional().describe('Filter by tags'),
+    official: z.boolean().optional().describe('Filter to only official NetPad applications'),
+    verified: z.boolean().optional().describe('Filter to only verified applications'),
+    sortBy: z.enum(['relevance', 'downloads', 'rating', 'newest']).optional().describe('Sort order'),
+    page: z.number().optional().describe('Page number'),
+    pageSize: z.number().optional().describe('Results per page'),
+  },
+  async (options) => {
+    const results = searchMarketplace(options as MarketplaceSearchOptions);
+    const code = generateSearchMarketplaceCode(options as MarketplaceSearchOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Marketplace Search Results\n\n\`\`\`json\n${JSON.stringify(results, null, 2)}\n\`\`\`\n\n## API Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Get marketplace app details
+server.tool(
+  'get_marketplace_app',
+  'Get detailed information about a specific application in the marketplace.',
+  {
+    applicationId: z.string().describe('Application ID or package name'),
+  },
+  async ({ applicationId }) => {
+    const app = SAMPLE_MARKETPLACE_APPS.find(
+      a => a.id === applicationId || a.packageName === applicationId
+    );
+
+    if (!app) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Application "${applicationId}" not found in marketplace` }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(app, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Publish to marketplace
+server.tool(
+  'publish_to_marketplace',
+  'Generate code and configuration for publishing an application to the NetPad marketplace.',
+  {
+    applicationId: z.string().describe('Application ID to publish'),
+    version: z.string().describe('Version to publish (e.g., "1.0.0")'),
+    changelog: z.string().optional().describe('Release notes'),
+    visibility: z.enum(['public', 'private', 'organization']).describe('Visibility level'),
+    category: z.string().describe('Marketplace category'),
+    tags: z.array(z.string()).optional().describe('Tags for discoverability'),
+    screenshots: z.array(z.string()).optional().describe('Screenshot URLs'),
+    readme: z.string().optional().describe('README content'),
+    license: z.string().optional().describe('License (default: MIT)'),
+  },
+  async (options) => {
+    const code = generatePublishToMarketplaceCode(options as PublishOptions);
+    const config = generatePublishConfig(options as PublishOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Publish to Marketplace\n\n### Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\`\n\n### API Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Install from marketplace
+server.tool(
+  'install_from_marketplace',
+  'Generate code for installing an application from the NetPad marketplace into a project.',
+  {
+    applicationId: z.string().optional().describe('Application ID to install'),
+    packageName: z.string().optional().describe('npm package name (alternative to applicationId)'),
+    version: z.string().optional().describe('Version to install (default: latest)'),
+    projectId: z.string().describe('Target project ID'),
+    organizationId: z.string().describe('Organization ID'),
+    configuration: z.record(z.string(), z.any()).optional().describe('Initial configuration for the application'),
+  },
+  async (options) => {
+    const code = generateInstallFromMarketplaceCode(options as InstallOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Install from Marketplace\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Sync to npm
+server.tool(
+  'sync_to_npm',
+  'Generate code and package.json for publishing a NetPad application to npm registry.',
+  {
+    applicationId: z.string().describe('Application ID to sync'),
+    packageName: z.string().optional().describe('npm package name (auto-generated if not provided)'),
+    scope: z.string().optional().describe('npm scope (e.g., "@myorg")'),
+    author: z.union([
+      z.string(),
+      z.object({
+        name: z.string(),
+        email: z.string().optional(),
+        url: z.string().optional(),
+      })
+    ]).optional().describe('Package author'),
+    license: z.string().optional().describe('License (default: MIT)'),
+    repository: z.object({
+      type: z.string(),
+      url: z.string(),
+    }).optional().describe('Repository URL'),
+    homepage: z.string().optional().describe('Homepage URL'),
+    keywords: z.array(z.string()).optional().describe('Additional npm keywords'),
+  },
+  async (options) => {
+    const packageJson = generateNpmPackageJson(options as NpmSyncOptions);
+    const code = generateSyncToNpmCode(options as NpmSyncOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Sync to npm\n\n### Generated package.json\n\n\`\`\`json\n${JSON.stringify(packageJson, null, 2)}\n\`\`\`\n\n### Sync Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Import from npm
+server.tool(
+  'import_from_npm',
+  'Generate code for importing a NetPad application from the npm registry.',
+  {
+    packageName: z.string().describe('npm package name to import'),
+    version: z.string().optional().describe('Version to import (default: latest)'),
+    projectId: z.string().describe('Target project ID'),
+    organizationId: z.string().describe('Organization ID'),
+    applicationName: z.string().optional().describe('Custom name for the imported application'),
+  },
+  async (options) => {
+    const validation = validateNpmPackageName(options.packageName);
+    const code = generateImportFromNpmCode(options as NpmImportOptions);
+
+    let output = `## Import from npm\n\n`;
+
+    if (!validation.valid) {
+      output += `### Validation Errors\n\n\`\`\`json\n${JSON.stringify(validation, null, 2)}\n\`\`\`\n\n`;
+    } else if (validation.warnings.length > 0) {
+      output += `### Validation Warnings\n\n${validation.warnings.map(w => `- ${w}`).join('\n')}\n\n`;
+    }
+
+    output += `### Import Code\n\n\`\`\`typescript\n${code}\n\`\`\``;
+
+    return {
+      content: [{
+        type: 'text',
+        text: output,
+      }],
+    };
+  }
+);
+
+// Tool: Validate npm package name
+server.tool(
+  'validate_npm_package_name',
+  'Validate an npm package name for NetPad conventions and npm registry rules.',
+  {
+    packageName: z.string().describe('Package name to validate'),
+  },
+  async ({ packageName }) => {
+    const validation = validateNpmPackageName(packageName);
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(validation, null, 2),
+      }],
+    };
+  }
+);
+
+// Resource: Marketplace Categories Reference
+server.resource(
+  'netpad-marketplace-categories',
+  'netpad://reference/marketplace-categories',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/marketplace-categories',
+        mimeType: 'application/json',
+        text: JSON.stringify(MARKETPLACE_CATEGORIES, null, 2),
+      },
+    ],
+  })
+);
+
+// Resource: Sample Marketplace Apps
+server.resource(
+  'netpad-marketplace-apps',
+  'netpad://reference/marketplace-apps',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/marketplace-apps',
+        mimeType: 'application/json',
+        text: JSON.stringify(SAMPLE_MARKETPLACE_APPS, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
+// WORKFLOW AUTOMATION TOOLS (Phase 3 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List workflow templates
+server.tool(
+  'list_workflow_templates',
+  'List all available workflow templates for creating automated workflows.',
+  {
+    category: z.string().optional().describe('Filter by category (e.g., "notifications", "data", "sales")'),
+  },
+  async ({ category }) => {
+    let templates = Object.values(WORKFLOW_TEMPLATES);
+    if (category) {
+      templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+    }
+
+    const summary = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      nodesCount: t.nodes.length,
+      edgesCount: t.edges.length,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(Object.values(WORKFLOW_TEMPLATES).map(t => t.category))],
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Get workflow template details
+server.tool(
+  'get_workflow_template',
+  'Get detailed information about a specific workflow template including its nodes, edges, and configuration.',
+  {
+    templateId: z.enum(['form-to-email', 'form-to-database', 'lead-qualification', 'webhook-to-database', 'scheduled-report']).describe('The template ID'),
+  },
+  async ({ templateId }) => {
+    const template = WORKFLOW_TEMPLATES[templateId];
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Template "${templateId}" not found` }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(template, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: List workflow node types
+server.tool(
+  'list_workflow_node_types',
+  'List all available workflow node types organized by category.',
+  {
+    category: z.enum(['triggers', 'logic', 'data', 'actions', 'ai']).optional().describe('Filter by node category'),
+  },
+  async ({ category }) => {
+    if (category) {
+      const nodes = getNodesByCategory(category);
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            category,
+            nodes,
+            total: nodes.length,
+          }, null, 2),
+        }],
+      };
+    }
+
+    const categories = getNodeCategories();
+    const summary: Record<string, any> = {};
+    for (const cat of categories) {
+      summary[cat] = getNodesByCategory(cat).map((n: any) => ({
+        type: n.type,
+        name: n.name,
+        description: n.description,
+        stage: n.stage,
+      }));
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          categories: summary,
+          allCategories: categories,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Create workflow from template
+server.tool(
+  'create_workflow_from_template',
+  'Generate code to create a new workflow, optionally using a template.',
+  {
+    name: z.string().describe('Name of the workflow'),
+    description: z.string().optional().describe('Description of the workflow'),
+    templateId: z.enum(['form-to-email', 'form-to-database', 'lead-qualification', 'webhook-to-database', 'scheduled-report']).optional().describe('Template to use'),
+    applicationId: z.string().optional().describe('Application ID to attach workflow to'),
+    projectId: z.string().describe('Project ID'),
+    organizationId: z.string().describe('Organization ID'),
+    tags: z.array(z.string()).optional().describe('Tags for categorization'),
+  },
+  async (options) => {
+    const code = generateCreateWorkflowCode(options as CreateWorkflowOptions);
+    const config = generateWorkflowConfig(options as CreateWorkflowOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Workflow Creation Code\n\n\`\`\`typescript\n${code}\n\`\`\`\n\n## Workflow Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Add workflow node
+server.tool(
+  'add_workflow_node',
+  'Generate code for adding a node to a workflow.',
+  {
+    workflowId: z.string().describe('Workflow ID'),
+    nodeType: z.string().describe('Node type (e.g., "form-trigger", "email-send", "mongodb-query")'),
+    label: z.string().optional().describe('Custom label for the node'),
+    position: z.object({
+      x: z.number(),
+      y: z.number(),
+    }).describe('Position on canvas'),
+    config: z.record(z.string(), z.any()).describe('Node-specific configuration'),
+  },
+  async ({ workflowId, nodeType, label, position, config }) => {
+    const nodeId = `node_${Date.now().toString(36)}`;
+    const node: WorkflowNodeConfig = {
+      id: nodeId,
+      type: nodeType,
+      label,
+      position,
+      config,
+      enabled: true,
+    };
+    const code = generateAddNodeCode(workflowId, node);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Add Node Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Connect workflow nodes
+server.tool(
+  'connect_workflow_nodes',
+  'Generate code for connecting two nodes in a workflow.',
+  {
+    workflowId: z.string().describe('Workflow ID'),
+    sourceNodeId: z.string().describe('Source node ID'),
+    sourceHandle: z.string().describe('Source output handle (e.g., "form_data", "true", "output")'),
+    targetNodeId: z.string().describe('Target node ID'),
+    targetHandle: z.string().describe('Target input handle (e.g., "input", "data", "filter")'),
+    condition: z.object({
+      expression: z.string(),
+      label: z.string().optional(),
+    }).optional().describe('Optional condition for the edge'),
+  },
+  async ({ workflowId, sourceNodeId, sourceHandle, targetNodeId, targetHandle, condition }) => {
+    const edgeId = `edge_${Date.now().toString(36)}`;
+    const edge: WorkflowEdgeConfig = {
+      id: edgeId,
+      source: sourceNodeId,
+      sourceHandle,
+      target: targetNodeId,
+      targetHandle,
+      condition,
+    };
+    const code = generateConnectNodesCode(workflowId, edge);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Connect Nodes Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Configure workflow trigger
+server.tool(
+  'configure_workflow_trigger',
+  'Generate code for configuring a workflow trigger node.',
+  {
+    workflowId: z.string().describe('Workflow ID'),
+    triggerNodeId: z.string().describe('Trigger node ID'),
+    triggerType: z.enum(['form_submission', 'webhook', 'schedule', 'manual']).describe('Type of trigger'),
+    formId: z.string().optional().describe('Form ID (for form_submission trigger)'),
+    formSlug: z.string().optional().describe('Form slug (for form_submission trigger)'),
+    schedule: z.string().optional().describe('Cron expression (for schedule trigger)'),
+    timezone: z.string().optional().describe('Timezone (for schedule trigger)'),
+    webhookMethod: z.string().optional().describe('HTTP method (for webhook trigger)'),
+    webhookAuthentication: z.string().optional().describe('Authentication type (for webhook trigger)'),
+  },
+  async ({ workflowId, triggerNodeId, triggerType, ...rest }) => {
+    const config: TriggerConfig = {
+      type: triggerType,
+      ...rest,
+    };
+    const code = generateConfigureTriggerCode(workflowId, triggerNodeId, config);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Configure Trigger Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Test workflow
+server.tool(
+  'test_workflow',
+  'Generate code for testing a workflow execution with sample data.',
+  {
+    workflowId: z.string().describe('Workflow ID'),
+    organizationId: z.string().describe('Organization ID'),
+    testData: z.record(z.string(), z.any()).optional().describe('Test data to pass to the trigger'),
+    dryRun: z.boolean().optional().describe('Run without side effects (default: true)'),
+  },
+  async (options) => {
+    const code = generateTestWorkflowCode(options as TestWorkflowOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Test Workflow Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Get workflow execution history
+server.tool(
+  'get_workflow_execution_history',
+  'Generate code for retrieving workflow execution history.',
+  {
+    workflowId: z.string().describe('Workflow ID'),
+    organizationId: z.string().describe('Organization ID'),
+    page: z.number().optional().describe('Page number'),
+    pageSize: z.number().optional().describe('Results per page'),
+    status: z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']).optional().describe('Filter by status'),
+  },
+  async ({ workflowId, organizationId, page, pageSize, status }) => {
+    const code = generateGetExecutionHistoryCode(workflowId, organizationId, { page, pageSize, status });
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Execution History Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Resource: Workflow Templates Reference
+server.resource(
+  'netpad-workflow-templates',
+  'netpad://reference/workflow-templates',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/workflow-templates',
+        mimeType: 'application/json',
+        text: JSON.stringify(WORKFLOW_TEMPLATES, null, 2),
+      },
+    ],
+  })
+);
+
+// Resource: Workflow Node Types Reference
+server.resource(
+  'netpad-workflow-nodes',
+  'netpad://reference/workflow-nodes',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/workflow-nodes',
+        mimeType: 'application/json',
+        text: JSON.stringify(WORKFLOW_NODE_TYPES, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
+// CONVERSATIONAL & SEARCH FORMS TOOLS (Phase 4 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List conversational form templates
+server.tool(
+  'list_conversational_templates',
+  'List all available conversational form templates for AI-powered data collection.',
+  {
+    category: z.string().optional().describe('Filter by category (e.g., "support", "feedback", "intake")'),
+  },
+  async ({ category }) => {
+    let templates = Object.values(CONVERSATIONAL_TEMPLATES);
+    if (category) {
+      templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+    }
+
+    const summary = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      topicsCount: t.defaultConfig.topics.length,
+      extractionFieldsCount: t.defaultConfig.extractionSchema.length,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(Object.values(CONVERSATIONAL_TEMPLATES).map(t => t.category))],
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Get conversational template details
+server.tool(
+  'get_conversational_template',
+  'Get detailed information about a specific conversational form template including topics, extraction schema, and persona configuration.',
+  {
+    templateId: z.enum(['it-helpdesk', 'customer-feedback', 'lead-qualification', 'patient-intake']).describe('The template ID'),
+  },
+  async ({ templateId }) => {
+    const template = CONVERSATIONAL_TEMPLATES[templateId];
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Template "${templateId}" not found` }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(template, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Create conversational form
+server.tool(
+  'create_conversational_form',
+  'Generate code to create an AI-powered conversational form that collects data through natural dialogue.',
+  {
+    name: z.string().describe('Name of the conversational form'),
+    description: z.string().optional().describe('Description of the form'),
+    objective: z.string().describe('The goal/objective of the conversation'),
+    context: z.string().optional().describe('Additional context for the AI'),
+    templateId: z.enum(['it-helpdesk', 'customer-feedback', 'lead-qualification', 'patient-intake']).optional().describe('Template to use'),
+    persona: z.object({
+      style: z.enum(['professional', 'friendly', 'casual', 'empathetic', 'custom']).describe('Conversation style'),
+      tone: z.string().optional().describe('Specific tone description'),
+      behaviors: z.array(z.string()).optional().describe('Behaviors the AI should exhibit'),
+      restrictions: z.array(z.string()).optional().describe('Things the AI should avoid'),
+    }).describe('AI persona configuration'),
+    topics: z.array(z.object({
+      id: z.string().describe('Topic ID'),
+      name: z.string().describe('Topic name'),
+      description: z.string().describe('What information to gather'),
+      priority: z.enum(['required', 'important', 'optional']).describe('Topic priority'),
+      depth: z.enum(['surface', 'moderate', 'deep']).describe('How deep to explore'),
+      extractionField: z.string().optional().describe('Field to extract data to'),
+    })).describe('Topics to cover in conversation'),
+    extractionSchema: z.array(z.object({
+      field: z.string().describe('Field name'),
+      type: z.enum(['string', 'number', 'boolean', 'enum', 'array', 'object']).describe('Field type'),
+      required: z.boolean().describe('Whether required'),
+      description: z.string().describe('Field description'),
+      options: z.array(z.string()).optional().describe('Options for enum type'),
+      topicId: z.string().optional().describe('Associated topic'),
+    })).describe('Schema for extracted data'),
+    conversationLimits: z.object({
+      maxTurns: z.number().optional().describe('Maximum conversation turns'),
+      maxDuration: z.number().optional().describe('Maximum duration in minutes'),
+      minConfidence: z.number().optional().describe('Minimum confidence threshold'),
+    }).optional().describe('Conversation limits'),
+    projectId: z.string().describe('Project ID'),
+    organizationId: z.string().describe('Organization ID'),
+    applicationId: z.string().optional().describe('Application ID'),
+  },
+  async (options) => {
+    const code = generateCreateConversationalFormCode(options as ConversationalFormOptions);
+    const config = generateConversationalFormConfig(options as ConversationalFormOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Conversational Form Creation Code\n\n\`\`\`typescript\n${code}\n\`\`\`\n\n## Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Configure RAG settings
+server.tool(
+  'configure_rag_settings',
+  'Generate code to configure Retrieval-Augmented Generation (RAG) for a conversational form. RAG enables the AI to reference uploaded documents during conversations.',
+  {
+    formId: z.string().describe('Form ID to configure RAG for'),
+    enabled: z.boolean().describe('Enable or disable RAG'),
+    documentIds: z.array(z.string()).optional().describe('Document IDs to use for retrieval'),
+    retrievalConfig: z.object({
+      maxChunks: z.number().optional().describe('Maximum chunks to retrieve'),
+      minScore: z.number().optional().describe('Minimum relevance score (0-1)'),
+      retrievalThreshold: z.number().optional().describe('Threshold for including results'),
+    }).optional().describe('Retrieval configuration'),
+  },
+  async (options) => {
+    const code = generateConfigureRAGCode(options as RAGConfigOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Configure RAG Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Add RAG document
+server.tool(
+  'add_rag_document',
+  'Generate code for uploading a document to use with RAG in conversational forms.',
+  {
+    formId: z.string().describe('Form ID'),
+    sourceType: z.enum(['pdf', 'txt', 'md', 'html', 'docx', 'json']).describe('Document type'),
+    title: z.string().optional().describe('Document title'),
+    description: z.string().optional().describe('Document description'),
+  },
+  async ({ formId, sourceType, title, description }) => {
+    const code = generateAddRAGDocumentCode(formId, { sourceType, title, description });
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Upload RAG Document Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: List search operators
+server.tool(
+  'list_search_operators',
+  'List all available search operators for different field types in search forms.',
+  {
+    fieldType: z.string().optional().describe('Filter by field type (e.g., "string", "number", "date", "enum", "boolean")'),
+  },
+  async ({ fieldType }) => {
+    if (fieldType) {
+      const operators = getOperatorsForFieldType(fieldType);
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            fieldType,
+            operators,
+            total: operators.length,
+          }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          operators: SEARCH_OPERATORS,
+          fieldTypes: Object.keys(SEARCH_OPERATORS),
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Create search form
+server.tool(
+  'create_search_form',
+  'Generate code to create a search form for querying MongoDB collections with configurable operators and result views.',
+  {
+    name: z.string().describe('Name of the search form'),
+    description: z.string().optional().describe('Description of the form'),
+    connectionId: z.string().describe('MongoDB connection ID'),
+    database: z.string().describe('Database name'),
+    collection: z.string().describe('Collection name'),
+    fields: z.array(z.object({
+      path: z.string().describe('Field path in document'),
+      label: z.string().describe('Display label'),
+      type: z.string().describe('Field type (short_text, number, date, dropdown, etc.)'),
+      operators: z.array(z.string()).describe('Allowed operators'),
+      defaultOperator: z.string().describe('Default operator'),
+      showInResults: z.boolean().describe('Show in results'),
+      resultOrder: z.number().optional().describe('Order in results'),
+      optionsSource: z.object({
+        type: z.enum(['static', 'distinct', 'lookup']).describe('Source type'),
+        showCounts: z.boolean().optional().describe('Show document counts'),
+      }).optional().describe('Options source for dropdown fields'),
+    })).describe('Search field configurations'),
+    resultsConfig: z.object({
+      layout: z.enum(['table', 'cards', 'list']).optional().describe('Results layout'),
+      pageSize: z.number().optional().describe('Results per page'),
+      allowView: z.boolean().optional().describe('Allow viewing documents'),
+      allowEdit: z.boolean().optional().describe('Allow editing documents'),
+      allowDelete: z.boolean().optional().describe('Allow deleting documents'),
+      allowExport: z.boolean().optional().describe('Allow exporting results'),
+      defaultSortField: z.string().optional().describe('Default sort field'),
+      defaultSortDirection: z.enum(['asc', 'desc']).optional().describe('Default sort direction'),
+    }).optional().describe('Results configuration'),
+    projectId: z.string().describe('Project ID'),
+    organizationId: z.string().describe('Organization ID'),
+    applicationId: z.string().optional().describe('Application ID'),
+  },
+  async (options) => {
+    const code = generateCreateSearchFormCode(options as SearchFormOptions);
+    const config = generateSearchFormConfig(options as SearchFormOptions);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Search Form Creation Code\n\n\`\`\`typescript\n${code}\n\`\`\`\n\n## Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Configure search operators for a field
+server.tool(
+  'configure_search_operators',
+  'Generate code to configure search operators for a specific field in a search form.',
+  {
+    formId: z.string().describe('Form ID'),
+    fieldPath: z.string().describe('Field path to configure'),
+    operators: z.array(z.string()).describe('Operators to enable'),
+    defaultOperator: z.string().describe('Default operator'),
+  },
+  async ({ formId, fieldPath, operators, defaultOperator }) => {
+    const code = generateConfigureSearchOperatorsCode(formId, fieldPath, operators, defaultOperator);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Configure Search Operators Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Test conversational form
+server.tool(
+  'test_conversational_form',
+  'Generate code for testing a conversational form by simulating a conversation.',
+  {
+    formId: z.string().describe('Form ID'),
+    organizationId: z.string().describe('Organization ID'),
+  },
+  async ({ formId, organizationId }) => {
+    const code = generateTestConversationalFormCode(formId, organizationId);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Test Conversational Form Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Test search form
+server.tool(
+  'test_search_form',
+  'Generate code for testing a search form with a sample query.',
+  {
+    formId: z.string().describe('Form ID'),
+    organizationId: z.string().describe('Organization ID'),
+    exampleQuery: z.record(z.string(), z.any()).describe('Example search query'),
+  },
+  async ({ formId, organizationId, exampleQuery }) => {
+    const code = generateTestSearchFormCode(formId, organizationId, exampleQuery);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Test Search Form Code\n\n\`\`\`typescript\n${code}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Resource: Conversational Templates Reference
+server.resource(
+  'netpad-conversational-templates',
+  'netpad://reference/conversational-templates',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/conversational-templates',
+        mimeType: 'application/json',
+        text: JSON.stringify(CONVERSATIONAL_TEMPLATES, null, 2),
+      },
+    ],
+  })
+);
+
+// Resource: Search Operators Reference
+server.resource(
+  'netpad-search-operators',
+  'netpad://reference/search-operators',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/search-operators',
+        mimeType: 'application/json',
+        text: JSON.stringify(SEARCH_OPERATORS, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
+// ENHANCED TEMPLATES TOOLS (Phase 6 - Version 2.0.0)
+// ============================================================================
+
+// Tool: List template categories
+server.tool(
+  'list_template_categories',
+  'List all available form template categories with descriptions and template counts.',
+  {},
+  async () => {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          categories: TEMPLATE_CATEGORIES,
+          total: TEMPLATE_CATEGORIES.length,
+          totalTemplates: Object.keys(FORM_TEMPLATES).length,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: List form templates
+server.tool(
+  'list_form_templates',
+  'List all available form templates (25+) across multiple categories. Returns template summaries with field counts.',
+  {
+    category: z.string().optional().describe('Filter by category (business, events, feedback, support, ecommerce, healthcare, hr, finance, education, real-estate, or "all")'),
+    search: z.string().optional().describe('Search templates by name, description, or tags'),
+  },
+  async ({ category, search }) => {
+    let templates: FormTemplate[];
+
+    if (search) {
+      templates = searchTemplates(search);
+    } else if (category) {
+      templates = getTemplatesByCategory(category);
+    } else {
+      templates = Object.values(FORM_TEMPLATES);
+    }
+
+    const summary = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      icon: t.icon,
+      fieldCount: t.fields.length,
+      hasMultiPage: !!t.multiPage?.enabled,
+      requiresEncryption: t.settings?.requiresEncryption ?? false,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(templates.map(t => t.category))],
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Get form template details
+server.tool(
+  'get_form_template',
+  'Get detailed information about a specific form template including all fields, validation rules, and configuration.',
+  {
+    templateId: z.string().describe('Template ID (e.g., "contact-form", "lead-capture", "patient-intake")'),
+  },
+  async ({ templateId }) => {
+    const template = getTemplateById(templateId);
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: `Template "${templateId}" not found`,
+            availableTemplates: Object.keys(FORM_TEMPLATES),
+          }, null, 2),
+        }],
+      };
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(template, null, 2),
+      }],
+    };
+  }
+);
+
+// Tool: Create form from template
+server.tool(
+  'create_form_from_template',
+  'Generate code to create a form from a template with optional customizations.',
+  {
+    templateId: z.string().describe('Template ID to use'),
+    customizations: z.object({
+      name: z.string().optional().describe('Custom form name'),
+      description: z.string().optional().describe('Custom description'),
+      includeOptionalFields: z.boolean().optional().describe('Include optional fields (default: true)'),
+      submitButtonText: z.string().optional().describe('Custom submit button text'),
+      successMessage: z.string().optional().describe('Custom success message'),
+    }).optional().describe('Customization options'),
+    projectId: z.string().optional().describe('Project ID'),
+    organizationId: z.string().optional().describe('Organization ID'),
+  },
+  async ({ templateId, customizations, projectId, organizationId }) => {
+    const template = getTemplateById(templateId);
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Template "${templateId}" not found` }, null, 2),
+        }],
+      };
+    }
+
+    const code = generateCreateFormFromTemplateCode(templateId, customizations as TemplateCustomizations, projectId, organizationId);
+    const config = generateFormConfigFromTemplate(template, customizations as TemplateCustomizations);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `## Create Form from Template: ${template.name}\n\n### Code\n\n\`\`\`typescript\n${code}\n\`\`\`\n\n### Generated Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+      }],
+    };
+  }
+);
+
+// Tool: Preview template form configuration
+server.tool(
+  'preview_template_config',
+  'Preview the form configuration that would be generated from a template with customizations.',
+  {
+    templateId: z.string().describe('Template ID'),
+    customizations: z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      includeOptionalFields: z.boolean().optional(),
+      submitButtonText: z.string().optional(),
+      successMessage: z.string().optional(),
+    }).optional().describe('Customization options'),
+  },
+  async ({ templateId, customizations }) => {
+    const template = getTemplateById(templateId);
+    if (!template) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ error: `Template "${templateId}" not found` }, null, 2),
+        }],
+      };
+    }
+
+    const config = generateFormConfigFromTemplate(template, customizations as TemplateCustomizations);
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(config, null, 2),
+      }],
+    };
+  }
+);
+
+// Resource: Form Templates Reference
+server.resource(
+  'netpad-form-templates',
+  'netpad://reference/form-templates',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/form-templates',
+        mimeType: 'application/json',
+        text: JSON.stringify(FORM_TEMPLATES, null, 2),
+      },
+    ],
+  })
+);
+
+// Resource: Template Categories Reference
+server.resource(
+  'netpad-template-categories',
+  'netpad://reference/template-categories',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/template-categories',
+        mimeType: 'application/json',
+        text: JSON.stringify(TEMPLATE_CATEGORIES, null, 2),
+      },
+    ],
+  })
+);
 
 // ============================================================================
 // PROMPTS - Pre-built prompts for common tasks

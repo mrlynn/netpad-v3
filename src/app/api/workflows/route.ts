@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || undefined;
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || undefined;
     const projectId = searchParams.get('projectId') || undefined;
+    const applicationId = searchParams.get('applicationId') || undefined; // Phase 2: Filter by application
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
     const sortBy = searchParams.get('sortBy') || 'updatedAt';
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
       status,
       tags,
       projectId,
+      applicationId, // Phase 2: Pass applicationId filter
       page,
       pageSize,
       sortBy,
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
+      success: true,
       workflows,
       total,
       page,
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { orgId, projectId, name, description, tags } = body;
+    const { orgId, projectId, applicationId, name, description, tags, templateId, templateVersion } = body;
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
@@ -118,6 +121,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Phase 2: Validate applicationId if provided (should belong to the project)
+    if (applicationId && projectId) {
+      const { getApplication } = await import('@/lib/platform/applications');
+      const app = await getApplication(orgId, applicationId);
+      if (!app || app.projectId !== projectId) {
+        return NextResponse.json(
+          { error: 'Application not found or does not belong to this project' },
+          { status: 400 }
+        );
+      }
+    }
+
     // TODO: Verify user has access to this organization
     // TODO: Check organization workflow limits
 
@@ -130,7 +145,22 @@ export async function POST(request: NextRequest) {
       description: description?.trim(),
       tags: tags || [],
       projectId,
+      applicationId, // Phase 2: Pass applicationId if provided
+      templateId, // Phase 4: Pass templateId if provided
+      templateVersion, // Phase 4: Pass templateVersion if provided
     });
+
+    // Update application stats if applicationId is set
+    if (applicationId) {
+      try {
+        const { calculateApplicationStats } = await import('@/lib/platform/applications');
+        await calculateApplicationStats(orgId, applicationId);
+        console.log('[API workflows] Application stats updated');
+      } catch (statsError) {
+        console.error('[API workflows] Failed to update application stats:', statsError);
+        // Don't fail the request if stats update fails
+      }
+    }
 
     return NextResponse.json({ workflow }, { status: 201 });
   } catch (error) {

@@ -43,14 +43,16 @@ import { usePathname } from 'next/navigation';
 import { parseOrgProjectFromPath } from '@/lib/routing';
 import { formNameToCollectionName } from '@/lib/utils/collectionNaming';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
 
 interface FormBuilderProps {
   initialFormId?: string;
   organizationId?: string;
   projectId?: string;
+  applicationId?: string;
 }
 
-export function FormBuilder({ initialFormId, organizationId: propOrganizationId, projectId: propProjectId }: FormBuilderProps) {
+export function FormBuilder({ initialFormId, organizationId: propOrganizationId, projectId: propProjectId, applicationId: propApplicationId }: FormBuilderProps) {
   const { connectionString, databaseName, collection, sampleDocs, dispatch } = usePipeline();
   const { currentOrgId, organization } = useOrganization();
   const pathname = usePathname();
@@ -444,7 +446,9 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
     setError(null);
 
     try {
-      const response = await fetch(`/api/forms/${formId}`);
+      // Include orgId in query params if available for organization database lookup
+      const orgIdParam = effectiveOrgId ? `?orgId=${effectiveOrgId}` : '';
+      const response = await fetch(`/api/forms/${formId}${orgIdParam}`);
       const data = await response.json();
 
       if (data.success && data.form) {
@@ -1195,6 +1199,17 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
       ) : (
         // Main editing area - Google Forms style centered layout
         <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {/* Component Protection Indicator */}
+          {currentFormId && effectiveOrgId && propApplicationId && (
+            <Box sx={{ position: 'absolute', top: 16, left: 16, right: 16, zIndex: 1000 }}>
+              <ComponentProtectionIndicator
+                componentId={currentFormId}
+                componentType="form"
+                orgId={effectiveOrgId}
+                applicationId={propApplicationId}
+              />
+            </Box>
+          )}
           {/* Centered Form Editor */}
           <WYSIWYGFormEditor
             fieldConfigs={fieldConfigs.filter((f) => f.included)}
@@ -1273,6 +1288,8 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
         onConfirm={handleNewFormConfirm}
         suggestedName={pendingTemplate?.name || ''}
         organizationId={organizationId}
+        projectId={effectiveProjectId}
+        applicationId={propApplicationId}
       />
 
       {/* Save Dialog */}
@@ -1308,6 +1325,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
           accessControl,
           organizationId,
           projectId,
+          applicationId: propApplicationId,
         }}
       />
 

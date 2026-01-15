@@ -319,7 +319,7 @@ export function QuickPublishPopover({
           <Button
             onClick={handlePublish}
             variant="contained"
-            disabled={!formName.trim() || publishing || (needsCollectionSelection && (!selectedVaultId || !selectedCollection))}
+            disabled={!formName.trim() || publishing || (needsCollectionSelection && (!selectedVaultId || !selectedCollection)) || false}
             startIcon={publishing ? <CircularProgress size={16} /> : <Rocket />}
             sx={{
               flex: 1,

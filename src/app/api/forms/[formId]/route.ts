@@ -14,6 +14,7 @@ import {
 } from '@/lib/storage';
 import { getSession } from '@/lib/auth/session';
 import { checkFormAccess, describeAccessRequirements } from '@/lib/platform/formAccess';
+import { getOrgFormsCollection } from '@/lib/platform/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,7 +144,71 @@ export async function GET(
       });
     }
 
-    // For authenticated access, get from session storage
+    // For authenticated access, try organization database first if orgId provided
+    const { searchParams } = new URL(request.url);
+    const orgId = searchParams.get('orgId');
+    
+    if (orgId) {
+      try {
+        const session = await getSession();
+        if (session.userId) {
+          // Check organization database
+          const formsCollection = await getOrgFormsCollection(orgId);
+          // Try by formId first, then by id field
+          const orgForm = await formsCollection.findOne({
+            $or: [
+              { formId },
+              { id: formId },
+              { slug: formId },
+            ],
+          });
+
+          if (orgForm) {
+            // Convert org form format to form builder format
+            const form = {
+              id: orgForm.formId || orgForm.id,
+              formId: orgForm.formId || orgForm.id,
+              name: orgForm.name,
+              description: orgForm.description,
+              slug: orgForm.slug,
+              fieldConfigs: orgForm.fieldConfigs || [],
+              variables: orgForm.variables || [],
+              multiPage: orgForm.multiPage,
+              lifecycle: orgForm.lifecycle,
+              theme: orgForm.theme,
+              formType: orgForm.formType || 'data-entry',
+              searchConfig: orgForm.searchConfig,
+              conversationalConfig: orgForm.conversationalConfig,
+              dataSource: orgForm.dataSource,
+              accessControl: orgForm.accessControl,
+              isPublished: orgForm.isPublished || false,
+              publishedAt: orgForm.publishedAt,
+              organizationId: orgForm.organizationId,
+              projectId: orgForm.projectId,
+              applicationId: orgForm.applicationId,
+              createdAt: orgForm.createdAt,
+              updatedAt: orgForm.updatedAt,
+            };
+
+            console.log('[API forms/[formId]] Returning org form:', {
+              formId: form.id,
+              hasDataSource: !!form.dataSource,
+              organizationId: form.organizationId,
+            });
+
+            return NextResponse.json({
+              success: true,
+              form,
+            });
+          }
+        }
+      } catch (orgError) {
+        console.error('[API forms/[formId]] Error loading from org database:', orgError);
+        // Fall through to session storage
+      }
+    }
+
+    // Fall back to session storage
     const session = await getIronSession(await cookies(), sessionOptions);
     const sessionId = ensureSessionId(session);
     await session.save();
@@ -188,6 +253,67 @@ export async function DELETE(
 ) {
   try {
     const { formId } = await params;
+    const { searchParams } = new URL(request.url);
+    const orgId = searchParams.get('orgId');
+
+    // If orgId is provided, delete from organization database
+    if (orgId) {
+      try {
+        const session = await getSession();
+        if (!session?.userId) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized' },
+            { status: 401 }
+          );
+        }
+
+        // Check organization permissions
+        const { getUserOrgPermissions } = await import('@/lib/platform/permissions');
+        const permissions = await getUserOrgPermissions(session.userId, orgId);
+        if (!permissions.orgRole) {
+          return NextResponse.json(
+            { success: false, error: 'Forbidden' },
+            { status: 403 }
+          );
+        }
+
+        // Delete from organization database
+        const formsCollection = await getOrgFormsCollection(orgId);
+        const result = await formsCollection.findOneAndDelete({
+          $or: [
+            { formId },
+            { id: formId },
+            { slug: formId },
+          ],
+        });
+
+        if (!result) {
+          return NextResponse.json(
+            { success: false, error: 'Form not found' },
+            { status: 404 }
+          );
+        }
+
+        // Also remove from published forms
+        await unpublishForm(formId);
+
+        console.log('[API forms/[formId]] Deleted form from org database:', {
+          formId,
+          orgId,
+          deletedFormId: result.formId || result.id,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Form deleted successfully',
+        });
+      } catch (orgError) {
+        console.error('[API forms/[formId]] Error deleting from org database:', orgError);
+        // Fall through to session storage for backward compatibility
+      }
+    }
+
+    // Fall back to session storage (for backward compatibility)
     const session = await getIronSession(await cookies(), sessionOptions);
     const sessionId = ensureSessionId(session);
     await session.save();

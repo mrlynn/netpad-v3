@@ -297,6 +297,208 @@ export const ORG_ROLE_CAPABILITIES: Record<OrgRole, string[]> = {
 };
 
 // ============================================
+// Application Permissions (Phase 10)
+// ============================================
+
+export type ApplicationRole = 'owner' | 'editor' | 'analyst' | 'viewer';
+
+export const APPLICATION_ROLE_CAPABILITIES: Record<ApplicationRole, string[]> = {
+  owner: [
+    'read',
+    'edit',
+    'delete',
+    'manage_permissions',
+    'create_release',
+    'publish',
+    'view_analytics',
+    'export',
+  ],
+  editor: [
+    'read',
+    'edit',
+    'create_release',
+    'view_analytics',
+    'export',
+  ],
+  analyst: [
+    'read',
+    'view_analytics',
+    'export',
+  ],
+  viewer: [
+    'read',
+  ],
+};
+
+// ============================================
+// Data Views
+// ============================================
+
+export type DataViewQueryMode = 'query' | 'pipeline';
+export type DataViewColumnType = 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'json' | 'objectId' | 'array' | 'stringArray';
+export type DataViewAccessMode = 'projectRoles' | 'acl';
+export type DataViewAccessLevel = 'viewer' | 'editor' | 'admin';
+export type DataViewSource = 'grid' | 'rowDetail' | 'json' | 'api';
+export type DataViewMutationStatus = 'applied' | 'rejected';
+
+export interface DataViewSourceConfig {
+  connectionId?: string; // Reference to ConnectionVault (vaultId)
+  db: string;
+  collection: string;
+  queryMode: DataViewQueryMode;
+  query?: Record<string, any>; // Standard Mongo query
+  pipeline?: any[]; // Aggregation pipeline (must end in docs with stable _id)
+  defaultSort?: Record<string, 1 | -1>;
+  defaultLimit?: number;
+}
+
+export interface DataViewColumnValidation {
+  minLen?: number;
+  maxLen?: number;
+  regex?: string | null;
+  enum?: string[] | null;
+  min?: number | null;
+  max?: number | null;
+}
+
+export interface DataViewColumnFormat {
+  mode: 'none' | 'email' | 'phone' | 'date';
+}
+
+export interface DataViewColumn {
+  key: string;
+  label: string;
+  path: string; // Dot path in document
+  type: DataViewColumnType;
+  width?: number;
+  pinned?: boolean;
+  visible: boolean;
+  editable: boolean;
+  required: boolean;
+  readOnlyReason?: string | null;
+  validation?: DataViewColumnValidation;
+  format?: DataViewColumnFormat;
+  classification?: 'public' | 'internal' | 'sensitive';
+  inferredFromSample?: boolean;
+  confidence?: number;
+  group?: string; // Optional grouping for UI
+}
+
+export interface DataViewAccessControl {
+  mode: DataViewAccessMode;
+  roles?: DataViewAccessLevel[]; // When mode=projectRoles
+  acl?: Array<{
+    subjectType: 'user';
+    subjectId: string; // userId
+    access: DataViewAccessLevel;
+  }>;
+}
+
+export interface DataViewEditPolicy {
+  allowRowCreate: boolean;
+  allowRowDelete: boolean;
+  allowJsonEdit: boolean; // Escape hatch (default false)
+  allowBulkEdit: boolean; // v2+ typically
+  constraints?: {
+    timeWindowHours?: number | null;
+    immutablePaths?: string[];
+  };
+}
+
+export interface DataViewFieldRule {
+  path: string;
+  editable: boolean;
+  reason?: string;
+  allowRoles?: DataViewAccessLevel[];
+}
+
+export interface DataViewPermissions {
+  viewAccess: DataViewAccessControl;
+  editPolicy: DataViewEditPolicy;
+  fieldRules?: DataViewFieldRule[];
+}
+
+export interface DataViewWorkflowBinding {
+  enabled: boolean;
+  workflowId?: string; // ObjectId as string
+  paths?: string[]; // Optional gating by column paths
+}
+
+export interface DataViewWorkflows {
+  onCellUpdate?: DataViewWorkflowBinding;
+  onRowCreate?: DataViewWorkflowBinding;
+  onRowDelete?: DataViewWorkflowBinding;
+}
+
+export interface DataViewConcurrency {
+  mode: 'none' | 'etag';
+  etagPath?: string; // e.g., "_npMeta.etag"
+}
+
+export interface DataViewMaskingRule {
+  classification: 'public' | 'internal' | 'sensitive';
+  maskMode: 'partial' | 'full';
+}
+
+export interface DataViewMasking {
+  enabled: boolean;
+  rules?: DataViewMaskingRule[];
+}
+
+export interface DataViewSettings {
+  patchWritesOnly?: boolean;
+  concurrency?: DataViewConcurrency;
+  masking?: DataViewMasking;
+}
+
+export interface DataView {
+  _id?: ObjectId;
+  projectId: string; // "proj_abc123"
+  organizationId: string; // "org_xyz789"
+  name: string;
+  slug: string; // URL-friendly, unique per project
+  description?: string;
+  source: DataViewSourceConfig;
+  columns: DataViewColumn[];
+  permissions: DataViewPermissions;
+  workflows?: DataViewWorkflows;
+  settings?: DataViewSettings;
+  createdBy: string; // userId
+  createdAt: Date;
+  updatedAt: Date;
+  version: number;
+}
+
+// ============================================
+// Data Mutations (Audit Log)
+// ============================================
+
+export interface DataMutation {
+  _id?: ObjectId;
+  projectId: string;
+  dataViewId: string; // ObjectId as string
+  connectionId?: string; // vaultId reference
+  db: string;
+  collection: string;
+  docId: string; // ObjectId as string
+  actor: {
+    userId: string;
+    email?: string;
+    role?: string;
+  };
+  source: DataViewSource;
+  ops: Array<{
+    op: 'set' | 'unset';
+    path: string;
+    from?: any;
+    to?: any;
+  }>;
+  status: DataViewMutationStatus;
+  rejectedReason?: string | null;
+  createdAt: Date;
+}
+
+// ============================================
 // Form Data Source (replaces connectionString in form)
 // ============================================
 
@@ -982,6 +1184,7 @@ export type IntegrationProvider =
   | 'twilio'
   | 'sendgrid'
   | 'mailchimp'
+  | 'smtp'           // User-provided SMTP server for email
   | 'zapier'
   | 'mongodb_atlas'
   | 'mongodb_atlas_data_api'
@@ -1046,6 +1249,28 @@ export interface ApiKeyCredentials {
 export interface BasicAuthCredentials {
   username: string;
   password: string;
+}
+
+/**
+ * SMTP server credentials for email sending
+ */
+export interface SmtpCredentials {
+  host: string;
+  port: number;
+  secure?: boolean;      // true for port 465, false for others (STARTTLS)
+  username: string;
+  password: string;
+  fromEmail?: string;    // Default sender email
+  fromName?: string;     // Default sender name
+}
+
+/**
+ * SendGrid API credentials for email sending
+ */
+export interface SendGridCredentials {
+  apiKey: string;
+  fromEmail: string;     // Verified sender email in SendGrid
+  fromName?: string;     // Default sender name
 }
 
 /**

@@ -178,6 +178,13 @@ export function OnboardingTour({
       // Ignore localStorage errors
     }
 
+    // Also set a session flag to prevent re-triggering during this session
+    try {
+      sessionStorage.setItem(`tour_dismissed_${tourId}`, 'true');
+    } catch {
+      // Ignore sessionStorage errors
+    }
+
     onClose();
   };
 
@@ -466,6 +473,13 @@ export function useTourStatus(tourId: string) {
 
   useEffect(() => {
     try {
+      // Check session flag first (prevents re-triggering after dismiss)
+      const dismissedThisSession = sessionStorage.getItem(`tour_dismissed_${tourId}`);
+      if (dismissedThisSession === 'true') {
+        setHasCompletedTour(true);
+        return;
+      }
+
       const completed = JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY) || '[]');
       setHasCompletedTour(completed.includes(tourId));
     } catch {

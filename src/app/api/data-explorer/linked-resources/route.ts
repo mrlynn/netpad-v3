@@ -138,7 +138,12 @@ export async function GET(request: NextRequest) {
       workflows: linkedWorkflows,
     };
 
-    return NextResponse.json(response);
+    // Cache for 10 minutes - linked resources change infrequently
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'private, max-age=600, stale-while-revalidate=120',
+      },
+    });
   } catch (error) {
     console.error('Linked resources lookup error:', error);
     return NextResponse.json(

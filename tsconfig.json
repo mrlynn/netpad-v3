@@ -45,6 +45,7 @@
     "scripts/**/*",
     "packages/**/*",
     "examples/**/*",
-    "templates/**/*"
+    "templates/**/*",
+    "docs/**/*"
   ]
 }

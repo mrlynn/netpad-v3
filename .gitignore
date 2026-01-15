@@ -78,3 +78,4 @@ test-results/
 *.tmp
 *.temp
 .cache/
+.netpad/

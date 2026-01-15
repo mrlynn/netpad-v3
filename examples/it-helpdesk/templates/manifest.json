@@ -1,28 +1,47 @@
 {
-  "name": "IT Help Desk Template",
-  "version": "1.2.0",
-  "description": "Complete IT support ticketing system with ticket submission, search & management, conditional fields, priority-based routing, automated notifications, and Slack escalation for critical tickets",
-  "author": "NetPad Examples",
-  "license": "MIT",
-  "netpadVersion": "3.1.0",
-  "assets": {
-    "forms": ["form.json", "search-form.json"],
-    "workflows": ["workflow.json"]
+  "application": {
+    "name": "IT Help Desk",
+    "version": "2.0.0",
+    "schemaVersion": "1.0.0",
+    "netpadVersion": "4.6.0",
+    "description": "A complete IT support ticketing system built as a NetPad Application. Includes ticket submission (traditional and conversational AI-powered), ticket search and management, automated routing workflows, priority-based escalation, and Slack notifications. This is a production-ready Application that solves the job-to-be-done: 'Manage internal IT support requests efficiently without enterprise ticketing software.'",
+    "author": {
+      "name": "NetPad Examples",
+      "email": "examples@netpad.io"
+    },
+    "license": "MIT",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-15T00:00:00.000Z"
+  },
+  "manifest": {
+    "name": "IT Help Desk",
+    "version": "2.0.0",
+    "description": "Complete IT support ticketing system with ticket submission, search & management, conditional fields, priority-based routing, automated notifications, and Slack escalation for critical tickets",
+    "author": "NetPad Examples",
+    "license": "MIT",
+    "netpadVersion": "4.6.0",
+    "assets": {
+      "forms": ["form.json", "search-form.json"],
+      "workflows": ["workflow.json"]
+    },
+    "tags": ["helpdesk", "it-support", "ticketing", "application", "workflow-automation", "conditional-logic", "search", "data-management", "slack-integration", "email-notifications"],
+    "category": "helpdesk"
   },
   "dependencies": {
-    "integrations": ["email", "slack"]
+    "integrations": ["email", "slack"],
+    "netpadFeatures": ["conversational-forms", "search-forms", "smart-dropdowns", "conditional-logic", "workflow-automation"]
   },
   "instructions": {
-    "import": "Import this template into NetPad to create a complete IT help desk system. Includes a ticket submission form, a ticket search/management form, and an automated routing workflow.",
+    "import": "This is a NetPad Application that groups related forms, workflows, and connections into a complete solution. Import this Application into your NetPad project to get a fully-functional IT help desk system.",
     "setup": [
-      "1. Import the template bundle using the NetPad import API or UI",
-      "2. Configure your MongoDB connection (the form will store submissions in your specified collection)",
+      "1. Create a new Application in NetPad or import this bundle",
+      "2. Configure your MongoDB connection (the Application will store submissions in your specified collection)",
       "3. Customize department options, issue categories, and contact preferences to match your organization",
       "4. Configure the workflow email addresses (change 'it-support@yourcompany.com' to your IT team's email)",
       "5. Set up Slack integration and update the '#it-critical-alerts' channel name",
-      "6. Link the workflow to your form via the Workflows panel",
-      "7. Publish both the submission form (for end users) and search form (for IT staff)",
-      "8. Activate the workflow to enable automated routing"
+      "6. Create an Application Release to version your configuration",
+      "7. Publish the Application to your organization or the marketplace (optional)",
+      "8. The forms and workflows are already connected within the Application"
     ],
     "customization": [
       "Modify the department dropdown options to match your organization structure",
@@ -31,11 +50,18 @@
       "Edit email templates in the workflow to match your organization's tone",
       "Add additional workflow actions (e.g., create tickets in Jira, log to spreadsheet)",
       "Configure form theme and branding to match your brand",
-      "Customize search form filters and result columns for your IT team's needs"
+      "Customize search form filters and result columns for your IT team's needs",
+      "Use the Application Permissions feature to control who can edit forms/workflows",
+      "Create Application Releases to version your changes with semantic versioning"
     ]
   },
-  "tags": ["helpdesk", "it-support", "ticketing", "forms", "workflows", "automation", "conditional-logic", "search", "data-management"],
-  "category": "helpdesk",
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "updatedAt": "2026-01-04T00:00:00.000Z"
+  "connections": [
+    {
+      "id": "conn_ticket_submission",
+      "formRef": "it-support-request",
+      "workflowRef": "it-ticket-routing",
+      "type": "trigger",
+      "description": "Triggers ticket routing workflow when a ticket is submitted"
+    }
+  ]
 }

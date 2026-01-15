@@ -1,8 +1,16 @@
-# IT Help Desk Demo
+# IT Help Desk Application
 
-A complete internal IT support ticketing system built with **@netpad/forms**. This example demonstrates how to build a production-ready help desk form with conditional fields, priority-based routing, and organized sections—all without writing backend code.
+A complete internal IT support ticketing system built as a **NetPad Application**. This example demonstrates how to build a production-ready Application that groups ticket intake forms, search interfaces, automated workflows, and integrations into a single, versioned, shareable solution.
 
-Based on the article: [Build Your Own IT Help Desk in 30 Minutes](../../docs/internal/it-helpdesk-article.md)
+**This is a complete NetPad Application**, not just standalone forms and workflows. The Application includes:
+- Ticket submission forms (traditional and conversational AI-powered)
+- Ticket search form with smart dropdowns
+- Automated routing workflows
+- Application versioning and releases
+- Marketplace-ready structure
+- npm package integration
+
+Based on the article: [Build Your Own IT Help Desk Application in 30 Minutes](../../docs/internal/it-helpdesk-article.md)
 
 ## Features
 
@@ -27,6 +35,14 @@ Based on the article: [Build Your Own IT Help Desk in 30 Minutes](../../docs/int
 - **Date Range Filtering** — Filter tickets by submission date
 - **Results Display** — View search results in a card layout with ticket details
 
+### Application Features
+
+- **Complete Application Structure** - Forms, workflows, and connections grouped together
+- **Versioned Releases** - Semantic versioning (2.0.0) with changelogs
+- **Marketplace Ready** - Can be published to NetPad marketplace
+- **npm Package** - Can be published to npm for programmatic installation
+- **Application Permissions** - Fine-grained RBAC at the Application level
+
 ### Technical Highlights
 
 - Conditional logic with `show`/`hide` actions
@@ -34,8 +50,33 @@ Based on the article: [Build Your Own IT Help Desk in 30 Minutes](../../docs/int
 - Half-width fields for compact forms
 - Radio buttons and checkboxes for selections
 - MongoDB-ready document structure
+- Smart dropdowns with dynamic data population
+- Conversational AI form option
 
 ## Quick Start
+
+### Option 1: Install from NetPad Marketplace (Recommended)
+
+1. Navigate to **Marketplace** in your NetPad organization
+2. Search for "IT Help Desk"
+3. Click **Install** to import the Application into your project
+4. Configure email addresses and Slack integration
+5. Create your first Application Release
+
+### Option 2: Import Application Bundle
+
+1. Download the Application bundle files from this repository:
+   - `templates/manifest.json`
+   - `templates/form.json`
+   - `templates/search-form.json`
+   - `templates/workflow.json`
+2. In NetPad, navigate to **Applications** → **Import Application**
+3. Select the `manifest.json` file
+4. Configure integrations (email, Slack) and create your first Release
+
+**Note:** The NetPad CLI (`@netpad/cli`) can install Applications published to npm. The IT Helpdesk Application is currently available via marketplace UI installation or bundle import. Future versions may be published to npm for CLI installation.
+
+### Option 3: Run the Standalone Demo
 
 ```bash
 # From the examples/it-helpdesk directory
@@ -340,9 +381,9 @@ Add new categories with their conditional fields:
 }
 ```
 
-## Template Bundle
+## Application Bundle
 
-This example includes a **portable template bundle** that can be imported into NetPad:
+This example includes a **portable Application bundle** that can be imported into NetPad:
 
 ```
 templates/
@@ -377,34 +418,45 @@ templates/
 - Critical ticket escalation to Slack
 - Parallel execution for simultaneous notifications
 
-### Importing the Templates
+### Importing the Application
 
 **Option 1: Import via NetPad UI**
 
-1. Download the form/workflow JSON files
-2. In NetPad Form Builder, click **More (⋮)** → **Import Form Definition**
-3. In NetPad Workflows, click **Import Workflow**
-4. Configure integrations (email, Slack) and activate
+1. In NetPad, navigate to **Applications** → **Import Application**
+2. Select the `manifest.json` bundle file
+3. Review the Application structure (forms, workflows, connections)
+4. Configure integrations (email, Slack) and create your first Release
 
-**Option 2: Import via API**
+**Option 2: Install from Marketplace**
+
+1. Navigate to **Marketplace** in NetPad
+2. Search for "IT Help Desk"
+3. Click **Install** to add the Application to your project
+
+**Option 3: Import via Bundle Files**
+
+Download the bundle files from `templates/` and import via NetPad UI.
+
+**Option 4: Import via API**
 
 ```typescript
-// Import the complete bundle
+// Import the complete Application bundle
 const bundle = {
+  application: applicationJson,
   manifest: manifestJson,
-  forms: [formJson],
+  forms: [formJson, searchFormJson],
   workflows: [workflowJson],
+  connections: [connectionJson],
 };
 
-const response = await fetch('/api/templates/import?orgId=your-org-id', {
+const response = await fetch('/api/applications/import?orgId=your-org-id', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(bundle),
 });
 
 const result = await response.json();
-console.log('Imported forms:', result.imported.forms);
-console.log('Imported workflows:', result.imported.workflows);
+console.log('Imported Application:', result.application);
 ```
 
 ### Workflow Configuration
@@ -415,13 +467,16 @@ After importing the workflow, you'll need to configure:
 2. **Slack integration**: Connect your Slack workspace and update `#it-critical-alerts` channel
 3. **Form linkage**: Link the workflow to your imported form via the Workflows panel
 
-### Benefits of Template Bundles
+### Benefits of Application Bundles
 
-- **Portability**: Share forms and workflows between NetPad instances
-- **Version Control**: Store definitions in Git alongside your code
-- **Environment Promotion**: Move from dev → staging → production
-- **Community Sharing**: Share complete templates with other NetPad users
-- **Disaster Recovery**: Backup and restore form and workflow configurations
+- **Complete Solutions**: Share entire Applications, not just individual forms/workflows
+- **Version Control**: Store Application definitions in Git alongside your code
+- **Semantic Versioning**: Track changes with major.minor.patch releases
+- **Marketplace Distribution**: Publish Applications for others to discover and install
+- **npm Integration**: Install Applications from npm registry or publish your own
+- **Environment Promotion**: Move Applications from dev → staging → production
+- **Breaking Change Detection**: Application Contracts detect and enforce version bumps
+- **Disaster Recovery**: Backup and restore complete Application configurations
 
 ## Related Resources
 

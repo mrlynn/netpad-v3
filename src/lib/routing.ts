@@ -4,7 +4,7 @@
  * Centralized helpers for generating URLs with org/project hierarchy
  */
 
-export type ResourceType = 'forms' | 'workflows' | 'data' | 'clusters' | 'connections' | 'builder' | 'projects';
+export type ResourceType = 'forms' | 'workflows' | 'data' | 'clusters' | 'connections' | 'builder' | 'projects' | 'applications';
 
 /**
  * Generate URL for org/project resource

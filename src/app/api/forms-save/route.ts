@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import { getForms, saveForm, publishForm, getVersionsForForm, addFormVersion } from '@/lib/storage';
 import { checkFieldLimit } from '@/lib/platform/billing';
 import { getOrgFormsCollection } from '@/lib/platform/db';
+import { ensureDefaultApplication } from '@/lib/platform/applications';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -70,6 +71,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Phase 2: Validate applicationId if projectId is provided
+    if (formConfig.projectId && formConfig.organizationId) {
+      // If projectId is set, applicationId should be set (will be auto-assigned if missing)
+      // This is a soft validation - we'll ensure default app exists below
+      if (!formConfig.applicationId) {
+        // ApplicationId will be assigned automatically below
+        console.log('[API forms-save] Form has projectId but no applicationId - will assign default app');
+      }
+    }
+
     // Validate data destination before publishing
     if (publish) {
       const hasDataSource = formConfig.dataSource && formConfig.organizationId;
@@ -101,9 +112,60 @@ export async function POST(request: NextRequest) {
     let savedForm: SavedForm;
 
     if (isUpdate) {
-      // Update existing form
+      // Update existing form - check both session storage and organization database
+      let existing: SavedForm | null = null;
+      
+      // First check session storage
       const forms = await getForms(sessionId);
-      const existing = forms.find(f => f.id === formConfig.id);
+      existing = forms.find(f => f.id === formConfig.id) || null;
+      
+      // If not found in session storage and we have organizationId, check org database
+      if (!existing && formConfig.organizationId) {
+        try {
+          const orgFormsCollection = await getOrgFormsCollection(formConfig.organizationId);
+          const orgForm = await orgFormsCollection.findOne({
+            $or: [
+              { formId: formConfig.id },
+              { id: formConfig.id },
+            ],
+          });
+          
+          if (orgForm) {
+            // Convert org form format to SavedForm format
+            existing = {
+              id: orgForm.formId || orgForm.id,
+              name: orgForm.name,
+              description: orgForm.description,
+              slug: orgForm.slug,
+              fieldConfigs: orgForm.fieldConfigs || [],
+              variables: orgForm.variables || [],
+              multiPage: orgForm.multiPage,
+              lifecycle: orgForm.lifecycle,
+              theme: orgForm.theme,
+              formType: orgForm.formType || 'data-entry',
+              searchConfig: orgForm.searchConfig,
+              conversationalConfig: orgForm.conversationalConfig,
+              dataSource: orgForm.dataSource,
+              accessControl: orgForm.accessControl,
+              connectionString: orgForm.connectionString,
+              database: orgForm.database,
+              collection: orgForm.collection,
+              isPublished: orgForm.isPublished || false,
+              publishedAt: orgForm.publishedAt,
+              organizationId: orgForm.organizationId,
+              projectId: orgForm.projectId,
+              applicationId: orgForm.applicationId,
+              createdAt: orgForm.createdAt,
+              updatedAt: orgForm.updatedAt,
+            } as SavedForm;
+            
+            console.log('[API forms-save] Found form in organization database:', formConfig.id);
+          }
+        } catch (orgError) {
+          console.error('[API forms-save] Error checking organization database:', orgError);
+          // Continue - will check session storage result below
+        }
+      }
 
       if (!existing) {
         return NextResponse.json(
@@ -112,8 +174,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Build savedForm, explicitly handling dataSource, organizationId, and projectId to preserve them
-      const { dataSource: formDataSource, organizationId: formOrgId, projectId: formProjectId, ...restFormConfig } = formConfig;
+      // Build savedForm, explicitly handling dataSource, organizationId, projectId, and applicationId to preserve them
+      const { dataSource: formDataSource, organizationId: formOrgId, projectId: formProjectId, applicationId: formApplicationId, ...restFormConfig } = formConfig;
+      
+      // Determine applicationId: use provided, existing, or ensure default app exists
+      let finalApplicationId = formApplicationId || existing.applicationId;
+      if (!finalApplicationId && formProjectId && formOrgId) {
+        // Ensure default application exists and use it
+        try {
+          const defaultApp = await ensureDefaultApplication(formOrgId, formProjectId, 'system');
+          finalApplicationId = defaultApp.applicationId;
+        } catch (error) {
+          console.error('[API forms-save] Failed to ensure default application:', error);
+          // Continue without applicationId for now - will be backfilled in migration
+        }
+      }
+      
       savedForm = {
         ...existing,
         ...restFormConfig,
@@ -122,20 +198,35 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
         isPublished: publish ? true : existing.isPublished,
         publishedAt: publish && !existing.publishedAt ? now : existing.publishedAt,
-        // Explicitly preserve dataSource, organizationId, and projectId - use formConfig values if provided, otherwise keep existing
+        // Explicitly preserve dataSource, organizationId, projectId, and applicationId - use formConfig values if provided, otherwise keep existing
         dataSource: formDataSource !== undefined ? formDataSource : existing.dataSource,
         organizationId: formOrgId !== undefined ? formOrgId : existing.organizationId,
         projectId: formProjectId !== undefined ? formProjectId : existing.projectId,
+        applicationId: finalApplicationId,
       };
     } else {
       // Create new form
       const id = randomBytes(16).toString('hex');
       const slug = generateSlug(formConfig.name) + '-' + randomBytes(4).toString('hex');
 
+      // Ensure applicationId is set if projectId is provided
+      let applicationId = formConfig.applicationId;
+      if (!applicationId && formConfig.projectId && formConfig.organizationId) {
+        // Ensure default application exists and use it
+        try {
+          const defaultApp = await ensureDefaultApplication(formConfig.organizationId, formConfig.projectId, 'system');
+          applicationId = defaultApp.applicationId;
+        } catch (error) {
+          console.error('[API forms-save] Failed to ensure default application:', error);
+          // Continue without applicationId for now - will be backfilled in migration
+        }
+      }
+
       savedForm = {
         ...formConfig,
         id,
         slug,
+        applicationId,
         createdAt: now,
         updatedAt: now,
         isPublished: publish,
@@ -173,7 +264,9 @@ export async function POST(request: NextRequest) {
           name: savedForm.name,
           description: savedForm.description,
           slug: savedForm.slug,
+          organizationId: savedForm.organizationId,
           projectId: savedForm.projectId,
+          applicationId: savedForm.applicationId, // Phase 2: Include applicationId
           fieldConfigs: savedForm.fieldConfigs,
           variables: savedForm.variables,
           theme: savedForm.theme,
@@ -183,6 +276,7 @@ export async function POST(request: NextRequest) {
           collection: savedForm.collection,
           isPublished: savedForm.isPublished,
           publishedAt: savedForm.publishedAt,
+          createdBy: savedForm.createdBy,
           createdAt: savedForm.createdAt,
           updatedAt: savedForm.updatedAt,
           thumbnailUrl: savedForm.thumbnailUrl,
@@ -196,6 +290,18 @@ export async function POST(request: NextRequest) {
         );
 
         console.log('[API forms-save] Form saved to organization database:', savedForm.organizationId);
+
+        // Update application stats if applicationId is set
+        if (savedForm.applicationId && savedForm.organizationId) {
+          try {
+            const { calculateApplicationStats } = await import('@/lib/platform/applications');
+            await calculateApplicationStats(savedForm.organizationId, savedForm.applicationId);
+            console.log('[API forms-save] Application stats updated');
+          } catch (statsError) {
+            console.error('[API forms-save] Failed to update application stats:', statsError);
+            // Don't fail the request if stats update fails
+          }
+        }
       } catch (orgError) {
         console.error('[API forms-save] Failed to save to organization database:', orgError);
         // Don't fail the request if org save fails - the form is still saved to platform DB

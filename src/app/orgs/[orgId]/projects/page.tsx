@@ -23,7 +23,7 @@ import {
 import { Add } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
-import { ProjectList } from '@/components/Projects/ProjectList';
+import { ProjectList, ApplicationImportButton } from '@/components/Projects';
 import { Project, ProjectEnvironment } from '@/types/platform';
 import { useTheme } from '@mui/material/styles';
 import { getOrgProjectUrl } from '@/lib/routing';
@@ -95,8 +95,8 @@ export default function ProjectsPage() {
         setCreateDialogOpen(false);
         resetForm();
         loadProjects();
-        // Navigate to the new project's forms page
-        router.push(getOrgProjectUrl(orgId, data.project.projectId, 'forms'));
+        // Navigate to the new project's applications page (Applications-first model)
+        router.push(getOrgProjectUrl(orgId, data.project.projectId, 'applications'));
       } else {
         setError(data.error || 'Failed to create project');
       }
@@ -155,8 +155,8 @@ export default function ProjectsPage() {
   };
 
   const handleSelect = (project: Project) => {
-    // Navigate to project's forms page
-    router.push(getOrgProjectUrl(orgId, project.projectId, 'forms'));
+    // Navigate to project's applications page (Applications-first model)
+    router.push(getOrgProjectUrl(orgId, project.projectId, 'applications'));
   };
 
   const resetForm = () => {
@@ -216,24 +216,34 @@ export default function ProjectsPage() {
                 Organize your forms, workflows, clusters, and connections by project
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => {
-                resetForm();
-                setCreateDialogOpen(true);
-              }}
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { bgcolor: theme.palette.primary.dark },
-              }}
-            >
-              Create Project
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <ApplicationImportButton
+                organizationId={orgId}
+                variant="button"
+                size="medium"
+                onImportComplete={(result) => {
+                  loadProjects();
+                }}
+              />
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => {
+                  resetForm();
+                  setCreateDialogOpen(true);
+                }}
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
+                }}
+              >
+                Create Project
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>

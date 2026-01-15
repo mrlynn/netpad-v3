@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { validateAIRequestWithGuestAccess, recordAIUsage, recordGuestUsage } from '@/lib/ai/aiRequestGuard';
 import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext, WorkflowBuilderContext } from '@/types/chat';
+import { getSearchFormsCapability, getTemplateGalleryCapability, getConversationalFormsCapability, getNpmPackagesCapability, getApplicationContractsCapability } from '@/lib/ai/chatCapabilities';
 
 // ============================================
 // System Prompt
@@ -31,7 +32,7 @@ function buildSystemPrompt(context: FormBuilderContext): string {
 ## Current Context
 - **View**: ${context.currentView}
 - **Form**: ${context.formName || 'Untitled Form'}${context.formDescription ? ` - ${context.formDescription}` : ''}
-- **Form Type**: ${context.formType || 'data-entry'}
+- **Form Type**: ${context.formType || 'data-entry'}${context.formType === 'search' ? ' (Search Form)' : context.formType === 'conversational' ? ' (Conversational Form)' : context.formType === 'both' ? ' (Data Entry + Search)' : ''}
 - **Current Fields**:
 ${fieldList}
 ${selectedField ? `\n- **Selected Field**: "${selectedField.label}" (${selectedField.type})` : ''}
@@ -206,9 +207,37 @@ You can help users configure automation for their forms in the Settings > Action
 - "Custom thank you message" → Explain success message with {{field}} variables
 - "Integrate with my CRM/API" → Suggest webhook notification
 
+${getSearchFormsCapability()}
+
+${getTemplateGalleryCapability()}
+
+${getConversationalFormsCapability()}
+
+${getNpmPackagesCapability()}
+
+${getApplicationContractsCapability()}
+
 ## Beyond Forms: Other NetPad Capabilities
 
 NetPad is a complete platform. When relevant, you can mention these capabilities:
+
+**Applications (Applications-First Model):**
+- Applications are first-class entities that group related forms, workflows, and connections
+- Organize complete solutions (e.g., "IT Help Desk" application with forms, workflows, and connections)
+- Create application releases with semantic versioning (X.Y.Z format)
+- Track application-level statistics (forms count, workflows count, connections count)
+- Export entire applications as bundles
+- Access from Applications section in navigation
+
+**Application Marketplace:**
+- Discover ready-to-use applications created by the community and NetPad team
+- Browse by category (helpdesk, onboarding, survey, etc.), filter by type (Official vs Community)
+- Import applications directly into your projects with one click
+- Publish your applications to share with others (requires admin approval)
+- Manage your published applications (edit metadata, unpublish/republish, delete)
+- Publish as npm packages for distribution via npm registry
+- Install applications from npm packages via Web UI, CLI, or direct npm install
+- Access from Marketplace in navigation
 
 **Workflows & Automation:**
 - Automate post-submission actions with visual workflows (form trigger → email, database write, webhook, etc.)
@@ -222,18 +251,19 @@ NetPad is a complete platform. When relevant, you can mention these capabilities
 - Manage connection credentials securely (Connection Vault with encryption)
 - Auto-provision MongoDB Atlas clusters (M0 free tier)
 
-**AI & Conversational Forms:**
-- Create AI-powered conversational forms (natural language data collection)
-- Use built-in templates (IT Helpdesk, Customer Feedback, Patient Intake) or create custom templates
-- 12+ AI agents for optimization, compliance, translation, insights
-- Conversational forms extract structured data from natural language dialogue
-
 **Platform Services:**
 - Organize work by projects (dev, staging, prod environments)
 - Team collaboration with role-based access (Owner, Admin, Member, Viewer)
 - One-click deployment to Vercel with auto-provisioned databases
 
 **When to mention these:**
+- User asks about "creating a search/filter form" → Mention Search Forms (formType: 'search')
+- User asks about "using templates" → Mention Template Gallery with search form templates
+- User asks about "organizing forms and workflows" → Mention Applications
+- User asks about "versioning" or "releases" → Mention Application Releases
+- User asks about "sharing" or "publishing" → Mention Application Marketplace and npm package publishing
+- User asks about "npm packages" or "publishing to npm" → Mention npm Package Integration
+- User asks about "preventing breaking changes" or "contracts" → Mention Application Contracts & Protection
 - User asks about "automating after form submission" → Mention Workflows
 - User asks about "browsing/viewing data" → Mention Data Browser
 - User wants "chatbot-style form" → Mention Conversational Forms
@@ -510,6 +540,9 @@ const GENERAL_SUPPORT_PROMPT = `You are a friendly customer support assistant fo
 - Visual WYSIWYG form builder with drag-and-drop interface
 - Multi-page forms with progress indicators
 - Advanced features: conditional logic, computed fields, lookup fields, repeater fields, field encryption
+- **Search Forms**: Create search/filter forms (formType: 'search') with searchConfig for querying MongoDB data
+- **Search Form Templates**: Pre-built templates (Customer Search, Order Search, Support Ticket Search)
+- **Template Gallery**: Browse templates by category, preview, and customize
 - URL pre-filling and post-submit actions (redirects, webhooks)
 - Form analytics: response trends, completion funnels, field-level statistics
 - Publishing: public URLs, custom slugs, embeddable forms
@@ -544,6 +577,11 @@ const GENERAL_SUPPORT_PROMPT = `You are a friendly customer support assistant fo
   - Enterprise: Workflow Generator
 
 ### Pillar 5: Platform Services
+- **Applications**: First-class entities grouping forms, workflows, and connections. Applications support versioning through releases (semantic versioning X.Y.Z), application-level statistics, and export as bundles
+- **Application Releases**: Versioned snapshots of applications with changelog tracking. Releases are immutable and can be published to the marketplace
+- **Application Contracts & Protection**: Define explicit contracts for application public API (inputs, outputs, side effects, events, behaviors), breaking change detection, contract enforcement (requires major version bumps for breaking changes), component protection (lock forms/workflows), contract comparison with migration guides
+- **Application Marketplace**: Public catalog for discovering and sharing applications. Browse by category, filter by type (Official vs Community), import applications, publish your own applications (with admin review), and manage published applications
+- **npm Package Integration**: Publish applications as npm packages (@netpad/app-* or @your-org/netpad-app-*), install via npm CLI or Web UI, automatic package discovery from npm registry, dependency resolution for applications and plugins
 - Organizations: Multi-tenant workspaces with team member management (Owner, Admin, Member, Viewer roles), invitation system, shared resources
 - Projects: Environment-based organization (dev, staging, prod, custom), project-level analytics, export entire projects
 - Authentication: Google OAuth, GitHub OAuth, Magic Link (passwordless email), Passkeys (WebAuthn/FIDO2)
@@ -552,10 +590,11 @@ const GENERAL_SUPPORT_PROMPT = `You are a friendly customer support assistant fo
 
 ## Key Capabilities Summary
 - Forms: 30+ field types, conditional logic, encryption, analytics
+- Applications: First-class entities with versioning, releases, and marketplace publishing
 - Workflows: 25+ node types, visual editor, automation
 - Data Management: Browse, query, import/export, encrypted connections
 - AI Features: Conversational forms, 12+ AI agents, template system
-- Platform: Organizations, projects, RBAC, one-click deployment
+- Platform: Organizations, projects, applications, marketplace, RBAC, one-click deployment
 
 ## Pricing
 - Free tier: 3 forms, 1,000 submissions/month, 50 workflow executions/month, 1 active workflow, 1 connection, 10 AI generations/month, 30-day retention

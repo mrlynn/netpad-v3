@@ -6,7 +6,7 @@
 
 import { randomBytes, createHash } from 'crypto';
 import { Collection, ObjectId } from 'mongodb';
-import { connectDB } from '@/lib/mongodb';
+import { getPlatformDb } from '@/lib/platform/db';
 import {
   APIKey,
   APIKeyPermission,
@@ -19,7 +19,7 @@ import {
 // ============================================
 
 async function getAPIKeysCollection(): Promise<Collection<APIKey>> {
-  const db = await connectDB();
+  const db = await getPlatformDb();
   return db.collection<APIKey>('api_keys');
 }
 
@@ -86,7 +86,7 @@ export async function createAPIKey(
     keyPrefix: getKeyPrefix(fullKey),
     keyHash: generatedKeyHash,
     permissions: request.permissions,
-    scopes: request.scopes,
+    scopes: request.scopes || undefined,
     rateLimit: {
       requestsPerHour: request.rateLimit?.requestsPerHour || 1000,
       requestsPerDay: request.rateLimit?.requestsPerDay || 10000,
@@ -100,7 +100,19 @@ export async function createAPIKey(
     expiresAt,
   };
 
-  await collection.insertOne(apiKey);
+  try {
+    await collection.insertOne(apiKey);
+    console.log('[API Key Creation] Successfully created API key:', apiKey.id);
+  } catch (dbError: any) {
+    console.error('[API Key Creation] Database error:', dbError);
+    console.error('[API Key Creation] Error details:', {
+      code: dbError.code,
+      codeName: dbError.codeName,
+      message: dbError.message,
+      stack: dbError.stack,
+    });
+    throw new Error(`Failed to save API key to database: ${dbError.message || 'Unknown error'}`);
+  }
 
   return { apiKey, fullKey };
 }

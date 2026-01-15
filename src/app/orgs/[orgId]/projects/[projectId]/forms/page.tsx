@@ -366,7 +366,7 @@ export default function FormsPage() {
     }
 
     try {
-      const response = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/forms/${formId}?orgId=${orgId}`, { method: 'DELETE' });
       const data = await response.json();
 
       if (data.success) {

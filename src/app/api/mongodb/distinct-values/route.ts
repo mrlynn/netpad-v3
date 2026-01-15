@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { sessionOptions, ensureSessionId } from '@/lib/session';
-import { MongoClient } from 'mongodb';
+import { getClient } from '@/lib/mongodb/clientCache';
 import { getForms, getPublishedFormById, getPublishedFormBySlug } from '@/lib/storage';
 import { getDecryptedConnectionString } from '@/lib/platform/connectionVault';
 
@@ -112,113 +112,112 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = new MongoClient(connectionString);
+    // Use cached client for better performance
+    const client = await getClient(connectionString);
+    const db = client.db(database);
+    const coll = db.collection(targetCollection);
 
-    try {
-      await client.connect();
-      const db = client.db(database);
-      const coll = db.collection(targetCollection);
+    // Build match stages (reused in both facets)
+    const matchStages: Record<string, unknown>[] = [];
 
-      // Build aggregation pipeline for distinct values with counts
-      const pipeline: any[] = [];
-
-      // Apply base filter if provided
-      if (Object.keys(filter).length > 0) {
-        pipeline.push({ $match: filter });
-      }
-
-      // Only include documents where the field exists and is not null
-      pipeline.push({
-        $match: {
-          [field]: { $exists: true, $ne: null }
-        }
-      });
-
-      // Group by field value and count
-      const groupStage: any = {
-        $group: {
-          _id: `$${field}`,
-          count: { $sum: 1 }
-        }
-      };
-
-      // If labelField is different from the value field, capture it
-      if (labelField && labelField !== field) {
-        groupStage.$group.label = { $first: `$${labelField}` };
-      }
-
-      pipeline.push(groupStage);
-
-      // Sort based on preference
-      let sortStage: any = {};
-      switch (sortBy) {
-        case 'count':
-          sortStage = { count: sortDirection === 'desc' ? -1 : 1 };
-          break;
-        case 'value':
-          sortStage = { _id: sortDirection === 'desc' ? -1 : 1 };
-          break;
-        case 'label':
-          sortStage = { label: sortDirection === 'desc' ? -1 : 1, _id: 1 };
-          break;
-        default:
-          sortStage = { count: -1 };
-      }
-      pipeline.push({ $sort: sortStage });
-
-      // Limit results
-      pipeline.push({ $limit: limit });
-
-      // Execute aggregation
-      const results = await coll.aggregate(pipeline).toArray();
-
-      // Transform results into consistent format
-      const values: DistinctValueResult[] = results.map((doc) => {
-        const value = doc._id;
-        let label: string;
-
-        // Determine label: labelMap > labelField > value
-        if (labelMap && labelMap[value]) {
-          label = labelMap[value];
-        } else if (doc.label) {
-          label = doc.label;
-        } else if (typeof value === 'string') {
-          label = value;
-        } else {
-          label = String(value);
-        }
-
-        return {
-          value,
-          label,
-          count: includeCounts ? doc.count : 0,
-        };
-      });
-
-      // Get total distinct count (for showing "X of Y values")
-      const totalDistinct = await coll.aggregate([
-        ...(Object.keys(filter).length > 0 ? [{ $match: filter }] : []),
-        { $match: { [field]: { $exists: true, $ne: null } } },
-        { $group: { _id: `$${field}` } },
-        { $count: 'total' }
-      ]).toArray();
-
-      await client.close();
-
-      return NextResponse.json({
-        success: true,
-        values,
-        total: totalDistinct[0]?.total || values.length,
-      } as DistinctValuesResponse);
-
-    } catch (error: any) {
-      await client.close().catch(() => {});
-      throw error;
+    // Apply base filter if provided
+    if (Object.keys(filter).length > 0) {
+      matchStages.push({ $match: filter });
     }
-  } catch (error: any) {
+
+    // Only include documents where the field exists and is not null
+    matchStages.push({
+      $match: {
+        [field]: { $exists: true, $ne: null }
+      }
+    });
+
+    // Group by field value and count
+    const groupStage: Record<string, unknown> = {
+      $group: {
+        _id: `$${field}`,
+        count: { $sum: 1 }
+      }
+    };
+
+    // If labelField is different from the value field, capture it
+    if (labelField && labelField !== field) {
+      (groupStage.$group as Record<string, unknown>).label = { $first: `$${labelField}` };
+    }
+
+    // Sort based on preference
+    let sortStage: Record<string, number> = {};
+    switch (sortBy) {
+      case 'count':
+        sortStage = { count: sortDirection === 'desc' ? -1 : 1 };
+        break;
+      case 'value':
+        sortStage = { _id: sortDirection === 'desc' ? -1 : 1 };
+        break;
+      case 'label':
+        sortStage = { label: sortDirection === 'desc' ? -1 : 1, _id: 1 };
+        break;
+      default:
+        sortStage = { count: -1 };
+    }
+
+    // Use $facet to get both paginated results AND total count in a single query
+    // This eliminates the duplicate aggregation that was causing 2x database load
+    const facetPipeline = [
+      ...matchStages,
+      groupStage,
+      {
+        $facet: {
+          // Paginated results with sorting
+          values: [
+            { $sort: sortStage },
+            { $limit: limit }
+          ],
+          // Total count of distinct values
+          totalCount: [
+            { $count: 'total' }
+          ]
+        }
+      }
+    ];
+
+    const [facetResult] = await coll.aggregate(facetPipeline).toArray();
+
+    // Transform results into consistent format
+    const values: DistinctValueResult[] = (facetResult?.values || []).map((doc: Record<string, unknown>) => {
+      const value = doc._id;
+      let label: string;
+
+      // Determine label: labelMap > labelField > value
+      if (labelMap && labelMap[value as string]) {
+        label = labelMap[value as string];
+      } else if (doc.label) {
+        label = doc.label as string;
+      } else if (typeof value === 'string') {
+        label = value;
+      } else {
+        label = String(value);
+      }
+
+      return {
+        value,
+        label,
+        count: includeCounts ? (doc.count as number) : 0,
+      };
+    });
+
+    const total = facetResult?.totalCount?.[0]?.total || values.length;
+
+    return NextResponse.json({
+      success: true,
+      values,
+      total,
+    } as DistinctValuesResponse);
+
+  } catch (error: unknown) {
     console.error('Distinct values error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch distinct values' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch distinct values' },
       { status: 500 }
     );
   }

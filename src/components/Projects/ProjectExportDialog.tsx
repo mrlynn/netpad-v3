@@ -45,9 +45,13 @@ import {
   Check as CheckIcon,
   Warning as WarningIcon,
   Key as KeyIcon,
+  Link as LinkIcon,
+  PlayArrow as TriggerIcon,
+  Publish as PublishIcon,
 } from '@mui/icons-material';
 import { Project } from '@/types/platform';
-import { BundleExport, EnvVarSpec } from '@/types/template';
+import { BundleExport, EnvVarSpec, FormWorkflowConnection } from '@/types/template';
+import { ApplicationPublishDialog } from './ApplicationPublishDialog';
 
 interface ProjectExportDialogProps {
   open: boolean;
@@ -59,6 +63,7 @@ interface ProjectExportDialogProps {
 interface ExportPreview {
   formsCount: number;
   workflowsCount: number;
+  connectionsCount: number;
   bundle: BundleExport;
 }
 
@@ -72,6 +77,7 @@ export function ProjectExportDialog({
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<ExportPreview | null>(null);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
   // Export options
   const [includeDeploymentConfig, setIncludeDeploymentConfig] = useState(true);
@@ -107,6 +113,7 @@ export function ProjectExportDialog({
       setPreview({
         formsCount: data.metadata.formsCount,
         workflowsCount: data.metadata.workflowsCount,
+        connectionsCount: data.metadata.connectionsCount || 0,
         bundle: data.bundle,
       });
     } catch (err) {
@@ -216,6 +223,14 @@ export function ProjectExportDialog({
                     {preview.workflowsCount} Workflow{preview.workflowsCount !== 1 ? 's' : ''}
                   </Typography>
                 </Box>
+                {preview.connectionsCount > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LinkIcon fontSize="small" sx={{ color: '#00ED64' }} />
+                    <Typography variant="body2" sx={{ color: '#00ED64', fontWeight: 500 }}>
+                      {preview.connectionsCount} Connection{preview.connectionsCount !== 1 ? 's' : ''}
+                    </Typography>
+                  </Box>
+                )}
                 {preview.bundle.theme && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <SettingsIcon fontSize="small" color="action" />
@@ -282,6 +297,90 @@ export function ProjectExportDialog({
                         />
                       </ListItem>
                     ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* Form-Workflow Connections */}
+            {preview.bundle.connections && preview.bundle.connections.length > 0 && (
+              <Accordion defaultExpanded={preview.bundle.connections.length <= 5}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LinkIcon fontSize="small" sx={{ color: '#00ED64' }} />
+                    <Typography variant="subtitle2" sx={{ color: '#00ED64' }}>
+                      Form-Workflow Connections ({preview.bundle.connections.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <Alert severity="info" sx={{ mb: 1.5 }}>
+                    <Typography variant="caption">
+                      These connections show how forms trigger workflows. They will be automatically
+                      configured when the application is imported.
+                    </Typography>
+                  </Alert>
+                  <List dense disablePadding>
+                    {preview.bundle.connections.map((connection: FormWorkflowConnection, index: number) => {
+                      // Find form and workflow names for display
+                      const form = preview.bundle.forms?.find(
+                        f => f.id === connection.formRef || f.slug === connection.formRef
+                      );
+                      const workflow = preview.bundle.workflows?.find(
+                        w => w.id === connection.workflowRef || w.slug === connection.workflowRef
+                      );
+
+                      return (
+                        <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            <TriggerIcon fontSize="small" sx={{ color: '#00ED64' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                >
+                                  <FormIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+                                  {form?.name || connection.formRef}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#00ED64' }}>
+                                  →
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                >
+                                  <WorkflowIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+                                  {workflow?.name || connection.workflowRef}
+                                </Typography>
+                                {connection.type === 'trigger' && (
+                                  <Chip
+                                    label="Trigger"
+                                    size="small"
+                                    sx={{
+                                      height: 18,
+                                      fontSize: '0.65rem',
+                                      bgcolor: alpha('#00ED64', 0.1),
+                                      color: '#00ED64',
+                                      border: `1px solid ${alpha('#00ED64', 0.3)}`,
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              connection.description ||
+                              (connection.config?.triggerOn
+                                ? `Triggers on: ${connection.config.triggerOn}`
+                                : 'Automatic connection')
+                            }
+                            secondaryTypographyProps={{ variant: 'caption' }}
+                          />
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 </AccordionDetails>
               </Accordion>
@@ -422,6 +521,22 @@ export function ProjectExportDialog({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
+          onClick={() => setPublishDialogOpen(true)}
+          variant="outlined"
+          disabled={!preview || exporting}
+          startIcon={<PublishIcon />}
+          sx={{
+            borderColor: '#00ED64',
+            color: '#00ED64',
+            '&:hover': {
+              borderColor: '#00CC55',
+              bgcolor: alpha('#00ED64', 0.08),
+            },
+          }}
+        >
+          Publish to Marketplace
+        </Button>
+        <Button
           onClick={handleExport}
           variant="contained"
           disabled={!preview || exporting}
@@ -436,6 +551,19 @@ export function ProjectExportDialog({
           {exporting ? 'Exporting...' : 'Export Bundle'}
         </Button>
       </DialogActions>
+
+      {/* Publish Dialog */}
+      {preview && (
+        <ApplicationPublishDialog
+          open={publishDialogOpen}
+          onClose={() => setPublishDialogOpen(false)}
+          bundle={preview.bundle}
+          onPublished={(applicationId: string) => {
+            setPublishDialogOpen(false);
+            // Could show success message or navigate to marketplace
+          }}
+        />
+      )}
     </Dialog>
   );
 }

@@ -122,9 +122,10 @@ function MessageBubble({ message }: MessageBubbleProps) {
           borderRadius: 2,
           bgcolor: isUser
             ? theme.palette.primary.main
-            : alpha(theme.palette.action.hover, 0.5),
-          color: isUser ? 'white' : 'inherit',
-          border: isUser ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            : theme.palette.background.paper,
+          color: isUser ? 'white' : 'text.primary',
+          border: isUser ? 'none' : `1px solid ${theme.palette.divider}`,
+          boxShadow: isUser ? 'none' : theme.shadows[1],
         }}
       >
         {isStreaming && !message.content ? (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { getClient } from '@/lib/mongodb/clientCache';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,37 +31,29 @@ export async function POST(request: NextRequest) {
 
     const sampleLimit = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
 
-    const client = new MongoClient(connectionString);
-    
-    try {
-      await client.connect();
-      const db = client.db(databaseName);
-      const coll = db.collection(collection);
-      
-      // Get sample documents
-      const samples = await coll.find({}).limit(sampleLimit).toArray();
-      
-      // Get total count
-      const totalCount = await coll.countDocuments();
-      
-      await client.close();
+    // Use cached client for better performance
+    const client = await getClient(connectionString);
+    const db = client.db(databaseName);
+    const coll = db.collection(collection);
 
-      return NextResponse.json({
-        success: true,
-        documents: samples,
-        count: samples.length,
-        totalCount
-      });
-    } catch (error: any) {
-      await client.close().catch(() => {});
-      throw error;
-    }
-  } catch (error: any) {
+    // Get sample documents and count in parallel
+    const [samples, totalCount] = await Promise.all([
+      coll.find({}).limit(sampleLimit).toArray(),
+      coll.estimatedDocumentCount(), // Use estimated count for speed
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      documents: samples,
+      count: samples.length,
+      totalCount
+    });
+  } catch (error: unknown) {
     console.error('Sample documents error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to fetch sample documents'
+        error: error instanceof Error ? error.message : 'Failed to fetch sample documents'
       },
       { status: 500 }
     );

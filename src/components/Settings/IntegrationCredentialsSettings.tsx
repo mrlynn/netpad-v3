@@ -69,6 +69,8 @@ const PROVIDER_CONFIG: Record<string, { name: string; icon: React.ReactNode; col
   notion: { name: 'Notion', icon: <DatabaseIcon />, color: '#000000' },
   mongodb_atlas: { name: 'MongoDB Atlas Admin API', icon: <DatabaseIcon />, color: '#00684A' },
   mongodb_atlas_data_api: { name: 'MongoDB Atlas Data API', icon: <DatabaseIcon />, color: '#00684A' },
+  smtp: { name: 'SMTP Email', icon: <CloudIcon />, color: '#EA4335' },
+  sendgrid: { name: 'SendGrid Email', icon: <CloudIcon />, color: '#1A82E2' },
   custom_api_key: { name: 'API Key', icon: <KeyIcon />, color: '#607D8B' },
 };
 
@@ -118,6 +120,19 @@ export function IntegrationCredentialsSettings() {
   const [formAtlasDataApiKey, setFormAtlasDataApiKey] = useState('');
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // SMTP form state
+  const [formSmtpHost, setFormSmtpHost] = useState('');
+  const [formSmtpPort, setFormSmtpPort] = useState('587');
+  const [formSmtpUsername, setFormSmtpUsername] = useState('');
+  const [formSmtpPassword, setFormSmtpPassword] = useState('');
+  const [formSmtpFromEmail, setFormSmtpFromEmail] = useState('');
+  const [formSmtpFromName, setFormSmtpFromName] = useState('');
+
+  // SendGrid form state
+  const [formSendgridApiKey, setFormSendgridApiKey] = useState('');
+  const [formSendgridFromEmail, setFormSendgridFromEmail] = useState('');
+  const [formSendgridFromName, setFormSendgridFromName] = useState('');
 
   // Fetch credentials
   useEffect(() => {
@@ -191,11 +206,28 @@ export function IntegrationCredentialsSettings() {
             appId: formAtlasAppId,
             apiKey: formAtlasDataApiKey,
           };
+        } else if (formProvider === 'sendgrid') {
+          credentialsPayload = {
+            apiKey: formSendgridApiKey,
+            fromEmail: formSendgridFromEmail,
+            fromName: formSendgridFromName || undefined,
+          };
         } else {
           credentialsPayload = {
             apiKey: formApiKey,
           };
         }
+      } else if (formAuthType === 'basic_auth' && formProvider === 'smtp') {
+        // SMTP credentials
+        credentialsPayload = {
+          host: formSmtpHost,
+          port: parseInt(formSmtpPort, 10),
+          secure: parseInt(formSmtpPort, 10) === 465,
+          username: formSmtpUsername,
+          password: formSmtpPassword,
+          fromEmail: formSmtpFromEmail || undefined,
+          fromName: formSmtpFromName || undefined,
+        };
       }
 
       // Add Atlas metadata if applicable
@@ -277,6 +309,17 @@ export function IntegrationCredentialsSettings() {
     setFormAtlasAppId('');
     setFormAtlasDataApiKey('');
     setConnectionTestResult(null);
+    // Reset SMTP fields
+    setFormSmtpHost('');
+    setFormSmtpPort('587');
+    setFormSmtpUsername('');
+    setFormSmtpPassword('');
+    setFormSmtpFromEmail('');
+    setFormSmtpFromName('');
+    // Reset SendGrid fields
+    setFormSendgridApiKey('');
+    setFormSendgridFromEmail('');
+    setFormSendgridFromName('');
   };
 
   // Test Atlas connection
@@ -539,6 +582,10 @@ export function IntegrationCredentialsSettings() {
                     setFormAuthType('oauth2');
                   } else if (newProvider.startsWith('mongodb_atlas')) {
                     setFormAuthType('api_key');
+                  } else if (newProvider === 'smtp') {
+                    setFormAuthType('basic_auth');
+                  } else if (newProvider === 'sendgrid') {
+                    setFormAuthType('api_key');
                   } else {
                     setFormAuthType('api_key');
                   }
@@ -551,6 +598,8 @@ export function IntegrationCredentialsSettings() {
                 <MenuItem value="notion">Notion</MenuItem>
                 <MenuItem value="mongodb_atlas">MongoDB Atlas (Admin API)</MenuItem>
                 <MenuItem value="mongodb_atlas_data_api">MongoDB Atlas (Data API)</MenuItem>
+                <MenuItem value="smtp">SMTP Email Server</MenuItem>
+                <MenuItem value="sendgrid">SendGrid Email</MenuItem>
                 <MenuItem value="custom_api_key">Custom API Key</MenuItem>
               </Select>
             </FormControl>
@@ -766,8 +815,115 @@ export function IntegrationCredentialsSettings() {
               </>
             )}
 
+            {/* SMTP Configuration */}
+            {formProvider === 'smtp' && (
+              <>
+                <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
+                  <strong>SMTP Email Server Setup:</strong>
+                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    <li>For Gmail: Use smtp.gmail.com with an App Password</li>
+                    <li>For Outlook: Use smtp.office365.com</li>
+                    <li>For custom servers: Use your SMTP host and credentials</li>
+                  </ul>
+                </Alert>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="SMTP Host"
+                  value={formSmtpHost}
+                  onChange={(e) => setFormSmtpHost(e.target.value)}
+                  placeholder="e.g., smtp.gmail.com"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="SMTP Port"
+                  value={formSmtpPort}
+                  onChange={(e) => setFormSmtpPort(e.target.value)}
+                  placeholder="587"
+                  helperText="Use 587 for TLS or 465 for SSL"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Username"
+                  value={formSmtpUsername}
+                  onChange={(e) => setFormSmtpUsername(e.target.value)}
+                  placeholder="your-email@example.com"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Password"
+                  type="password"
+                  value={formSmtpPassword}
+                  onChange={(e) => setFormSmtpPassword(e.target.value)}
+                  placeholder="Your password or app password"
+                />
+                <Divider />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Default From Email (optional)"
+                  value={formSmtpFromEmail}
+                  onChange={(e) => setFormSmtpFromEmail(e.target.value)}
+                  placeholder="notifications@yourcompany.com"
+                  helperText="Default sender email address"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Default From Name (optional)"
+                  value={formSmtpFromName}
+                  onChange={(e) => setFormSmtpFromName(e.target.value)}
+                  placeholder="Your Company"
+                  helperText="Default sender display name"
+                />
+              </>
+            )}
+
+            {/* SendGrid Configuration */}
+            {formProvider === 'sendgrid' && (
+              <>
+                <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
+                  <strong>SendGrid Setup:</strong>
+                  <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    <li>Go to <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer">SendGrid API Keys</a></li>
+                    <li>Create an API Key with &quot;Mail Send&quot; permission</li>
+                    <li>Verify your sender email in SendGrid</li>
+                  </ol>
+                </Alert>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="SendGrid API Key"
+                  type="password"
+                  value={formSendgridApiKey}
+                  onChange={(e) => setFormSendgridApiKey(e.target.value)}
+                  placeholder="SG.xxxxxxxx"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Verified From Email"
+                  value={formSendgridFromEmail}
+                  onChange={(e) => setFormSendgridFromEmail(e.target.value)}
+                  placeholder="notifications@yourcompany.com"
+                  helperText="Must be verified in SendGrid"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="From Name (optional)"
+                  value={formSendgridFromName}
+                  onChange={(e) => setFormSendgridFromName(e.target.value)}
+                  placeholder="Your Company"
+                />
+              </>
+            )}
+
             {/* Generic API Key providers */}
-            {!formProvider.startsWith('google_') && !formProvider.startsWith('mongodb_atlas') && (
+            {!formProvider.startsWith('google_') && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'smtp' && formProvider !== 'sendgrid' && (
               <>
                 <FormControl fullWidth size="small">
                   <InputLabel>Authentication Type</InputLabel>
@@ -804,7 +960,9 @@ export function IntegrationCredentialsSettings() {
               (formAuthType === 'service_account' && !formServiceAccountJson) ||
               (formProvider === 'mongodb_atlas' && (!formAtlasOrgId || !formAtlasPublicKey || !formAtlasPrivateKey)) ||
               (formProvider === 'mongodb_atlas_data_api' && (!formAtlasAppId || !formAtlasDataApiKey)) ||
-              (formAuthType === 'api_key' && !formProvider.startsWith('mongodb_atlas') && !formApiKey)
+              (formProvider === 'smtp' && (!formSmtpHost || !formSmtpUsername || !formSmtpPassword)) ||
+              (formProvider === 'sendgrid' && (!formSendgridApiKey || !formSendgridFromEmail)) ||
+              (formAuthType === 'api_key' && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'sendgrid' && !formApiKey)
             }
             sx={{
               bgcolor: '#00ED64',

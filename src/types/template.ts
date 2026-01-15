@@ -15,7 +15,7 @@ export interface TemplateManifest {
   name: string;
   version: string;
   description?: string;
-  author?: string;
+  author?: string | { name: string; email?: string; url?: string };
   license?: string;
   
   /**
@@ -64,6 +64,11 @@ export interface TemplateManifest {
  * Cleaned form configuration ready for export (no sensitive data)
  */
 export interface FormDefinition {
+  /**
+   * Original ID (for reference during import)
+   */
+  id?: string;
+  
   name: string;
   description?: string;
   fieldConfigs: any[];          // FieldConfig[]
@@ -74,6 +79,12 @@ export interface FormDefinition {
   multiPage?: any;              // MultiPageConfig
   botProtection?: any;          // BotProtectionConfig
   draftSettings?: any;          // DraftSettings
+  
+  /**
+   * Application-specific metadata
+   */
+  applicationRole?: 'primary' | 'secondary' | 'supporting';
+  displayOrder?: number;
   
   // Metadata (exported but will be regenerated on import)
   slug?: string;
@@ -93,6 +104,11 @@ export interface FormDefinition {
  * Cleaned workflow configuration ready for export
  */
 export interface WorkflowDefinition {
+  /**
+   * Original ID (for reference during import)
+   */
+  id?: string;
+  
   name: string;
   description?: string;
   canvas: any;                  // WorkflowCanvas
@@ -101,6 +117,12 @@ export interface WorkflowDefinition {
   inputSchema?: any;            // JSONSchemaDefinition
   outputSchema?: any;           // JSONSchemaDefinition
   tags?: string[];
+  
+  /**
+   * Application-specific metadata
+   */
+  applicationRole?: 'primary' | 'secondary' | 'supporting';
+  displayOrder?: number;
   
   // Metadata (exported but will be regenerated on import)
   slug?: string;
@@ -116,12 +138,133 @@ export interface WorkflowDefinition {
 }
 
 /**
+ * Form-Workflow Connection
+ * Explicit connection between a form and workflow
+ */
+export interface FormWorkflowConnection {
+  /**
+   * Connection ID (for reference)
+   */
+  id: string;
+  
+  /**
+   * Reference to form (by slug or original ID)
+   */
+  formRef: string;
+  
+  /**
+   * Reference to workflow (by slug or original ID)
+   */
+  workflowRef: string;
+  
+  /**
+   * Connection type
+   */
+  type: 'trigger' | 'webhook' | 'manual' | 'scheduled';
+  
+  /**
+   * Connection configuration
+   */
+  config?: {
+    /**
+     * For trigger connections
+     */
+    triggerOn?: 'submit' | 'update' | 'delete';
+    conditions?: Array<{
+      field: string;
+      operator: string;
+      value: any;
+    }>;
+    
+    /**
+     * For webhook connections
+     */
+    webhookUrl?: string;
+    webhookMethod?: string;
+    
+    /**
+     * For scheduled connections
+     */
+    schedule?: string; // Cron expression
+  };
+  
+  /**
+   * Metadata
+   */
+  description?: string;
+  enabled?: boolean;
+}
+
+/**
+ * Application Manifest
+ * Enhanced manifest for complete NetPad applications
+ */
+export interface ApplicationManifest extends TemplateManifest {
+  /**
+   * Unique application ID
+   */
+  id?: string;
+
+  /**
+   * Application icon (emoji or icon name)
+   */
+  icon?: string;
+
+  /**
+   * Application color (hex or CSS color)
+   */
+  color?: string;
+
+  /**
+   * Short summary (1-2 sentences)
+   */
+  summary?: string;
+  
+  /**
+   * Author information
+   */
+  author?: {
+    name: string;
+    email?: string;
+    url?: string;
+  };
+  
+  /**
+   * Marketplace metadata
+   */
+  marketplace?: {
+    featured?: boolean;
+    downloads?: number;
+    rating?: number;
+    reviews?: number;
+    price?: {
+      type: 'free' | 'paid';
+      amount?: number;
+      currency?: string;
+    };
+  };
+  
+  /**
+   * Change log
+   */
+  changelog?: Array<{
+    version: string;
+    date: string;
+    changes: string[];
+  }>;
+}
+
+/**
  * Bundle Export Response
  */
 export interface BundleExport {
-  manifest: TemplateManifest;
+  manifest: TemplateManifest | ApplicationManifest;
   forms?: FormDefinition[];
   workflows?: WorkflowDefinition[];
+  /**
+   * Explicit form-workflow connections
+   */
+  connections?: FormWorkflowConnection[];
   theme?: any;
   // NEW: Project metadata
   project?: {

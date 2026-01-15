@@ -67,4 +67,9 @@ export type HelpTopicId =
   | 'deployment-vercel'
   | 'organizations'
   | 'connection-vault'
-  | 'template-gallery';
+  | 'template-gallery'
+  | 'applications'
+  | 'application-releases'
+  | 'application-contracts'
+  | 'marketplace'
+  | 'npm-packages';

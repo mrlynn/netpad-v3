@@ -141,10 +141,17 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(response, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API Keys] Error creating key:', error);
+    const errorMessage = error?.message || 'Failed to create API key';
+    const errorDetails = process.env.NODE_ENV === 'development' ? error?.stack : undefined;
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create API key' },
+      { 
+        success: false, 
+        error: errorMessage,
+        ...(errorDetails && { details: errorDetails })
+      },
       { status: 500 }
     );
   }

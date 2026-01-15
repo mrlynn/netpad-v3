@@ -457,6 +457,76 @@ export interface GenerateWorkflowResponse {
 }
 
 // ============================================
+// Application Generation Types
+// ============================================
+
+/**
+ * Request for generating a complete application (metadata, form, and workflow)
+ */
+export interface GenerateApplicationRequest {
+  /** Natural language description of the application */
+  prompt: string;
+  /** Optional context about the application's purpose */
+  context?: {
+    /** Industry or domain (e.g., "healthcare", "ecommerce") */
+    industry?: string;
+    /** Target audience (e.g., "customers", "employees") */
+    audience?: string;
+  };
+  /** Generation options */
+  options?: {
+    /** Whether to generate a form */
+    includeForm?: boolean;
+    /** Whether to generate a workflow */
+    includeWorkflow?: boolean;
+    /** Maximum fields for the form */
+    maxFields?: number;
+    /** Maximum nodes for the workflow */
+    maxNodes?: number;
+  };
+}
+
+/**
+ * Generated application structure
+ */
+export interface GeneratedApplication {
+  /** Application metadata */
+  application: {
+    name: string;
+    description?: string;
+    tags?: string[];
+    version?: string;
+    color?: string;
+  };
+  /** Generated form configuration (if requested) */
+  form?: Partial<FormConfiguration>;
+  /** Generated workflow configuration (if requested) */
+  workflow?: GeneratedWorkflow;
+}
+
+/**
+ * Response from application generation
+ */
+export interface GenerateApplicationResponse {
+  /** Whether generation was successful */
+  success: boolean;
+  /** Generated application configuration */
+  application?: GeneratedApplication;
+  /** Confidence score (0-1) for the generation */
+  confidence: number;
+  /** Suggestions or warnings */
+  suggestions?: string[];
+  /** Error message if generation failed */
+  error?: string;
+  /** Token usage for billing/tracking */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+// ============================================
 // Completion Hints Types
 // ============================================
 

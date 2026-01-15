@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   AppBar,
@@ -45,6 +45,8 @@ import {
   FolderOpen,
   ArrowDropDown,
   Description,
+  Apps,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -73,8 +75,16 @@ const NAV_ITEM_CONFIGS = [
     key: 'projects',
     label: 'Projects',
     icon: <FolderOpen sx={{ fontSize: 18 }} />,
+    // color: '#FF9800',
     color: '#FF9800',
     matchPaths: ['/projects'],
+  },
+  {
+    key: 'applications',
+    label: 'Applications',
+    icon: <Apps sx={{ fontSize: 18 }} />,
+    color: '#00ED64',
+    matchPaths: ['/applications'],
   },
   {
     key: 'forms',
@@ -94,6 +104,13 @@ const NAV_ITEM_CONFIGS = [
     label: 'Data',
     icon: <Storage sx={{ fontSize: 18 }} />,
     color: '#2196F3',
+  },
+  {
+    key: 'marketplace',
+    label: 'Marketplace',
+    icon: <Apps sx={{ fontSize: 18 }} />,
+    color: '#00ED64',
+    matchPaths: ['/marketplace'],
   },
 ];
 
@@ -120,10 +137,20 @@ export function AppNavBar() {
       
       // Generate nav items with new URLs
       const items = NAV_ITEM_CONFIGS.map(config => {
-        // Projects link goes to org's projects list, not project-specific
+        // Projects and Marketplace links go to org-level, not project-specific
         if (config.key === 'projects') {
           return {
             href: `/orgs/${urlOrgId}/projects`,
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
+        if (config.key === 'marketplace') {
+          // Marketplace is org-scoped in the new URL structure
+          return {
+            href: `/orgs/${urlOrgId}/marketplace`,
             label: config.label,
             icon: config.icon,
             color: config.color,
@@ -154,6 +181,17 @@ export function AppNavBar() {
             matchPaths: config.matchPaths,
           };
         }
+        if (config.key === 'marketplace') {
+          // Prefer org-scoped marketplace when org is known
+          const orgId = organization?.orgId;
+          return {
+            href: orgId ? `/orgs/${orgId}/marketplace` : '/marketplace',
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
         return {
           href: config.key === 'forms' ? '/my-forms' : `/${config.key}`,
           label: config.label,
@@ -162,13 +200,26 @@ export function AppNavBar() {
           matchPaths: config.matchPaths,
         };
       });
+
+      // Add admin nav item for platform admins
+      const isPlatformAdmin = user?.platformRole === 'admin';
+      if (isPlatformAdmin) {
+        items.push({
+          href: '/admin/marketplace-review',
+          label: 'Review',
+          icon: <AdminPanelSettings sx={{ fontSize: 18 }} />,
+          color: '#FF6B6B',
+          matchPaths: ['/admin'],
+        });
+      }
+
       setNavItems(items);
       
       // Get project from localStorage for legacy routes
       const stored = localStorage.getItem('selected_project_id');
       setCurrentProjectId(stored || undefined);
     }
-  }, [pathname, organization]);
+  }, [pathname, organization, user]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
@@ -178,12 +229,41 @@ export function AppNavBar() {
 
   // Check if a nav item is active based on current path
   const isNavItemActive = (item: NavItem): boolean => {
+    // Exact match
     if (pathname === item.href) return true;
-    // Special handling for projects - match /orgs/[orgId]/projects (with or without trailing slash or sub-paths)
-    if (item.href.includes('/projects') && pathname.match(/^\/orgs\/[^/]+\/projects(\/|$)/)) {
+
+    // Special handling for projects list page - ONLY match /orgs/[orgId]/projects exactly
+    // Do NOT match when user is inside a project (e.g., /orgs/[orgId]/projects/[projectId]/workflows)
+    const isProjectsListHref = item.href.match(/^\/orgs\/[^/]+\/projects$/);
+    if (isProjectsListHref) {
+      // Only active if we're on the projects list page itself
+      return pathname.match(/^\/orgs\/[^/]+\/projects\/?$/) !== null;
+    }
+
+    // Special handling for org marketplace page - ONLY match /orgs/[orgId]/marketplace exactly
+    const isOrgMarketplaceHref = item.href.match(/^\/orgs\/[^/]+\/marketplace$/);
+    if (isOrgMarketplaceHref) {
+      return pathname.match(/^\/orgs\/[^/]+\/marketplace\/?$/) !== null;
+    }
+
+    // Special handling for admin pages
+    if (item.href.startsWith('/admin')) {
+      return pathname.startsWith('/admin');
+    }
+
+    // For project-specific resources (forms, workflows, data, etc.)
+    // Extract the resource type from both the href and current pathname
+    // URLs look like: /orgs/{orgId}/projects/{projectId}/{resource}
+    const hrefMatch = item.href.match(/\/orgs\/[^/]+\/projects\/[^/]+\/(\w+)/);
+    const pathnameMatch = pathname.match(/\/orgs\/[^/]+\/projects\/[^/]+\/(\w+)/);
+
+    if (hrefMatch && pathnameMatch && hrefMatch[1] === pathnameMatch[1]) {
       return true;
     }
+
+    // Legacy path matching
     if (item.matchPaths?.some(path => pathname.startsWith(path))) return true;
+
     return false;
   };
 
@@ -327,51 +407,80 @@ export function AppNavBar() {
 
         {/* CENTER: Primary Navigation - Tabs, not pills */}
         {!isMobile && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {navItems.map((item) => {
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {navItems.map((item, index) => {
               const isActive = isNavItemActive(item);
+              // Check if this is Forms, Workflows, or Data by checking the key or href
+              const itemKey = NAV_ITEM_CONFIGS.find(c => c.label === item.label)?.key || '';
+              const isDeEmphasized = ['forms', 'workflows', 'data'].includes(itemKey);
+              // Show divider before Forms (first de-emphasized item) and before Marketplace
+              const showDividerBefore = (itemKey === 'forms') || (itemKey === 'marketplace');
+              
               return (
-                <Button
-                  key={item.href}
-                  component={Link}
-                  href={item.href}
-                  startIcon={<Box sx={{ display: 'flex', alignItems: 'center' }}>{item.icon}</Box>}
-                  size="small"
-                  sx={{
-                    minWidth: 'auto',
-                    px: 2,
-                    py: 0.75,
-                    color: isActive ? item.color : 'text.secondary',
-                    bgcolor: 'transparent',
-                    borderRadius: 0,
-                    textTransform: 'none',
-                    fontWeight: isActive ? 600 : 400,
-                    fontSize: '0.875rem',
-                    position: 'relative',
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: isActive ? 'calc(100% - 16px)' : 0,
-                      height: 2,
-                      bgcolor: isActive ? item.color : 'transparent',
-                      transition: 'width 0.2s ease',
-                    },
-                    '&:hover': {
-                      bgcolor: 'transparent',
-                      color: isActive ? item.color : 'text.primary',
+                <React.Fragment key={item.href}>
+                  {showDividerBefore && (
+                    <Divider 
+                      orientation="vertical" 
+                      flexItem 
+                      sx={{ 
+                        height: 24, 
+                        mx: 0.5,
+                        borderColor: 'divider',
+                        opacity: 0.5,
+                      }} 
+                    />
+                  )}
+                  <Box
+                    component={Link}
+                    href={item.href}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      px: 2,
+                      py: 0.75,
+                      color: isActive ? item.color : 'text.secondary',
+                      textDecoration: 'none',
+                      borderRadius: 1,
+                      fontWeight: isActive ? 600 : (isDeEmphasized ? 400 : 500),
+                      fontSize: isDeEmphasized ? '0.8125rem' : '0.875rem',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      bgcolor: isActive ? alpha(item.color, 0.12) : 'transparent',
+                      opacity: isActive ? 1 : (isDeEmphasized ? 0.6 : 0.7),
+                      '& svg': {
+                        color: isActive ? item.color : 'text.secondary',
+                        fontSize: isDeEmphasized ? 16 : 18,
+                        opacity: isActive ? 1 : (isDeEmphasized ? 0.6 : 0.7),
+                      },
                       '&::after': {
-                        width: isActive ? 'calc(100% - 16px)' : 'calc(100% - 16px)',
-                        bgcolor: isActive ? item.color : alpha(item.color, 0.3),
-                      }
-                    },
-                    transition: 'color 0.15s ease'
-                  }}
-                >
-                  {item.label}
-                </Button>
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -1,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: isActive ? '80%' : 0,
+                        height: 2,
+                        bgcolor: isActive ? item.color : 'transparent',
+                        borderRadius: 1,
+                        transition: 'width 0.2s ease',
+                      },
+                      '&:hover': {
+                        opacity: isDeEmphasized ? 0.8 : 1,
+                        bgcolor: isActive ? alpha(item.color, 0.15) : alpha(item.color, 0.08),
+                        color: isActive ? item.color : 'text.primary',
+                        '& svg': {
+                          color: isActive ? item.color : 'text.primary',
+                          opacity: isDeEmphasized ? 0.8 : 1,
+                        },
+                      },
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Box>
+                </React.Fragment>
               );
             })}
           </Box>
@@ -751,16 +860,26 @@ export function AppNavBar() {
                     href={item.href}
                     onClick={handleMobileMenuClose}
                     sx={{
-                      color: isActive ? item.color : 'text.primary',
+                      color: isActive ? item.color : 'text.secondary',
                       bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',
                       borderRadius: 1,
                       mb: 0.5,
+                      opacity: isActive ? 1 : 0.35,
                       '&:hover': {
-                        bgcolor: alpha(item.color, 0.15),
+                        bgcolor: isActive ? alpha(item.color, 0.15) : alpha('#000', 0.05),
+                        opacity: isActive ? 1 : 0.5,
                       }
                     }}
                   >
-                    <ListItemIcon sx={{ color: isActive ? item.color : 'inherit', minWidth: 40 }}>
+                    <ListItemIcon 
+                      sx={{ 
+                        color: isActive ? item.color : 'text.secondary', 
+                        minWidth: 40,
+                        '& svg': {
+                          opacity: isActive ? 1 : 0.3,
+                        }
+                      }}
+                    >
                       {item.icon}
                     </ListItemIcon>
                     <ListItemText 

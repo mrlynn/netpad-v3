@@ -10,9 +10,10 @@ import { WorkflowNode } from '@/types/workflow';
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'condition-builder' | 'switch-cases';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'email-credential-select' | 'condition-builder' | 'switch-cases';
   options?: string[];
   description?: string;
+  required?: boolean;
 }
 
 /**
@@ -21,6 +22,17 @@ export interface ConfigField {
 export interface SwitchCase {
   value: string;
   label?: string;
+}
+
+/**
+ * Email credential for selection
+ */
+export interface EmailCredentialOption {
+  credentialId: string;
+  name: string;
+  provider: 'smtp' | 'sendgrid';
+  status: string;
+  fromEmail?: string;
 }
 
 /**
@@ -44,6 +56,8 @@ export interface NodeEditorProps {
     status: string;
   }>;
   connectionsLoading?: boolean;
+  availableEmailCredentials?: EmailCredentialOption[];
+  emailCredentialsLoading?: boolean;
   availableFields?: Array<{
     path: string;
     label: string;

@@ -6,7 +6,7 @@
 
 import { FormConfiguration } from '@/types/form';
 import { WorkflowDocument } from '@/types/workflow';
-import { FormDefinition, WorkflowDefinition, BundleImportRequest, BundleImportResult } from '@/types/template';
+import { FormDefinition, WorkflowDefinition, BundleImportRequest, BundleImportResult, FormWorkflowConnection } from '@/types/template';
 import { nanoid } from 'nanoid';
 
 /**
@@ -131,4 +131,99 @@ export function validateWorkflowDefinition(definition: any): { valid: boolean; e
   }
   
   return { valid: true };
+}
+
+/**
+ * Resolve form and workflow references during import
+ * Updates workflow nodes that reference forms with new form IDs
+ * 
+ * @param workflows - Workflow definitions to update
+ * @param formIdMap - Map of old form ID/slug to new form ID
+ * @param workflowIdMap - Map of old workflow ID/slug to new workflow ID
+ * @param forms - Form definitions for reference matching
+ */
+export function resolveFormWorkflowReferences(
+  workflows: WorkflowDefinition[],
+  formIdMap: Map<string, string>, // oldId/slug -> newId
+  workflowIdMap: Map<string, string>, // oldId/slug -> newId
+  forms: FormDefinition[]
+): void {
+  for (const workflow of workflows) {
+    if (!workflow.canvas?.nodes) continue;
+    
+    // Find all form-trigger nodes
+    const formTriggerNodes = workflow.canvas.nodes.filter(
+      (node: any) => node.type === 'form-trigger'
+    );
+    
+    for (const node of formTriggerNodes) {
+      const oldFormRef = node.config?.formId;
+      if (!oldFormRef) continue;
+      
+      // Find the form by old ID or slug
+      const form = forms.find(
+        f => f.id === oldFormRef || f.slug === oldFormRef
+      );
+      
+      if (form) {
+        // Try to get new ID from map using old ID or slug
+        const newFormId = formIdMap.get(form.id || '') || 
+                         formIdMap.get(form.slug || '') ||
+                         formIdMap.get(oldFormRef);
+        
+        if (newFormId) {
+          // Update the node config with new form ID
+          if (!node.config) {
+            node.config = {};
+          }
+          node.config.formId = newFormId;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Auto-detect and create connections from workflow nodes if connections are missing
+ * This provides backward compatibility for bundles without explicit connections
+ */
+export function detectConnectionsFromWorkflows(
+  forms: FormDefinition[],
+  workflows: WorkflowDefinition[]
+): FormWorkflowConnection[] {
+  const connections: FormWorkflowConnection[] = [];
+  
+  for (const workflow of workflows) {
+    if (!workflow.canvas?.nodes) continue;
+    
+    const formTriggerNodes = workflow.canvas.nodes.filter(
+      (node: any) => node.type === 'form-trigger'
+    );
+    
+    for (const node of formTriggerNodes) {
+      const formId = node.config?.formId;
+      if (!formId) continue;
+      
+      // Find matching form
+      const form = forms.find(
+        f => f.id === formId || f.slug === formId
+      );
+      
+      if (form) {
+        connections.push({
+          id: `conn_${workflow.slug || workflow.id || 'unknown'}_${form.slug || form.id || 'unknown'}`,
+          formRef: form.slug || form.id || '',
+          workflowRef: workflow.slug || workflow.id || '',
+          type: 'trigger',
+          config: {
+            triggerOn: node.config?.triggerOn || 'submit',
+            conditions: node.config?.conditions || [],
+          },
+          enabled: node.enabled !== false,
+        });
+      }
+    }
+  }
+  
+  return connections;
 }

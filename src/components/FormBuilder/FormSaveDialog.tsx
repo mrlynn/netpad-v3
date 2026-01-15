@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,12 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  alpha
+  alpha,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
 } from '@mui/material';
 import { Save, Public, Edit } from '@mui/icons-material';
 import { FormConfiguration } from '@/types/form';
@@ -52,8 +57,11 @@ export function FormSaveDialog({
 }: FormSaveDialogProps) {
   const { connectionString } = usePipeline();
   const params = useParams();
+  const searchParams = useSearchParams();
   // Check if we're in a project context from the URL
+  const urlOrgId = params?.orgId as string | undefined;
   const urlProjectId = params?.projectId as string | undefined;
+  const urlApplicationId = searchParams?.get('applicationId') || undefined;
   const isInProjectContext = !!urlProjectId;
   
   const [name, setName] = useState(formConfig.name || '');
@@ -61,6 +69,9 @@ export function FormSaveDialog({
   const [publish, setPublish] = useState(formConfig.isPublished || false);
   // If we're in a project context, use the URL projectId; otherwise use formConfig or empty
   const [projectId, setProjectId] = useState<string>(isInProjectContext ? (urlProjectId || '') : (formConfig.projectId || ''));
+  const [applicationId, setApplicationId] = useState<string>(formConfig.applicationId || '');
+  const [applications, setApplications] = useState<Array<{ applicationId: string; name: string; isDefault?: boolean }>>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,16 +87,109 @@ export function FormSaveDialog({
       // If we're in a project context, always use the URL projectId
       if (isInProjectContext && urlProjectId) {
         setProjectId(urlProjectId);
+        // Prefer applicationId from: 1) formConfig, 2) URL query param, 3) empty
+        setApplicationId(formConfig.applicationId || urlApplicationId || '');
       } else if (formConfig.projectId) {
         // Otherwise, use projectId from formConfig if available
         setProjectId(formConfig.projectId);
+        setApplicationId(formConfig.applicationId || urlApplicationId || '');
       } else {
         // If no projectId in formConfig, reset to empty so user can select
         setProjectId('');
+        setApplicationId(formConfig.applicationId || urlApplicationId || '');
       }
       setError(null);
     }
   }, [open, formConfig, isInProjectContext, urlProjectId]);
+
+  // Load applications for the selected project (when in org/project context)
+  useEffect(() => {
+    const orgId = formConfig.organizationId || urlOrgId;
+    if (!orgId || !projectId) {
+      setApplications([]);
+      return;
+    }
+
+    const loadApplications = async () => {
+      try {
+        setLoadingApplications(true);
+        console.log('[FormSaveDialog] Fetching applications:', { orgId, projectId });
+        const response = await fetch(`/api/applications?orgId=${orgId}&projectId=${projectId}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('[FormSaveDialog] Failed to load applications:', response.status, errorData);
+          setApplications([]);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[FormSaveDialog] Applications API response:', data);
+
+        // Handle both response formats: { success: true, applications: [...] } or { applications: [...] }
+        const appsArray = data.success ? data.applications : (data.applications || []);
+        
+        if (Array.isArray(appsArray) && appsArray.length > 0) {
+          const apps = appsArray as Array<{ applicationId: string; name: string; isDefault?: boolean }>;
+          setApplications(apps);
+
+          // Priority: 1) applicationId from formConfig (application context), 2) URL query param, 3) current applicationId state, 4) default app
+          // Always check formConfig.applicationId first (it's the source of truth from the application context)
+          const preferredApplicationId = formConfig.applicationId || urlApplicationId;
+          
+          console.log('[FormSaveDialog] Loading applications:', {
+            preferredApplicationId,
+            currentApplicationId: applicationId,
+            appsCount: apps.length,
+            apps: apps.map(a => ({ id: a.applicationId, name: a.name, isDefault: a.isDefault }))
+          });
+          
+          if (preferredApplicationId) {
+            // Verify the preferred application exists in the list
+            const preferredApp = apps.find((a) => a.applicationId === preferredApplicationId);
+            if (preferredApp) {
+              console.log('[FormSaveDialog] Setting preferred application:', preferredApp.name);
+              setApplicationId(preferredApplicationId);
+              return; // Don't fall through to default logic
+            } else {
+              console.warn('[FormSaveDialog] Preferred application not found in list:', preferredApplicationId);
+            }
+          }
+          
+          // If no preferred app or preferred app not found, check if we already have an applicationId set
+          if (applicationId) {
+            const existingApp = apps.find((a) => a.applicationId === applicationId);
+            if (existingApp) {
+              console.log('[FormSaveDialog] Keeping existing application:', existingApp.name);
+              // Keep the existing selection
+              return;
+            }
+          }
+          
+          // Fall back to default application
+          const defaultApp = apps.find((a) => a.isDefault);
+          if (defaultApp) {
+            console.log('[FormSaveDialog] Falling back to default application:', defaultApp.name);
+            setApplicationId(defaultApp.applicationId);
+          } else {
+            console.warn('[FormSaveDialog] No default application found');
+          }
+        } else {
+          console.warn('[FormSaveDialog] No applications found in response or empty array:', data);
+          setApplications([]);
+        }
+      } catch (err) {
+        console.error('[FormSaveDialog] Failed to load applications:', err);
+        setApplications([]);
+      } finally {
+        setLoadingApplications(false);
+      }
+    };
+
+    loadApplications();
+    // Note: We intentionally don't include `applicationId` in deps to avoid re-renders when we set it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, formConfig.organizationId, formConfig.applicationId, urlOrgId]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -106,6 +210,7 @@ export function FormSaveDialog({
         name: name.trim(),
         description: description.trim() || undefined,
         projectId: projectId,
+        applicationId: applicationId || formConfig.applicationId,
         connectionString: connectionString || undefined
       };
 
@@ -312,6 +417,30 @@ export function FormSaveDialog({
                 This form will be saved to the current project
               </Typography>
             </Box>
+          )}
+
+          {/* Application Selector (when we know org + project) */}
+          {projectId && (formConfig.organizationId || urlOrgId) && (
+            <FormControl fullWidth disabled={loadingApplications || applications.length === 0} sx={{ mt: 1 }}>
+              <InputLabel>Application</InputLabel>
+              <Select
+                value={applicationId || ''}
+                label="Application"
+                onChange={(e) => setApplicationId(e.target.value as string)}
+              >
+                {applications.map((app) => (
+                  <MenuItem key={app.applicationId} value={app.applicationId}>
+                    {app.name}
+                    {app.isDefault ? ' (Default)' : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                {applications.length === 0
+                  ? 'No applications yet - a default application will be created automatically'
+                  : 'Select which application this form belongs to'}
+              </FormHelperText>
+            </FormControl>
           )}
 
           {/* Publish Option */}

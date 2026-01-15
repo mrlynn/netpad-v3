@@ -33,6 +33,7 @@ import {
 import { getHandler, NodeErrorCodes } from './nodeHandlers';
 import { ExtendedNodeContext } from './nodeHandlers/types';
 import { getDecryptedConnectionString } from '@/lib/platform/connectionVault';
+import { getEmailCredentials } from '@/lib/platform/integrationCredentials';
 import {
   substituteVariables,
   buildSubstitutionContext,
@@ -342,6 +343,9 @@ async function executeWorkflow(
       },
       getConnection: async (vaultId: string) => {
         return getDecryptedConnectionString(workflow.orgId, vaultId);
+      },
+      getEmailCredentials: async (credentialId: string) => {
+        return getEmailCredentials(workflow.orgId, credentialId);
       },
     };
 

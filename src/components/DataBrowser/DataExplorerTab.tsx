@@ -8,11 +8,13 @@
 import React, { useState, useCallback } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { ArrowBack as BackIcon } from '@mui/icons-material';
+import { usePathname } from 'next/navigation';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDataExplorer } from '@/hooks/useDataExplorer';
 import { DataExplorerTree } from './DataExplorerTree';
 import { CollectionDetailPanel } from './CollectionDetailPanel';
 import { DataBrowser } from './DataBrowser';
+import { parseOrgProjectFromPath } from '@/lib/routing';
 
 interface DataExplorerTabProps {
   onNeedConnection?: () => void;
@@ -20,6 +22,8 @@ interface DataExplorerTabProps {
 
 export function DataExplorerTab({ onNeedConnection }: DataExplorerTabProps) {
   const { currentOrgId } = useOrganization();
+  const pathname = usePathname();
+  const { projectId } = parseOrgProjectFromPath(pathname || '');
   const [browsing, setBrowsing] = useState(false);
 
   const {
@@ -108,6 +112,7 @@ export function DataExplorerTab({ onNeedConnection }: DataExplorerTabProps) {
             initialDatabase={selectedNode.database}
             initialCollection={selectedNode.collection}
             initialVaultId={selectedNode.vaultId}
+            projectId={projectId || undefined}
             onNeedConnection={onNeedConnection}
           />
         </Box>

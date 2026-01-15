@@ -6,7 +6,7 @@
 
 import { FormConfiguration } from '@/types/form';
 import { WorkflowDocument } from '@/types/workflow';
-import { FormDefinition, WorkflowDefinition, TemplateManifest, BundleExport } from '@/types/template';
+import { FormDefinition, WorkflowDefinition, TemplateManifest, ApplicationManifest, BundleExport, FormWorkflowConnection } from '@/types/template';
 
 /**
  * Clean form configuration for export
@@ -27,6 +27,8 @@ export function cleanFormForExport(form: FormConfiguration): FormDefinition {
 
   return {
     ...exportableFields,
+    // Preserve original ID for reference resolution
+    id: form.id || (form as any).formId,
     // Preserve slug for reference, but it will be regenerated on import if conflicts
     slug: form.slug,
     createdAt: form.createdAt,
@@ -53,6 +55,8 @@ export function cleanWorkflowForExport(workflow: WorkflowDocument): WorkflowDefi
 
   return {
     ...exportableFields,
+    // Preserve original ID for reference resolution
+    id: workflow.id || workflow._id?.toString(),
     // Preserve slug for reference
     slug: workflow.slug,
     createdAt: workflow.createdAt instanceof Date ? workflow.createdAt.toISOString() : workflow.createdAt,
@@ -110,18 +114,76 @@ export function createManifest(
 }
 
 /**
+ * Detect form-workflow connections from workflow nodes
+ * Analyzes workflow canvas nodes to find form-trigger nodes and match them to forms
+ */
+export function detectFormWorkflowConnections(
+  forms: FormDefinition[],
+  workflows: WorkflowDefinition[]
+): FormWorkflowConnection[] {
+  const connections: FormWorkflowConnection[] = [];
+  
+  for (const workflow of workflows) {
+    if (!workflow.canvas?.nodes) continue;
+    
+    // Find all form-trigger nodes in this workflow
+    const formTriggerNodes = workflow.canvas.nodes.filter(
+      (node: any) => node.type === 'form-trigger'
+    );
+    
+    for (const node of formTriggerNodes) {
+      const formId = node.config?.formId;
+      if (!formId) continue;
+      
+      // Find matching form by ID or slug
+      const form = forms.find(
+        f => f.id === formId || f.slug === formId
+      );
+      
+      if (form) {
+        // Create connection
+        const connectionId = `conn_${workflow.slug || workflow.id || 'unknown'}_${form.slug || form.id || 'unknown'}`;
+        
+        connections.push({
+          id: connectionId,
+          formRef: form.slug || form.id || '',
+          workflowRef: workflow.slug || workflow.id || '',
+          type: 'trigger',
+          config: {
+            triggerOn: node.config?.triggerOn || 'submit',
+            conditions: node.config?.conditions || [],
+          },
+          description: `Workflow "${workflow.name}" triggers on form "${form.name}" submission`,
+          enabled: node.enabled !== false,
+        });
+      }
+    }
+  }
+  
+  return connections;
+}
+
+/**
  * Create bundle export structure
  */
 export function createBundleExport(
-  manifest: TemplateManifest,
+  manifest: TemplateManifest | ApplicationManifest,
   forms?: FormDefinition[],
   workflows?: WorkflowDefinition[],
-  theme?: any
+  theme?: any,
+  connections?: FormWorkflowConnection[]
 ): BundleExport {
+  // Auto-detect connections if not provided
+  let detectedConnections = connections;
+  if (!detectedConnections && forms && workflows) {
+    detectedConnections = detectFormWorkflowConnections(forms, workflows);
+  }
+  
   return {
     manifest,
     forms,
     workflows,
+    connections: detectedConnections,
     theme,
   };
 }

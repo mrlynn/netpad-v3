@@ -131,13 +131,14 @@ export async function POST(request: NextRequest) {
       ? (sourceType as RAGDocumentSourceType)
       : 'other';
 
-    // Upload to Vercel Blob with private access for security
-    // Private blobs require signed URLs for access (generated in GET endpoint)
+    // Upload to Vercel Blob
+    // Note: Using public access as Vercel Blob free tier only supports public
+    // Documents are protected at the API level through authentication
     const blob = await put(
       `rag-documents/${organizationId}/${formId}/${Date.now()}-${file.name}`,
       file,
       {
-        access: 'private',
+        access: 'public',
         contentType: file.type,
       }
     );

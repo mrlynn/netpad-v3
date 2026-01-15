@@ -1,0 +1,33 @@
+{
+  "name": "Simple Contact Form",
+  "version": "1.0.0",
+  "description": "A simple contact form application with email notification workflow - perfect for testing application publishing",
+  "summary": "Contact form with automated email notifications",
+  "category": "business",
+  "tags": ["contact", "form", "email", "notification", "simple", "test"],
+  "icon": "📧",
+  "author": {
+    "name": "NetPad Examples",
+    "email": "examples@netpad.io"
+  },
+  "license": "MIT",
+  "netpadVersion": "3.1.0",
+  "assets": {
+    "forms": ["form.json"],
+    "workflows": ["workflow.json"]
+  },
+  "dependencies": {
+    "integrations": ["email"]
+  },
+  "instructions": {
+    "import": "Import this template into NetPad to create a simple contact form with email notifications. Perfect for testing application publishing workflows.",
+    "setup": [
+      "1. Import the template bundle using the NetPad import API or UI",
+      "2. Configure your email integration",
+      "3. Update the recipient email address in the workflow",
+      "4. Publish the form",
+      "5. Activate the workflow"
+    ]
+  },
+  "createdAt": "2026-01-15T00:00:00.000Z"
+}

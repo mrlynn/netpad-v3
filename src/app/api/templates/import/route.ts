@@ -17,6 +17,7 @@ import {
   validateFormDefinition,
   validateWorkflowDefinition,
   generateSlug,
+  resolveFormWorkflowReferences,
 } from '@/lib/templates/import';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { createWorkflow } from '@/lib/workflow/db';
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
       userId = sessionId;
     }
     
+    // Build maps for reference resolution
+    const formIdMap = new Map<string, string>(); // oldId/slug -> newId
+    const workflowIdMap = new Map<string, string>(); // oldId/slug -> newId
+    
     // Import forms
     if (importRequest.forms && importRequest.forms.length > 0) {
       for (const formDef of importRequest.forms) {
@@ -81,6 +86,10 @@ export async function POST(request: NextRequest) {
             });
             continue;
           }
+          
+          // Store old references for mapping
+          const oldId = formDef.id || '';
+          const oldSlug = formDef.slug || '';
           
           if (orgId) {
             // Platform-based import
@@ -118,11 +127,18 @@ export async function POST(request: NextRequest) {
             
             await collection.insertOne(formConfig as any);
             
+            const newId = formConfig.id!;
             result.imported.forms.push({
-              newId: formConfig.id!,
+              originalId: oldId || undefined,
+              newId,
               name: formConfig.name,
               slug: formConfig.slug || '',
             });
+            
+            // Map old references to new ID
+            if (oldId) formIdMap.set(oldId, newId);
+            if (oldSlug) formIdMap.set(oldSlug, newId);
+            formIdMap.set(formDef.name, newId); // Also map by name as fallback
           } else if (sessionId) {
             // Legacy session-based import
             const formConfig = convertFormDefinitionToConfig(
@@ -137,11 +153,18 @@ export async function POST(request: NextRequest) {
             
             await saveForm(sessionId, formConfig as any);
             
+            const newId = formConfig.id!;
             result.imported.forms.push({
-              newId: formConfig.id!,
+              originalId: oldId || undefined,
+              newId,
               name: formConfig.name,
               slug: formConfig.slug || '',
             });
+            
+            // Map old references to new ID
+            if (oldId) formIdMap.set(oldId, newId);
+            if (oldSlug) formIdMap.set(oldSlug, newId);
+            formIdMap.set(formDef.name, newId);
           }
         } catch (error: any) {
           result.errors?.push({
@@ -151,6 +174,16 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+    }
+    
+    // Resolve form references in workflows before importing
+    if (importRequest.workflows && importRequest.workflows.length > 0 && importRequest.forms) {
+      resolveFormWorkflowReferences(
+        importRequest.workflows,
+        formIdMap,
+        workflowIdMap,
+        importRequest.forms
+      );
     }
     
     // Import workflows
@@ -167,6 +200,10 @@ export async function POST(request: NextRequest) {
             });
             continue;
           }
+          
+          // Store old references for mapping
+          const oldId = workflowDef.id || '';
+          const oldSlug = workflowDef.slug || '';
           
           // Convert and create
           const workflowData = convertWorkflowDefinitionToDocument(
@@ -187,7 +224,7 @@ export async function POST(request: NextRequest) {
             tags: workflowData.tags || [],
           });
           
-          // Update with canvas and settings
+          // Update with canvas and settings (now with resolved form references)
           const { updateWorkflow } = await import('@/lib/workflow/db');
           await updateWorkflow(orgId, workflow.id, userId, {
             canvas: workflowData.canvas,
@@ -201,11 +238,18 @@ export async function POST(request: NextRequest) {
           const { getWorkflowById } = await import('@/lib/workflow/db');
           const updatedWorkflow = await getWorkflowById(orgId, workflow.id);
           
+          const newId = workflow.id;
           result.imported.workflows.push({
-            newId: workflow.id,
+            originalId: oldId || undefined,
+            newId,
             name: workflow.name,
             slug: updatedWorkflow?.slug || workflow.slug,
           });
+          
+          // Map old references to new ID
+          if (oldId) workflowIdMap.set(oldId, newId);
+          if (oldSlug) workflowIdMap.set(oldSlug, newId);
+          workflowIdMap.set(workflowDef.name, newId);
         } catch (error: any) {
           result.errors?.push({
             type: 'workflow',

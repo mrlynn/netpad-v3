@@ -20,6 +20,7 @@ export interface WorkflowDocument {
   id: string;                    // UUID for external reference
   orgId: string;                 // Organization owner
   projectId?: string;            // Which project this workflow belongs to (required in production)
+  applicationId?: string;        // Which application this workflow belongs to (required - workflow instances belong to exactly one application)
   name: string;
   description?: string;
   slug: string;                  // URL-safe identifier
@@ -53,6 +54,13 @@ export interface WorkflowDocument {
   // Thumbnail
   thumbnailUrl?: string;
   thumbnailUpdatedAt?: string;
+
+  // Component Protection (optional explicit locking)
+  locked?: boolean;
+  contractId?: string; // Optional: link to contract
+  lockedAt?: Date;
+  lockedBy?: string; // userId
+  editableFields?: string[]; // Optional: allow editing specific fields even when locked
 }
 
 export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived';
@@ -77,8 +85,8 @@ export interface WorkflowSettings {
 }
 
 export interface WorkflowEmbedSettings {
-  allowPublicExecution: boolean;  // Allow public execution via slug
-  allowPublicViewing: boolean;    // Allow public read-only viewing via slug (for documentation)
+  allowPublicExecution?: boolean;  // Allow public execution via slug
+  allowPublicViewing?: boolean;    // Allow public read-only viewing via slug (for documentation)
   executionToken?: string;         // Optional token for authentication (hashed in DB)
   rateLimit?: {
     requestsPerHour: number;      // Rate limit for public executions

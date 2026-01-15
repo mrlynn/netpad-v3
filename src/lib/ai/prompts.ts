@@ -314,6 +314,106 @@ Available field types:
 
 Always respond with valid JSON only, no markdown or explanation text.`,
 
+  applicationGenerator: `You are an expert application builder assistant. Your role is to generate complete applications including metadata, forms, and workflows from natural language descriptions.
+
+You understand application design best practices including:
+- Creating cohesive applications that group related forms and workflows
+- Choosing appropriate application names, descriptions, and tags
+- Designing forms that collect the right data
+- Creating workflows that automate processes based on form submissions
+- Ensuring forms and workflows work together seamlessly
+
+When generating applications, you must output valid JSON with this structure:
+{
+  "application": {
+    "name": "Application Name",
+    "description": "Brief description of what this application does",
+    "tags": ["tag1", "tag2"],
+    "version": "1.0.0",
+    "color": "#00ED64"
+  },
+  "form": {
+    "name": "Form Name",
+    "description": "Form description",
+    "fieldConfigs": [
+      {
+        "path": "fieldPath",
+        "label": "Field Label",
+        "type": "field_type",
+        "required": true/false,
+        "included": true
+      }
+    ]
+  },
+  "workflow": {
+    "name": "Workflow Name",
+    "description": "Brief description",
+    "nodes": [
+      {
+        "tempId": "node_1",
+        "type": "node-type",
+        "label": "Display Label",
+        "position": { "x": 250, "y": 100 },
+        "config": { ... },
+        "enabled": true
+      }
+    ],
+    "edges": [
+      {
+        "sourceTempId": "node_1",
+        "sourceHandle": "output",
+        "targetTempId": "node_2",
+        "targetHandle": "input"
+      }
+    ],
+    "settings": {
+      "executionMode": "sequential",
+      "errorHandling": "stop"
+    }
+  }
+}
+
+## Available workflow node types (you MUST use only these types)
+
+TRIGGERS (every workflow needs exactly one trigger):
+- manual-trigger: Start workflow manually with a button click
+- form-trigger: Trigger when a form is submitted
+- webhook-trigger: Trigger from external HTTP webhook call
+- schedule-trigger: Trigger on a cron schedule (e.g., daily, hourly)
+
+LOGIC:
+- conditional: If/Else branching based on conditions
+- loop: Iterate over array items
+- delay: Wait for a specified duration before continuing
+
+INTEGRATIONS & DATA:
+- http-request: Make HTTP API calls (GET, POST, PUT, DELETE)
+- mongodb-query: Query documents from MongoDB collection
+- mongodb-write: Insert or update documents in MongoDB
+
+ACTIONS:
+- email-send: Send an email message
+- notification: Send a push notification
+
+AI:
+- ai-prompt: Send a prompt to an AI model and get a response
+- ai-classify: Classify text into categories using AI
+- ai-extract: Extract structured data from unstructured text using AI
+
+IMPORTANT:
+- For saving form submissions to MongoDB, use a mongodb-write node (NOT custom names)
+- For sending confirmation emails, use an email-send node (NOT custom names)
+
+IMPORTANT RULES:
+1. The application name should be descriptive and professional
+2. Tags should be relevant and help categorize the application
+3. The form should collect data relevant to the application's purpose
+4. The workflow should typically be triggered by the form submission (form-trigger)
+5. The workflow should process or act on the form data using the node types above (e.g., mongodb-write to save, email-send to email)
+6. Keep forms focused (5-15 fields typically)
+7. Keep workflows simple (3-7 nodes typically)
+8. Always respond with valid JSON only, no markdown or explanation text.`,
+
   formulaAssistant: `You are a formula assistant for a form builder application. Your role is to convert natural language descriptions into formula expressions.
 
 Available functions:
@@ -779,6 +879,107 @@ export function buildWorkflowGenerationPrompt(
     "errorHandling": "stop"
   }
 }`;
+
+  return prompt;
+}
+
+// ============================================
+// Application Generation Prompts
+// ============================================
+
+/**
+ * Build a prompt for application generation
+ */
+export function buildApplicationGenerationPrompt(
+  userPrompt: string,
+  context?: {
+    industry?: string;
+    audience?: string;
+  },
+  options?: {
+    includeForm?: boolean;
+    includeWorkflow?: boolean;
+    maxFields?: number;
+    maxNodes?: number;
+  }
+): string {
+  let prompt = `Generate a complete application configuration for the following request:\n\n"${userPrompt}"`;
+
+  if (context?.industry) {
+    prompt += `\n\nIndustry/Domain: ${context.industry}`;
+  }
+
+  if (context?.audience) {
+    prompt += `\nTarget Audience: ${context.audience}`;
+  }
+
+  if (options?.includeForm === false) {
+    prompt += `\n\nDo NOT generate a form - only generate application metadata and workflow.`;
+  } else if (options?.includeWorkflow === false) {
+    prompt += `\n\nDo NOT generate a workflow - only generate application metadata and form.`;
+  } else {
+    prompt += `\n\nGenerate both a form and a workflow. The workflow should be triggered by form submissions.`;
+  }
+
+  if (options?.maxFields) {
+    prompt += `\nMaximum form fields: ${options.maxFields}`;
+  }
+
+  if (options?.maxNodes) {
+    prompt += `\nMaximum workflow nodes: ${options.maxNodes}`;
+  }
+
+  prompt += `\n\nRespond with a JSON object containing:
+{
+  "application": {
+    "name": "Application Name",
+    "description": "Brief description of what this application does",
+    "tags": ["tag1", "tag2"],
+    "version": "1.0.0",
+    "color": "#00ED64"
+  },
+  "form": {
+    "name": "Form Name",
+    "description": "Form description",
+    "fieldConfigs": [
+      {
+        "path": "fieldPath",
+        "label": "Field Label",
+        "type": "field_type",
+        "required": true/false,
+        "included": true
+      }
+    ]
+  },
+  "workflow": {
+    "name": "Workflow Name",
+    "description": "Brief description",
+    "nodes": [
+      {
+        "tempId": "node_1",
+        "type": "form-trigger",
+        "label": "Form Submitted",
+        "position": { "x": 250, "y": 100 },
+        "config": { "formId": "will_be_set_later" },
+        "enabled": true
+      }
+    ],
+    "edges": [],
+    "settings": {
+      "executionMode": "sequential",
+      "errorHandling": "stop"
+    }
+  }
+}
+
+IMPORTANT:
+- Application name should be descriptive and professional
+- Tags should help categorize the application
+- Form should collect relevant data for the application's purpose
+- Workflow should typically start with a form-trigger node
+- Workflow should process form data (save to database, send email, etc.)
+- Keep forms focused (5-15 fields)
+- Keep workflows simple (3-7 nodes)`;
 
   return prompt;
 }

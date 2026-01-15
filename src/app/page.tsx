@@ -162,8 +162,8 @@ const platformFeatures = [
   },
   {
     icon: <ImportExport sx={{ fontSize: 28 }} />,
-    title: 'Data Portability',
-    description: 'Export your data anytime as JSON or CSV. Take ownership and transfer to your own cluster.',
+    title: 'Application Portability',
+    description: 'Export entire applications as runnable code. Deploy anywhere—NetPad is optional at runtime.',
   },
   {
     icon: <Groups sx={{ fontSize: 28 }} />,
@@ -1081,6 +1081,138 @@ export default function LandingPage() {
         </Container>
       </Box>
 
+      {/* Application Ownership & Portability Section */}
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Chip
+              label="Application Ownership"
+              icon={<Code sx={{ fontSize: 14 }} />}
+              size="small"
+              sx={{
+                mb: 2,
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
+                fontWeight: 600,
+                '& .MuiChip-icon': { color: '#00ED64' }
+              }}
+            />
+            <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
+              Build Applications You
+              <br />Actually Own
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                color: alpha('#fff', 0.8),
+                mb: 2,
+                maxWidth: 700,
+                mx: 'auto',
+                fontWeight: 500,
+                lineHeight: 1.6
+              }}
+            >
+              NetPad doesn't hold your applications hostage.
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: alpha('#fff', 0.6),
+                mb: 4,
+                maxWidth: 600,
+                mx: 'auto',
+                lineHeight: 1.8
+              }}
+            >
+              What you build in NetPad is a real application—defined as code, exportable at any time, and runnable anywhere. Use NetPad as long as it helps. Leave when you don't. Your app keeps working.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3} sx={{ mb: 6 }}>
+            {[
+              {
+                icon: <ImportExport sx={{ fontSize: 32 }} />,
+                title: 'Portable Definitions',
+                description: 'Forms, workflows, and data models export as versioned JSON specs. Git-friendly, diffable, and human-readable.',
+              },
+              {
+                icon: <Cloud sx={{ fontSize: 32 }} />,
+                title: 'Run Anywhere',
+                description: 'Host with NetPad or deploy to your own infrastructure. Export to Express, Next.js, serverless, or Docker.',
+              },
+              {
+                icon: <Code sx={{ fontSize: 32 }} />,
+                title: 'Framework-Friendly',
+                description: 'Export to Node.js, serverless functions, or edge runtimes. Integrate with your existing stack.',
+              },
+              {
+                icon: <GitHub sx={{ fontSize: 32 }} />,
+                title: 'Git-Native',
+                description: 'Diff, review, version, and ship like real software. Your application definitions live in version control.',
+              },
+              {
+                icon: <RocketLaunch sx={{ fontSize: 32 }} />,
+                title: 'One-Click Eject',
+                description: 'Export your entire application as runnable code. NetPad is optional at runtime—your app works without us.',
+              },
+              {
+                icon: <CompareArrows sx={{ fontSize: 32 }} />,
+                title: 'Version Migration',
+                description: 'Every export includes migration guides. Breaking changes are explicit, with rollback instructions included.',
+              },
+            ].map((feature, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <SpotlightCard
+                  spotlightColor="0, 237, 100"
+                  hoverBorderColor={alpha('#00ED64', 0.3)}
+                  sx={{ p: 3, height: '100%' }}
+                >
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 2,
+                      bgcolor: alpha('#00ED64', 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00ED64',
+                      mb: 2
+                    }}
+                  >
+                    {feature.icon}
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: alpha('#fff', 0.6), lineHeight: 1.6 }}>
+                    {feature.description}
+                  </Typography>
+                </SpotlightCard>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box
+            sx={{
+              p: 4,
+              borderRadius: 3,
+              bgcolor: alpha('#00ED64', 0.05),
+              border: '1px solid',
+              borderColor: alpha('#00ED64', 0.2),
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.8), mb: 2, fontStyle: 'italic', fontSize: '1.1rem' }}>
+              "NetPad is not a walled garden. It's a power tool for building applications faster—without deciding how or where they live forever."
+            </Typography>
+            <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
+              — Built for developers who value ownership
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+
       {/* Platform & Security Section - Combined */}
       <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="lg">
@@ -1914,6 +2046,163 @@ console.log('Output:', result.execution.result?.output);`}
         </Container>
       </Box>
 
+      {/* CLI Section */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Chip
+                label="CLI Tool"
+                icon={<Terminal sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{
+                  mb: 2,
+                  bgcolor: alpha('#00ED64', 0.1),
+                  color: '#00ED64',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#00ED64' }
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                Manage Applications
+                <br />From the Command Line
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Use <code style={{ color: '#00ED64', background: alpha('#00ED64', 0.1), padding: '2px 6px', borderRadius: 4 }}>@netpad/cli</code> to install applications from npm, search the marketplace, scaffold new packages, and manage your NetPad organization—all from your terminal.
+              </Typography>
+
+              {/* Install command */}
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography sx={{ color: '#d4d4d4', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#00ED64' }}>$</span> npm install -g @netpad/cli
+                </Typography>
+                <ContentCopy sx={{ color: alpha('#fff', 0.4), fontSize: 18, cursor: 'pointer', '&:hover': { color: '#fff' } }} />
+              </Paper>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  component="a"
+                  href="https://www.npmjs.com/package/@netpad/cli"
+                  target="_blank"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Terminal />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
+                    color: '#001E2B',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
+                    }
+                  }}
+                >
+                  View on npm
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/mrlynn/netpad-v3/tree/main/packages/cli"
+                  target="_blank"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<GitHub />}
+                  sx={{
+                    borderColor: alpha('#fff', 0.3),
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#fff',
+                      bgcolor: alpha('#fff', 0.1),
+                    }
+                  }}
+                >
+                  Documentation
+                </Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                {[
+                  { title: 'Install Packages', description: 'Install NetPad applications and plugins directly from npm into your organization' },
+                  { title: 'Search Marketplace', description: 'Search for packages by name, category, or tags with filtering options' },
+                  { title: 'List Installed', description: 'View all applications installed in your organization with version info' },
+                  { title: 'Create Packages', description: 'Scaffold new application packages with templates and best practices' },
+                  { title: 'Authenticate', description: 'Login with API keys, manage profiles for different environments' },
+                  { title: 'CI/CD Ready', description: 'Use in scripts, GitHub Actions, and automated deployment pipelines' },
+                ].map((feature, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#fff', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#fff', 0.1),
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {feature.description}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Code example */}
+              <Paper
+                sx={{
+                  mt: 3,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ bgcolor: '#00ED64', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#001E2B', fontWeight: 'bold' }}>
+                    CLI Usage Examples
+                  </Typography>
+                  <Chip label="Terminal" size="small" sx={{ bgcolor: 'rgba(0,30,43,0.2)', color: '#001E2B', fontSize: '0.7rem' }} />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.6, overflow: 'auto' }}>
+{`# Install an application from npm
+$ netpad install @netpad/app-customer-feedback
+
+# Search for packages
+$ netpad search "customer feedback"
+
+# List installed applications
+$ netpad list
+
+# Create a new application package
+$ netpad create-app my-app
+
+# Authenticate with API key
+$ netpad login --api-key np_live_xxx`}
+                  </pre>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Deployment Platform Section */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
@@ -1988,7 +2277,7 @@ console.log('Output:', result.execution.result?.output);`}
               Built for Developers
             </Typography>
             <Typography variant="body2" sx={{ color: alpha('#fff', 0.6) }}>
-              Full REST API, webhooks, and JSON export. Self-host or use our managed service.
+              Full REST API, webhooks, and application export. Export as runnable code or self-host your own instance.
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
@@ -2003,6 +2292,12 @@ console.log('Output:', result.execution.result?.output);`}
               label="@netpad/workflows"
               size="small"
               sx={{ bgcolor: alpha('#9C27B0', 0.2), color: '#fff', fontWeight: 600 }}
+            />
+            <Chip
+              icon={<Terminal sx={{ fontSize: 14 }} />}
+              label="@netpad/cli"
+              size="small"
+              sx={{ bgcolor: alpha('#00ED64', 0.2), color: '#fff', fontWeight: 600 }}
             />
             <Chip
               icon={<Code sx={{ fontSize: 14 }} />}
@@ -2023,8 +2318,8 @@ console.log('Output:', result.execution.result?.output);`}
               sx={{ bgcolor: alpha('#fff', 0.1), color: '#fff' }}
             />
             <Chip
-              icon={<DataObject sx={{ fontSize: 14 }} />}
-              label="JSON Export"
+              icon={<ImportExport sx={{ fontSize: 14 }} />}
+              label="Application Export"
               size="small"
               sx={{ bgcolor: alpha('#fff', 0.1), color: '#fff' }}
             />

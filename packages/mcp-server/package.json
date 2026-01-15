@@ -1,7 +1,7 @@
 {
   "name": "@netpad/mcp-server",
-  "version": "0.2.0",
-  "description": "MCP server to help developers build form applications with @netpad/forms - 22 tools for form generation, workflow integration, and more",
+  "version": "2.0.0",
+  "description": "MCP server for AI-assisted NetPad application development - 58 tools for forms, workflows, applications, marketplace, npm, conversational forms, and search interfaces",
   "author": "MongoDB",
   "license": "Apache-2.0",
   "type": "module",
@@ -46,7 +46,12 @@
     "nextjs",
     "mongodb",
     "workflow",
-    "automation"
+    "automation",
+    "applications",
+    "contracts",
+    "releases",
+    "marketplace",
+    "low-code"
   ],
   "repository": {
     "type": "git",

@@ -105,7 +105,7 @@ function SettingsContent() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
         <Typography
           variant="h4"
           sx={{
@@ -118,7 +118,6 @@ function SettingsContent() {
         >
           Settings
         </Typography>
-        <DeployToVercelButton variant="outlined" size="small" />
       </Box>
 
       {/* Self-hosting banner */}

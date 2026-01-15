@@ -1,0 +1,58 @@
+{
+  "id": "contact-form",
+  "slug": "contact",
+  "name": "Contact Us",
+  "description": "Simple contact form for receiving messages",
+  "fieldConfigs": [
+    {
+      "path": "name",
+      "label": "Your Name",
+      "type": "text",
+      "included": true,
+      "required": true,
+      "placeholder": "Enter your full name",
+      "validation": {
+        "minLength": 2,
+        "maxLength": 100
+      }
+    },
+    {
+      "path": "email",
+      "label": "Email Address",
+      "type": "email",
+      "included": true,
+      "required": true,
+      "placeholder": "your.email@example.com",
+      "validation": {
+        "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+      }
+    },
+    {
+      "path": "subject",
+      "label": "Subject",
+      "type": "text",
+      "included": true,
+      "required": true,
+      "placeholder": "What is this regarding?",
+      "validation": {
+        "minLength": 3,
+        "maxLength": 200
+      }
+    },
+    {
+      "path": "message",
+      "label": "Message",
+      "type": "textarea",
+      "included": true,
+      "required": true,
+      "placeholder": "Enter your message here...",
+      "rows": 6,
+      "validation": {
+        "minLength": 10,
+        "maxLength": 2000
+      }
+    }
+  ],
+  "applicationRole": "primary",
+  "displayOrder": 1
+}

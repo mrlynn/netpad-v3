@@ -1,0 +1,64 @@
+{
+  "id": "contact-notification",
+  "slug": "contact-notification",
+  "name": "Contact Form Notification",
+  "description": "Sends email notification when contact form is submitted",
+  "canvas": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "form-trigger",
+        "position": { "x": 100, "y": 200 },
+        "config": {
+          "formId": "YOUR_FORM_ID_HERE",
+          "waitForValidation": false,
+          "includeMetadata": true
+        },
+        "label": "Form Submitted",
+        "enabled": true
+      },
+      {
+        "id": "email-1",
+        "type": "email-send",
+        "position": { "x": 400, "y": 200 },
+        "config": {
+          "to": "contact@example.com",
+          "fromName": "Contact Form",
+          "subject": "New Contact Form Submission: {{trigger.payload.data.subject}}",
+          "body": "You have received a new contact form submission:\n\n**Name:** {{trigger.payload.data.name}}\n**Email:** {{trigger.payload.data.email}}\n**Subject:** {{trigger.payload.data.subject}}\n\n**Message:**\n{{trigger.payload.data.message}}",
+          "bodyFormat": "markdown"
+        },
+        "label": "Send Email Notification",
+        "notes": "Sends email notification to contact@example.com when form is submitted",
+        "enabled": true
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-trigger-to-email",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "email-1",
+        "targetHandle": "input"
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "settings": {
+    "executionMode": "sequential",
+    "maxExecutionTime": 30000,
+    "retryPolicy": {
+      "maxRetries": 2,
+      "backoffMultiplier": 2,
+      "initialDelayMs": 1000
+    },
+    "errorHandling": "stop",
+    "timezone": "UTC"
+  },
+  "variables": [],
+  "tags": ["contact", "email", "notification"]
+}

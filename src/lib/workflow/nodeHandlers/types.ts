@@ -5,6 +5,7 @@
  */
 
 import { NodeExecutionContext, NodeExecutionResult } from '@/types/workflow';
+import { EmailCredentials } from '@/lib/platform/integrationCredentials';
 
 /**
  * Extended context passed to node handlers
@@ -28,6 +29,14 @@ export interface ExtendedNodeContext extends NodeExecutionContext {
     connectionString: string;
     database: string;
   } | null>;
+
+  /**
+   * Get email credentials from the integration vault
+   * Supports SMTP and SendGrid providers
+   * @param credentialId The integration credential ID
+   * @returns Email credentials or null if not found
+   */
+  getEmailCredentials: (credentialId: string) => Promise<EmailCredentials | null>;
 }
 
 /**

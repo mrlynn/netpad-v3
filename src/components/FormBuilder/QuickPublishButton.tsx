@@ -458,7 +458,7 @@ export function QuickPublishButton({
             </DialogContent>
 
             <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button onClick={handleClose} variant="contained" fullWidth>
+              <Button onClick={() => setPublishedUrl(null)} variant="contained" fullWidth>
                 Done
               </Button>
             </DialogActions>

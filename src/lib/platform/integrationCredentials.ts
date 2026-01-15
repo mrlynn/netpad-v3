@@ -723,3 +723,139 @@ export async function validateAtlasCredentials(
     };
   }
 }
+
+// ============================================
+// Email Provider Helpers
+// ============================================
+
+/**
+ * SMTP credentials for email sending
+ */
+export interface SmtpCredentials {
+  host: string;
+  port: number;
+  secure?: boolean;
+  username: string;
+  password: string;
+  fromEmail?: string;
+  fromName?: string;
+}
+
+/**
+ * SendGrid credentials for email sending
+ */
+export interface SendGridCredentials {
+  apiKey: string;
+  fromEmail: string;
+  fromName?: string;
+}
+
+/**
+ * Email credential types that can be returned
+ */
+export type EmailCredentials =
+  | { provider: 'smtp'; credentials: SmtpCredentials }
+  | { provider: 'sendgrid'; credentials: SendGridCredentials };
+
+/**
+ * Get email credentials from the integration vault
+ * Supports both SMTP and SendGrid providers
+ */
+export async function getEmailCredentials(
+  organizationId: string,
+  credentialId: string
+): Promise<EmailCredentials | null> {
+  const collection = await getIntegrationCredentialsCollection(organizationId);
+  const credential = await collection.findOne({
+    credentialId,
+    status: 'active',
+    provider: { $in: ['smtp', 'sendgrid'] },
+  });
+
+  if (!credential) {
+    console.warn(`[IntegrationCreds] Email credential not found or not active: ${credentialId}`);
+    return null;
+  }
+
+  try {
+    const decrypted = decrypt(credential.encryptedCredentials);
+    const credentials = JSON.parse(decrypted);
+
+    // Update usage stats
+    await collection.updateOne(
+      { credentialId },
+      {
+        $set: { lastUsedAt: new Date(), updatedAt: new Date() },
+        $inc: { usageCount: 1 },
+      }
+    );
+
+    if (credential.provider === 'smtp') {
+      const smtpCreds = credentials as SmtpCredentials;
+      // Validate required SMTP fields
+      if (!smtpCreds.host || !smtpCreds.username || !smtpCreds.password) {
+        console.warn(`[IntegrationCreds] SMTP credentials missing required fields for ${credentialId}`);
+        return null;
+      }
+      return {
+        provider: 'smtp',
+        credentials: {
+          host: smtpCreds.host,
+          port: smtpCreds.port || 587,
+          secure: smtpCreds.secure ?? (smtpCreds.port === 465),
+          username: smtpCreds.username,
+          password: smtpCreds.password,
+          fromEmail: smtpCreds.fromEmail,
+          fromName: smtpCreds.fromName,
+        },
+      };
+    }
+
+    if (credential.provider === 'sendgrid') {
+      const sgCreds = credentials as SendGridCredentials;
+      // Validate required SendGrid fields
+      if (!sgCreds.apiKey || !sgCreds.fromEmail) {
+        console.warn(`[IntegrationCreds] SendGrid credentials missing required fields for ${credentialId}`);
+        return null;
+      }
+      return {
+        provider: 'sendgrid',
+        credentials: {
+          apiKey: sgCreds.apiKey,
+          fromEmail: sgCreds.fromEmail,
+          fromName: sgCreds.fromName,
+        },
+      };
+    }
+
+    console.warn(`[IntegrationCreds] Unknown email provider: ${credential.provider}`);
+    return null;
+  } catch (error) {
+    console.error(`[IntegrationCreds] Failed to decrypt email credentials for ${credentialId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * List all email credentials for an organization
+ * Returns credentials for both SMTP and SendGrid providers
+ */
+export async function listEmailCredentials(
+  organizationId: string
+): Promise<IntegrationCredential[]> {
+  const collection = await getIntegrationCredentialsCollection(organizationId);
+
+  const credentials = await collection
+    .find({
+      provider: { $in: ['smtp', 'sendgrid'] },
+      status: { $ne: 'disabled' },
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  // Redact all credentials
+  return credentials.map((c) => ({
+    ...c,
+    encryptedCredentials: '[REDACTED]',
+  }));
+}

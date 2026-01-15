@@ -26,6 +26,9 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  FormControl,
+  Select,
+  InputLabel,
   ToggleButtonGroup,
   ToggleButton,
   Card,
@@ -57,13 +60,21 @@ import {
   Close,
   Check,
   Upload,
+  ViewList,
+  Settings,
+  Create,
 } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { ConnectionPanel } from '@/components/ConnectionPanel/ConnectionPanel';
 import { ExportDialog } from '@/components/DataExport';
 import { SchemaAwareDocumentEditor } from './SchemaAwareDocumentEditor';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { DataViewRowDetailDrawer } from './DataViewRowDetailDrawer';
+import { DataViewEditorDialog } from './DataViewEditorDialog';
+import { DataView } from '@/types/platform';
+import { parseOrgProjectFromPath } from '@/lib/routing';
 
 interface Document {
   _id: string;
@@ -511,6 +522,8 @@ interface DataBrowserProps {
   initialDatabase?: string;
   initialCollection?: string;
   initialVaultId?: string;
+  // Optional projectId for data views support
+  projectId?: string;
 }
 
 export function DataBrowser({
@@ -519,6 +532,7 @@ export function DataBrowser({
   initialDatabase,
   initialCollection,
   initialVaultId,
+  projectId,
 }: DataBrowserProps) {
   const {
     connectionString: ctxConnectionString,
@@ -534,9 +548,11 @@ export function DataBrowser({
 
   // For connection string, we need to fetch from vault if using initialVaultId
   const [fetchedConnectionString, setFetchedConnectionString] = useState<string | null>(null);
+  const [fetchingConnectionString, setFetchingConnectionString] = useState(false);
   const connectionString = fetchedConnectionString || ctxConnectionString;
   const { currentOrgId } = useOrganization();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -564,9 +580,78 @@ export function DataBrowser({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Data view state
+  const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname || '');
+  const effectiveProjectId = projectId || urlProjectId || undefined;
+  const [dataViews, setDataViews] = useState<DataView[]>([]);
+  const [selectedDataView, setSelectedDataView] = useState<DataView | null>(null);
+  const [dataViewCapabilities, setDataViewCapabilities] = useState<{
+    canEdit: boolean;
+    canJsonEdit: boolean;
+    writablePaths: string[];
+    maskedColumns?: string[];
+  } | null>(null);
+  const [loadingDataViews, setLoadingDataViews] = useState(false);
+  const [dataViewEditorOpen, setDataViewEditorOpen] = useState(false);
+  const [editingDataView, setEditingDataView] = useState<DataView | null>(null);
+  const [availableVaults, setAvailableVaults] = useState<Array<{ vaultId: string; name: string; database: string }>>([]);
+
+  // Load data views for project
+  useEffect(() => {
+    if (effectiveProjectId && currentOrgId) {
+      loadDataViews();
+      loadAvailableVaults();
+    }
+  }, [effectiveProjectId, currentOrgId]);
+
+  const loadAvailableVaults = async () => {
+    if (!currentOrgId) return;
+    try {
+      const response = await fetch(`/api/organizations/${currentOrgId}/vault`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVaults(
+          (data.connections || [])
+            .filter((v: any) => v.status === 'active') // Only show active connections
+            .map((v: any) => ({
+              vaultId: v.vaultId,
+              name: v.name,
+              database: v.database,
+            }))
+        );
+      } else {
+        console.error('Failed to load vaults:', await response.text());
+      }
+    } catch (err) {
+      console.error('Failed to load vaults:', err);
+      // Don't show error to user - just log it
+    }
+  };
+
+  const loadDataViews = async (): Promise<DataView[]> => {
+    if (!effectiveProjectId) return [];
+    setLoadingDataViews(true);
+    try {
+      const response = await fetch(`/api/projects/${effectiveProjectId}/data-views`);
+      if (response.ok) {
+        const data = await response.json();
+        const views = data.views || [];
+        setDataViews(views);
+        return views;
+      }
+      return [];
+    } catch (err) {
+      console.error('Failed to load data views:', err);
+      return [];
+    } finally {
+      setLoadingDataViews(false);
+    }
+  };
+
   // Fetch connection string from vault when using initialVaultId
   useEffect(() => {
     if (initialVaultId && currentOrgId && !ctxConnectionString) {
+      setFetchingConnectionString(true);
       const fetchConnectionString = async () => {
         try {
           const response = await fetch(
@@ -578,6 +663,8 @@ export function DataBrowser({
           }
         } catch (err) {
           console.error('Failed to fetch connection string:', err);
+        } finally {
+          setFetchingConnectionString(false);
         }
       };
       fetchConnectionString();
@@ -597,6 +684,46 @@ export function DataBrowser({
 
   // Fetch documents
   const fetchDocuments = useCallback(async () => {
+    // If using data view, use data view query endpoint
+    if (selectedDataView && effectiveProjectId) {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/projects/${effectiveProjectId}/data-views/${selectedDataView.slug}/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filter: {},
+            sort: [{ path: sortField, dir: sortDirection }],
+            page: { limit: rowsPerPage, cursor: String(page * rowsPerPage) },
+            includeMeta: true,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setDocuments(data.documents);
+          setTotalCount(data.totalCount);
+
+          // Use columns from data view
+          const visibleColumns = selectedDataView.columns
+            .filter(col => col.visible)
+            .map(col => col.path);
+          setColumns(visibleColumns);
+        } else {
+          setError(data.error || 'Failed to fetch documents');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch documents');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Fallback to direct MongoDB query
     if (!hasConnection) return;
 
     setLoading(true);
@@ -649,14 +776,36 @@ export function DataBrowser({
     } finally {
       setLoading(false);
     }
-  }, [hasConnection, connectionString, databaseName, collection, page, rowsPerPage, sortField, sortDirection]);
+  }, [hasConnection, connectionString, databaseName, collection, page, rowsPerPage, sortField, sortDirection, selectedDataView, effectiveProjectId]);
+
+  // Load data view capabilities when view is selected
+  useEffect(() => {
+    if (selectedDataView && effectiveProjectId) {
+      loadDataViewCapabilities();
+    } else {
+      setDataViewCapabilities(null);
+    }
+  }, [selectedDataView, effectiveProjectId]);
+
+  const loadDataViewCapabilities = async () => {
+    if (!selectedDataView || !effectiveProjectId) return;
+    try {
+      const response = await fetch(`/api/projects/${effectiveProjectId}/data-views/${selectedDataView.slug}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDataViewCapabilities(data.capabilities);
+      }
+    } catch (err) {
+      console.error('Failed to load data view capabilities:', err);
+    }
+  };
 
   // Fetch on connection or pagination change
   useEffect(() => {
-    if (hasConnection) {
+    if (hasConnection || selectedDataView) {
       fetchDocuments();
     }
-  }, [hasConnection, fetchDocuments]);
+  }, [hasConnection, selectedDataView, fetchDocuments]);
 
   // Handle sort
   const handleSort = (field: string) => {
@@ -768,8 +917,15 @@ export function DataBrowser({
   };
 
   const handleViewDocument = (doc: Document) => {
-    setDetailDocument(doc);
-    setDetailDrawerOpen(true);
+    // If using data view, open edit drawer directly (it has view + edit)
+    if (selectedDataView) {
+      setEditDocument(doc);
+      setEditDrawerOpen(true);
+      setSaveError(null);
+    } else {
+      setDetailDocument(doc);
+      setDetailDrawerOpen(true);
+    }
     handleMenuClose();
   };
 
@@ -782,6 +938,66 @@ export function DataBrowser({
   };
 
   const handleSaveDocument = async (updatedDoc: Record<string, unknown>, encryptedFieldPaths?: string[]) => {
+    // If using data view, use data view mutation endpoint
+    if (selectedDataView && effectiveProjectId && editDocument) {
+      setSaving(true);
+      setSaveError(null);
+
+      try {
+        // Compute ops from changes
+        const ops: Array<{ op: 'set' | 'unset'; path: string; value?: any }> = [];
+        
+        for (const col of selectedDataView.columns) {
+          if (!col.visible) continue;
+          const currentValue = editDocument[col.path];
+          const newValue = updatedDoc[col.path];
+          
+          if (JSON.stringify(currentValue) !== JSON.stringify(newValue)) {
+            if (newValue === null || newValue === undefined || newValue === '') {
+              ops.push({ op: 'unset', path: col.path });
+            } else {
+              ops.push({ op: 'set', path: col.path, value: newValue });
+            }
+          }
+        }
+
+        if (ops.length === 0) {
+          setSaving(false);
+          return;
+        }
+
+        const response = await fetch(
+          `/api/projects/${effectiveProjectId}/data-views/${selectedDataView.slug}/rows/${editDocument._id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ops,
+              context: { source: 'rowDetail' },
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setEditDrawerOpen(false);
+          setEditDocument(null);
+          setSnackbarMessage('Document updated successfully');
+          setSnackbarOpen(true);
+          fetchDocuments();
+        } else {
+          setSaveError(data.error || 'Failed to update document');
+        }
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : 'Failed to update document');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Fallback to direct MongoDB update
     if (!connectionString || !databaseName || !collection) return;
 
     setSaving(true);
@@ -820,6 +1036,44 @@ export function DataBrowser({
         setSnackbarMessage('Document updated successfully');
         setSnackbarOpen(true);
         // Refresh the documents list
+        fetchDocuments();
+      } else {
+        setSaveError(data.error || 'Failed to update document');
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to update document');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle save from data view drawer (patch operations)
+  const handleSaveDataView = async (ops: Array<{ op: 'set' | 'unset'; path: string; value?: any }>) => {
+    if (!selectedDataView || !effectiveProjectId || !editDocument) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${effectiveProjectId}/data-views/${selectedDataView.slug}/rows/${editDocument._id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ops,
+            context: { source: 'rowDetail' },
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEditDrawerOpen(false);
+        setEditDocument(null);
+        setSnackbarMessage('Document updated successfully');
+        setSnackbarOpen(true);
         fetchDocuments();
       } else {
         setSaveError(data.error || 'Failed to update document');
@@ -873,6 +1127,43 @@ export function DataBrowser({
   if (!hasConnection) {
     // If sidebar is disabled, show centered empty state with button to go to connections
     if (!showSidebar) {
+      // Show loading state if we're fetching the connection string
+      if (fetchingConnectionString) {
+        return (
+          <Box
+            sx={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 4,
+              bgcolor: 'background.default',
+            }}
+          >
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 3, sm: 4 },
+                maxWidth: 450,
+                width: '100%',
+                textAlign: 'center',
+                border: '2px dashed',
+                borderColor: alpha('#00ED64', 0.3),
+                borderRadius: 3,
+                bgcolor: alpha('#00ED64', 0.02),
+                mx: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <NetPadLoader size="medium" message="Connecting..." showPhrases={false} />
+            </Paper>
+          </Box>
+        );
+      }
+
       return (
         <Box
           sx={{
@@ -996,7 +1287,7 @@ export function DataBrowser({
     <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
       {loading && documents.length === 0 ? (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <CircularProgress size={32} />
+          <NetPadLoader size="medium" showPhrases={false} />
         </Box>
       ) : documents.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
@@ -1073,7 +1364,7 @@ export function DataBrowser({
     <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
       {loading && documents.length === 0 ? (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <CircularProgress size={32} />
+          <NetPadLoader size="medium" showPhrases={false} />
         </Box>
       ) : documents.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
@@ -1105,7 +1396,7 @@ export function DataBrowser({
     <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
       {loading && documents.length === 0 ? (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <CircularProgress size={32} />
+          <NetPadLoader size="medium" showPhrases={false} />
         </Box>
       ) : documents.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
@@ -1173,22 +1464,99 @@ export function DataBrowser({
           gap: 1,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <TableChart sx={{ fontSize: 20, color: '#00ED64' }} />
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               Data Browser
             </Typography>
           </Box>
-          <Chip
-            label={`${databaseName}.${collection}`}
-            size="small"
-            sx={{
-              bgcolor: alpha('#00ED64', 0.1),
-              color: '#00ED64',
-              fontWeight: 500,
-            }}
-          />
+          {effectiveProjectId && (
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={selectedDataView?.slug || ''}
+                onChange={(e) => {
+                  const view = dataViews.find(v => v.slug === e.target.value);
+                  setSelectedDataView(view || null);
+                  setPage(0);
+                }}
+                displayEmpty
+                sx={{ fontSize: 12 }}
+              >
+                <MenuItem value="">
+                  <em>Direct Collection Access</em>
+                </MenuItem>
+                {dataViews.map((view) => (
+                  <MenuItem key={view.slug} value={view.slug}>
+                    {view.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          {effectiveProjectId && (
+            <>
+              <Tooltip title="Create New Data View">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setEditingDataView(null);
+                    setDataViewEditorOpen(true);
+                  }}
+                >
+                  <Create sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Manage Data Views">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    // Could open a management dialog here
+                    setEditingDataView(null);
+                    setDataViewEditorOpen(true);
+                  }}
+                >
+                  <Settings sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+          {effectiveProjectId && selectedDataView && (
+            <Tooltip title="Edit Data View">
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setEditingDataView(selectedDataView);
+                  setDataViewEditorOpen(true);
+                }}
+              >
+                <Edit sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!selectedDataView && (
+            <Chip
+              label={`${databaseName}.${collection}`}
+              size="small"
+              sx={{
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
+                fontWeight: 500,
+              }}
+            />
+          )}
+          {selectedDataView && (
+            <Chip
+              icon={<ViewList sx={{ fontSize: 14 }} />}
+              label={selectedDataView.name}
+              size="small"
+              sx={{
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
+                fontWeight: 500,
+              }}
+            />
+          )}
           <Chip
             label={loading ? '...' : `${totalCount.toLocaleString()} documents`}
             size="small"
@@ -1361,34 +1729,77 @@ export function DataBrowser({
         </MenuItem>
       </Menu>
 
-      {/* Document Detail Drawer */}
-      <DocumentDetailDrawer
-        open={detailDrawerOpen}
-        document={detailDocument}
-        onClose={() => setDetailDrawerOpen(false)}
-        onCopy={() => handleCopyDocument(detailDocument || undefined)}
-        onEdit={() => detailDocument && handleEditDocument(detailDocument)}
-        onDelete={() => handleDeleteDocument()}
-      />
+      {/* Data View Row Detail Drawer or Document Detail Drawer */}
+      {selectedDataView && dataViewCapabilities ? (
+        <DataViewRowDetailDrawer
+          open={editDrawerOpen}
+          document={editDocument}
+          dataView={selectedDataView}
+          capabilities={dataViewCapabilities}
+          onClose={() => {
+            setEditDrawerOpen(false);
+            setEditDocument(null);
+            setSaveError(null);
+          }}
+          onSave={handleSaveDataView}
+          onDelete={async () => {
+            if (!editDocument || !selectedDataView || !effectiveProjectId) return;
+            if (!confirm(`Are you sure you want to delete this document?\n\nID: ${editDocument._id}`)) {
+              return;
+            }
+            try {
+              const response = await fetch(
+                `/api/projects/${effectiveProjectId}/data-views/${selectedDataView.slug}/rows/${editDocument._id}`,
+                { method: 'DELETE' }
+              );
+              if (response.ok) {
+                setEditDrawerOpen(false);
+                setEditDocument(null);
+                setSnackbarMessage('Document deleted successfully');
+                setSnackbarOpen(true);
+                fetchDocuments();
+              } else {
+                setSaveError('Failed to delete document');
+              }
+            } catch (err) {
+              setSaveError(err instanceof Error ? err.message : 'Failed to delete document');
+            }
+          }}
+          saving={saving}
+          error={saveError}
+        />
+      ) : (
+        <>
+          {/* Document Detail Drawer */}
+          <DocumentDetailDrawer
+            open={detailDrawerOpen}
+            document={detailDocument}
+            onClose={() => setDetailDrawerOpen(false)}
+            onCopy={() => handleCopyDocument(detailDocument || undefined)}
+            onEdit={() => detailDocument && handleEditDocument(detailDocument)}
+            onDelete={() => handleDeleteDocument()}
+          />
 
-      {/* Schema-Aware Document Editor */}
-      <SchemaAwareDocumentEditor
-        open={editDrawerOpen}
-        document={editDocument}
-        database={databaseName || ''}
-        collection={collection || ''}
-        connectionString={connectionString || ''}
-        organizationId={currentOrgId || undefined}
-        vaultId={activeVaultId || undefined}
-        onClose={() => {
-          setEditDrawerOpen(false);
-          setEditDocument(null);
-          setSaveError(null);
-        }}
-        onSave={handleSaveDocument}
-        saving={saving}
-        error={saveError}
-      />
+          {/* Schema-Aware Document Editor */}
+          <SchemaAwareDocumentEditor
+            open={editDrawerOpen}
+            document={editDocument}
+            database={databaseName || ''}
+            collection={collection || ''}
+            connectionString={connectionString || ''}
+            organizationId={currentOrgId || undefined}
+            vaultId={activeVaultId || undefined}
+            onClose={() => {
+              setEditDrawerOpen(false);
+              setEditDocument(null);
+              setSaveError(null);
+            }}
+            onSave={handleSaveDocument}
+            saving={saving}
+            error={saveError}
+          />
+        </>
+      )}
 
       {/* Copy Snackbar */}
       <Snackbar
@@ -1416,6 +1827,64 @@ export function DataBrowser({
           connectionString={!activeVaultId ? connectionString || undefined : undefined}
           database={databaseName!}
           collection={collection!}
+        />
+      )}
+
+      {/* Data View Editor Dialog */}
+      {effectiveProjectId && (
+        <DataViewEditorDialog
+          open={dataViewEditorOpen}
+          onClose={() => {
+            setDataViewEditorOpen(false);
+            setEditingDataView(null);
+          }}
+          onSave={async (viewData) => {
+            try {
+              const url = editingDataView
+                ? `/api/projects/${effectiveProjectId}/data-views/${editingDataView.slug}`
+                : `/api/projects/${effectiveProjectId}/data-views`;
+              
+              const method = editingDataView ? 'PATCH' : 'POST';
+              
+              const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(viewData),
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save data view');
+              }
+
+              // Reload data views
+              const updatedViews = await loadDataViews();
+              
+              // If this was a new view, select it
+              if (!editingDataView) {
+                const data = await response.json();
+                if (data.view) {
+                  const newView = updatedViews.find(v => v.slug === data.view.slug) || data.view;
+                  if (newView) {
+                    setSelectedDataView(newView);
+                  }
+                }
+              } else {
+                // If editing, update selected view if it was the one being edited
+                if (selectedDataView?._id === editingDataView._id) {
+                  const updatedView = updatedViews.find(v => v._id === editingDataView._id);
+                  if (updatedView) {
+                    setSelectedDataView(updatedView);
+                  }
+                }
+              }
+            } catch (err) {
+              throw err;
+            }
+          }}
+          existingView={editingDataView}
+          projectId={effectiveProjectId}
+          availableVaults={availableVaults}
         />
       )}
     </Box>

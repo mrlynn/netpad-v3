@@ -165,12 +165,15 @@ export function WorkflowEmbedCodeGenerator({
 
       case 'execution-ui':
         // Embed execution UI (requires executionId)
+        const executionUiTokenParam = settings.includeToken && executionToken
+          ? `\n    token: '${executionToken}',`
+          : '';
         return `<!-- NetPad Workflow Execution UI Embed -->
 <script src="${baseUrl}/workflow-embed.js"></script>
 <div id="workflow-execution-container"></div>
 <script>
   // First execute the workflow
-  NetPad.executeWorkflow('${workflowSlug}', {${tokenParam}
+  NetPad.executeWorkflow('${workflowSlug}', {${executionUiTokenParam}
     payload: { data: 'value' }
   })
     .then(result => {

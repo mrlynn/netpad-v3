@@ -20,6 +20,7 @@ import {
   Project,
 } from '@/types/platform';
 import { Deployment } from '@/types/deployment';
+import { Application, ApplicationContract, ApplicationRelease, ConfigSchema, WorkflowTemplate } from '@/types/application';
 
 // Connection pool
 let platformClient: MongoClient | null = null;
@@ -82,6 +83,29 @@ export async function getOrgDb(orgId: string): Promise<Db> {
     // Create indexes on first connection
     const db = client.db(dbName);
     await createOrgIndexes(db);
+  } else {
+    // Verify connection is still alive
+    try {
+      await client.db().admin().ping();
+    } catch (error) {
+      // Connection is dead, create a new one
+      console.log(`[Org DB] Connection dead for ${orgId}, reconnecting...`);
+      try {
+        await client.close();
+      } catch {
+        // Ignore close errors
+      }
+      orgClients.delete(orgId);
+      
+      const uri = getPlatformUri();
+      client = new MongoClient(uri);
+      await client.connect();
+      orgClients.set(orgId, client);
+      console.log(`[Org DB] Reconnected to organization database: ${dbName}`);
+      
+      const db = client.db(dbName);
+      await createOrgIndexes(db);
+    }
   }
 
   return client.db(dbName);
@@ -178,6 +202,39 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await clusters.createIndex({ organizationId: 1, projectId: 1 }); // NEW: Composite index
     await clusters.createIndex({ status: 1 });
 
+    // API Keys collection (platform database)
+    const apiKeys = db.collection('api_keys');
+    await apiKeys.createIndex({ id: 1 }, { unique: true });
+    await apiKeys.createIndex({ keyHash: 1 }, { unique: true });
+    await apiKeys.createIndex({ organizationId: 1 });
+    await apiKeys.createIndex({ createdBy: 1 });
+    await apiKeys.createIndex({ status: 1 });
+    await apiKeys.createIndex({ environment: 1 });
+    await apiKeys.createIndex({ organizationId: 1, status: 1 });
+    await apiKeys.createIndex({ expiresAt: 1 }, { sparse: true });
+
+    // Application Reviews collection (platform database)
+    const applicationReviews = db.collection('application_reviews');
+    await applicationReviews.createIndex({ reviewId: 1 }, { unique: true });
+    await applicationReviews.createIndex({ marketplaceApplicationId: 1, status: 1 });
+    await applicationReviews.createIndex({ userId: 1 });
+    await applicationReviews.createIndex({ marketplaceApplicationId: 1, userId: 1 }, { unique: true, partialFilterExpression: { status: 'published' } });
+    await applicationReviews.createIndex({ marketplaceApplicationId: 1, createdAt: -1 });
+    await applicationReviews.createIndex({ marketplaceApplicationId: 1, rating: 1 });
+
+    // Marketplace Applications collection (platform database)
+    const marketplaceApps = db.collection('marketplace_applications');
+    await marketplaceApps.createIndex({ id: 1 }, { unique: true });
+    await marketplaceApps.createIndex({ source: 1 }); // 'web' or 'npm'
+    await marketplaceApps.createIndex({ sourcePackageName: 1 }, { sparse: true }); // For npm packages
+    await marketplaceApps.createIndex({ 'manifest.category': 1 });
+    await marketplaceApps.createIndex({ published: 1, status: 1 });
+    await marketplaceApps.createIndex({ isOfficial: 1 });
+    await marketplaceApps.createIndex({ publishedAt: -1 });
+    await marketplaceApps.createIndex({ 'stats.downloads': -1 });
+    await marketplaceApps.createIndex({ 'stats.rating': -1 });
+    await marketplaceApps.createIndex({ '_syncMetadata.lastSyncedAt': -1 }, { sparse: true }); // For npm sync tracking
+
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
     // Indexes may already exist
@@ -207,6 +264,8 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await forms.createIndex({ 'dataSource.vaultId': 1 });
     await forms.createIndex({ organizationId: 1, projectId: 1 });
     await forms.createIndex({ projectId: 1 });
+    await forms.createIndex({ applicationId: 1, updatedAt: -1 });
+    await forms.createIndex({ projectId: 1, applicationId: 1 });
 
     // Form submissions collection
     const submissions = db.collection('form_submissions');
@@ -251,6 +310,72 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await integrationCreds.createIndex({ createdBy: 1 });
     await integrationCreds.createIndex({ status: 1 });
     await integrationCreds.createIndex({ 'permissions.userId': 1 });
+
+    // Data Views collection
+    const dataViews = db.collection('dataViews');
+    await dataViews.createIndex({ projectId: 1, slug: 1 }, { unique: true });
+    await dataViews.createIndex({ projectId: 1, name: 1 });
+    await dataViews.createIndex({ organizationId: 1, projectId: 1 });
+    await dataViews.createIndex({ 'source.connectionId': 1 });
+    await dataViews.createIndex({ createdBy: 1 });
+
+    // Data Mutations (audit log) collection
+    const dataMutations = db.collection('dataMutations');
+    await dataMutations.createIndex({ projectId: 1, docId: 1, createdAt: -1 });
+    await dataMutations.createIndex({ projectId: 1, dataViewId: 1, createdAt: -1 });
+    await dataMutations.createIndex({ 'actor.userId': 1, createdAt: -1 });
+    await dataMutations.createIndex({ status: 1 });
+
+    // Applications collection
+    const applications = db.collection('applications');
+    await applications.createIndex({ applicationId: 1 }, { unique: true });
+    await applications.createIndex({ organizationId: 1, projectId: 1 });
+    await applications.createIndex({ projectId: 1, slug: 1 }, { unique: true });
+    await applications.createIndex({ projectId: 1 });
+    await applications.createIndex({ organizationId: 1, updatedAt: -1 });
+    await applications.createIndex({ createdBy: 1 });
+    await applications.createIndex({ status: 1 });
+    await applications.createIndex({ isDefault: 1 });
+
+    // Application Contracts collection
+    const applicationContracts = db.collection('applicationContracts');
+    await applicationContracts.createIndex({ contractId: 1 }, { unique: true });
+    await applicationContracts.createIndex({ applicationId: 1 });
+    await applicationContracts.createIndex({ applicationId: 1, version: 1 }, { unique: true }); // Unique: one contract per version
+    await applicationContracts.createIndex({ applicationId: 1, status: 1 }); // For querying active contracts
+
+    // Application Releases collection
+    const applicationReleases = db.collection('applicationReleases');
+    await applicationReleases.createIndex({ releaseId: 1 }, { unique: true });
+    await applicationReleases.createIndex({ applicationId: 1, version: 1 }, { unique: true });
+    await applicationReleases.createIndex({ applicationId: 1, createdAt: -1 });
+
+    // Configuration Schemas collection
+    const configSchemas = db.collection('configSchemas');
+    await configSchemas.createIndex({ configSchemaId: 1 }, { unique: true });
+    await configSchemas.createIndex({ applicationId: 1 });
+    await configSchemas.createIndex({ applicationId: 1, version: 1 });
+
+    // Workflow Templates collection (stored in org DB for custom templates)
+    const workflowTemplates = db.collection('workflowTemplates');
+    await workflowTemplates.createIndex({ templateId: 1 }, { unique: true });
+    await workflowTemplates.createIndex({ createdBy: 1 });
+    await workflowTemplates.createIndex({ tags: 1 });
+
+    // Installed Applications collection (tracks marketplace app installations)
+    const installedApplications = db.collection('installed_applications');
+    await installedApplications.createIndex({ installationId: 1 }, { unique: true });
+    await installedApplications.createIndex({ organizationId: 1, projectId: 1 });
+    await installedApplications.createIndex({ marketplaceApplicationId: 1 });
+    await installedApplications.createIndex({ status: 1, organizationId: 1 });
+    await installedApplications.createIndex({ installedBy: 1 });
+
+    // Application Permissions collection (Phase 10)
+    const applicationPermissions = db.collection('application_permissions');
+    await applicationPermissions.createIndex({ permissionId: 1 }, { unique: true });
+    await applicationPermissions.createIndex({ applicationId: 1, userId: 1 }, { unique: true });
+    await applicationPermissions.createIndex({ organizationId: 1, applicationId: 1 });
+    await applicationPermissions.createIndex({ userId: 1, organizationId: 1 });
 
     console.log(`[Org DB] Indexes created for ${db.databaseName}`);
   } catch (error) {
@@ -321,7 +446,7 @@ export async function getDeploymentsCollection(): Promise<Collection<Deployment>
 // Collection Accessors - Organization
 // ============================================
 
-import { ConnectionVault, PlatformFormSubmission, IntegrationCredential } from '@/types/platform';
+import { ConnectionVault, PlatformFormSubmission, IntegrationCredential, DataView, DataMutation } from '@/types/platform';
 import { ConversationSubmission, StoredTemplate } from '@/types/conversational';
 
 export async function getConnectionVaultCollection(orgId: string): Promise<Collection<ConnectionVault>> {
@@ -357,6 +482,55 @@ export async function getConversationSubmissionsCollection(orgId: string): Promi
 export async function getConversationalTemplatesCollection(orgId: string): Promise<Collection<StoredTemplate>> {
   const db = await getOrgDb(orgId);
   return db.collection<StoredTemplate>('conversational_templates');
+}
+
+// ============================================
+// Application Collection Accessors
+// ============================================
+
+export async function getApplicationsCollection(orgId: string): Promise<Collection<Application>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<Application>('applications');
+}
+
+export async function getApplicationContractsCollection(orgId: string): Promise<Collection<ApplicationContract>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<ApplicationContract>('applicationContracts');
+}
+
+export async function getApplicationReleasesCollection(orgId: string): Promise<Collection<ApplicationRelease>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<ApplicationRelease>('applicationReleases');
+}
+
+export async function getConfigSchemasCollection(orgId: string): Promise<Collection<ConfigSchema>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<ConfigSchema>('configSchemas');
+}
+
+export async function getWorkflowTemplatesCollection(orgId: string): Promise<Collection<WorkflowTemplate>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<WorkflowTemplate>('workflowTemplates');
+}
+
+export async function getDataViewsCollection(orgId: string): Promise<Collection<DataView>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<DataView>('dataViews');
+}
+
+export async function getDataMutationsCollection(orgId: string): Promise<Collection<DataMutation>> {
+  const db = await getOrgDb(orgId);
+  return db.collection<DataMutation>('dataMutations');
+}
+
+export async function getInstalledApplicationsCollection(orgId: string): Promise<Collection<any>> {
+  const db = await getOrgDb(orgId);
+  return db.collection('installed_applications');
+}
+
+export async function getApplicationReviewsCollection(): Promise<Collection<any>> {
+  const db = await getPlatformDb();
+  return db.collection('application_reviews');
 }
 
 // ============================================

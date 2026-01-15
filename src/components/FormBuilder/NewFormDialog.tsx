@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import {
   Dialog,
   DialogTitle,
@@ -27,6 +28,8 @@ interface NewFormDialogProps {
   onConfirm: (formName: string, collectionName: string, projectId?: string) => void;
   suggestedName?: string;
   organizationId?: string;
+  projectId?: string;
+  applicationId?: string;
 }
 
 // Generate a valid MongoDB collection name from a form name
@@ -46,10 +49,20 @@ export function NewFormDialog({
   onConfirm,
   suggestedName = '',
   organizationId,
+  projectId: propProjectId,
+  applicationId: propApplicationId,
 }: NewFormDialogProps) {
+  const params = useParams();
+  // Check if we're in a project context from the URL
+  const urlProjectId = params?.projectId as string | undefined;
+  const isInProjectContext = !!urlProjectId;
+  
+  // Use projectId from props, URL, or empty (for user selection)
+  const effectiveProjectId = propProjectId || urlProjectId || '';
+  
   const [formName, setFormName] = useState(suggestedName);
   const [collectionName, setCollectionName] = useState('');
-  const [projectId, setProjectId] = useState<string>('');
+  const [projectId, setProjectId] = useState<string>(effectiveProjectId);
 
   // Update collection name when form name changes
   useEffect(() => {
@@ -58,19 +71,25 @@ export function NewFormDialog({
 
   // Reset when dialog opens with a new suggested name
   useEffect(() => {
-    if (open && suggestedName) {
-      setFormName(suggestedName);
-      setCollectionName(generateCollectionName(suggestedName));
+    if (open) {
+      if (suggestedName) {
+        setFormName(suggestedName);
+        setCollectionName(generateCollectionName(suggestedName));
+      }
+      // Reset projectId to effective value (from props/URL or empty)
+      setProjectId(effectiveProjectId);
     }
-  }, [open, suggestedName]);
+  }, [open, suggestedName, effectiveProjectId]);
 
   const handleConfirm = () => {
     if (formName.trim() && collectionName.trim()) {
-      onConfirm(formName.trim(), collectionName.trim(), projectId || undefined);
+      // Use effectiveProjectId if we're in project context, otherwise use selected projectId
+      const finalProjectId = isInProjectContext && effectiveProjectId ? effectiveProjectId : (projectId || undefined);
+      onConfirm(formName.trim(), collectionName.trim(), finalProjectId);
       // Reset for next time
       setFormName('');
       setCollectionName('');
-      setProjectId('');
+      setProjectId(effectiveProjectId);
     }
   };
 
@@ -186,14 +205,35 @@ export function NewFormDialog({
 
         {organizationId && (
           <Box sx={{ mt: 3 }}>
-            <ProjectSelector
-              organizationId={organizationId}
-              value={projectId}
-              onChange={setProjectId}
-              required
-              label="Project"
-              helperText="Select a project to organize this form"
-            />
+            {isInProjectContext && effectiveProjectId ? (
+              // Show read-only project info when in project context
+              <Box
+                sx={{
+                  p: 1.5,
+                  bgcolor: alpha('#00ED64', 0.05),
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: alpha('#00ED64', 0.2)
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  <strong style={{ color: '#00ED64' }}>Current Project</strong>
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  This form will be saved to the current project
+                </Typography>
+              </Box>
+            ) : (
+              // Show project selector when not in project context
+              <ProjectSelector
+                organizationId={organizationId}
+                value={projectId}
+                onChange={setProjectId}
+                required
+                label="Project"
+                helperText="Select a project to organize this form"
+              />
+            )}
           </Box>
         )}
       </DialogContent>

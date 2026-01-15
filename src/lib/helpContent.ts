@@ -4220,4 +4220,767 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'quick start',
     ],
   },
+
+  'applications': {
+    id: 'applications',
+    title: 'Applications',
+    description:
+      'Applications are first-class entities that group related forms and workflows together. They provide organization, versioning, and sharing capabilities.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Applications?',
+      },
+      {
+        type: 'text',
+        content:
+          'Applications in NetPad are containers that group related forms and workflows together. Think of an application as a complete solution - like "IT Help Desk" or "Customer Onboarding" - that includes all the forms, workflows, and connections needed to solve a specific business problem.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Benefits',
+      },
+      {
+        type: 'list',
+        content: [
+          'Organization: Group related forms and workflows logically',
+          'Versioning: Create releases to snapshot your application at specific versions',
+          'Sharing: Publish applications to the marketplace for others to use',
+          'Insights: Track application-level statistics (forms, workflows, connections)',
+          'Export: Export entire applications as bundles for backup or sharing',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating Applications',
+      },
+      {
+        type: 'text',
+        content:
+          'Applications are created automatically when you create forms or workflows within a project. You can also create them explicitly from the Applications page. Each application has a name, description, icon, tags, and version.',
+      },
+      {
+        type: 'heading',
+        content: 'Application Structure',
+      },
+      {
+        type: 'list',
+        content: [
+          'Forms: All forms associated with the application',
+          'Workflows: All workflows that automate processes for the application',
+          'Connections: Form-to-workflow connections that trigger automation',
+          'Releases: Versioned snapshots of the application at specific points in time',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Applications help you think about your solution holistically. Instead of managing individual forms and workflows, you manage complete applications that solve business problems.',
+      },
+    ],
+    relatedTopics: ['application-releases', 'marketplace', 'projects-management'],
+    keywords: [
+      'application',
+      'app',
+      'group',
+      'organize',
+      'container',
+      'solution',
+      'package',
+      'bundle',
+    ],
+  },
+
+  'application-releases': {
+    id: 'application-releases',
+    title: 'Application Releases',
+    description:
+      'Create versioned snapshots of your applications with semantic versioning. Releases capture the exact state of forms, workflows, and connections at a point in time.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Releases?',
+      },
+      {
+        type: 'text',
+        content:
+          'Releases are versioned snapshots of your application. They capture the exact state of all forms, workflows, and connections at a specific point in time, allowing you to track changes, roll back if needed, and publish to the marketplace.',
+      },
+      {
+        type: 'heading',
+        content: 'Semantic Versioning',
+      },
+      {
+        type: 'text',
+        content:
+          'Releases use semantic versioning (X.Y.Z format): Major.Minor.Patch. For example, 1.0.0 is the first release, 1.1.0 adds features, and 1.1.1 fixes bugs.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Major (X.0.0): Breaking changes or major new features',
+          'Minor (X.Y.0): New features that are backward compatible',
+          'Patch (X.Y.Z): Bug fixes and minor improvements',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating Releases',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to your application → Releases tab',
+          'Click "Create Release"',
+          'Enter a version number (or use the suggested next version)',
+          'Add a changelog describing what changed',
+          'The release captures a snapshot of all forms, workflows, and connections',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Release Manifest',
+      },
+      {
+        type: 'text',
+        content:
+          'Each release includes a manifest that documents what was included: which forms, workflows, and connections are part of this version. This manifest is used when publishing to the marketplace or exporting the application.',
+      },
+      {
+        type: 'heading',
+        content: 'Publishing Releases',
+      },
+      {
+        type: 'text',
+        content:
+          'Once you create a release, you can publish it to the marketplace. The release becomes the source of truth for the marketplace listing, ensuring users get the exact version you tested and approved.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Create a release before making major changes. This gives you a safe point to roll back to if something goes wrong.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Releases are immutable - once created, they cannot be modified. Create a new release if you need to make changes.',
+      },
+    ],
+    relatedTopics: ['applications', 'marketplace'],
+    keywords: [
+      'release',
+      'version',
+      'versioning',
+      'snapshot',
+      'semantic versioning',
+      'changelog',
+      'manifest',
+      'publish',
+    ],
+  },
+
+  'marketplace': {
+    id: 'marketplace',
+    title: 'Application Marketplace',
+    description:
+      'Discover and share NetPad applications. Browse published applications, import them into your projects, or publish your own applications for others to use.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the Marketplace?',
+      },
+      {
+        type: 'text',
+        content:
+          'The Application Marketplace is a public catalog where you can discover ready-to-use NetPad applications created by the community and NetPad team. Browse applications, preview their contents, and import them directly into your projects.',
+      },
+      {
+        type: 'heading',
+        content: 'Browsing the Marketplace',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to Marketplace from the main navigation',
+          'Browse by category (helpdesk, onboarding, survey, etc.)',
+          'Filter by type (Official NetPad apps vs Community packages)',
+          'Filter by source (Web Marketplace, npm Packages, or All Sources)',
+          'Use quick filter chips in the header to quickly switch between sources',
+          'Search by name, description, or tags',
+          'Sort by popularity, recent additions, or ratings',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Application Details',
+      },
+      {
+        type: 'text',
+        content:
+          'Each marketplace listing shows: application name, description, version, number of forms/workflows/connections, author information, download statistics, and ratings. npm packages also display a red "npm" badge and the package name. Click on an application to see full details and preview its contents.',
+      },
+      {
+        type: 'heading',
+        content: 'Importing Applications',
+      },
+      {
+        type: 'text',
+        content:
+          'Applications can be imported from two sources:',
+      },
+      {
+        type: 'heading',
+        content: 'Web Marketplace Applications',
+      },
+      {
+        type: 'list',
+        content: [
+          'Click "Import" on any web marketplace application',
+          'Select your organization and project',
+          'Choose import options (generate new IDs, preserve slugs, etc.)',
+          'The application\'s forms and workflows are imported into your project',
+          'You can then customize them to fit your needs',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'npm Packages',
+      },
+      {
+        type: 'list',
+        content: [
+          'Filter by "npm Packages" source or click the "npm Packages" chip',
+          'Browse npm packages (they display a red "npm" badge)',
+          'Click "Install from npm" on any npm package',
+          'The package is automatically downloaded from npm registry and installed',
+          'Dependencies are automatically resolved and installed',
+          'The application is created in your project with all forms and workflows',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Publishing Your Applications',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create a release of your application (see Application Releases)',
+          'Click "Publish" on the release',
+          'Fill in marketplace metadata (summary, tags, category)',
+          'Submit for review (admin approval required)',
+          'Once approved, your application appears in the marketplace',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'My Applications',
+      },
+      {
+        type: 'text',
+        content:
+          'The "My Applications" tab shows all applications you\'ve published. You can edit metadata, unpublish/republish, view statistics, and delete listings. Only you can manage your published applications.',
+      },
+      {
+        type: 'heading',
+        content: 'Official vs Community',
+      },
+      {
+        type: 'list',
+        content: [
+          'Official: Applications created and verified by the NetPad team',
+          'Community: Applications created by users and shared publicly',
+          'Both types are available in the marketplace',
+          'Official apps are marked with a verified badge',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Web Marketplace vs npm Packages',
+      },
+      {
+        type: 'text',
+        content:
+          'Applications can be published in two ways:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Web Marketplace: Published directly through the NetPad UI, stored in NetPad database',
+          'npm Packages: Published to npm registry, automatically synced to marketplace',
+          'Both appear in the marketplace and can be installed/imported',
+          'Use the source filter to view only web marketplace apps, only npm packages, or both',
+          'npm packages show a red "npm" badge and display the npm package name',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Before publishing, make sure your application is well-tested and documented. Good descriptions and tags help others discover your application.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Published applications go through an admin review process. Make sure your application follows best practices and includes proper documentation.',
+      },
+    ],
+    relatedTopics: ['applications', 'application-releases', 'npm-packages'],
+    keywords: [
+      'marketplace',
+      'publish',
+      'share',
+      'discover',
+      'import',
+      'catalog',
+      'gallery',
+      'community',
+      'official',
+      'verified',
+    ],
+  },
+
+  'npm-packages': {
+    id: 'npm-packages',
+    title: 'npm Package Integration',
+    description:
+      'Publish and install NetPad applications as npm packages. Share applications through npm registry and install them via npm CLI or web UI.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are npm Packages?',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad applications can be published as npm packages, similar to how n8n publishes community nodes. This allows developers to share applications through the npm registry, making them discoverable and installable via familiar npm workflows.',
+      },
+      {
+        type: 'heading',
+        content: 'Package Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'Applications: Complete, self-contained solutions with forms, workflows, and configuration (@netpad/app-* or @your-org/netpad-app-*)',
+          'Plugins: Reusable components that extend NetPad capabilities (@netpad/plugin-* or @your-org/netpad-plugin-*)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Package Naming',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad packages follow specific naming conventions for discovery:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Official packages: @netpad/app-* or @netpad/plugin-* (verified by NetPad team)',
+          'Community packages: @your-org/netpad-app-* or netpad-app-* (published by developers)',
+          'All packages must include "netpad-app" or "netpad-plugin" in keywords for discovery',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Package Structure',
+      },
+      {
+        type: 'text',
+        content:
+          'Each npm package contains:',
+      },
+      {
+        type: 'list',
+        content: [
+          'package.json: Standard npm package.json with a "netpad" field containing application/plugin metadata',
+          'dist/bundle.json: Complete application bundle with forms, workflows, and configuration',
+          'README.md: Documentation for the package',
+          'CHANGELOG.md: Version history and changes',
+        ],
+      },
+      {
+        type: 'code',
+        content: `{
+  "name": "@netpad/app-customer-feedback",
+  "version": "1.2.0",
+  "description": "Customer feedback collection application",
+  "keywords": ["netpad", "netpad-app", "feedback"],
+  "main": "dist/bundle.json",
+  "netpad": {
+    "type": "application",
+    "applicationId": "app_customer_feedback",
+    "name": "Customer Feedback",
+    "version": "1.2.0",
+    "minNetPadVersion": "3.0.0",
+    "category": "customer-engagement",
+    "dependencies": {
+      "plugins": ["@netpad/plugin-node-slack@^1.0.0"]
+    }
+  }
+}`,
+      },
+      {
+        type: 'heading',
+        content: 'Publishing to npm',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create a release of your application (see Application Releases)',
+          'Use the package builder to generate package.json and bundle.json',
+          'Publish to npm: npm publish',
+          'Package will be automatically discovered by NetPad marketplace sync',
+          'Appears in marketplace within 1 hour of publishing',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Installing from npm',
+      },
+      {
+        type: 'text',
+        content:
+          'You can install npm packages in three ways:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Web UI: Browse marketplace, filter by "npm Packages" source, and click "Install from npm" (handles npm installation automatically)',
+          'CLI: npx @netpad/cli install @netpad/app-customer-feedback',
+          'Direct npm: npm install @netpad/app-customer-feedback (for self-hosted instances)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Marketplace UI Features',
+      },
+      {
+        type: 'text',
+        content:
+          'The marketplace UI includes special features for npm packages:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Source Filter: Filter applications by source (All Sources, Web Marketplace, npm Packages)',
+          'Quick Filter Chips: Click chips in the header to quickly filter by source type',
+          'npm Badge: npm packages display a red "npm" badge to distinguish them from web marketplace applications',
+          'Package Name Display: npm package names are shown in monospace font below the application name',
+          'Install Button: npm packages show an "Install from npm" button instead of the standard "Import" button',
+          'Package Info: Click on an npm package to see detailed package information including the npm package name',
+        ],
+      },
+      {
+        type: 'text',
+        content:
+          'To find npm packages in the marketplace:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Go to the Marketplace page',
+          'Use the "Source" filter dropdown and select "npm Packages"',
+          'Or click the "npm Packages" chip in the header',
+          'Browse npm packages - they will have a red "npm" badge',
+          'Click "Install from npm" to install the package to your project',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Package Discovery',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad marketplace automatically discovers packages from npm registry by:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Searching for packages with keywords: "netpad-app", "netpad-plugin", "netpad-community-app", "netpad-community-plugin"',
+          'Checking for "netpad" field in package.json',
+          'Syncing every hour to discover new packages',
+          'Updating existing packages when new versions are published',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Dependencies',
+      },
+      {
+        type: 'text',
+        content:
+          'Applications can depend on other applications and plugins:',
+      },
+      {
+        type: 'code',
+        content: `{
+  "netpad": {
+    "dependencies": {
+      "applications": ["@netpad/app-notifications@^1.0.0"],
+      "plugins": ["@netpad/plugin-node-slack@^1.0.0"],
+      "workflowTemplates": ["@netpad/template-email-notification@^1.0.0"]
+    }
+  }
+}`,
+      },
+      {
+        type: 'text',
+        content:
+          'When installing an application, all dependencies are automatically resolved and installed.',
+      },
+      {
+        type: 'heading',
+        content: 'Verification',
+      },
+      {
+        type: 'list',
+        content: [
+          'Official packages (@netpad/ scope): Automatically verified, maintained by NetPad team',
+          'Community packages: Can be submitted for verification review to get "Verified by NetPad" badge',
+          'Unverified packages: Still available in marketplace, marked as community packages',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Package Development',
+      },
+      {
+        type: 'list',
+        content: [
+          'Use @netpad/cli to scaffold new packages: npx @netpad/cli create-app my-app',
+          'Build package: npm run build (validates structure and generates bundle.json)',
+          'Test locally before publishing',
+          'Follow semantic versioning (X.Y.Z format)',
+          'Include comprehensive README and CHANGELOG',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Before publishing, validate your package structure using the package validators. Ensure all required fields are present and follow NetPad conventions.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Package names must follow npm naming conventions and NetPad conventions. Official @netpad/ scope is reserved for NetPad team packages.',
+      },
+    ],
+    relatedTopics: ['marketplace', 'applications', 'application-releases', 'application-contracts'],
+    keywords: [
+      'npm',
+      'package',
+      'publish',
+      'install',
+      'registry',
+      'npmjs',
+      'community',
+      'plugin',
+      'bundle',
+      'package.json',
+      'semantic versioning',
+      'dependencies',
+    ],
+  },
+
+  'application-contracts': {
+    id: 'application-contracts',
+    title: 'Application Contracts & Protection',
+    description:
+      'Define explicit contracts for your applications to ensure stability and prevent breaking changes. Protect forms and workflows from accidental modifications.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Application Contracts?',
+      },
+      {
+        type: 'text',
+        content:
+          'Application contracts are explicit definitions of your application\'s public API surface. They document what inputs consumers must provide, what outputs are guaranteed, what side effects occur, what events are emitted, and which behaviors are part of the contract. Contracts enable deterministic breaking change detection and enforcement.',
+      },
+      {
+        type: 'heading',
+        content: 'Why Use Contracts?',
+      },
+      {
+        type: 'list',
+        content: [
+          'Prevent Breaking Changes: Contracts enforce that breaking changes require major version bumps',
+          'Consumer Protection: Consumers know exactly what they can rely on',
+          'Upgrade Safety: Automatic detection of breaking changes during upgrades',
+          'Documentation: Contracts serve as living documentation of your application\'s API',
+          'Component Protection: Lock forms and workflows to prevent accidental modifications',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Contract Components',
+      },
+      {
+        type: 'text',
+        content:
+          'A contract defines five key aspects of your application:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Inputs: What external consumers must provide (fields, types, required/optional, constraints)',
+          'Outputs: What consumers can rely on (guaranteed fields and their types)',
+          'Side Effects: What the application does (writes to collections, API calls, notifications)',
+          'Events: Events the application emits (what external systems can subscribe to)',
+          'Behaviors: Which workflows are part of the public contract (workflow IDs, triggers)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating Contracts',
+      },
+      {
+        type: 'text',
+        content:
+          'Contracts are created in the Contracts tab of your application. You can create contracts manually using the visual Contract Editor, or they can be inferred from your forms and workflows (future feature).',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to your application → Contracts tab',
+          'Click "Create Contract"',
+          'Enter a version number (must match a release version)',
+          'Define inputs, outputs, side effects, events, and behaviors',
+          'Set stability promises (which parts are guaranteed stable)',
+          'Save as draft, then activate when ready',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Contract Lifecycle',
+      },
+      {
+        type: 'list',
+        content: [
+          'Draft: Contract is being defined and can be edited',
+          'Active: Contract is live and enforced. Cannot be modified (create new version instead)',
+          'Deprecated: Contract is no longer recommended but still valid',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Breaking Change Detection',
+      },
+      {
+        type: 'text',
+        content:
+          'When you create a new release, the system compares the new contract with the previous active contract to detect breaking changes. Breaking changes include:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Removed inputs or outputs',
+          'Type changes (string → number)',
+          'Required field changes (optional → required)',
+          'Removed side effects or events',
+          'Removed behaviors or workflow changes',
+          'Removed stability guarantees',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Contract Enforcement',
+      },
+      {
+        type: 'text',
+        content:
+          'Contracts are enforced at release creation time:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Breaking changes require a major version bump (1.0.0 → 2.0.0)',
+          'Non-breaking changes allow minor or patch bumps',
+          'You can override enforcement if needed (with warnings)',
+          'Validation results are shown before release creation',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Component Protection',
+      },
+      {
+        type: 'text',
+        content:
+          'You can explicitly lock forms and workflows to prevent accidental modifications:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Lock components when they\'re part of a published contract',
+          'Locked components show a warning in the editor',
+          'You can specify which fields remain editable (if any)',
+          'Only owners/admins can lock/unlock components',
+          'Lock status is visible in form and workflow editors',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Comparing Contracts',
+      },
+      {
+        type: 'text',
+        content:
+          'Use the Compare feature to see differences between contract versions:',
+      },
+      {
+        type: 'list',
+        content: [
+          'View breaking changes with impact levels (high, medium, low)',
+          'See non-breaking changes that may require consumer updates',
+          'View additive changes (new features)',
+          'Get migration guides for breaking changes',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Best Practices',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create contracts early in development to establish API boundaries',
+          'Activate contracts before publishing to marketplace',
+          'Use stability promises to communicate what won\'t change',
+          'Lock critical components to prevent accidental breaking changes',
+          'Review breaking changes carefully before major version bumps',
+          'Provide migration guides for breaking changes',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Contracts are optional but highly recommended for applications you plan to share or publish. They provide confidence to consumers and help you maintain backward compatibility.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Active contracts cannot be modified. If you need to change a contract, create a new version. This ensures contract immutability and consumer trust.',
+      },
+    ],
+    relatedTopics: ['applications', 'application-releases', 'application-contracts', 'marketplace'],
+    keywords: [
+      'contract',
+      'contracts',
+      'protection',
+      'breaking changes',
+      'versioning',
+      'api',
+      'stability',
+      'lock',
+      'locked',
+      'component protection',
+      'migration',
+      'upgrade',
+      'compatibility',
+      'semantic versioning',
+    ],
+  },
 };

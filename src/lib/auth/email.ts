@@ -37,6 +37,7 @@ export interface SendMagicLinkEmailParams {
   token: string;
   expiresInMinutes?: number;
   returnUrl?: string;
+  directUrl?: string; // Override the default /auth/verify URL (for CLI links)
 }
 
 export async function sendMagicLinkEmail({
@@ -44,11 +45,19 @@ export async function sendMagicLinkEmail({
   token,
   expiresInMinutes = 5,
   returnUrl,
+  directUrl,
 }: SendMagicLinkEmailParams): Promise<boolean> {
-  // Build the magic link URL, optionally including returnUrl
-  let magicLinkUrl = `${APP_URL}/auth/verify?token=${token}`;
-  if (returnUrl) {
-    magicLinkUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
+  // Build the magic link URL
+  // If directUrl is provided (for CLI), use it directly
+  // Otherwise, use the standard /auth/verify URL with optional returnUrl
+  let magicLinkUrl: string;
+  if (directUrl) {
+    magicLinkUrl = directUrl;
+  } else {
+    magicLinkUrl = `${APP_URL}/auth/verify?token=${token}`;
+    if (returnUrl) {
+      magicLinkUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
+    }
   }
 
   const html = `

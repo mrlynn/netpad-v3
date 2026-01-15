@@ -14,6 +14,7 @@ import {
   ProjectSettings,
   ProjectStats,
 } from '@/types/platform';
+import { ensureDefaultApplication } from './applications';
 
 // ============================================
 // Helper Functions
@@ -114,6 +115,21 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
   };
 
   await projectsCollection.insertOne(project);
+
+  // Auto-create default application for the project (Phase 1 requirement)
+  try {
+    await ensureDefaultApplication(
+      input.organizationId,
+      project.projectId,
+      input.createdBy
+    );
+  } catch (error) {
+    // Log but don't fail project creation if default app creation fails
+    console.error('[Projects] Failed to create default application:', error);
+    // TODO: Consider whether to rollback project creation or continue
+    // For now, we continue - the default app can be created later if needed
+  }
+
   return project;
 }
 

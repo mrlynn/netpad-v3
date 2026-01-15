@@ -15,7 +15,14 @@
     "test:unit": "jest --testPathPattern=tests/unit",
     "test:integration": "jest --testPathPattern=tests/integration",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "seed:marketplace": "tsx scripts/seed-marketplace.ts",
+    "verify:marketplace": "tsx scripts/verify-marketplace.ts",
+    "test:npm-sync": "tsx scripts/test-npm-sync.ts",
+    "test:contracts": "tsx scripts/test-contracts.ts",
+    "migrate:default-applications": "tsx scripts/migrate-default-applications.ts",
+    "migrate:backfill-application-ids": "tsx scripts/migrate-backfill-application-ids.ts",
+    "seed:workflow-templates": "tsx scripts/seed-workflow-templates.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -42,6 +49,7 @@
     "nanoid": "^5.1.6",
     "next": "14.2.5",
     "nodemailer": "^7.0.11",
+    "npm-registry-fetch": "^19.1.1",
     "openai": "^6.15.0",
     "pdf-parse": "^2.4.5",
     "react": "^18.3.1",
@@ -52,6 +60,8 @@
     "recharts": "^3.6.0",
     "remark-gfm": "^4.0.1",
     "stripe": "^20.1.0",
+    "swr": "^2.3.8",
+    "tar": "^7.5.2",
     "xlsx": "^0.18.5",
     "zundo": "^2.3.0",
     "zustand": "^5.0.9"

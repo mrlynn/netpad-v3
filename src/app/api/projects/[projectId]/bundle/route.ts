@@ -166,6 +166,7 @@ export async function GET(
           projectName: project.name,
           formsCount: formDefinitions.length,
           workflowsCount: workflowDefinitions.length,
+          connectionsCount: bundle.connections?.length || 0,
           exportedAt: new Date().toISOString(),
         },
       }, {

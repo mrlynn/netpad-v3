@@ -15,6 +15,7 @@ import {
   WorkflowVersion,
   WorkflowCanvas,
 } from '@/types/workflow';
+import { ensureDefaultApplication } from '@/lib/platform/applications';
 
 // ============================================
 // COLLECTION ACCESSORS
@@ -129,6 +130,8 @@ export async function createOrgWorkflowIndexes(orgId: string): Promise<void> {
     await workflows.createIndex({ createdBy: 1 });
     await workflows.createIndex({ orgId: 1, projectId: 1 });
     await workflows.createIndex({ projectId: 1 });
+    await workflows.createIndex({ applicationId: 1, updatedAt: -1 });
+    await workflows.createIndex({ projectId: 1, applicationId: 1 });
 
     // Workflow versions collection
     const versions = db.collection('workflow_versions');
@@ -166,6 +169,9 @@ export async function createWorkflow(
     description?: string;
     tags?: string[];
     projectId?: string;
+    applicationId?: string; // Phase 2: Optional applicationId
+    templateId?: string; // Phase 4: Optional template to seed from
+    templateVersion?: string; // Phase 4: Optional template version
   }
 ): Promise<WorkflowDocument> {
   const collection = await getWorkflowsCollection(orgId);
@@ -180,16 +186,61 @@ export async function createWorkflow(
     slug = `${slug}-${nanoid(4)}`;
   }
 
+  // Phase 2: Ensure applicationId is set if projectId is provided
+  let applicationId = data.applicationId;
+  if (!applicationId && data.projectId) {
+    try {
+      const defaultApp = await ensureDefaultApplication(orgId, data.projectId, userId);
+      applicationId = defaultApp.applicationId;
+    } catch (error) {
+      console.error('[Workflow DB] Failed to ensure default application:', error);
+      // Continue without applicationId for now - will be backfilled in migration
+    }
+  }
+
+  // Phase 4: Load template definition if templateId is provided
+  let initialCanvas = createEmptyCanvas();
+  let initialSettings = { ...DEFAULT_WORKFLOW_SETTINGS };
+  let initialVariables: any[] = [];
+
+  if (data.templateId) {
+    try {
+      const { getWorkflowTemplatesCollection } = await import('@/lib/platform/db');
+      const templatesCollection = await getWorkflowTemplatesCollection(orgId);
+      const templateQuery: any = { templateId: data.templateId };
+      if (data.templateVersion) {
+        templateQuery.version = data.templateVersion;
+      }
+      const template = await templatesCollection.findOne(templateQuery);
+      
+      if (template && template.definition) {
+        if (template.definition.canvas) {
+          initialCanvas = template.definition.canvas;
+        }
+        if (template.definition.settings) {
+          initialSettings = { ...DEFAULT_WORKFLOW_SETTINGS, ...template.definition.settings };
+        }
+        if (template.definition.variables) {
+          initialVariables = template.definition.variables;
+        }
+      }
+    } catch (error) {
+      console.error('[Workflow DB] Failed to load template:', error);
+      // Continue with empty canvas if template load fails
+    }
+  }
+
   const workflow: WorkflowDocument = {
     id,
     orgId,
     projectId: data.projectId,
+    applicationId, // Phase 2: Include applicationId
     name: data.name,
     description: data.description,
     slug,
-    canvas: createEmptyCanvas(),
-    settings: { ...DEFAULT_WORKFLOW_SETTINGS },
-    variables: [],
+    canvas: initialCanvas, // Phase 4: Use template canvas if provided
+    settings: initialSettings, // Phase 4: Use template settings if provided
+    variables: initialVariables, // Phase 4: Use template variables if provided
     status: 'draft',
     version: 1,
     tags: data.tags || [],
@@ -235,6 +286,7 @@ export async function listWorkflows(
     status?: string;
     tags?: string[];
     projectId?: string;
+    applicationId?: string; // Phase 2: Filter by application
     page?: number;
     pageSize?: number;
     sortBy?: string;
@@ -246,6 +298,7 @@ export async function listWorkflows(
     status,
     tags,
     projectId,
+    applicationId, // Phase 2: Filter by application
     page = 1,
     pageSize = 20,
     sortBy = 'updatedAt',
@@ -257,6 +310,7 @@ export async function listWorkflows(
   if (status) query.status = status;
   if (tags && tags.length > 0) query.tags = { $in: tags };
   if (projectId) query.projectId = projectId;
+  if (applicationId) query.applicationId = applicationId; // Phase 2: Filter by application
 
   // Get total count
   const total = await collection.countDocuments(query);

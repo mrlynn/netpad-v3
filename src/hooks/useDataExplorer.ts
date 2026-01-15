@@ -3,21 +3,26 @@
  *
  * Handles:
  * - Loading cluster and vault information
- * - Lazy loading databases and collections
+ * - Lazy loading databases and collections with SWR caching
  * - Fetching linked forms/workflows for selected collections
  * - Search/filter functionality
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSWRConfig } from 'swr';
 import { useClusterProvisioning } from './useClusterProvisioning';
+import {
+  useDatabases,
+  useCollections,
+  useLinkedResources,
+  cacheKeys,
+} from '@/lib/swr';
 import type {
   ClusterTreeNode,
   DatabaseTreeNode,
   CollectionTreeNode,
   SelectedNode,
   LinkedResourceInfo,
-  DatabaseInfo,
-  CollectionStats,
 } from '@/types/dataExplorer';
 
 interface UseDataExplorerResult {
@@ -56,18 +61,51 @@ interface UseDataExplorerResult {
 export function useDataExplorer(
   orgId: string | undefined
 ): UseDataExplorerResult {
+  const { mutate } = useSWRConfig();
   const { status: clusterStatus, loading: clusterLoading, refetch: refetchCluster } = useClusterProvisioning(orgId);
 
   const [clusters, setClusters] = useState<ClusterTreeNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Linked resources state
-  const [linkedForms, setLinkedForms] = useState<LinkedResourceInfo[]>([]);
-  const [linkedWorkflows, setLinkedWorkflows] = useState<LinkedResourceInfo[]>([]);
-  const [linkedLoading, setLinkedLoading] = useState(false);
+  // Track which cluster/database is currently being expanded for SWR hooks
+  const [expandingClusterId, setExpandingClusterId] = useState<string | null>(null);
+  const [expandingDatabase, setExpandingDatabase] = useState<{ clusterId: string; database: string } | null>(null);
+
+  // Get the current vaultId for the expanding cluster
+  const expandingCluster = clusters.find(c => c.clusterId === expandingClusterId);
+  const expandingVaultId = expandingCluster?.vaultId;
+
+  // SWR hook for databases - only fetches when expandingClusterId is set
+  const {
+    data: databasesData,
+    error: databasesError,
+    isLoading: databasesLoading,
+  } = useDatabases(orgId, expandingVaultId);
+
+  // SWR hook for collections - only fetches when expandingDatabase is set
+  const expandingDbCluster = clusters.find(c => c.clusterId === expandingDatabase?.clusterId);
+  const {
+    data: collectionsData,
+    error: collectionsError,
+    isLoading: collectionsLoading,
+  } = useCollections(
+    orgId,
+    expandingDbCluster?.vaultId,
+    expandingDatabase?.database,
+    { includeStats: true }
+  );
+
+  // SWR hook for linked resources - fetches when a collection is selected
+  const {
+    data: linkedResourcesData,
+    isLoading: linkedLoading,
+  } = useLinkedResources(
+    orgId,
+    selectedNode?.vaultId,
+    selectedNode?.collection
+  );
 
   // Initialize tree from cluster status
   useEffect(() => {
@@ -79,7 +117,6 @@ export function useDataExplorer(
     const cluster = clusterStatus.cluster;
 
     // Build initial tree with cluster node
-    // Note: database name is not stored on cluster, it will be loaded dynamically from the vault
     const clusterNode: ClusterTreeNode = {
       clusterId: cluster.clusterId || 'default',
       name: cluster.atlasClusterName || 'NetPad Cluster',
@@ -88,7 +125,7 @@ export function useDataExplorer(
       provider: (cluster.provider as 'AWS' | 'GCP' | 'AZURE') || 'AWS',
       region: cluster.region || 'US_EAST_1',
       vaultId: clusterStatus.vaultId || '',
-      database: 'forms', // Default database name, actual databases loaded on expand
+      database: 'forms',
       databases: [],
       isExpanded: false,
       isLoading: false,
@@ -97,95 +134,129 @@ export function useDataExplorer(
     setClusters([clusterNode]);
   }, [clusterStatus]);
 
-  // Fetch databases for a cluster
-  const fetchDatabases = useCallback(
-    async (clusterId: string, vaultId: string): Promise<DatabaseInfo[]> => {
-      if (!vaultId || !orgId) return [];
+  // Handle databases data from SWR
+  useEffect(() => {
+    if (!expandingClusterId || !databasesData?.databases) return;
 
-      try {
-        const response = await fetch(
-          `/api/collections?organizationId=${orgId}&vaultId=${vaultId}`
-        );
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || 'Failed to fetch databases');
-        }
-        const data = await response.json();
-        return data.databases || [];
-      } catch (err) {
-        console.error('Failed to fetch databases:', err);
-        throw err;
-      }
-    },
-    [orgId]
-  );
+    const cluster = clusters.find(c => c.clusterId === expandingClusterId);
+    if (!cluster) return;
 
-  // Fetch collections for a database
-  const fetchCollections = useCallback(
-    async (vaultId: string, database: string): Promise<CollectionStats[]> => {
-      if (!vaultId || !database || !orgId) return [];
+    setClusters((prev) =>
+      prev.map((c) => {
+        if (c.clusterId !== expandingClusterId) return c;
 
-      try {
-        const response = await fetch(
-          `/api/collections?organizationId=${orgId}&vaultId=${vaultId}&database=${database}&includeStats=true`
-        );
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || 'Failed to fetch collections');
-        }
-        const data = await response.json();
-        return data.collections || [];
-      } catch (err) {
-        console.error('Failed to fetch collections:', err);
-        throw err;
-      }
-    },
-    [orgId]
-  );
+        const dbNodes: DatabaseTreeNode[] = databasesData.databases.map((db) => ({
+          name: db.name,
+          vaultId: cluster.vaultId,
+          sizeOnDisk: db.sizeOnDisk,
+          collections: [],
+          isExpanded: false,
+          isLoading: false,
+          isEmpty: db.empty,
+        }));
 
-  // Fetch linked resources for a collection
-  const fetchLinkedResources = useCallback(
-    async (vaultId: string, collection: string) => {
-      if (!orgId || !collection) return;
+        return { ...c, databases: dbNodes, isExpanded: true, isLoading: false };
+      })
+    );
 
-      setLinkedLoading(true);
-      try {
-        const params = new URLSearchParams({
-          organizationId: orgId,
-          collection,
-          ...(vaultId && { vaultId }),
-        });
+    // Clear expanding state
+    setExpandingClusterId(null);
+  }, [databasesData, expandingClusterId, clusters]);
 
-        const response = await fetch(`/api/data-explorer/linked-resources?${params}`);
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || 'Failed to fetch linked resources');
-        }
+  // Handle databases error
+  useEffect(() => {
+    if (databasesError && expandingClusterId) {
+      setError(databasesError.message || 'Failed to load databases');
+      setClusters((prev) =>
+        prev.map((c) =>
+          c.clusterId === expandingClusterId ? { ...c, isLoading: false } : c
+        )
+      );
+      setExpandingClusterId(null);
+    }
+  }, [databasesError, expandingClusterId]);
 
-        const data = await response.json();
-        setLinkedForms(data.forms || []);
-        setLinkedWorkflows(data.workflows || []);
-      } catch (err) {
-        console.error('Failed to fetch linked resources:', err);
-        setLinkedForms([]);
-        setLinkedWorkflows([]);
-      } finally {
-        setLinkedLoading(false);
-      }
-    },
-    [orgId]
-  );
+  // Handle collections data from SWR
+  useEffect(() => {
+    if (!expandingDatabase || !collectionsData?.collections) return;
 
-  // Expand cluster - loads databases
+    const { clusterId, database } = expandingDatabase;
+    const cluster = clusters.find(c => c.clusterId === clusterId);
+    if (!cluster) return;
+
+    setClusters((prev) =>
+      prev.map((c) => {
+        if (c.clusterId !== clusterId) return c;
+
+        return {
+          ...c,
+          databases: c.databases.map((db) => {
+            if (db.name !== database) return db;
+
+            const collNodes: CollectionTreeNode[] = collectionsData.collections.map((coll) => ({
+              name: coll.name,
+              database,
+              vaultId: cluster.vaultId,
+              type: coll.type || 'collection',
+              documentCount: coll.documentCount || 0,
+              storageSize: coll.storageSize || 0,
+              avgDocumentSize: coll.avgObjSize,
+              indexCount: coll.indexCount,
+              linkedForms: [],
+              linkedWorkflows: [],
+              isLoadingLinked: false,
+            }));
+
+            return {
+              ...db,
+              collections: collNodes,
+              isExpanded: true,
+              isLoading: false,
+            };
+          }),
+        };
+      })
+    );
+
+    // Clear expanding state
+    setExpandingDatabase(null);
+  }, [collectionsData, expandingDatabase, clusters]);
+
+  // Handle collections error
+  useEffect(() => {
+    if (collectionsError && expandingDatabase) {
+      setError(collectionsError.message || 'Failed to load collections');
+      const { clusterId, database } = expandingDatabase;
+      setClusters((prev) =>
+        prev.map((c) => {
+          if (c.clusterId !== clusterId) return c;
+          return {
+            ...c,
+            databases: c.databases.map((db) =>
+              db.name === database ? { ...db, isLoading: false } : db
+            ),
+          };
+        })
+      );
+      setExpandingDatabase(null);
+    }
+  }, [collectionsError, expandingDatabase]);
+
+  // Expand cluster - triggers SWR fetch for databases
   const expandCluster = useCallback(
-    async (clusterId: string) => {
+    (clusterId: string) => {
       setClusters((prev) =>
         prev.map((cluster) => {
           if (cluster.clusterId !== clusterId) return cluster;
 
-          // If already expanded and has databases, just toggle
+          // If already expanded and has databases, just toggle visibility
           if (cluster.isExpanded && cluster.databases.length > 0) {
             return cluster;
+          }
+
+          // If databases already cached (from previous expand), use them
+          if (cluster.databases.length > 0) {
+            return { ...cluster, isExpanded: true };
           }
 
           return { ...cluster, isExpanded: true, isLoading: true };
@@ -195,36 +266,12 @@ export function useDataExplorer(
       const cluster = clusters.find((c) => c.clusterId === clusterId);
       if (!cluster || !cluster.vaultId) return;
 
-      try {
-        const databases = await fetchDatabases(clusterId, cluster.vaultId);
-
-        setClusters((prev) =>
-          prev.map((c) => {
-            if (c.clusterId !== clusterId) return c;
-
-            const dbNodes: DatabaseTreeNode[] = databases.map((db) => ({
-              name: db.name,
-              vaultId: cluster.vaultId,
-              sizeOnDisk: db.sizeOnDisk,
-              collections: [],
-              isExpanded: false,
-              isLoading: false,
-              isEmpty: db.empty,
-            }));
-
-            return { ...c, databases: dbNodes, isExpanded: true, isLoading: false };
-          })
-        );
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load databases');
-        setClusters((prev) =>
-          prev.map((c) =>
-            c.clusterId === clusterId ? { ...c, isLoading: false } : c
-          )
-        );
+      // Only trigger fetch if we don't have databases yet
+      if (cluster.databases.length === 0) {
+        setExpandingClusterId(clusterId);
       }
     },
-    [clusters, fetchDatabases]
+    [clusters]
   );
 
   const collapseCluster = useCallback((clusterId: string) => {
@@ -237,7 +284,7 @@ export function useDataExplorer(
     );
   }, []);
 
-  // Expand database - loads collections
+  // Expand database - triggers SWR fetch for collections
   const expandDatabase = useCallback(
     async (clusterId: string, database: string) => {
       setClusters((prev) =>
@@ -249,9 +296,14 @@ export function useDataExplorer(
             databases: cluster.databases.map((db) => {
               if (db.name !== database) return db;
 
-              // If already expanded and has collections, just toggle
+              // If already expanded and has collections, just toggle visibility
               if (db.isExpanded && db.collections.length > 0) {
                 return db;
+              }
+
+              // If collections already cached, use them
+              if (db.collections.length > 0) {
+                return { ...db, isExpanded: true };
               }
 
               return { ...db, isExpanded: true, isLoading: true };
@@ -264,59 +316,12 @@ export function useDataExplorer(
       const dbNode = cluster?.databases.find((d) => d.name === database);
       if (!cluster || !dbNode) return;
 
-      try {
-        const collections = await fetchCollections(cluster.vaultId, database);
-
-        setClusters((prev) =>
-          prev.map((c) => {
-            if (c.clusterId !== clusterId) return c;
-
-            return {
-              ...c,
-              databases: c.databases.map((db) => {
-                if (db.name !== database) return db;
-
-                const collNodes: CollectionTreeNode[] = collections.map((coll) => ({
-                  name: coll.name,
-                  database,
-                  vaultId: cluster.vaultId,
-                  type: coll.type || 'collection',
-                  documentCount: coll.documentCount || 0,
-                  storageSize: coll.storageSize || 0,
-                  avgDocumentSize: coll.avgObjSize,
-                  indexCount: coll.indexCount,
-                  linkedForms: [],
-                  linkedWorkflows: [],
-                  isLoadingLinked: false,
-                }));
-
-                return {
-                  ...db,
-                  collections: collNodes,
-                  isExpanded: true,
-                  isLoading: false,
-                };
-              }),
-            };
-          })
-        );
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load collections');
-        setClusters((prev) =>
-          prev.map((c) => {
-            if (c.clusterId !== clusterId) return c;
-
-            return {
-              ...c,
-              databases: c.databases.map((db) =>
-                db.name === database ? { ...db, isLoading: false } : db
-              ),
-            };
-          })
-        );
+      // Only trigger fetch if we don't have collections yet
+      if (dbNode.collections.length === 0) {
+        setExpandingDatabase({ clusterId, database });
       }
     },
-    [clusters, fetchCollections]
+    [clusters]
   );
 
   const collapseDatabase = useCallback((clusterId: string, database: string) => {
@@ -334,7 +339,7 @@ export function useDataExplorer(
     );
   }, []);
 
-  // Select a collection
+  // Select a collection - SWR will automatically fetch linked resources
   const selectCollection = useCallback(
     (clusterId: string, database: string, collection: string, vaultId: string) => {
       setSelectedNode({
@@ -344,39 +349,58 @@ export function useDataExplorer(
         database,
         collection,
       });
-
-      // Fetch linked resources for this collection
-      fetchLinkedResources(vaultId, collection);
     },
-    [fetchLinkedResources]
+    []
   );
 
   const clearSelection = useCallback(() => {
     setSelectedNode(null);
-    setLinkedForms([]);
-    setLinkedWorkflows([]);
   }, []);
 
-  // Refresh all data
+  // Refresh all data - invalidates SWR cache
   const refresh = useCallback(async () => {
-    setLoading(true);
     setError(null);
 
-    try {
-      await refetchCluster();
-      // Reset tree state to trigger re-load
-      setClusters([]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh');
-    } finally {
-      setLoading(false);
+    // Get all vaultIds from clusters to invalidate their caches
+    const vaultIds = clusters.map(c => c.vaultId).filter(Boolean);
+
+    // Invalidate all SWR caches for this org
+    if (orgId) {
+      for (const vaultId of vaultIds) {
+        // Invalidate databases cache
+        mutate(cacheKeys.databases(orgId, vaultId));
+
+        // Invalidate collections cache for all expanded databases
+        const cluster = clusters.find(c => c.vaultId === vaultId);
+        if (cluster) {
+          for (const db of cluster.databases) {
+            mutate(cacheKeys.collections(orgId, vaultId, db.name));
+          }
+        }
+      }
+
+      // Invalidate linked resources if a collection is selected
+      if (selectedNode?.collection) {
+        mutate(
+          cacheKeys.linkedResources(orgId, selectedNode.collection, selectedNode.vaultId)
+        );
+      }
     }
-  }, [refetchCluster]);
+
+    // Refetch cluster status
+    await refetchCluster();
+
+    // Reset tree state to trigger re-load
+    setClusters([]);
+  }, [orgId, clusters, selectedNode, mutate, refetchCluster]);
+
+  // Compute loading state
+  const loading = clusterLoading || databasesLoading || collectionsLoading;
 
   return {
     clusters,
     selectedNode,
-    loading: loading || clusterLoading,
+    loading,
     error,
 
     expandCluster,
@@ -386,8 +410,8 @@ export function useDataExplorer(
     selectCollection,
     clearSelection,
 
-    linkedForms,
-    linkedWorkflows,
+    linkedForms: linkedResourcesData?.forms || [],
+    linkedWorkflows: linkedResourcesData?.workflows || [],
     linkedLoading,
 
     searchQuery,

@@ -29,8 +29,9 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { getOrgProjectUrl } from '@/lib/routing';
 import { VariablePickerButton } from '../../VariablePicker';
-import { ConfigField, SwitchCase } from './utils';
+import { ConfigField, SwitchCase, EmailCredentialOption } from './utils';
 import { SwitchCasesEditor } from './SwitchCasesEditor';
+import { Email as EmailIcon, Send as SendIcon } from '@mui/icons-material';
 
 interface ConfigFieldRendererProps {
   field: ConfigField;
@@ -51,6 +52,8 @@ interface ConfigFieldRendererProps {
     status: string;
   }>;
   connectionsLoading?: boolean;
+  availableEmailCredentials?: EmailCredentialOption[];
+  emailCredentialsLoading?: boolean;
 }
 
 export function ConfigFieldRenderer({
@@ -62,6 +65,8 @@ export function ConfigFieldRenderer({
   formsLoading = false,
   availableConnections = [],
   connectionsLoading = false,
+  availableEmailCredentials = [],
+  emailCredentialsLoading = false,
 }: ConfigFieldRendererProps) {
   const theme = useTheme();
   const params = useParams();
@@ -390,6 +395,139 @@ export function ConfigFieldRenderer({
           cases={(value as SwitchCase[]) || []}
           onChange={(newCases) => onChange(field.key, newCases)}
         />
+      );
+
+    case 'email-credential-select':
+      const selectedEmailCred = availableEmailCredentials.find(c => c.credentialId === value);
+      const currentValueIsValidCredId = typeof value === 'string' && (
+        availableEmailCredentials.some(c => c.credentialId === value) ||
+        /^intcred_[a-zA-Z0-9]+$/.test(value)
+      );
+      return (
+        <Box key={field.key} sx={{ mb: 2 }}>
+          <Autocomplete
+            options={availableEmailCredentials}
+            loading={emailCredentialsLoading}
+            value={selectedEmailCred || null}
+            onChange={(_, newValue) => {
+              if (newValue) {
+                onChange(field.key, newValue.credentialId);
+              } else {
+                onChange(field.key, '');
+              }
+            }}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, val) => option.credentialId === val.credentialId}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start !important' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                  {option.provider === 'sendgrid' ? (
+                    <SendIcon sx={{ fontSize: 16, color: '#1A82E2' }} />
+                  ) : (
+                    <EmailIcon sx={{ fontSize: 16, color: '#EA4335' }} />
+                  )}
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {option.name}
+                  </Typography>
+                  <Chip
+                    label={option.provider.toUpperCase()}
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: '0.65rem',
+                      bgcolor: option.provider === 'sendgrid'
+                        ? alpha('#1A82E2', 0.1)
+                        : alpha('#EA4335', 0.1),
+                      color: option.provider === 'sendgrid' ? '#1A82E2' : '#EA4335',
+                    }}
+                  />
+                  <Chip
+                    label={option.status}
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: '0.65rem',
+                      bgcolor: option.status === 'active'
+                        ? alpha(theme.palette.success.main, 0.1)
+                        : alpha(theme.palette.warning.main, 0.1),
+                      color: option.status === 'active'
+                        ? theme.palette.success.main
+                        : theme.palette.warning.main,
+                    }}
+                  />
+                </Box>
+                {option.fromEmail && (
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', ml: 3 }}>
+                    From: {option.fromEmail}
+                  </Typography>
+                )}
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={field.label}
+                size="small"
+                helperText={field.description}
+                placeholder="Select an email credential"
+                error={field.required && !value}
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {emailCredentialsLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            noOptionsText={
+              <Box sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No email credentials configured
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Add SMTP or SendGrid credentials in Settings → Integrations
+                </Typography>
+              </Box>
+            }
+          />
+          {typeof value === 'string' && value.length > 0 && (
+            <Box sx={{ mt: 1, p: 1, bgcolor: currentValueIsValidCredId ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.warning.main, 0.1), borderRadius: 1 }}>
+              <Typography variant="caption" sx={{ fontFamily: 'monospace', color: currentValueIsValidCredId ? 'success.main' : 'warning.main' }}>
+                Credential ID: {value}
+              </Typography>
+              {!currentValueIsValidCredId && (
+                <Typography variant="caption" display="block" color="warning.main" sx={{ mt: 0.5 }}>
+                  Warning: This does not look like a valid credential ID. Please select a credential from the dropdown.
+                </Typography>
+              )}
+            </Box>
+          )}
+          {availableEmailCredentials.length === 0 && !emailCredentialsLoading && (
+            <Box sx={{ mt: 1, p: 1.5, bgcolor: alpha(theme.palette.warning.main, 0.1), borderRadius: 1 }}>
+              <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
+                No email credentials found
+              </Typography>
+              <Typography variant="caption" color="text.secondary" component="div">
+                To send emails, add an SMTP or SendGrid credential in{' '}
+                {orgId ? (
+                  <Link
+                    href={`/orgs/${orgId}/settings?tab=integrations`}
+                    target="_blank"
+                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                  >
+                    Settings → Integrations
+                  </Link>
+                ) : (
+                  'Settings → Integrations'
+                )}
+                .
+              </Typography>
+            </Box>
+          )}
+        </Box>
       );
 
     default:

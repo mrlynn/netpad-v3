@@ -6,17 +6,56 @@
 'use client';
 
 import React from 'react';
-import { Box } from '@mui/material';
+import { useParams } from 'next/navigation';
+import { Box, Alert, Typography, Button } from '@mui/material';
+import { Settings as SettingsIcon } from '@mui/icons-material';
+import Link from 'next/link';
 import { ConfigField, NodeEditorProps } from './shared/utils';
 import { ConfigFieldRenderer } from './shared/ConfigFieldRenderer';
 
 // Config schemas for action nodes
 const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   'email-send': [
-    { key: 'to', label: 'To', type: 'text', description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)' },
-    { key: 'subject', label: 'Subject', type: 'text', description: 'Email subject (supports {{variables}})' },
-    { key: 'body', label: 'Body', type: 'code', description: 'Email body (HTML supported, use {{variables}})' },
-    { key: 'from', label: 'From', type: 'text', description: 'Sender email address' },
+    {
+      key: 'credentialId',
+      label: 'Email Credential',
+      type: 'email-credential-select',
+      description: 'Select your SMTP or SendGrid credentials',
+      required: true,
+    },
+    {
+      key: 'to',
+      label: 'To',
+      type: 'text',
+      description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)',
+      required: true,
+    },
+    {
+      key: 'subject',
+      label: 'Subject',
+      type: 'text',
+      description: 'Email subject (supports {{variables}})',
+      required: true,
+    },
+    {
+      key: 'body',
+      label: 'Body',
+      type: 'code',
+      description: 'Email body (HTML supported, use {{variables}})',
+      required: true,
+    },
+    {
+      key: 'from',
+      label: 'From (optional)',
+      type: 'text',
+      description: 'Override sender email (defaults to credential setting)',
+    },
+    {
+      key: 'replyTo',
+      label: 'Reply-To (optional)',
+      type: 'text',
+      description: 'Reply-to email address',
+    },
   ],
   'notification': [
     // Notification node config - if it exists, add fields here
@@ -32,16 +71,59 @@ export function ActionNodeEditor({
   formsLoading = false,
   availableConnections = [],
   connectionsLoading = false,
+  availableEmailCredentials = [],
+  emailCredentialsLoading = false,
   nodeId,
 }: NodeEditorProps) {
+  const params = useParams();
+  const orgId = params.orgId as string | undefined;
   const configSchema = ACTION_CONFIG_SCHEMAS[node.type] || [];
 
   if (configSchema.length === 0) {
     return null;
   }
 
+  // Check if email credentials are missing for email-send node
+  const needsEmailSetup = node.type === 'email-send' &&
+    !emailCredentialsLoading &&
+    availableEmailCredentials.length === 0;
+
   return (
     <Box>
+      {node.type === 'email-send' && needsEmailSetup && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2, fontSize: '0.85rem' }}
+          action={
+            orgId && (
+              <Button
+                component={Link}
+                href={`/orgs/${orgId}/settings?tab=integrations`}
+                target="_blank"
+                size="small"
+                startIcon={<SettingsIcon />}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Configure
+              </Button>
+            )
+          }
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+            Email integration required
+          </Typography>
+          <Typography variant="caption" component="div">
+            Add SMTP or SendGrid credentials to send emails from this workflow.
+          </Typography>
+        </Alert>
+      )}
+      {node.type === 'email-send' && !needsEmailSetup && !emailCredentialsLoading && (
+        <Alert severity="success" sx={{ mb: 2, py: 0.5 }}>
+          <Typography variant="caption">
+            {availableEmailCredentials.length} email credential{availableEmailCredentials.length !== 1 ? 's' : ''} available
+          </Typography>
+        </Alert>
+      )}
       {configSchema.map((field) => (
         <ConfigFieldRenderer
           key={field.key}
@@ -53,6 +135,8 @@ export function ActionNodeEditor({
           formsLoading={formsLoading}
           availableConnections={availableConnections}
           connectionsLoading={connectionsLoading}
+          availableEmailCredentials={availableEmailCredentials}
+          emailCredentialsLoading={emailCredentialsLoading}
         />
       ))}
     </Box>

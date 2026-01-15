@@ -102,6 +102,17 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
   const [availableConnections, setAvailableConnections] = useState<ConnectionOption[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
 
+  // Email credentials list for email-credential-select dropdown
+  interface EmailCredentialOption {
+    credentialId: string;
+    name: string;
+    provider: 'smtp' | 'sendgrid';
+    status: string;
+    fromEmail?: string;
+  }
+  const [availableEmailCredentials, setAvailableEmailCredentials] = useState<EmailCredentialOption[]>([]);
+  const [emailCredentialsLoading, setEmailCredentialsLoading] = useState(false);
+
   // Fetch available forms when panel opens
   useEffect(() => {
     if (open && selectedNode?.type === 'form-trigger' && orgId) {
@@ -153,6 +164,33 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
       fetchConnections();
     }
   }, [open, selectedNode?.type]);
+
+  // Fetch available email credentials when panel opens for email-send node
+  useEffect(() => {
+    if (open && selectedNode?.type === 'email-send' && orgId) {
+      const fetchEmailCredentials = async () => {
+        setEmailCredentialsLoading(true);
+        try {
+          const response = await fetch(`/api/organizations/${orgId}/integrations/email`);
+          const data = await response.json();
+          if (data.success && data.credentials) {
+            setAvailableEmailCredentials(data.credentials.map((c: any) => ({
+              credentialId: c.credentialId,
+              name: c.name,
+              provider: c.provider,
+              status: c.status,
+              fromEmail: c.fromEmail,
+            })));
+          }
+        } catch (error) {
+          console.error('Failed to fetch email credentials:', error);
+        } finally {
+          setEmailCredentialsLoading(false);
+        }
+      };
+      fetchEmailCredentials();
+    }
+  }, [open, selectedNode?.type, orgId]);
 
   // Get available fields from upstream nodes for autocomplete
   const availableFields = useMemo(() => {
@@ -633,6 +671,8 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
                   formsLoading={formsLoading}
                   availableConnections={availableConnections}
                   connectionsLoading={connectionsLoading}
+                  availableEmailCredentials={availableEmailCredentials}
+                  emailCredentialsLoading={emailCredentialsLoading}
                   nodeId={selectedNode.id}
                 />
               ) : isDataNode ? (

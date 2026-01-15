@@ -31,7 +31,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { useWorkflow, useWorkflowEditor } from '@/contexts/WorkflowContext';
-import { WorkflowSettings, RetryPolicy, WorkflowEmbedSettings } from '@/types/workflow';
+import { WorkflowSettings, RetryPolicy, WorkflowEmbedSettings, DEFAULT_WORKFLOW_SETTINGS } from '@/types/workflow';
 import { generateExecutionToken, hashExecutionToken, getTokenPrefix } from '@/lib/workflow/embedTokens';
 import { WorkflowEmbedCodeGenerator } from '../EmbedCodeGenerator';
 
@@ -98,17 +98,16 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
       setName(workflow.name || '');
       setDescription(workflow.description || '');
       setTags(workflow.tags || []);
-      setSettings(workflow.settings || {
-        executionMode: 'auto',
-        maxExecutionTime: 300000,
+      // Merge workflow settings with defaults to ensure all properties exist
+      const mergedSettings: WorkflowSettings = {
+        ...DEFAULT_WORKFLOW_SETTINGS,
+        ...workflow.settings,
         retryPolicy: {
-          maxRetries: 3,
-          backoffMultiplier: 2,
-          initialDelayMs: 1000,
+          ...DEFAULT_WORKFLOW_SETTINGS.retryPolicy,
+          ...(workflow.settings?.retryPolicy || {}),
         },
-        errorHandling: 'stop',
-        timezone: 'UTC',
-      });
+      };
+      setSettings(mergedSettings);
       setHasChanges(false);
       setNewToken(null);
       setShowToken(false);
@@ -156,6 +155,7 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
       // Update settings with hashed token
       const hashedToken = await hashExecutionToken(token);
       const embedSettings: WorkflowEmbedSettings = {
+        allowPublicViewing: false,
         ...settings.embedSettings,
         allowPublicExecution: true,
         executionToken: hashedToken,
@@ -170,6 +170,8 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
 
   const handleRemoveToken = () => {
     const embedSettings: WorkflowEmbedSettings = {
+      allowPublicExecution: false,
+      allowPublicViewing: false,
       ...settings.embedSettings,
       executionToken: undefined,
     };
@@ -365,11 +367,14 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
                 value={settings.embedSettings?.rateLimit?.requestsPerHour || ''}
                 onChange={(e) => {
                   const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
-                  handleEmbedSettingChange('rateLimit', {
-                    ...settings.embedSettings?.rateLimit,
-                    requestsPerHour: value,
-                    requestsPerDay: settings.embedSettings?.rateLimit?.requestsPerDay || value ? (value * 24) : undefined,
-                  });
+                  if (value === undefined) {
+                    handleEmbedSettingChange('rateLimit', undefined);
+                  } else {
+                    handleEmbedSettingChange('rateLimit', {
+                      requestsPerHour: value,
+                      requestsPerDay: settings.embedSettings?.rateLimit?.requestsPerDay || (value * 24),
+                    });
+                  }
                 }}
                 helperText="Maximum number of executions per hour (optional)"
                 sx={{ mb: 2 }}

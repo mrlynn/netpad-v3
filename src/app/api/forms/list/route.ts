@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const projectId = searchParams.get('projectId');
+    const applicationId = searchParams.get('applicationId'); // Phase 2: Filter by application
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId query parameter is required' }, { status: 400 });
@@ -40,6 +41,11 @@ export async function GET(request: NextRequest) {
       query.projectId = projectId;
     }
 
+    // Phase 2: Filter by applicationId if provided
+    if (applicationId) {
+      query.applicationId = applicationId;
+    }
+
     // Fetch forms
     const forms = await formsCollection
       .find(query)
@@ -61,6 +67,7 @@ export async function GET(request: NextRequest) {
       fieldCount: form.fieldConfigs?.length || 0,
       thumbnailUrl: form.thumbnailUrl,
       projectId: form.projectId,
+      applicationId: form.applicationId, // Phase 2: Include applicationId
     }));
 
     return NextResponse.json({

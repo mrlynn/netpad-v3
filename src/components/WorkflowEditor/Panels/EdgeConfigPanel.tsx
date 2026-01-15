@@ -70,10 +70,10 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
     const updates: Partial<WorkflowEdge> = {
       animated,
       type: edgeType !== 'default' ? edgeType : undefined,
-      // Save condition if either expression or label exists
-      condition: conditionExpression || conditionLabel
+      // Save condition only if expression exists (required field)
+      condition: conditionExpression
         ? {
-            ...(conditionExpression ? { expression: conditionExpression } : {}),
+            expression: conditionExpression,
             ...(conditionLabel ? { label: conditionLabel } : {}),
           }
         : undefined,

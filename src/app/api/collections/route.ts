@@ -91,69 +91,77 @@ export async function GET(request: NextRequest) {
     const db = client.db(database);
     const collections = await db.listCollections().toArray();
 
-    const collectionInfos: CollectionInfo[] = [];
+    // Build collection info in parallel for better performance
+    const collectionInfos: CollectionInfo[] = await Promise.all(
+      collections.map(async (coll) => {
+        const info: CollectionInfo = {
+          name: coll.name,
+          database,
+          type: coll.type === 'view' ? 'view' : 'collection',
+          documentCount: 0,
+          storageSize: 0,
+          avgDocSize: 0,
+          indexes: [],
+        };
 
-    for (const coll of collections) {
-      const info: CollectionInfo = {
-        name: coll.name,
-        database,
-        type: coll.type === 'view' ? 'view' : 'collection',
-        documentCount: 0,
-        storageSize: 0,
-        avgDocSize: 0,
-        indexes: [],
-      };
+        if (includeStats && coll.type !== 'view') {
+          // Fetch stats and indexes in parallel
+          const [statsResult, indexesResult] = await Promise.allSettled([
+            db.command({ collStats: coll.name }),
+            db.collection(coll.name).indexes(),
+          ]);
 
-      if (includeStats && coll.type !== 'view') {
-        try {
-          const stats = await db.command({ collStats: coll.name });
-          info.documentCount = stats.count || 0;
-          info.storageSize = stats.storageSize || 0;
-          info.avgDocSize = stats.avgObjSize || 0;
-        } catch {
-          // Stats may not be available
-        }
-
-        // Get indexes
-        try {
-          const collection = db.collection(coll.name);
-          const indexes = await collection.indexes();
-          info.indexes = indexes.map(idx => ({
-            name: idx.name || '',
-            key: idx.key as Record<string, 1 | -1 | 'text' | '2dsphere'>,
-            unique: idx.unique,
-            sparse: idx.sparse,
-            expireAfterSeconds: idx.expireAfterSeconds,
-          }));
-        } catch {
-          // Indexes may not be available
-        }
-      }
-
-      // Get sample document for schema inference
-      if (includeSample && coll.type !== 'view') {
-        try {
-          const collection = db.collection(coll.name);
-          const sample = await collection.findOne({});
-          if (sample) {
-            // Store sample schema (just the keys, not values)
-            const sampleKeys = Object.keys(sample);
-            // @ts-ignore - adding extra field
-            info.sampleKeys = sampleKeys;
+          if (statsResult.status === 'fulfilled') {
+            const stats = statsResult.value;
+            info.documentCount = stats.count || 0;
+            info.storageSize = stats.storageSize || 0;
+            info.avgDocSize = stats.avgObjSize || 0;
           }
-        } catch {
-          // Sample may not be available
+
+          if (indexesResult.status === 'fulfilled') {
+            info.indexes = indexesResult.value.map(idx => ({
+              name: idx.name || '',
+              key: idx.key as Record<string, 1 | -1 | 'text' | '2dsphere'>,
+              unique: idx.unique,
+              sparse: idx.sparse,
+              expireAfterSeconds: idx.expireAfterSeconds,
+            }));
+          }
         }
+
+        // Get sample document for schema inference
+        if (includeSample && coll.type !== 'view') {
+          try {
+            const collection = db.collection(coll.name);
+            const sample = await collection.findOne({});
+            if (sample) {
+              // Store sample schema (just the keys, not values)
+              const sampleKeys = Object.keys(sample);
+              // @ts-ignore - adding extra field
+              info.sampleKeys = sampleKeys;
+            }
+          } catch {
+            // Sample may not be available
+          }
+        }
+
+        return info;
+      })
+    );
+
+    // Return with cache headers - cache for 5 minutes, allow stale for 1 minute while revalidating
+    return NextResponse.json(
+      {
+        database,
+        collections: collectionInfos,
+        total: collectionInfos.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        },
       }
-
-      collectionInfos.push(info);
-    }
-
-    return NextResponse.json({
-      database,
-      collections: collectionInfos,
-      total: collectionInfos.length,
-    });
+    );
   } catch (error) {
     console.error('Error listing collections:', error);
     return NextResponse.json(

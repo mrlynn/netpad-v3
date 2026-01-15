@@ -64,6 +64,7 @@ import { WorkflowBuilderContext } from '@/types/chat';
 import { nanoid } from 'nanoid';
 import { WorkflowNode, WorkflowEdge } from '@/types/workflow';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -705,6 +706,17 @@ function WorkflowEditorInner({
 
         {/* Canvas */}
         <Box data-tour="workflow-canvas" sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          {/* Component Protection Indicator */}
+          {workflow?.id && workflow?.applicationId && (
+            <Box sx={{ position: 'absolute', top: 16, left: 16, right: 16, zIndex: 1000 }}>
+              <ComponentProtectionIndicator
+                componentId={workflow.id}
+                componentType="workflow"
+                orgId={orgId}
+                applicationId={workflow.applicationId}
+              />
+            </Box>
+          )}
           <ReactFlowProvider>
             <WorkflowEditorCanvas
               onNodeDoubleClick={handleNodeDoubleClick}
