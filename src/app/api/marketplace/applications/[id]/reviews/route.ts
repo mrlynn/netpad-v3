@@ -95,7 +95,7 @@ export async function POST(
     const reviewDoc = await createOrUpdateReview({
       marketplaceApplicationId: id,
       userId: session.userId,
-      userName: user?.name || user?.email || 'Anonymous',
+      userName: user?.displayName || user?.email || 'Anonymous',
       userEmail: user?.email,
       rating: Math.round(rating), // Ensure integer
       title: title?.trim() || undefined,
