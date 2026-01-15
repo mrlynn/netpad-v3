@@ -307,6 +307,7 @@ export function ApplicationDetailDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orgId: organizationId,
+          projectId: projectId,
           options: {
             generateNewIds,
             preserveSlugs,

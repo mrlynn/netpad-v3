@@ -204,6 +204,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orgId: organizationId,
+          projectId: projectId,
           options: {
             generateNewIds: true,
             preserveSlugs: false,
