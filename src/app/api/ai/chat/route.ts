@@ -653,10 +653,44 @@ function isContactOrSupportQuery(message: string, history?: Array<{ role: string
 }
 
 // ============================================
+// CORS Configuration
+// ============================================
+
+const ALLOWED_ORIGINS = [
+  'https://docs.netpad.io',
+  'https://www.netpad.io',
+  'https://netpad.io',
+  ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : []),
+];
+
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : null;
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin || '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400', // 24 hours
+  };
+}
+
+// Handle preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(origin),
+  });
+}
+
+// ============================================
 // API Handler
 // ============================================
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
   try {
     const body = await request.json() as ChatRequest;
 
@@ -664,7 +698,7 @@ export async function POST(request: NextRequest) {
     if (!body.message || typeof body.message !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Message is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -673,7 +707,7 @@ export async function POST(request: NextRequest) {
     if (!provider) {
       return NextResponse.json(
         { success: false, error: 'AI service is not configured. Set OPENAI_API_KEY for cloud or OLLAMA_BASE_URL for self-hosted.' },
-        { status: 503 }
+        { status: 503, headers: corsHeaders }
       );
     }
 
@@ -755,7 +789,7 @@ export async function POST(request: NextRequest) {
             error: error.message || 'AI service error',
             code: error.code,
           },
-          { status: error.statusCode || 500 }
+          { status: error.statusCode || 500, headers: corsHeaders }
         );
       }
       throw error;
@@ -778,7 +812,7 @@ export async function POST(request: NextRequest) {
       action,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, { headers: corsHeaders });
   } catch (error) {
     console.error('Chat API error:', error);
     return NextResponse.json(
@@ -786,7 +820,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error',
       },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
