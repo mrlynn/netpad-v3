@@ -179,7 +179,7 @@ export default function MarketplaceReviewPage() {
       case 'rejected':
         return <CancelIcon />;
       default:
-        return null;
+        return undefined;
     }
   };
 
@@ -297,12 +297,23 @@ export default function MarketplaceReviewPage() {
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Typography variant="h6">{app.icon || '📦'} {app.name}</Typography>
-                        <Chip
-                          icon={getStatusIcon(app.status)}
-                          label={app.status}
-                          color={getStatusColor(app.status) as any}
-                          size="small"
-                        />
+                        {(() => {
+                          const statusIcon = getStatusIcon(app.status);
+                          return statusIcon ? (
+                            <Chip
+                              icon={statusIcon}
+                              label={app.status}
+                              color={getStatusColor(app.status) as any}
+                              size="small"
+                            />
+                          ) : (
+                            <Chip
+                              label={app.status}
+                              color={getStatusColor(app.status) as any}
+                              size="small"
+                            />
+                          );
+                        })()}
                         {app.isOfficial && (
                           <Chip
                             icon={<VerifiedIcon />}
