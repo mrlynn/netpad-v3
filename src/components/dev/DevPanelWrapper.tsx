@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { IconButton, Tooltip, useTheme } from '@mui/material';
 import { Bug } from 'lucide-react';
@@ -62,7 +62,7 @@ function saveState(state: DevPanelState) {
   }
 }
 
-export function DevPanelWrapper() {
+function DevPanelWrapperInner() {
   // ALL hooks must be called before any early returns
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -161,6 +161,14 @@ export function DevPanelWrapper() {
       onPositionChange={handlePositionChange}
       onHide={handleHide}
     />
+  );
+}
+
+export function DevPanelWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <DevPanelWrapperInner />
+    </Suspense>
   );
 }
 

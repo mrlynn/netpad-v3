@@ -135,7 +135,7 @@ export async function fetchPackageMetadata(
       repository: versionData.repository,
       homepage: versionData.homepage,
       dist: {
-        tarball: dist.tarball || `${NPM_REGISTRY_URL}/${encodeURIComponent(packageName)}/-/${packageName}-${latestVersion}.tgz`,
+        tarball: dist.tarball || `${NPM_REGISTRY_URL}/${encodeURIComponent(packageName)}/-/${packageName}-${targetVersion}.tgz`,
         shasum: dist.shasum,
         integrity: dist.integrity,
       },

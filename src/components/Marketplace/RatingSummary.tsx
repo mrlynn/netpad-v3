@@ -57,7 +57,7 @@ export function RatingSummary({
       {showDistribution && ratingDistribution && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
           {[5, 4, 3, 2, 1].map((rating) => {
-            const count = ratingDistribution[rating as keyof typeof ratingDistribution];
+            const count = ratingDistribution[String(rating) as keyof typeof ratingDistribution];
             const percentage = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
             return (
               <Box key={rating} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

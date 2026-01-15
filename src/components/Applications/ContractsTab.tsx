@@ -46,6 +46,7 @@ import { BreakingChangesDialog } from './BreakingChangesDialog';
 import { fetcher } from '@/lib/swr';
 import useSWR from 'swr';
 import { ContractComparison } from '@/lib/platform/contractComparison';
+import { CreateContractInput } from '@/lib/platform/applicationContracts';
 
 interface ContractsTabProps {
   applicationId: string;

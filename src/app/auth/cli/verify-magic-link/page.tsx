@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Box, Typography } from '@mui/material';
 import NetPadLoader from '@/components/common/NetPadLoader';
 
-export default function VerifyMagicLinkPage() {
+function VerifyMagicLinkContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('Verifying magic link...');
@@ -136,5 +136,26 @@ export default function VerifyMagicLinkPage() {
         )}
       </Box>
     </Box>
+  );
+}
+
+export default function VerifyMagicLinkPage() {
+  return (
+    <Suspense fallback={
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          backgroundColor: '#001E2B',
+        }}
+      >
+        <NetPadLoader size="large" message="Loading..." />
+      </Box>
+    }>
+      <VerifyMagicLinkContent />
+    </Suspense>
   );
 }

@@ -738,10 +738,9 @@ export default function ApplicationsPage() {
               iconPosition="start" 
             />
             <Tab
-              label="Installed"
+              label={updatesAvailable > 0 ? `Installed (${updatesAvailable})` : "Installed"}
               icon={<CheckCircle />}
               iconPosition="start"
-              badge={updatesAvailable > 0 ? updatesAvailable : undefined}
             />
             <Tab
               label="System"

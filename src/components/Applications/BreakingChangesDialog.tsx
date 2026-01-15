@@ -156,7 +156,7 @@ export function BreakingChangesDialog({
             </Alert>
             <List>
               {comparison.breakingChanges.map((change, index) => (
-                <Paper key={index} sx={{ mb: 2, p: 2, bgcolor: 'error.light', bgcolor: 'rgba(211, 47, 47, 0.1)' }}>
+                <Paper key={index} sx={{ mb: 2, p: 2, bgcolor: 'rgba(211, 47, 47, 0.1)' }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1 }}>
                     {getImpactIcon(change.impact)}
                     <Box sx={{ flex: 1 }}>

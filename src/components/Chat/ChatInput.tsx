@@ -15,7 +15,7 @@ import {
   KeyboardVoice as VoiceIcon,
 } from '@mui/icons-material';
 import { useChat } from '@/contexts/ChatContext';
-import { FormBuilderContext } from '@/types/chat';
+import { FormBuilderContext, ChatMessage } from '@/types/chat';
 
 // Quick suggestion chips
 const QUICK_SUGGESTIONS = [

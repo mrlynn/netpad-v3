@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Box,
@@ -38,7 +38,7 @@ const HIDDEN_ROUTES = [
   '/auth/',  // Auth pages
 ];
 
-export function ChatWidget() {
+function ChatWidgetInner() {
   // ALL hooks must be called before any early returns
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -431,5 +431,13 @@ export function ChatWidget() {
         )}
       </Paper>
     </Slide>
+  );
+}
+
+export function ChatWidget() {
+  return (
+    <Suspense fallback={null}>
+      <ChatWidgetInner />
+    </Suspense>
   );
 }
