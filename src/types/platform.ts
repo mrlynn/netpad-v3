@@ -764,6 +764,7 @@ export type AIFeature =
   | 'ai_formula_assistant'
   | 'ai_conditional_logic'
   | 'ai_validation_patterns'
+  | 'ai_node_config_assistant'  // Workflow node configuration assistance
   // Layer 3: Autonomous Agents
   | 'agent_form_optimization'
   | 'agent_response_processing'
@@ -863,6 +864,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'ai_inline_suggestions',
       'ai_field_type_detection',
       'ai_formula_assistant',
+      'ai_node_config_assistant',
     ],
     platformFeatures: [],
   },
@@ -891,6 +893,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'ai_formula_assistant',
       'ai_conditional_logic',
       'ai_validation_patterns',
+      'ai_node_config_assistant',
       'agent_response_insights',
     ],
     platformFeatures: [
@@ -924,6 +927,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'ai_formula_assistant',
       'ai_conditional_logic',
       'ai_validation_patterns',
+      'ai_node_config_assistant',
       'agent_form_optimization',
       'agent_response_processing',
       'agent_response_insights',
@@ -968,6 +972,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'ai_formula_assistant',
       'ai_conditional_logic',
       'ai_validation_patterns',
+      'ai_node_config_assistant',
       'agent_form_optimization',
       'agent_response_processing',
       'agent_compliance_audit',

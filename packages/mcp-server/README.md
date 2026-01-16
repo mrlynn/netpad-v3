@@ -34,6 +34,7 @@ An MCP (Model Context Protocol) server for AI-assisted NetPad application develo
 - **Logic Nodes**: Conditional routing, switch, filter, loop
 - **Data Nodes**: Transform, code execution, variable management
 - **Integrations**: MongoDB, HTTP, Email, Slack, Google Sheets
+- **AI-Assisted Configuration**: Many node fields support AI generation (transforms, code, prompts, HTTP requests)
 
 ### Conversational Forms & RAG
 - **AI-Powered Forms**: Natural language data collection
@@ -256,6 +257,20 @@ Pre-built automation patterns:
 | `lead-qualification` | Qualify and route leads |
 | `webhook-to-database` | Process webhooks to database |
 | `scheduled-report` | Generate scheduled reports |
+
+## AI-Assisted Node Configuration
+
+Many workflow node fields support AI-powered configuration generation. The `aiAssist` metadata on config fields indicates which fields can use AI generation in the NetPad UI:
+
+| Node Type | Field | AI Assistance |
+|-----------|-------|---------------|
+| `mongodb-query` | filter | Generate MongoDB queries from natural language |
+| `transform` | expression | Generate JavaScript transforms |
+| `http-request` | url, headers, body | Generate URLs, headers, and request bodies |
+| `email-send` | to, subject, body | Generate email content |
+| `ai-generate` | prompt | Generate AI prompts |
+| `ai-classify` | categories, instructions | Generate classification rules |
+| `code` | code | Generate JavaScript code |
 
 ## Resources
 

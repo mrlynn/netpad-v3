@@ -1,10 +1,10 @@
 {
-  "name": "Simple Contact Form",
-  "version": "1.0.0",
-  "description": "A simple contact form application with email notification workflow - perfect for testing application publishing",
-  "summary": "Contact form with automated email notifications",
+  "name": "Contact Form Application",
+  "version": "2.0.0",
+  "description": "A comprehensive contact form application showcasing NetPad's key capabilities: multi-page forms, conditional logic, advanced workflows, MongoDB integration, and intelligent routing",
+  "summary": "Production-ready contact form with intelligent automation and data management",
   "category": "business",
-  "tags": ["contact", "form", "email", "notification", "simple", "test"],
+  "tags": ["contact", "form", "workflow", "automation", "mongodb", "email", "conditional", "multi-page", "showcase"],
   "icon": "📧",
   "author": {
     "name": "NetPad Examples",
@@ -17,17 +17,127 @@
     "workflows": ["workflow.json"]
   },
   "dependencies": {
-    "integrations": ["email"]
+    "integrations": ["email", "mongodb"]
   },
-  "instructions": {
-    "import": "Import this template into NetPad to create a simple contact form with email notifications. Perfect for testing application publishing workflows.",
-    "setup": [
-      "1. Import the template bundle using the NetPad import API or UI",
-      "2. Configure your email integration",
-      "3. Update the recipient email address in the workflow",
-      "4. Publish the form",
-      "5. Activate the workflow"
+  "contract": {
+    "version": "1.0.0",
+    "inputs": [
+      {
+        "key": "name",
+        "type": "string",
+        "required": true,
+        "description": "Contact's full name",
+        "source": "form"
+      },
+      {
+        "key": "email",
+        "type": "string",
+        "required": true,
+        "description": "Contact's email address",
+        "source": "form"
+      },
+      {
+        "key": "inquiryType",
+        "type": "string",
+        "required": true,
+        "description": "Type of inquiry (general, product, support, sales, partnership, feedback, other)",
+        "source": "form"
+      },
+      {
+        "key": "subject",
+        "type": "string",
+        "required": true,
+        "description": "Subject of the inquiry",
+        "source": "form"
+      },
+      {
+        "key": "message",
+        "type": "string",
+        "required": true,
+        "description": "Detailed message from the contact",
+        "source": "form"
+      }
+    ],
+    "outputs": [
+      {
+        "key": "submissionId",
+        "type": "string",
+        "guaranteed": true,
+        "description": "MongoDB document ID of the saved submission"
+      },
+      {
+        "key": "confirmationEmailSent",
+        "type": "boolean",
+        "guaranteed": true,
+        "description": "Whether confirmation email was sent to the contact"
+      },
+      {
+        "key": "routing",
+        "type": "object",
+        "guaranteed": true,
+        "description": "Routing information (urgent, sales, general)"
+      }
+    ],
+    "sideEffects": [
+      {
+        "type": "write",
+        "target": "contacts.submissions",
+        "description": "Saves form submission to MongoDB collection"
+      },
+      {
+        "type": "api_call",
+        "target": "email-send",
+        "description": "Sends email notifications based on inquiry type and urgency"
+      }
+    ],
+    "events": [
+      {
+        "name": "submission.created",
+        "description": "Emitted when a new contact form submission is created"
+      },
+      {
+        "name": "submission.routed",
+        "description": "Emitted when submission is routed based on inquiry type"
+      },
+      {
+        "name": "notification.sent",
+        "description": "Emitted when notification emails are sent"
+      }
     ]
   },
-  "createdAt": "2026-01-15T00:00:00.000Z"
+  "instructions": {
+    "import": "This application demonstrates NetPad's comprehensive capabilities including multi-page forms with conditional logic, sophisticated workflows with MongoDB integration, and intelligent email routing. Perfect for learning NetPad's advanced features.",
+    "setup": [
+      "1. Import the template bundle using the NetPad import API or UI",
+      "2. Configure your MongoDB connection in Settings → Connections",
+      "3. Configure your email integration in Settings → Integrations (SMTP or SendGrid)",
+      "4. Update email addresses in the workflow configuration:",
+      "   - contact@example.com → Your general contact email",
+      "   - sales@example.com → Your sales team email",
+      "   - urgent@example.com → Your urgent inquiry alert email",
+      "5. Update the form ID in the workflow trigger node",
+      "6. Update the connection ID in the MongoDB write node",
+      "7. Update the credential ID in all email-send nodes",
+      "8. Publish the form",
+      "9. Activate the workflow",
+      "10. Test the form submission and verify workflow execution"
+    ],
+    "features": [
+      "Multi-page form wizard with progress indicator",
+      "Conditional field visibility based on inquiry type",
+      "Section headers for organized form layout",
+      "Multiple field types: text, email, phone, dropdown, radio, checkbox, number",
+      "Field width options (half-width layouts)",
+      "Form validation with min/max length, patterns, and required fields",
+      "Workflow with conditional routing based on urgency and inquiry type",
+      "MongoDB integration for data persistence",
+      "Data transformation node for data normalization",
+      "Parallel workflow execution for efficiency",
+      "Multiple email notifications with intelligent routing",
+      "Workflow variables for easy configuration",
+      "Error handling with retry logic"
+    ]
+  },
+  "createdAt": "2026-01-15T00:00:00.000Z",
+  "updatedAt": "2026-01-27T00:00:00.000Z"
 }

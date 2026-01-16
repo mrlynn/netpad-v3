@@ -44,6 +44,7 @@ import { parseOrgProjectFromPath } from '@/lib/routing';
 import { formNameToCollectionName } from '@/lib/utils/collectionNaming';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
+import { useProjectDefaultVault } from '@/lib/swr';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -61,7 +62,10 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
   const effectiveProjectId = propProjectId || urlProjectId || localStorage.getItem('selected_project_id') || undefined;
   const effectiveOrgId = propOrganizationId || currentOrgId || undefined;
-  
+
+  // Fetch project's default vault with SWR caching (10 min cache)
+  const { data: defaultVaultData } = useProjectDefaultVault(effectiveProjectId);
+
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,15 +76,6 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   const [multiPageConfig, setMultiPageConfig] = useState<MultiPageConfig | undefined>(undefined);
   const [lifecycleConfig, setLifecycleConfig] = useState<FormLifecycle | undefined>(undefined);
   const [themeConfig, setThemeConfig] = useState<FormTheme | undefined>(undefined);
-
-  // Debug: Log whenever themeConfig changes
-  useEffect(() => {
-    console.log('[FormBuilder] themeConfig state changed:', {
-      themeConfig,
-      pageBackgroundColor: themeConfig?.pageBackgroundColor,
-      pageBackgroundGradient: themeConfig?.pageBackgroundGradient,
-    });
-  }, [themeConfig]);
 
   const [currentFormId, setCurrentFormId] = useState<string | undefined>(undefined);
   const [currentFormName, setCurrentFormName] = useState<string>('');
@@ -382,38 +377,24 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
     }
   }, [effectiveOrgId, effectiveProjectId]);
 
-  // Auto-populate dataSource when project changes (fetch default vault)
+  // Auto-populate dataSource when default vault data is available (via SWR cache)
   useEffect(() => {
-    const fetchProjectDefaultVault = async () => {
-      if (!effectiveProjectId || !effectiveOrgId) return;
-      
-      // Don't override if dataSource is already set (user may have manually configured it)
-      if (dataSource?.vaultId) return;
+    // Don't override if dataSource is already set (user may have manually configured it)
+    if (dataSource?.vaultId) return;
 
-      try {
-        const response = await fetch(`/api/projects/${effectiveProjectId}/default-vault`);
-        const data = await response.json();
+    if (defaultVaultData?.hasDefaultVault && defaultVaultData.vault) {
+      // Auto-generate collection name from form name if form name exists
+      const collectionName = currentFormName
+        ? formNameToCollectionName(currentFormName)
+        : 'form_responses';
 
-        if (data.hasDefaultVault && data.vault) {
-          // Auto-generate collection name from form name if form name exists
-          const collectionName = currentFormName 
-            ? formNameToCollectionName(currentFormName)
-            : 'form_responses';
-
-          setDataSource({
-            vaultId: data.vault.vaultId,
-            collection: collectionName,
-          });
-        }
-      } catch (error) {
-        console.error('[FormBuilder] Failed to fetch project default vault:', error);
-        // Silently fail - user can configure manually
-      }
-    };
-
-    fetchProjectDefaultVault();
+      setDataSource({
+        vaultId: defaultVaultData.vault.vaultId,
+        collection: collectionName,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveProjectId, effectiveOrgId]); // Note: intentionally not including dataSource to avoid loops
+  }, [defaultVaultData]); // Note: intentionally not including dataSource to avoid loops
 
   // Auto-update collection name when form name changes (if using default vault)
   useEffect(() => {

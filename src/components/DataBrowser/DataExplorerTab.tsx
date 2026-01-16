@@ -6,8 +6,23 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Box, IconButton, Tooltip } from '@mui/material';
-import { ArrowBack as BackIcon } from '@mui/icons-material';
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Paper,
+  Typography,
+  Button,
+  alpha,
+} from '@mui/material';
+import {
+  ArrowBack as BackIcon,
+  Storage,
+  Search,
+  TableChart,
+  DataObject,
+  ImportExport,
+} from '@mui/icons-material';
 import { usePathname } from 'next/navigation';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDataExplorer } from '@/hooks/useDataExplorer';
@@ -15,6 +30,7 @@ import { DataExplorerTree } from './DataExplorerTree';
 import { CollectionDetailPanel } from './CollectionDetailPanel';
 import { DataBrowser } from './DataBrowser';
 import { parseOrgProjectFromPath } from '@/lib/routing';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface DataExplorerTabProps {
   onNeedConnection?: () => void;
@@ -116,6 +132,105 @@ export function DataExplorerTab({ onNeedConnection }: DataExplorerTabProps) {
             onNeedConnection={onNeedConnection}
           />
         </Box>
+      </Box>
+    );
+  }
+
+  // Show loading state
+  if (loading && clusters.length === 0) {
+    return (
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <NetPadLoader size="large" message="Loading data connections..." />
+      </Box>
+    );
+  }
+
+  // Show empty state when no connections/clusters exist
+  if (!loading && clusters.length === 0) {
+    return (
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
+        <Paper
+          sx={{
+            p: 6,
+            textAlign: 'center',
+            bgcolor: alpha('#2196F3', 0.02),
+            border: '1px dashed',
+            borderColor: 'divider',
+            borderRadius: 2,
+            maxWidth: 600,
+          }}
+        >
+          <Storage sx={{ fontSize: 48, color: '#2196F3', mb: 2 }} />
+          <Typography variant="h5" sx={{ color: 'text.primary', mb: 1, fontWeight: 600 }}>
+            Explore Your Data
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
+            Browse, search, and manage your MongoDB collections. View documents,
+            see linked forms and workflows, and import or export data.
+          </Typography>
+
+          {/* Data Features */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+            {[
+              { icon: <Search sx={{ fontSize: 16 }} />, label: 'Visual search' },
+              { icon: <TableChart sx={{ fontSize: 16 }} />, label: 'Multiple views' },
+              { icon: <DataObject sx={{ fontSize: 16 }} />, label: 'Document editor' },
+              { icon: <ImportExport sx={{ fontSize: 16 }} />, label: 'Import & export' },
+            ].map((item) => (
+              <Box
+                key={item.label}
+                sx={{
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  bgcolor: alpha('#2196F3', 0.08),
+                  border: '1px solid',
+                  borderColor: alpha('#2196F3', 0.2),
+                }}
+              >
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {item.icon} {item.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+
+          <Button
+            variant="contained"
+            size="large"
+            onClick={onNeedConnection}
+            sx={{
+              bgcolor: '#2196F3',
+              color: 'white',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              '&:hover': { bgcolor: '#1976D2' },
+            }}
+          >
+            Set Up Database Connection
+          </Button>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
+            Connect to your MongoDB cluster to start exploring data
+          </Typography>
+        </Paper>
       </Box>
     );
   }

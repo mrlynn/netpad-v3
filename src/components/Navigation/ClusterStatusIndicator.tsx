@@ -10,10 +10,10 @@ import {
   Popover,
   Paper,
   Divider,
-  CircularProgress,
   Button,
   IconButton,
 } from '@mui/material';
+import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
 import {
   Storage,
   CheckCircle,
@@ -44,31 +44,31 @@ const STATUS_CONFIG: Record<ClusterProvisioningStatus, {
   pending: {
     label: 'Preparing database...',
     color: '#2196f3',
-    icon: <CircularProgress size={12} sx={{ color: '#2196f3' }} />,
+    icon: <NetPadSpinner size={12} />,
     shortLabel: 'Pending',
   },
   creating_project: {
     label: 'Creating Atlas project...',
     color: '#2196f3',
-    icon: <CircularProgress size={12} sx={{ color: '#2196f3' }} />,
+    icon: <NetPadSpinner size={12} />,
     shortLabel: 'Creating',
   },
   creating_cluster: {
     label: 'Provisioning cluster...',
     color: '#2196f3',
-    icon: <CircularProgress size={12} sx={{ color: '#2196f3' }} />,
+    icon: <NetPadSpinner size={12} />,
     shortLabel: 'Provisioning',
   },
   creating_user: {
     label: 'Setting up credentials...',
     color: '#2196f3',
-    icon: <CircularProgress size={12} sx={{ color: '#2196f3' }} />,
+    icon: <NetPadSpinner size={12} />,
     shortLabel: 'Configuring',
   },
   configuring_network: {
     label: 'Configuring network...',
     color: '#2196f3',
-    icon: <CircularProgress size={12} sx={{ color: '#2196f3' }} />,
+    icon: <NetPadSpinner size={12} />,
     shortLabel: 'Configuring',
   },
   ready: {
@@ -312,9 +312,9 @@ export function ClusterStatusIndicator() {
           {/* In Progress State */}
           {isInProgress && (
             <Box sx={{ p: 2, textAlign: 'center' }}>
-              <CircularProgress size={32} sx={{ color: '#2196f3', mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                Setting up your MongoDB Atlas cluster...
+              <NetPadLoader size="small" message="Setting up your MongoDB Atlas cluster..." />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                This may take a few minutes...
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 This usually takes about 30 seconds.

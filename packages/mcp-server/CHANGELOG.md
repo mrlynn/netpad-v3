@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-01-16
+
+### Added
+
+#### AI-Assisted Workflow Configuration
+- Added `aiAssist` metadata to workflow node config fields, enabling AI-powered configuration generation in the NetPad UI
+- Supported fields with AI assistance:
+  - `mongodb-query.filter` - Generate MongoDB queries from natural language
+  - `transform.expression` - Generate JavaScript transform expressions
+  - `http-request.url` - Generate API URLs dynamically
+  - `http-request.headers` - Generate HTTP headers
+  - `http-request.body` - Generate request payloads
+  - `email-send.to` - Generate recipient expressions
+  - `email-send.subject` - Generate email subjects
+  - `email-send.body` - Generate email content
+  - `ai-generate.prompt` - Generate AI prompts
+  - `ai-classify.categories` - Generate classification categories
+  - `ai-classify.instructions` - Generate classification instructions
+  - `code.code` - Generate JavaScript code
+
+#### New Node Type
+- Added `code` node type to `custom` category for executing custom JavaScript code
+
+### Changed
+- Added `AIAssistConfig` and `NodeConfigFieldDefinition` type exports for external type checking
+- Updated README with AI-assisted configuration documentation
+
+---
+
 ## [2.0.0] - 2026-01-15
 
 ### Added

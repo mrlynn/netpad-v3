@@ -13,10 +13,10 @@ import {
   Button,
   Typography,
   Alert,
-  CircularProgress,
   Divider,
 } from '@mui/material';
 import { RatingInput } from './RatingInput';
+import { NetPadSpinner } from '@/components/common/NetPadLoader';
 
 interface Review {
   reviewId: string;
@@ -139,7 +139,7 @@ export function ReviewForm({
             onClick={handleDelete}
             disabled={submitting || deleting}
           >
-            {deleting ? <CircularProgress size={16} /> : 'Delete'}
+            {deleting ? <NetPadSpinner size={16} /> : 'Delete'}
           </Button>
         )}
         {onCancel && (
@@ -151,7 +151,7 @@ export function ReviewForm({
           variant="contained"
           onClick={handleSubmit}
           disabled={rating === 0 || submitting || deleting}
-          startIcon={submitting ? <CircularProgress size={16} /> : null}
+          startIcon={submitting ? <NetPadSpinner size={16} /> : null}
         >
           {submitting ? 'Submitting...' : existingReview ? 'Update Review' : 'Submit Review'}
         </Button>

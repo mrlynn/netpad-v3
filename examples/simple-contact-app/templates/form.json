@@ -2,14 +2,27 @@
   "id": "contact-form",
   "slug": "contact",
   "name": "Contact Us",
-  "description": "Simple contact form for receiving messages",
+  "description": "A comprehensive contact form showcasing NetPad's advanced form capabilities including multi-page wizards, conditional logic, and diverse field types",
   "fieldConfigs": [
     {
+      "path": "_section_contact_info",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Contact Information",
+        "subtitle": "Tell us how to reach you"
+      }
+    },
+    {
       "path": "name",
-      "label": "Your Name",
-      "type": "text",
+      "label": "Full Name",
+      "type": "short_text",
       "included": true,
       "required": true,
+      "fieldWidth": "half",
       "placeholder": "Enter your full name",
       "validation": {
         "minLength": 2,
@@ -22,18 +35,73 @@
       "type": "email",
       "included": true,
       "required": true,
+      "fieldWidth": "half",
       "placeholder": "your.email@example.com",
       "validation": {
         "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
       }
     },
     {
-      "path": "subject",
-      "label": "Subject",
-      "type": "text",
+      "path": "phone",
+      "label": "Phone Number",
+      "type": "phone",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "(555) 123-4567"
+    },
+    {
+      "path": "preferredContact",
+      "label": "Preferred Contact Method",
+      "type": "radio",
       "included": true,
       "required": true,
-      "placeholder": "What is this regarding?",
+      "fieldWidth": "half",
+      "validation": {
+        "options": [
+          { "label": "📧 Email", "value": "email" },
+          { "label": "📞 Phone", "value": "phone" },
+          { "label": "💬 Either", "value": "either" }
+        ]
+      }
+    },
+    {
+      "path": "_section_inquiry",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Inquiry Details",
+        "subtitle": "What can we help you with?"
+      }
+    },
+    {
+      "path": "inquiryType",
+      "label": "Inquiry Type",
+      "type": "dropdown",
+      "included": true,
+      "required": true,
+      "validation": {
+        "options": [
+          { "label": "General Question", "value": "general" },
+          { "label": "Product Information", "value": "product" },
+          { "label": "Technical Support", "value": "support" },
+          { "label": "Sales Inquiry", "value": "sales" },
+          { "label": "Partnership Opportunity", "value": "partnership" },
+          { "label": "Feedback", "value": "feedback" },
+          { "label": "Other", "value": "other" }
+        ]
+      }
+    },
+    {
+      "path": "subject",
+      "label": "Subject",
+      "type": "short_text",
+      "included": true,
+      "required": true,
+      "placeholder": "Brief summary of your inquiry",
       "validation": {
         "minLength": 3,
         "maxLength": 200
@@ -42,17 +110,251 @@
     {
       "path": "message",
       "label": "Message",
-      "type": "textarea",
+      "type": "long_text",
       "included": true,
       "required": true,
-      "placeholder": "Enter your message here...",
+      "placeholder": "Please provide details about your inquiry...",
       "rows": 6,
       "validation": {
         "minLength": 10,
         "maxLength": 2000
       }
+    },
+    {
+      "path": "urgency",
+      "label": "Urgency Level",
+      "type": "radio",
+      "included": true,
+      "required": true,
+      "validation": {
+        "options": [
+          { "label": "🟢 Low - No rush", "value": "low" },
+          { "label": "🟡 Medium - Within a few days", "value": "medium" },
+          { "label": "🟠 High - Need response soon", "value": "high" },
+          { "label": "🔴 Urgent - Immediate attention needed", "value": "urgent" }
+        ]
+      },
+      "conditionalLogic": {
+        "show": {
+          "logicType": "any",
+          "conditions": [
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "support"
+            },
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "companyName",
+      "label": "Company Name",
+      "type": "short_text",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "Your company or organization",
+      "conditionalLogic": {
+        "show": {
+          "logicType": "any",
+          "conditions": [
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            },
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "partnership"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "companySize",
+      "label": "Company Size",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "validation": {
+        "options": [
+          { "label": "1-10 employees", "value": "1-10" },
+          { "label": "11-50 employees", "value": "11-50" },
+          { "label": "51-200 employees", "value": "51-200" },
+          { "label": "201-1000 employees", "value": "201-1000" },
+          { "label": "1000+ employees", "value": "1000+" }
+        ]
+      },
+      "conditionalLogic": {
+        "show": {
+          "logicType": "any",
+          "conditions": [
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            },
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "partnership"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "budget",
+      "label": "Estimated Budget",
+      "type": "number",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "placeholder": "0",
+      "validation": {
+        "min": 0
+      },
+      "conditionalLogic": {
+        "show": {
+          "conditions": [
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "timeline",
+      "label": "Expected Timeline",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "fieldWidth": "half",
+      "validation": {
+        "options": [
+          { "label": "Immediate", "value": "immediate" },
+          { "label": "Within 1 month", "value": "1-month" },
+          { "label": "Within 3 months", "value": "3-months" },
+          { "label": "Within 6 months", "value": "6-months" },
+          { "label": "Just exploring", "value": "exploring" }
+        ]
+      },
+      "conditionalLogic": {
+        "show": {
+          "conditions": [
+            {
+              "field": "inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "path": "_section_additional",
+      "label": "",
+      "type": "layout",
+      "included": true,
+      "required": false,
+      "layout": {
+        "type": "section-header",
+        "title": "Additional Information",
+        "subtitle": "Help us serve you better"
+      }
+    },
+    {
+      "path": "howDidYouHear",
+      "label": "How did you hear about us?",
+      "type": "dropdown",
+      "included": true,
+      "required": false,
+      "validation": {
+        "options": [
+          { "label": "Search Engine (Google, Bing, etc.)", "value": "search" },
+          { "label": "Social Media", "value": "social" },
+          { "label": "Referral / Word of Mouth", "value": "referral" },
+          { "label": "Advertisement", "value": "advertisement" },
+          { "label": "Conference / Event", "value": "event" },
+          { "label": "Other", "value": "other" }
+        ]
+      }
+    },
+    {
+      "path": "subscribeNewsletter",
+      "label": "Subscribe to our newsletter",
+      "type": "checkbox",
+      "included": true,
+      "required": false,
+      "defaultValue": false
+    },
+    {
+      "path": "agreeToTerms",
+      "label": "I agree to the terms and conditions",
+      "type": "checkbox",
+      "included": true,
+      "required": true,
+      "defaultValue": false
     }
   ],
+  "multiPageConfig": {
+    "enabled": true,
+    "showProgressBar": true,
+    "showPageTitles": true,
+    "pages": [
+      {
+        "id": "page-1",
+        "title": "Contact Information",
+        "description": "Tell us how to reach you",
+        "fields": [
+          "_section_contact_info",
+          "name",
+          "email",
+          "phone",
+          "preferredContact"
+        ]
+      },
+      {
+        "id": "page-2",
+        "title": "Inquiry Details",
+        "description": "What can we help you with?",
+        "fields": [
+          "_section_inquiry",
+          "inquiryType",
+          "subject",
+          "message",
+          "urgency",
+          "companyName",
+          "companySize",
+          "budget",
+          "timeline"
+        ]
+      },
+      {
+        "id": "page-3",
+        "title": "Additional Information",
+        "description": "Help us serve you better",
+        "fields": [
+          "_section_additional",
+          "howDidYouHear",
+          "subscribeNewsletter",
+          "agreeToTerms"
+        ]
+      }
+    ]
+  },
   "applicationRole": "primary",
   "displayOrder": 1
 }

@@ -30,7 +30,6 @@ import {
   ListItemIcon,
   ListItemText,
   Alert,
-  CircularProgress,
   Autocomplete,
   FormControl,
   InputLabel,
@@ -49,6 +48,7 @@ import {
   CheckCircle,
   Cancel,
 } from '@mui/icons-material';
+import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
 import Link from 'next/link';
 import { ApplicationPermission, ApplicationRole } from '@/types/application';
 import { fetcher } from '@/lib/swr';
@@ -258,7 +258,7 @@ export function PermissionsTab({ applicationId, orgId, projectId }: PermissionsT
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-        <CircularProgress />
+        <NetPadLoader size="small" message="Loading permissions..." />
       </Box>
     );
   }
@@ -385,7 +385,7 @@ export function PermissionsTab({ applicationId, orgId, projectId }: PermissionsT
                       disabled={updating === permission.permissionId || deleting === permission.permissionId}
                     >
                       {updating === permission.permissionId || deleting === permission.permissionId ? (
-                        <CircularProgress size={20} />
+                        <NetPadSpinner size={20} />
                       ) : (
                         <MoreVert fontSize="small" />
                       )}
@@ -479,7 +479,7 @@ export function PermissionsTab({ applicationId, orgId, projectId }: PermissionsT
             variant="contained"
             onClick={handleAddPermission}
             disabled={adding || !selectedUserId}
-            startIcon={adding ? <CircularProgress size={16} /> : <CheckCircle />}
+            startIcon={adding ? <NetPadSpinner size={16} /> : <CheckCircle />}
           >
             {adding ? 'Adding...' : 'Add Permission'}
           </Button>

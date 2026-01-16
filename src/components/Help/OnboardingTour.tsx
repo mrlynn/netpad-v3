@@ -158,6 +158,8 @@ export function OnboardingTour({
         completed.push(tourId);
         localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(completed));
       }
+      // Dispatch event to notify other components that tour status changed
+      window.dispatchEvent(new CustomEvent('tour-status-changed'));
     } catch {
       // Ignore localStorage errors
     }
@@ -184,6 +186,9 @@ export function OnboardingTour({
     } catch {
       // Ignore sessionStorage errors
     }
+
+    // Dispatch event to notify other components that tour status changed
+    window.dispatchEvent(new CustomEvent('tour-status-changed'));
 
     onClose();
   };
@@ -471,21 +476,41 @@ export function OnboardingTour({
 export function useTourStatus(tourId: string) {
   const [hasCompletedTour, setHasCompletedTour] = useState(true); // Default to true to prevent flash
 
-  useEffect(() => {
+  // Function to check storage for tour completion status
+  const checkTourStatus = useCallback(() => {
     try {
       // Check session flag first (prevents re-triggering after dismiss)
       const dismissedThisSession = sessionStorage.getItem(`tour_dismissed_${tourId}`);
       if (dismissedThisSession === 'true') {
-        setHasCompletedTour(true);
-        return;
+        return true;
       }
 
       const completed = JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY) || '[]');
-      setHasCompletedTour(completed.includes(tourId));
+      return completed.includes(tourId);
     } catch {
-      setHasCompletedTour(false);
+      return false;
     }
   }, [tourId]);
+
+  useEffect(() => {
+    setHasCompletedTour(checkTourStatus());
+  }, [checkTourStatus]);
+
+  // Listen for storage changes (to sync across the app when tour is dismissed)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setHasCompletedTour(checkTourStatus());
+    };
+
+    // Also listen for custom event dispatched when tour is dismissed
+    window.addEventListener('tour-status-changed', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('tour-status-changed', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [checkTourStatus]);
 
   const resetTour = useCallback(() => {
     try {
@@ -493,6 +518,8 @@ export function useTourStatus(tourId: string) {
       const updated = completed.filter((id: string) => id !== tourId);
       localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(updated));
       setHasCompletedTour(false);
+      // Dispatch custom event to notify other instances
+      window.dispatchEvent(new CustomEvent('tour-status-changed'));
     } catch {
       // Ignore localStorage errors
     }

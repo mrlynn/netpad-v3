@@ -17,8 +17,8 @@ import {
   Divider,
   Typography,
   alpha,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadSpinner, NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Folder,
   Check,
@@ -133,7 +133,7 @@ export function ProjectSelectorNav({ compact = false, currentProjectId }: Projec
   return (
     <>
       <Chip
-        icon={loading ? <CircularProgress size={12} /> : <Folder sx={{ fontSize: 14 }} />}
+        icon={loading ? <NetPadSpinner size={12} /> : <Folder sx={{ fontSize: 14 }} />}
         label={displayText}
         onClick={handleClick}
         size="small"
@@ -185,7 +185,7 @@ export function ProjectSelectorNav({ compact = false, currentProjectId }: Projec
         <Divider />
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-            <CircularProgress size={20} />
+            <NetPadLoader size="small" />
           </Box>
         ) : projects.length === 0 ? (
           <Box sx={{ px: 2, py: 2, textAlign: 'center' }}>

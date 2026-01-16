@@ -12,10 +12,12 @@ import {
   listUserVaults,
   listVaults,
   testConnectionString,
+  setVaultPermission,
 } from '@/lib/platform/connectionVault';
 import { assertOrgPermission, checkConnectionPermission } from '@/lib/platform/permissions';
 import { repairOrgCreatorMembership } from '@/lib/platform/organizations';
 import { checkConnectionLimit } from '@/lib/platform/billing';
+import { getProvisionedClusterForOrg } from '@/lib/atlas/provisioning';
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +40,35 @@ export async function GET(
 
     // List vaults accessible by this user
     let vaults = await listUserVaults(orgId, session.userId);
+
+    // Check for auto-provisioned cluster vault that user might not have explicit permission for
+    // This handles the case where vault was created with createdBy: 'system' before the fix
+    try {
+      const provisionedCluster = await getProvisionedClusterForOrg(orgId);
+      if (provisionedCluster?.vaultId && provisionedCluster.status === 'ready') {
+        // Check if user already has access to this vault
+        const hasAccess = vaults.some(v => v.vaultId === provisionedCluster.vaultId);
+
+        if (!hasAccess) {
+          // Auto-repair: Add user permission to the auto-provisioned vault
+          console.log(`[Vault API] User ${session.userId} missing access to auto-provisioned vault ${provisionedCluster.vaultId}. Adding permission...`);
+
+          await setVaultPermission(orgId, provisionedCluster.vaultId, {
+            userId: session.userId,
+            role: 'owner',
+            grantedAt: new Date(),
+            grantedBy: 'system',
+          });
+
+          // Re-fetch vaults to include the newly accessible one
+          vaults = await listUserVaults(orgId, session.userId);
+          console.log(`[Vault API] Successfully added permission for user ${session.userId} to vault ${provisionedCluster.vaultId}`);
+        }
+      }
+    } catch (provisioningErr) {
+      // Don't fail the request if provisioning check fails - just log it
+      console.warn('[Vault API] Error checking provisioned cluster:', provisioningErr);
+    }
 
     // Filter by projectId if provided
     if (projectId) {

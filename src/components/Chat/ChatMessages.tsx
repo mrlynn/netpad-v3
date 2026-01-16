@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, memo } from 'react';
 import {
   Box,
   Typography,
@@ -77,7 +77,8 @@ interface MessageBubbleProps {
   onExecuteAction?: (messageId: string, action: ChatAction) => void;
 }
 
-function MessageBubble({ message, onExecuteAction }: MessageBubbleProps) {
+// Memoize MessageBubble to prevent re-renders when parent updates but message hasn't changed
+const MessageBubble = memo(function MessageBubble({ message, onExecuteAction }: MessageBubbleProps) {
   const theme = useTheme();
   const { executeAction: contextExecuteAction } = useChat();
   const executeAction = onExecuteAction || contextExecuteAction;
@@ -191,7 +192,7 @@ function MessageBubble({ message, onExecuteAction }: MessageBubbleProps) {
       )}
     </Box>
   );
-}
+});
 
 interface ActionButtonProps {
   action: ChatAction;

@@ -47,6 +47,7 @@ import {
   Lock,
   Storefront,
   AutoAwesome,
+  Upload,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
@@ -54,6 +55,7 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { getOrgProjectUrl } from '@/lib/routing';
 import { Application, ApplicationStatus } from '@/types/application';
 import { ApplicationDialog } from '@/components/Applications/ApplicationDialog';
+import { ApplicationImportDialog } from '@/components/Applications/ApplicationImportDialog';
 import { InstalledApplicationsView } from '@/components/Applications/InstalledApplicationsView';
 import { useInstalledApplications } from '@/hooks/useInstalledApplications';
 import { UpdateNotificationBanner } from '@/components/Applications/UpdateNotificationBanner';
@@ -436,6 +438,7 @@ export default function ApplicationsPage() {
     severity: 'success',
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -697,25 +700,46 @@ export default function ApplicationsPage() {
                 Organize forms and workflows into applications
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              fullWidth={false}
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { bgcolor: theme.palette.primary.dark },
-              }}
-              onClick={() => {
-                setEditingApplication(null);
-                setDialogOpen(true);
-              }}
-            >
-              Create Application
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Upload />}
+                fullWidth={false}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    borderColor: theme.palette.primary.dark,
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  },
+                }}
+                onClick={() => setImportDialogOpen(true)}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                fullWidth={false}
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
+                }}
+                onClick={() => {
+                  setEditingApplication(null);
+                  setDialogOpen(true);
+                }}
+              >
+                Create Application
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -864,43 +888,106 @@ export default function ApplicationsPage() {
               borderRadius: 2,
             }}
           >
-            <Apps sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
-              {searchQuery 
-                ? 'No applications found' 
-                : activeTab === 1 
-                  ? 'No installed applications'
-                  : activeTab === 2
-                    ? 'No system applications'
-                    : 'No applications yet'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {searchQuery
-                ? 'Try adjusting your search query'
-                : activeTab === 1
-                  ? 'Install applications from the Marketplace to see them here'
-                  : activeTab === 2
-                    ? 'System applications are created automatically'
-                    : 'Create your first application to organize forms and workflows'}
-            </Typography>
-            {!searchQuery && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': { bgcolor: theme.palette.primary.dark },
-                }}
-                onClick={() => {
-                  setEditingApplication(null);
-                  setDialogOpen(true);
-                }}
-              >
-                Create Your First Application
-              </Button>
+            {searchQuery ? (
+              <>
+                <Apps sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                  No applications found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Try adjusting your search query
+                </Typography>
+              </>
+            ) : activeTab === 1 ? (
+              <>
+                <Apps sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                  No installed applications
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Install applications from the Marketplace to see them here
+                </Typography>
+                <Button
+                  component={Link}
+                  href={`/orgs/${orgId}/projects/${projectId}/marketplace`}
+                  variant="outlined"
+                  sx={{ textTransform: 'none' }}
+                >
+                  Browse Marketplace
+                </Button>
+              </>
+            ) : activeTab === 2 ? (
+              <>
+                <Apps sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                  No system applications
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  System applications are created automatically
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Apps sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+                <Typography variant="h5" sx={{ color: 'text.primary', mb: 1, fontWeight: 600 }}>
+                  Bundle Your Solutions
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
+                  Applications package related forms, workflows, and configurations together.
+                  Share them with your team or publish to the Marketplace.
+                </Typography>
+
+                {/* Application Benefits */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+                  {[
+                    { icon: '📦', label: 'Package forms & workflows' },
+                    { icon: '🔄', label: 'Version control' },
+                    { icon: '🌐', label: 'Share & publish' },
+                    { icon: '📥', label: 'Easy import/export' },
+                  ].map((item) => (
+                    <Box
+                      key={item.label}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.2),
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{item.icon}</span> {item.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<Add />}
+                  sx={{
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': { bgcolor: theme.palette.primary.dark },
+                  }}
+                  onClick={() => {
+                    setEditingApplication(null);
+                    setDialogOpen(true);
+                  }}
+                >
+                  Create Your First Application
+                </Button>
+
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
+                  Or browse the Marketplace for ready-to-use solutions
+                </Typography>
+              </>
             )}
           </Paper>
         ) : (
@@ -1122,6 +1209,23 @@ export default function ApplicationsPage() {
           }
         }}
         application={editingApplication}
+        organizationId={orgId}
+        projectId={projectId}
+      />
+
+      <ApplicationImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImport={(result) => {
+          if (result.success) {
+            setSnackbar({
+              open: true,
+              message: `Application imported successfully! ${result.imported?.forms.length || 0} form(s) and ${result.imported?.workflows.length || 0} workflow(s) created.`,
+              severity: 'success',
+            });
+            loadApplications(); // Refresh the list
+          }
+        }}
         organizationId={orgId}
         projectId={projectId}
       />

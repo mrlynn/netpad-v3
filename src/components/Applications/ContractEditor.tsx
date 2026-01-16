@@ -25,7 +25,6 @@ import {
   Chip,
   IconButton,
   Alert,
-  CircularProgress,
   Divider,
   Accordion,
   AccordionSummary,
@@ -44,6 +43,7 @@ import {
   Save,
   Gavel,
 } from '@mui/icons-material';
+import { NetPadSpinner } from '@/components/common/NetPadLoader';
 import { ApplicationContract } from '@/types/application';
 import { CreateContractInput } from '@/lib/platform/applicationContracts';
 
@@ -918,7 +918,7 @@ export function ContractEditor({
           variant="contained"
           onClick={handleSave}
           disabled={saving || (isEditMode && contract?.status === 'active')}
-          startIcon={saving ? <CircularProgress size={16} /> : <Save />}
+          startIcon={saving ? <NetPadSpinner size={16} /> : <Save />}
           sx={{
             bgcolor: '#00ED64',
             '&:hover': { bgcolor: '#00CC55' },

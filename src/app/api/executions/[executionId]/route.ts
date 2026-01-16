@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getExecutionById, getExecutionLogs } from '@/lib/workflow/db';
+import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
 interface RouteParams {
   params: Promise<{ executionId: string }>;
@@ -35,8 +36,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Execution not found' }, { status: 404 });
     }
 
-    // TODO: Verify user has access to this organization
-    // For now, we trust the authentication
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, execution.orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Calculate progress
     const totalNodes = execution.completedNodes.length +

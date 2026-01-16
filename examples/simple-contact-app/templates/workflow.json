@@ -1,64 +1,262 @@
 {
-  "id": "contact-notification",
-  "slug": "contact-notification",
-  "name": "Contact Form Notification",
-  "description": "Sends email notification when contact form is submitted",
+  "id": "contact-automation",
+  "slug": "contact-automation",
+  "name": "Contact Form Automation",
+  "description": "Comprehensive workflow demonstrating NetPad's automation capabilities: conditional routing, MongoDB operations, email notifications, and data transformation",
   "canvas": {
     "nodes": [
       {
         "id": "trigger-1",
         "type": "form-trigger",
-        "position": { "x": 100, "y": 200 },
+        "position": { "x": 100, "y": 300 },
         "config": {
           "formId": "YOUR_FORM_ID_HERE",
           "waitForValidation": false,
           "includeMetadata": true
         },
-        "label": "Form Submitted",
+        "label": "Contact Form Submitted",
         "enabled": true
       },
       {
-        "id": "email-1",
-        "type": "email-send",
+        "id": "save-to-db",
+        "type": "mongodb-write",
         "position": { "x": 400, "y": 200 },
         "config": {
-          "to": "contact@example.com",
-          "fromName": "Contact Form",
-          "subject": "New Contact Form Submission: {{trigger.payload.data.subject}}",
-          "body": "You have received a new contact form submission:\n\n**Name:** {{trigger.payload.data.name}}\n**Email:** {{trigger.payload.data.email}}\n**Subject:** {{trigger.payload.data.subject}}\n\n**Message:**\n{{trigger.payload.data.message}}",
+          "connectionId": "YOUR_CONNECTION_ID_HERE",
+          "database": "contacts",
+          "collection": "submissions",
+          "operation": "insertOne",
+          "document": "{\"name\": \"{{trigger.payload.data.name}}\", \"email\": \"{{trigger.payload.data.email}}\", \"phone\": \"{{trigger.payload.data.phone}}\", \"inquiryType\": \"{{trigger.payload.data.inquiryType}}\", \"subject\": \"{{trigger.payload.data.subject}}\", \"message\": \"{{trigger.payload.data.message}}\", \"urgency\": \"{{trigger.payload.data.urgency}}\", \"companyName\": \"{{trigger.payload.data.companyName}}\", \"companySize\": \"{{trigger.payload.data.companySize}}\", \"budget\": {{trigger.payload.data.budget}}, \"timeline\": \"{{trigger.payload.data.timeline}}\", \"howDidYouHear\": \"{{trigger.payload.data.howDidYouHear}}\", \"subscribeNewsletter\": {{trigger.payload.data.subscribeNewsletter}}, \"submittedAt\": \"{{trigger.payload.metadata.submittedAt}}\", \"status\": \"new\"}"
+        },
+        "label": "Save to Database",
+        "notes": "Saves form submission to MongoDB collection",
+        "enabled": true
+      },
+      {
+        "id": "transform-data",
+        "type": "transform",
+        "position": { "x": 400, "y": 400 },
+        "config": {
+          "expression": "{\"fullName\": trigger.payload.data.name, \"emailAddress\": trigger.payload.data.email, \"contactMethod\": trigger.payload.data.preferredContact, \"inquiry\": {\"type\": trigger.payload.data.inquiryType, \"subject\": trigger.payload.data.subject, \"message\": trigger.payload.data.message, \"urgency\": trigger.payload.data.urgency || \"medium\"}, \"company\": trigger.payload.data.companyName ? {\"name\": trigger.payload.data.companyName, \"size\": trigger.payload.data.companySize} : null, \"metadata\": {\"submittedAt\": trigger.payload.metadata.submittedAt, \"formId\": trigger.payload.metadata.formId}}",
+          "outputVariable": "normalizedData"
+        },
+        "label": "Normalize Data",
+        "notes": "Transforms form data into structured format",
+        "enabled": true
+      },
+      {
+        "id": "condition-urgency",
+        "type": "conditional",
+        "position": { "x": 700, "y": 300 },
+        "config": {
+          "conditions": [
+            {
+              "field": "trigger.payload.data.urgency",
+              "operator": "equals",
+              "value": "urgent"
+            }
+          ],
+          "logicType": "all",
+          "defaultBranch": "no"
+        },
+        "label": "Is Urgent?",
+        "notes": "Routes urgent inquiries for immediate attention",
+        "enabled": true
+      },
+      {
+        "id": "condition-inquiry-type",
+        "type": "conditional",
+        "position": { "x": 700, "y": 500 },
+        "config": {
+          "conditions": [
+            {
+              "field": "trigger.payload.data.inquiryType",
+              "operator": "equals",
+              "value": "sales"
+            },
+            {
+              "field": "trigger.payload.data.inquiryType",
+              "operator": "equals",
+              "value": "partnership"
+            }
+          ],
+          "logicType": "any",
+          "defaultBranch": "no"
+        },
+        "label": "Is Sales/Partnership?",
+        "notes": "Routes sales inquiries to sales team",
+        "enabled": true
+      },
+      {
+        "id": "email-confirmation",
+        "type": "email-send",
+        "position": { "x": 1000, "y": 200 },
+        "config": {
+          "credentialId": "YOUR_EMAIL_CREDENTIAL_ID_HERE",
+          "to": "{{trigger.payload.data.email}}",
+          "subject": "✅ We've received your inquiry: {{trigger.payload.data.subject}}",
+          "body": "Hi {{trigger.payload.data.name}},\n\nThank you for contacting us! We've received your inquiry and will get back to you soon.\n\n**Your Inquiry:**\n- Type: {{trigger.payload.data.inquiryType}}\n- Subject: {{trigger.payload.data.subject}}\n- Urgency: {{trigger.payload.data.urgency || 'Medium'}}\n\n**What happens next?**\n- We'll review your inquiry within 24 hours\n- Our team will respond via your preferred contact method: {{trigger.payload.data.preferredContact}}\n- For urgent matters, we'll prioritize your request\n\n**Your Message:**\n{{trigger.payload.data.message}}\n\nIf you have any questions in the meantime, feel free to reach out.\n\nBest regards,\nThe Team",
           "bodyFormat": "markdown"
         },
-        "label": "Send Email Notification",
-        "notes": "Sends email notification to contact@example.com when form is submitted",
+        "label": "Send Confirmation",
+        "notes": "Sends confirmation email to the submitter",
+        "enabled": true
+      },
+      {
+        "id": "email-urgent-alert",
+        "type": "email-send",
+        "position": { "x": 1000, "y": 350 },
+        "config": {
+          "credentialId": "YOUR_EMAIL_CREDENTIAL_ID_HERE",
+          "to": "urgent@example.com",
+          "subject": "🚨 URGENT: {{trigger.payload.data.subject}} from {{trigger.payload.data.name}}",
+          "body": "**URGENT INQUIRY RECEIVED**\n\n**Contact:**\n- Name: {{trigger.payload.data.name}}\n- Email: {{trigger.payload.data.email}}\n- Phone: {{trigger.payload.data.phone || 'Not provided'}}\n- Preferred Contact: {{trigger.payload.data.preferredContact}}\n\n**Inquiry:**\n- Type: {{trigger.payload.data.inquiryType}}\n- Subject: {{trigger.payload.data.subject}}\n- Urgency: URGENT\n\n**Message:**\n{{trigger.payload.data.message}}\n\n**Action Required:**\nPlease respond to this inquiry immediately.\n\n---\nThis is an automated alert from the contact form.",
+          "bodyFormat": "markdown"
+        },
+        "label": "Urgent Alert",
+        "notes": "Sends immediate alert for urgent inquiries",
+        "enabled": true
+      },
+      {
+        "id": "email-sales-team",
+        "type": "email-send",
+        "position": { "x": 1000, "y": 500 },
+        "config": {
+          "credentialId": "YOUR_EMAIL_CREDENTIAL_ID_HERE",
+          "to": "sales@example.com",
+          "subject": "💼 New {{trigger.payload.data.inquiryType}} inquiry: {{trigger.payload.data.subject}}",
+          "body": "New {{trigger.payload.data.inquiryType}} inquiry received:\n\n**Contact:**\n- Name: {{trigger.payload.data.name}}\n- Email: {{trigger.payload.data.email}}\n- Phone: {{trigger.payload.data.phone || 'Not provided'}}\n\n**Company:**\n- Name: {{trigger.payload.data.companyName || 'Not provided'}}\n- Size: {{trigger.payload.data.companySize || 'Not provided'}}\n- Budget: ${{trigger.payload.data.budget || 'Not specified'}}\n- Timeline: {{trigger.payload.data.timeline || 'Not specified'}}\n\n**Inquiry:**\n- Subject: {{trigger.payload.data.subject}}\n- Message: {{trigger.payload.data.message}}\n\n**Next Steps:**\nPlease follow up with this lead within 24 hours.\n\n---\nThis is an automated notification from the contact form.",
+          "bodyFormat": "markdown"
+        },
+        "label": "Sales Team Notification",
+        "notes": "Notifies sales team of new sales/partnership inquiries",
+        "enabled": true
+      },
+      {
+        "id": "email-general-notification",
+        "type": "email-send",
+        "position": { "x": 1000, "y": 650 },
+        "config": {
+          "credentialId": "YOUR_EMAIL_CREDENTIAL_ID_HERE",
+          "to": "contact@example.com",
+          "subject": "📬 New Contact Form Submission: {{trigger.payload.data.subject}}",
+          "body": "New contact form submission:\n\n**Contact:**\n- Name: {{trigger.payload.data.name}}\n- Email: {{trigger.payload.data.email}}\n- Phone: {{trigger.payload.data.phone || 'Not provided'}}\n- Preferred Contact: {{trigger.payload.data.preferredContact}}\n\n**Inquiry:**\n- Type: {{trigger.payload.data.inquiryType}}\n- Subject: {{trigger.payload.data.subject}}\n- Urgency: {{trigger.payload.data.urgency || 'Medium'}}\n\n**Message:**\n{{trigger.payload.data.message}}\n\n**Additional Info:**\n- How they heard about us: {{trigger.payload.data.howDidYouHear || 'Not provided'}}\n- Newsletter subscription: {{trigger.payload.data.subscribeNewsletter ? 'Yes' : 'No'}}\n\n---\nSubmitted at: {{trigger.payload.metadata.submittedAt}}",
+          "bodyFormat": "markdown"
+        },
+        "label": "General Notification",
+        "notes": "Sends general notification for non-urgent, non-sales inquiries",
         "enabled": true
       }
     ],
     "edges": [
       {
-        "id": "edge-trigger-to-email",
+        "id": "edge-trigger-to-save",
         "source": "trigger-1",
         "sourceHandle": "output",
-        "target": "email-1",
+        "target": "save-to-db",
         "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-transform",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "transform-data",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-urgency-check",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "condition-urgency",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-inquiry-check",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "condition-inquiry-type",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-trigger-to-confirmation",
+        "source": "trigger-1",
+        "sourceHandle": "output",
+        "target": "email-confirmation",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-urgency-yes-to-alert",
+        "source": "condition-urgency",
+        "sourceHandle": "yes",
+        "target": "email-urgent-alert",
+        "targetHandle": "input",
+        "condition": {
+          "expression": "trigger.payload.data.urgency === 'urgent'",
+          "label": "Yes - Urgent"
+        }
+      },
+      {
+        "id": "edge-inquiry-yes-to-sales",
+        "source": "condition-inquiry-type",
+        "sourceHandle": "yes",
+        "target": "email-sales-team",
+        "targetHandle": "input",
+        "condition": {
+          "expression": "trigger.payload.data.inquiryType === 'sales' || trigger.payload.data.inquiryType === 'partnership'",
+          "label": "Yes - Sales/Partnership"
+        }
+      },
+      {
+        "id": "edge-inquiry-no-to-general",
+        "source": "condition-inquiry-type",
+        "sourceHandle": "no",
+        "target": "email-general-notification",
+        "targetHandle": "input",
+        "condition": {
+          "expression": "trigger.payload.data.inquiryType !== 'sales' && trigger.payload.data.inquiryType !== 'partnership'",
+          "label": "No - General"
+        }
       }
     ],
     "viewport": {
       "x": 0,
       "y": 0,
-      "zoom": 1
+      "zoom": 0.8
     }
   },
   "settings": {
-    "executionMode": "sequential",
-    "maxExecutionTime": 30000,
+    "executionMode": "parallel",
+    "maxExecutionTime": 300000,
     "retryPolicy": {
-      "maxRetries": 2,
+      "maxRetries": 3,
       "backoffMultiplier": 2,
       "initialDelayMs": 1000
     },
-    "errorHandling": "stop",
+    "errorHandling": "continue",
     "timezone": "UTC"
   },
-  "variables": [],
-  "tags": ["contact", "email", "notification"]
+  "variables": [
+    {
+      "id": "var-contact-email",
+      "name": "contactEmail",
+      "type": "string",
+      "defaultValue": "contact@example.com",
+      "description": "General contact email address"
+    },
+    {
+      "id": "var-sales-email",
+      "name": "salesEmail",
+      "type": "string",
+      "defaultValue": "sales@example.com",
+      "description": "Sales team email address"
+    },
+    {
+      "id": "var-urgent-email",
+      "name": "urgentEmail",
+      "type": "string",
+      "defaultValue": "urgent@example.com",
+      "description": "Urgent inquiry alert email address"
+    }
+  ],
+  "tags": ["contact", "automation", "email", "mongodb", "conditional", "routing"]
 }

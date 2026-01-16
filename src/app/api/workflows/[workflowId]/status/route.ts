@@ -9,6 +9,7 @@ import { getSession } from '@/lib/auth/session';
 import { getWorkflowById, updateWorkflowStatus, listWorkflows } from '@/lib/workflow/db';
 import { WorkflowStatus } from '@/types/workflow';
 import { checkActiveWorkflowLimit } from '@/lib/platform/billing';
+import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -43,7 +44,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // TODO: Verify user has access to this organization
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Check workflow exists
     const existing = await getWorkflowById(orgId, workflowId);

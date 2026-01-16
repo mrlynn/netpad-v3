@@ -13,7 +13,17 @@ import { ConfigFieldRenderer } from './shared/ConfigFieldRenderer';
 // Config schemas for custom nodes
 const CUSTOM_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   'code': [
-    { key: 'code', label: 'JavaScript Code', type: 'code', description: 'Code to execute. Use "input" for node inputs, "return" to output data.' },
+    {
+      key: 'code',
+      label: 'JavaScript Code',
+      type: 'code',
+      description: 'Code to execute. Use "input" for node inputs, "return" to output data.',
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Calculate order total from items array"',
+        buttonLabel: 'Generate Code',
+      },
+    },
     { key: 'timeout', label: 'Timeout (ms)', type: 'number', description: 'Max execution time (default: 5000, max: 30000)' },
   ],
 };
@@ -43,6 +53,8 @@ export function CustomNodeEditor({
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}

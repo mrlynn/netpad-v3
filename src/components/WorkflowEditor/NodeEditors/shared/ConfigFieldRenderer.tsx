@@ -32,12 +32,18 @@ import { VariablePickerButton } from '../../VariablePicker';
 import { ConfigField, SwitchCase, EmailCredentialOption } from './utils';
 import { SwitchCasesEditor } from './SwitchCasesEditor';
 import { Email as EmailIcon, Send as SendIcon } from '@mui/icons-material';
+import { MongoQueryBuilder, QueryOptionsBuilder, AggregationBuilder } from '../../QueryBuilder';
+import { AIConfigAssistant } from '../../shared/AIConfigAssistant';
 
 interface ConfigFieldRendererProps {
   field: ConfigField;
   value: unknown;
   onChange: (key: string, value: unknown) => void;
   nodeId: string;
+  /** Node type for AI assistance context */
+  nodeType?: string;
+  /** Full config object for AI assistance context */
+  allConfig?: Record<string, unknown>;
   availableForms?: Array<{
     id: string;
     name: string;
@@ -61,6 +67,8 @@ export function ConfigFieldRenderer({
   value,
   onChange,
   nodeId,
+  nodeType,
+  allConfig = {},
   availableForms = [],
   formsLoading = false,
   availableConnections = [],
@@ -78,34 +86,52 @@ export function ConfigFieldRenderer({
     return null;
   }
 
+  // Helper to render AI assistant if enabled for this field
+  const renderAIAssistant = () => {
+    if (!field.aiAssist?.enabled || !nodeType) return null;
+    return (
+      <AIConfigAssistant
+        nodeId={nodeId}
+        nodeType={nodeType}
+        fieldKey={field.key}
+        currentConfig={allConfig}
+        currentFieldValue={value}
+        onApply={(newValue) => onChange(field.key, newValue)}
+        promptHint={field.aiAssist.promptHint}
+        buttonLabel={field.aiAssist.buttonLabel}
+      />
+    );
+  };
+
   switch (field.type) {
     case 'text':
     case 'password':
       return (
-        <TextField
-          key={field.key}
-          fullWidth
-          size="small"
-          label={field.label}
-          type={field.type === 'password' ? 'password' : 'text'}
-          value={(value as string) || ''}
-          onChange={(e) => onChange(field.key, e.target.value)}
-          helperText={field.description}
-          sx={{ mb: 2 }}
-          InputProps={{
-            endAdornment: field.type !== 'password' && (
-              <InputAdornment position="end">
-                <VariablePickerButton
-                  nodeId={nodeId}
-                  onInsert={(variable) => {
-                    const currentValue = (value as string) || '';
-                    onChange(field.key, currentValue + variable);
-                  }}
-                />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box key={field.key} sx={{ mb: 2 }}>
+          {renderAIAssistant()}
+          <TextField
+            fullWidth
+            size="small"
+            label={field.label}
+            type={field.type === 'password' ? 'password' : 'text'}
+            value={(value as string) || ''}
+            onChange={(e) => onChange(field.key, e.target.value)}
+            helperText={field.description}
+            InputProps={{
+              endAdornment: field.type !== 'password' && (
+                <InputAdornment position="end">
+                  <VariablePickerButton
+                    nodeId={nodeId}
+                    onInsert={(variable) => {
+                      const currentValue = (value as string) || '';
+                      onChange(field.key, currentValue + variable);
+                    }}
+                  />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
       );
 
     case 'number':
@@ -350,6 +376,7 @@ export function ConfigFieldRenderer({
     case 'code':
       return (
         <Box key={field.key} sx={{ mb: 2 }}>
+          {renderAIAssistant()}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
               {field.label}
@@ -394,6 +421,43 @@ export function ConfigFieldRenderer({
           key={field.key}
           cases={(value as SwitchCase[]) || []}
           onChange={(newCases) => onChange(field.key, newCases)}
+        />
+      );
+
+    case 'mongodb-query-builder':
+      return (
+        <MongoQueryBuilder
+          key={field.key}
+          value={value as Record<string, unknown> | string | undefined}
+          onChange={(newValue) => onChange(field.key, newValue)}
+          nodeId={nodeId}
+          showPreview={true}
+          label={field.label}
+          description={field.description}
+        />
+      );
+
+    case 'mongodb-options-builder':
+      return (
+        <QueryOptionsBuilder
+          key={field.key}
+          value={value as Record<string, unknown> | string | undefined}
+          onChange={(newValue) => onChange(field.key, newValue)}
+          label={field.label}
+          description={field.description}
+        />
+      );
+
+    case 'mongodb-pipeline-builder':
+      return (
+        <AggregationBuilder
+          key={field.key}
+          value={value as Record<string, unknown>[] | string | undefined}
+          onChange={(newValue) => onChange(field.key, newValue)}
+          nodeId={nodeId}
+          showPreview={true}
+          label={field.label}
+          description={field.description}
         />
       );
 
@@ -514,7 +578,7 @@ export function ConfigFieldRenderer({
                 To send emails, add an SMTP or SendGrid credential in{' '}
                 {orgId ? (
                   <Link
-                    href={`/orgs/${orgId}/settings?tab=integrations`}
+                    href={`/settings?tab=integrations`}
                     target="_blank"
                     style={{ color: 'inherit', textDecoration: 'underline' }}
                   >

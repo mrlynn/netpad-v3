@@ -73,6 +73,40 @@ export function isOrgProjectPath(pathname: string): boolean {
 }
 
 /**
+ * Generate URL for application-centric routes
+ * New simplified structure: /apps/:appSlug/:section
+ */
+export function getAppUrl(
+  appSlug: string,
+  section: 'forms' | 'workflows' | 'data' | 'settings' = 'forms'
+): string {
+  return `/apps/${appSlug}/${section}`;
+}
+
+/**
+ * Parse app slug from URL pathname
+ */
+export function parseAppFromPath(pathname: string): {
+  appSlug: string | null;
+  section: 'forms' | 'workflows' | 'data' | 'settings' | null;
+} {
+  const match = pathname.match(/^\/apps\/([^/]+)(?:\/([^/]+))?/);
+  if (match) {
+    const appSlug = match[1];
+    const section = match[2] as 'forms' | 'workflows' | 'data' | 'settings' | null;
+    return { appSlug, section: section || 'forms' };
+  }
+  return { appSlug: null, section: null };
+}
+
+/**
+ * Check if a pathname uses the new app-centric structure
+ */
+export function isAppPath(pathname: string): boolean {
+  return pathname.startsWith('/apps/');
+}
+
+/**
  * Legacy route mappings for redirects
  */
 export const LEGACY_ROUTES: Record<string, (orgId: string, projectId: string) => string> = {

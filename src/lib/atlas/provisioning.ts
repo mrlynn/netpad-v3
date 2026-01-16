@@ -581,7 +581,7 @@ export async function provisionM0Cluster(
     const vault = await createConnectionVault({
       organizationId,
       projectId,
-      createdBy: 'system',
+      createdBy: userId,  // Use actual userId so they have permission to access
       name: 'Default Database (Auto-provisioned)',
       description: `M0 cluster automatically provisioned on ${new Date().toLocaleDateString()}`,
       connectionString,

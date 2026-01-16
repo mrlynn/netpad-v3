@@ -104,45 +104,53 @@ export async function GET(request: NextRequest) {
           indexes: [],
         };
 
+        // Build list of parallel operations
+        const operations: Promise<unknown>[] = [];
+        const operationTypes: ('stats' | 'indexes' | 'sample')[] = [];
+
         if (includeStats && coll.type !== 'view') {
-          // Fetch stats and indexes in parallel
-          const [statsResult, indexesResult] = await Promise.allSettled([
-            db.command({ collStats: coll.name }),
-            db.collection(coll.name).indexes(),
-          ]);
-
-          if (statsResult.status === 'fulfilled') {
-            const stats = statsResult.value;
-            info.documentCount = stats.count || 0;
-            info.storageSize = stats.storageSize || 0;
-            info.avgDocSize = stats.avgObjSize || 0;
-          }
-
-          if (indexesResult.status === 'fulfilled') {
-            info.indexes = indexesResult.value.map(idx => ({
-              name: idx.name || '',
-              key: idx.key as Record<string, 1 | -1 | 'text' | '2dsphere'>,
-              unique: idx.unique,
-              sparse: idx.sparse,
-              expireAfterSeconds: idx.expireAfterSeconds,
-            }));
-          }
+          operations.push(db.command({ collStats: coll.name }));
+          operationTypes.push('stats');
+          operations.push(db.collection(coll.name).indexes());
+          operationTypes.push('indexes');
         }
 
-        // Get sample document for schema inference
         if (includeSample && coll.type !== 'view') {
-          try {
-            const collection = db.collection(coll.name);
-            const sample = await collection.findOne({});
-            if (sample) {
-              // Store sample schema (just the keys, not values)
-              const sampleKeys = Object.keys(sample);
-              // @ts-ignore - adding extra field
-              info.sampleKeys = sampleKeys;
+          operations.push(db.collection(coll.name).findOne({}));
+          operationTypes.push('sample');
+        }
+
+        // Execute all operations in parallel
+        if (operations.length > 0) {
+          const results = await Promise.allSettled(operations);
+
+          results.forEach((result, index) => {
+            if (result.status !== 'fulfilled') return;
+
+            const type = operationTypes[index];
+            if (type === 'stats') {
+              const stats = result.value as { count?: number; storageSize?: number; avgObjSize?: number };
+              info.documentCount = stats.count || 0;
+              info.storageSize = stats.storageSize || 0;
+              info.avgDocSize = stats.avgObjSize || 0;
+            } else if (type === 'indexes') {
+              const indexes = result.value as Array<{ name?: string; key: Record<string, unknown>; unique?: boolean; sparse?: boolean; expireAfterSeconds?: number }>;
+              info.indexes = indexes.map(idx => ({
+                name: idx.name || '',
+                key: idx.key as Record<string, 1 | -1 | 'text' | '2dsphere'>,
+                unique: idx.unique,
+                sparse: idx.sparse,
+                expireAfterSeconds: idx.expireAfterSeconds,
+              }));
+            } else if (type === 'sample') {
+              const sample = result.value as Record<string, unknown> | null;
+              if (sample) {
+                // Store sample schema (just the keys, not values)
+                // @ts-ignore - adding extra field
+                info.sampleKeys = Object.keys(sample);
+              }
             }
-          } catch {
-            // Sample may not be available
-          }
+          });
         }
 
         return info;
@@ -225,16 +233,18 @@ export async function POST(request: NextRequest) {
 
     await db.createCollection(collectionName, createOptions);
 
-    // Create indexes if specified
+    // Create indexes if specified - use Promise.all for parallel creation
     if (options?.indexes && Array.isArray(options.indexes)) {
       const collection = db.collection(collectionName);
-      for (const index of options.indexes) {
-        await collection.createIndex(index.key, {
-          unique: index.unique,
-          sparse: index.sparse,
-          expireAfterSeconds: index.expireAfterSeconds,
-        });
-      }
+      await Promise.all(
+        options.indexes.map((index: { key: Record<string, 1 | -1 | 'text' | '2dsphere'>; unique?: boolean; sparse?: boolean; expireAfterSeconds?: number }) =>
+          collection.createIndex(index.key, {
+            unique: index.unique,
+            sparse: index.sparse,
+            expireAfterSeconds: index.expireAfterSeconds,
+          })
+        )
+      );
     }
 
     return NextResponse.json({

@@ -12,3 +12,13 @@ export {
   cacheKeys,
 } from './useCollections';
 export { useDocuments, documentsCacheKey } from './useDocuments';
+export { useProjectDefaultVault, projectVaultCacheKey } from './useProjectVault';
+export {
+  useApplications,
+  useApplication,
+  useGroupedApplications,
+  useRecentApplications,
+  applicationsCacheKeys,
+  type UseApplicationsOptions,
+  type UseApplicationsReturn,
+} from './useApplications';

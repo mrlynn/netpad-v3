@@ -12,6 +12,7 @@ import {
   listWorkflows,
   createOrgWorkflowIndexes,
 } from '@/lib/workflow/db';
+import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
 /**
  * GET /api/workflows
@@ -41,8 +42,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this organization
-    // For now, we'll assume the user has access
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Ensure indexes exist
     await createOrgWorkflowIndexes(orgId);
@@ -133,8 +140,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // TODO: Verify user has access to this organization
-    // TODO: Check organization workflow limits
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Ensure indexes exist
     await createOrgWorkflowIndexes(orgId);

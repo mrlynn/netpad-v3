@@ -11,6 +11,7 @@ import { getSession } from '@/lib/auth/session';
 import { findUserById } from '@/lib/platform/users';
 import { checkAILimit, incrementAIUsage, hasAIFeature } from '@/lib/platform/billing';
 import { AIFeature } from '@/types/platform';
+import { getOrganizationsCollection } from '@/lib/platform/db';
 
 // Guest usage limits
 const GUEST_DAILY_LIMIT = 5;
@@ -108,13 +109,55 @@ export async function validateAIRequest(
     return {
       success: false,
       response: NextResponse.json(
-        { success: false, error: 'No organization found' },
+        { success: false, error: 'No organization found. Please create a workspace first.' },
         { status: 403 }
       ),
     };
   }
 
-  const orgId = user.organizations[0].orgId;
+  // Find the first valid organization (one that actually exists in the database)
+  let orgId: string | null = null;
+  const orgsCollection = await getOrganizationsCollection();
+  const staleOrgIds: string[] = [];
+
+  for (const userOrg of user.organizations) {
+    const org = await orgsCollection.findOne({ orgId: userOrg.orgId });
+    if (org) {
+      orgId = userOrg.orgId;
+      break;
+    } else {
+      console.warn(`[AI Guard] User ${session.userId} has stale org reference: ${userOrg.orgId}`);
+      staleOrgIds.push(userOrg.orgId);
+    }
+  }
+
+  // Clean up stale org references asynchronously (don't wait for it)
+  if (staleOrgIds.length > 0) {
+    const { getUsersCollection } = await import('@/lib/platform/db');
+    const usersCollection = await getUsersCollection();
+    usersCollection.updateOne(
+      { userId: session.userId },
+      {
+        $pull: { organizations: { orgId: { $in: staleOrgIds } } },
+        $set: { updatedAt: new Date() },
+      }
+    ).catch(err => console.error('[AI Guard] Failed to clean up stale org refs:', err));
+  }
+
+  if (!orgId) {
+    console.error(`[AI Guard] User ${session.userId} has no valid organizations. Org references: ${user.organizations.map(o => o.orgId).join(', ')}`);
+    return {
+      success: false,
+      response: NextResponse.json(
+        {
+          success: false,
+          error: 'Your organization could not be found. Please try signing out and signing back in, or create a new workspace.',
+          code: 'ORG_NOT_FOUND'
+        },
+        { status: 403 }
+      ),
+    };
+  }
 
   // Check if user has access to the feature
   const featureAccess = await hasAIFeature(orgId, feature);

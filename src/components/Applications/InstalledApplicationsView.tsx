@@ -20,7 +20,6 @@ import {
   Chip,
   IconButton,
   Alert,
-  CircularProgress,
   alpha,
   Stack,
   Menu,
@@ -38,6 +37,7 @@ import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { ApplicationUpgradeDialog } from './ApplicationUpgradeDialog';
 import { ApplicationDetailDialog } from '@/components/Marketplace/ApplicationDetailDialog';
@@ -170,7 +170,7 @@ export function InstalledApplicationsView({
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <CircularProgress />
+          <NetPadLoader size="medium" message="Loading installed applications..." />
         </Box>
       </Container>
     );

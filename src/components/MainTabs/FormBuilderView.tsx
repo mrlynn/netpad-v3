@@ -1,13 +1,17 @@
 'use client';
 
+/**
+ * FormBuilderView
+ *
+ * Wrapper component for the FormBuilder.
+ * Onboarding is now handled globally by OnboardingGate in the project layout.
+ */
+
 import { useEffect } from 'react';
-import { Box, CircularProgress, Typography, alpha, Button, Paper } from '@mui/material';
-import { Business } from '@mui/icons-material';
+import { Box, Typography } from '@mui/material';
 import { FormBuilder } from '@/components/FormBuilder/FormBuilder';
-import { OnboardingWizard, WelcomeScreen, WelcomeModal } from '@/components/Onboarding';
-import { useRequireOrganization, useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWelcomeModal } from '@/hooks/useWelcomeModal';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useTour } from '@/contexts/TourContext';
 
 interface FormBuilderViewProps {
@@ -16,35 +20,25 @@ interface FormBuilderViewProps {
 
 export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { isLoading, needsOrg, needsSelection } = useRequireOrganization();
-  const { refreshOrganizations, organizations, selectOrganization } = useOrganization();
-  const { showWelcome, dismissWelcome } = useWelcomeModal();
   const { startTour, hasCompletedTour, isTourActive } = useTour();
 
   // Auto-start form builder tour on first visit
   useEffect(() => {
     // Only trigger if:
-    // 1. User is authenticated (not in welcome/onboarding flow)
-    // 2. Org is selected (not in org selection state)
-    // 3. Tour is not already active
-    // 4. User hasn't completed the form-builder tour
-    if (
-      isAuthenticated &&
-      !needsOrg &&
-      !needsSelection &&
-      !isTourActive &&
-      !hasCompletedTour('form-builder')
-    ) {
+    // 1. User is authenticated
+    // 2. Tour is not already active
+    // 3. User hasn't completed the form-builder tour
+    if (isAuthenticated && !isTourActive && !hasCompletedTour('form-builder')) {
       // Small delay to ensure UI is fully rendered
       const timer = setTimeout(() => {
         startTour('form-builder');
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, needsOrg, needsSelection, isTourActive, hasCompletedTour, startTour]);
+  }, [isAuthenticated, isTourActive, hasCompletedTour, startTour]);
 
-  // Show loading state while checking org status
-  if (isLoading) {
+  // Show loading state while checking auth
+  if (isAuthLoading) {
     return (
       <Box
         sx={{
@@ -57,97 +51,15 @@ export function FormBuilderView({ initialFormId }: FormBuilderViewProps) {
           gap: 2,
         }}
       >
-        <CircularProgress sx={{ color: '#00ED64' }} />
-        <Typography variant="body2" color="text.secondary">
-          Loading your workspace...
-        </Typography>
+        <NetPadLoader size="small" message="Loading..." />
       </Box>
     );
   }
 
-  // Show welcome screen if user is not authenticated
-  if (!isAuthenticated && needsOrg) {
-    return <WelcomeScreen />;
-  }
-
-  // Show onboarding wizard if authenticated user needs to create an org
-  if (needsOrg) {
-    return (
-      <Box
-        sx={{
-          width: '100%',
-          height: '100%',
-          bgcolor: alpha('#00ED64', 0.02),
-        }}
-      >
-        {/* Show welcome modal for first-time users */}
-        <WelcomeModal open={showWelcome} onContinue={dismissWelcome} />
-        <OnboardingWizard onComplete={refreshOrganizations} />
-      </Box>
-    );
-  }
-
-  // Show org selector if user has orgs but none selected
-  if (needsSelection && organizations.length > 0) {
-    return (
-      <Box
-        sx={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 3,
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            maxWidth: 400,
-            textAlign: 'center',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 3,
-          }}
-        >
-          <Business sx={{ fontSize: 48, color: '#00ED64', mb: 2 }} />
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            Select a Workspace
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Choose which workspace you want to work in
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {organizations.map((org) => (
-              <Button
-                key={org.orgId}
-                variant="outlined"
-                onClick={() => selectOrganization(org.orgId)}
-                sx={{
-                  justifyContent: 'flex-start',
-                  textTransform: 'none',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    borderColor: '#00ED64',
-                    bgcolor: alpha('#00ED64', 0.05),
-                  },
-                }}
-              >
-                {org.name}
-              </Button>
-            ))}
-          </Box>
-        </Paper>
-      </Box>
-    );
-  }
-
-  // Normal form builder
+  // Render FormBuilder - onboarding is handled by global OnboardingGate
   return (
     <Box sx={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       <FormBuilder initialFormId={initialFormId} />
     </Box>
   );
 }
-

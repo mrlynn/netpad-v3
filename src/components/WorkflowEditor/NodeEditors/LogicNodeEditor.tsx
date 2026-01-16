@@ -148,6 +148,8 @@ export function LogicNodeEditor({
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}

@@ -128,6 +128,13 @@ async function fetchSubscriptionData(orgId: string): Promise<CachedSubscriptionD
     }
 
     const data = await response.json();
+
+    // Check if response contains an error or is missing required fields
+    if (data.error || !data.aiFeatures || !data.platformFeatures) {
+      console.error('[useFeatureGate] Invalid subscription data:', data.error || 'Missing required fields');
+      return null;
+    }
+
     subscriptionCache = {
       ...data,
       fetchedAt: Date.now(),

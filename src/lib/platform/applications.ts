@@ -208,6 +208,66 @@ export interface ListApplicationsOptions {
   status?: ApplicationStatus;
 }
 
+/**
+ * List all applications for an organization (across all projects)
+ * Used by the Application Switcher for app-centric navigation
+ */
+export async function listAllOrgApplications(
+  organizationId: string,
+  options: ListApplicationsOptions = {}
+): Promise<ListApplicationsResult> {
+  const applicationsCollection = await getApplicationsCollection(organizationId);
+  const {
+    page = 1,
+    pageSize = 100, // Higher default for switcher
+    sortBy = 'updatedAt',
+    sortOrder = 'desc',
+    search,
+    status,
+  } = options;
+
+  // Build query - no projectId filter, only orgId
+  const query: Record<string, unknown> = {
+    organizationId,
+  };
+
+  if (status) {
+    query.status = status;
+  }
+
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { slug: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  // Get total count
+  const total = await applicationsCollection.countDocuments(query);
+
+  // Build sort
+  const sort: Record<string, 1 | -1> = {
+    [sortBy]: sortOrder === 'asc' ? 1 : -1,
+  };
+
+  // Get paginated results
+  const applications = await applicationsCollection
+    .find(query)
+    .sort(sort)
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .toArray();
+
+  return {
+    applications,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
+}
+
 export interface ListApplicationsResult {
   applications: Application[];
   total: number;

@@ -210,18 +210,19 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   // Feature access helpers
   const currentTier: SubscriptionTier = state.organization?.subscription?.tier || 'free';
-  const tierConfig = SUBSCRIPTION_TIERS[currentTier];
+  // Ensure tierConfig is valid, fall back to 'free' tier if not
+  const tierConfig = SUBSCRIPTION_TIERS[currentTier] || SUBSCRIPTION_TIERS['free'];
 
   const hasAIFeature = useCallback((feature: AIFeature): boolean => {
-    return tierConfig.aiFeatures.includes(feature);
+    return tierConfig?.aiFeatures?.includes(feature) ?? false;
   }, [tierConfig]);
 
   const hasPlatformFeature = useCallback((feature: PlatformFeature): boolean => {
-    return tierConfig.platformFeatures.includes(feature);
+    return tierConfig?.platformFeatures?.includes(feature) ?? false;
   }, [tierConfig]);
 
   const getTierLimits = useCallback((): TierLimits => {
-    return tierConfig.limits;
+    return tierConfig?.limits ?? SUBSCRIPTION_TIERS['free'].limits;
   }, [tierConfig]);
 
   // Load organizations on auth change or pathname change

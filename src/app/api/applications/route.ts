@@ -10,6 +10,7 @@ import { getSession } from '@/lib/auth/session';
 import {
   createApplication,
   listApplications,
+  listAllOrgApplications,
   ensureDefaultApplication,
 } from '@/lib/platform/applications';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
@@ -31,9 +32,9 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId');
     const projectId = searchParams.get('projectId');
 
-    if (!orgId || !projectId) {
+    if (!orgId) {
       return NextResponse.json(
-        { error: 'orgId and projectId query parameters are required' },
+        { error: 'orgId query parameter is required' },
         { status: 400 }
       );
     }
@@ -47,15 +48,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify project exists and belongs to org
-    const project = await getProject(projectId);
-    if (!project || project.organizationId !== orgId) {
-      return NextResponse.json(
-        { error: 'Project not found or does not belong to this organization' },
-        { status: 404 }
-      );
-    }
-
     // Parse query parameters
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
@@ -64,15 +56,38 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || undefined;
     const status = searchParams.get('status') as 'draft' | 'active' | 'archived' | undefined;
 
-    // Get all applications for the project
-    let result = await listApplications(orgId, projectId, {
-      page,
-      pageSize,
-      sortBy: sortBy as 'name' | 'createdAt' | 'updatedAt',
-      sortOrder,
-      search,
-      status,
-    });
+    let result;
+
+    if (projectId) {
+      // Project-specific: Verify project exists and belongs to org
+      const project = await getProject(projectId);
+      if (!project || project.organizationId !== orgId) {
+        return NextResponse.json(
+          { error: 'Project not found or does not belong to this organization' },
+          { status: 404 }
+        );
+      }
+
+      // Get applications for the specific project
+      result = await listApplications(orgId, projectId, {
+        page,
+        pageSize,
+        sortBy: sortBy as 'name' | 'createdAt' | 'updatedAt',
+        sortOrder,
+        search,
+        status,
+      });
+    } else {
+      // Org-wide: Get all applications across all projects (for App Switcher)
+      result = await listAllOrgApplications(orgId, {
+        page,
+        pageSize,
+        sortBy: sortBy as 'name' | 'createdAt' | 'updatedAt',
+        sortOrder,
+        search,
+        status,
+      });
+    }
 
     // Filter by permissions (Phase 10)
     // Platform admins and org owners/admins see all applications

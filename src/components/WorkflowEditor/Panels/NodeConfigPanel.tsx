@@ -60,9 +60,10 @@ import { CustomNodeEditor } from '../NodeEditors/CustomNodeEditor';
 interface NodeConfigPanelProps {
   open: boolean;
   onClose: () => void;
+  onTestWorkflow?: () => void;
 }
 
-export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
+export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPanelProps) {
   const theme = useTheme();
   const params = useParams();
   const orgId = params.orgId as string | undefined;
@@ -638,6 +639,10 @@ export function NodeConfigPanel({ open, onClose }: NodeConfigPanelProps) {
                   availableConnections={availableConnections}
                   connectionsLoading={connectionsLoading}
                   nodeId={selectedNode.id}
+                  onTestClick={onTestWorkflow ? () => {
+                    onClose(); // Close config panel first
+                    onTestWorkflow(); // Then open test dialog
+                  } : undefined}
                 />
               ) : isLogicNode ? (
                 <LogicNodeEditor

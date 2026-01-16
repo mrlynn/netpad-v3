@@ -29,6 +29,11 @@ const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
       type: 'text',
       description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)',
       required: true,
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Send to the email from the form submission"',
+        buttonLabel: 'Generate Recipient',
+      },
     },
     {
       key: 'subject',
@@ -36,6 +41,11 @@ const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
       type: 'text',
       description: 'Email subject (supports {{variables}})',
       required: true,
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Welcome email with user name"',
+        buttonLabel: 'Generate Subject',
+      },
     },
     {
       key: 'body',
@@ -43,6 +53,11 @@ const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
       type: 'code',
       description: 'Email body (HTML supported, use {{variables}})',
       required: true,
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Professional welcome email with signup details"',
+        buttonLabel: 'Generate Email',
+      },
     },
     {
       key: 'from',
@@ -98,7 +113,7 @@ export function ActionNodeEditor({
             orgId && (
               <Button
                 component={Link}
-                href={`/orgs/${orgId}/settings?tab=integrations`}
+                href={`/settings?tab=integrations`}
                 target="_blank"
                 size="small"
                 startIcon={<SettingsIcon />}
@@ -131,6 +146,8 @@ export function ActionNodeEditor({
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}

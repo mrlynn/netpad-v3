@@ -1,7 +1,8 @@
 /**
  * Project Layout
- * 
- * Validates project access and provides project context to child routes
+ *
+ * Validates project access and provides project context to child routes.
+ * Wraps content in OnboardingGate to ensure users complete setup first.
  */
 
 import { ReactNode } from 'react';
@@ -9,6 +10,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
 import { getProject } from '@/lib/platform/projects';
+import { OnboardingGateWrapper } from './OnboardingGateWrapper';
 
 interface ProjectLayoutProps {
   children: ReactNode;
@@ -41,5 +43,6 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   }
 
   // Project is valid and user has access
-  return <>{children}</>;
+  // Wrap in OnboardingGate to ensure user completes setup
+  return <OnboardingGateWrapper>{children}</OnboardingGateWrapper>;
 }

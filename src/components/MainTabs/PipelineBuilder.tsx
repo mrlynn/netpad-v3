@@ -15,7 +15,8 @@ import { SerializedStage } from '@/lib/pipelineSerializer';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { useState, useEffect } from 'react';
 import { Document } from 'mongodb';
-import { Button, CircularProgress } from '@mui/material';
+import { Button } from '@mui/material';
+import { NetPadSpinner } from '@/components/common/NetPadLoader';
 import { PlayArrow } from '@mui/icons-material';
 import { serializePipeline } from '@/lib/pipelineSerializer';
 import { Allotment } from 'allotment';
@@ -234,7 +235,7 @@ export function PipelineBuilder() {
                           <Button
                             variant="contained"
                             size="small"
-                            startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrow />}
+                            startIcon={isExecuting ? <NetPadSpinner size={16} /> : <PlayArrow />}
                             onClick={() => {
                       setCurrentPage(1);
                       executePipeline(1, true);

@@ -13,10 +13,40 @@ import { ConfigFieldRenderer } from './shared/ConfigFieldRenderer';
 // Config schemas for integration nodes
 const INTEGRATION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   'http-request': [
-    { key: 'url', label: 'URL', type: 'text', description: 'The URL to request (use {{variable}} for dynamic values)' },
+    {
+      key: 'url',
+      label: 'URL',
+      type: 'text',
+      description: 'The URL to request (use {{variable}} for dynamic values)',
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "API endpoint for user lookup with ID from form"',
+        buttonLabel: 'Generate URL',
+      },
+    },
     { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], description: 'HTTP method' },
-    { key: 'headers', label: 'Headers', type: 'code', description: 'Request headers as JSON' },
-    { key: 'body', label: 'Body', type: 'code', description: 'Request body (for POST/PUT/PATCH)' },
+    {
+      key: 'headers',
+      label: 'Headers',
+      type: 'code',
+      description: 'Request headers as JSON',
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Bearer token auth with JSON content type"',
+        buttonLabel: 'Generate Headers',
+      },
+    },
+    {
+      key: 'body',
+      label: 'Body',
+      type: 'code',
+      description: 'Request body (for POST/PUT/PATCH)',
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Send form data as JSON with name and email"',
+        buttonLabel: 'Generate Body',
+      },
+    },
     { key: 'timeout', label: 'Timeout (ms)', type: 'number', description: 'Request timeout in milliseconds' },
   ],
   'mongodb-query': [
@@ -24,15 +54,16 @@ const INTEGRATION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'database', label: 'Database', type: 'text', description: 'Database name (optional, uses connection default)' },
     { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
     { key: 'operation', label: 'Operation', type: 'select', options: ['find', 'findOne', 'aggregate', 'count'], description: 'Query operation' },
-    { key: 'query', label: 'Query/Pipeline', type: 'code', description: 'MongoDB query or aggregation pipeline as JSON (use {{variable}} for dynamic values)' },
-    { key: 'options', label: 'Options', type: 'code', description: 'Query options (sort, limit, projection) as JSON' },
+    { key: 'query', label: 'Query Filter', type: 'mongodb-query-builder', description: 'Build your MongoDB query filter visually' },
+    { key: 'pipeline', label: 'Aggregation Pipeline', type: 'mongodb-pipeline-builder', description: 'Build your aggregation pipeline visually' },
+    { key: 'options', label: 'Options', type: 'mongodb-options-builder', description: 'Sort, limit, skip, and projection' },
   ],
   'mongodb-write': [
     { key: 'connectionId', label: 'Connection', type: 'connection-select', description: 'Select a MongoDB connection from the vault' },
     { key: 'database', label: 'Database', type: 'text', description: 'Database name (optional, uses connection default)' },
     { key: 'collection', label: 'Collection', type: 'text', description: 'Collection name' },
     { key: 'operation', label: 'Operation', type: 'select', options: ['insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'replaceOne'], description: 'Write operation' },
-    { key: 'filter', label: 'Filter', type: 'code', description: 'Filter query for update/delete operations (use {{variable}} for dynamic values)' },
+    { key: 'filter', label: 'Filter', type: 'mongodb-query-builder', description: 'Filter query for update/delete operations' },
     { key: 'document', label: 'Document/Update', type: 'code', description: 'Document to insert, or update operators ($set, $inc, etc.)' },
     { key: 'options', label: 'Options', type: 'code', description: 'Write options (upsert, etc.) as JSON' },
   ],
@@ -84,15 +115,37 @@ export function IntegrationNodeEditor({
     return null;
   }
 
+  // Filter fields based on operation for mongodb-query
+  const filteredSchema = configSchema.filter((field) => {
+    if (node.type === 'mongodb-query') {
+      const operation = config.operation as string;
+      // Show pipeline only for aggregate, hide query/options for aggregate
+      if (field.key === 'pipeline') {
+        return operation === 'aggregate';
+      }
+      if (field.key === 'query' || field.key === 'options') {
+        return operation !== 'aggregate';
+      }
+    }
+    // For mongodb-write, show filter only for update/delete operations
+    if (node.type === 'mongodb-write' && field.key === 'filter') {
+      const operation = config.operation as string;
+      return operation?.includes('update') || operation?.includes('delete') || operation === 'replaceOne';
+    }
+    return true;
+  });
+
   return (
     <Box>
-      {configSchema.map((field) => (
+      {filteredSchema.map((field) => (
         <ConfigFieldRenderer
           key={field.key}
           field={field}
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}

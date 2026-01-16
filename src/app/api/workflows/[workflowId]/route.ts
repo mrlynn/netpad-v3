@@ -14,6 +14,7 @@ import {
   deleteWorkflow,
 } from '@/lib/workflow/db';
 import { WorkflowCanvas, WorkflowSettings, WorkflowVariable } from '@/types/workflow';
+import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -39,7 +40,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this organization
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     const workflow = await getWorkflowById(orgId, workflowId);
 
@@ -77,7 +85,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this organization
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Validate updates
     const validUpdates: Partial<{
@@ -174,7 +189,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this organization
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Check workflow exists
     const existing = await getWorkflowById(orgId, workflowId);

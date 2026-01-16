@@ -17,7 +17,6 @@ import {
   TextField,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Chip,
   LinearProgress,
@@ -41,6 +40,7 @@ import {
   Description as FormIcon,
   AccountTree as WorkflowIcon,
 } from '@mui/icons-material';
+import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
 import { GeneratedApplication } from '@/lib/ai/types';
 
 // ============================================
@@ -252,10 +252,7 @@ export default function AIApplicationGeneratorDialog({
         {/* Loading state */}
         {loading && (
           <Box textAlign="center" py={4}>
-            <CircularProgress size={40} sx={{ color: '#9C27B0' }} />
-            <Typography variant="body2" color="text.secondary" mt={2}>
-              Generating your application...
-            </Typography>
+            <NetPadLoader size="small" message="Generating your application..." />
           </Box>
         )}
 
@@ -387,7 +384,7 @@ export default function AIApplicationGeneratorDialog({
             onClick={handleGenerate}
             variant="contained"
             disabled={!canGenerate}
-            startIcon={loading ? <CircularProgress size={16} /> : <AIIcon />}
+            startIcon={loading ? <NetPadSpinner size={16} /> : <AIIcon />}
             sx={{
               bgcolor: '#9C27B0',
               textTransform: 'none',

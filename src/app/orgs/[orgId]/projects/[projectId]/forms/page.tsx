@@ -527,31 +527,76 @@ export default function FormsPage() {
               borderRadius: 2,
             }}
           >
-            <Description sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
-              {searchQuery ? 'No forms found' : 'No forms yet'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {searchQuery
-                ? 'Try adjusting your search query'
-                : 'Create your first form to get started'}
-            </Typography>
-            {!searchQuery && (
-              <Button
-                component={Link}
-                href={getOrgProjectUrl(orgId, projectId, 'builder')}
-                variant="contained"
-                startIcon={<Add />}
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': { bgcolor: theme.palette.primary.dark },
-                }}
-              >
-                Create Your First Form
-              </Button>
+            {searchQuery ? (
+              <>
+                <Description sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                  No forms found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Try adjusting your search query
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Description sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+                <Typography variant="h5" sx={{ color: 'text.primary', mb: 1, fontWeight: 600 }}>
+                  Collect Data Your Way
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
+                  Build beautiful forms with our drag-and-drop editor, connect to MongoDB for data storage,
+                  and use AI to generate forms from natural language descriptions.
+                </Typography>
+
+                {/* Form Types */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+                  {[
+                    { icon: '📝', label: 'Surveys & Feedback' },
+                    { icon: '📋', label: 'Registration Forms' },
+                    { icon: '💬', label: 'Contact Forms' },
+                    { icon: '🤖', label: 'AI-Powered Chat' },
+                  ].map((item) => (
+                    <Box
+                      key={item.label}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.2),
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{item.icon}</span> {item.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                <Button
+                  component={Link}
+                  href={getOrgProjectUrl(orgId, projectId, 'builder')}
+                  variant="contained"
+                  size="large"
+                  startIcon={<Add />}
+                  sx={{
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': { bgcolor: theme.palette.primary.dark },
+                  }}
+                >
+                  Create Your First Form
+                </Button>
+
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
+                  Use AI to generate a form or start from a template
+                </Typography>
+              </>
             )}
           </Paper>
         ) : (

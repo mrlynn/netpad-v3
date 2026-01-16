@@ -26,7 +26,6 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  CircularProgress,
   Breadcrumbs,
 } from '@mui/material';
 import {
@@ -45,6 +44,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams, usePathname } from 'next/navigation';
 import { getOrgProjectUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 type ContextSection = 'forms' | 'workflows' | 'data' | 'releases' | 'contracts' | 'permissions' | 'overview';
 
@@ -386,7 +386,7 @@ export function ApplicationContextBar({
 
             {loadingApps ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+                <NetPadLoader size="small" />
               </Box>
             ) : applications.length === 0 ? (
               <MenuItem disabled>

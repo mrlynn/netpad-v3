@@ -6,7 +6,8 @@
 'use client';
 
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Button, Divider, Typography, alpha } from '@mui/material';
+import { Science as TestIcon } from '@mui/icons-material';
 import { ConfigField, NodeEditorProps } from './shared/utils';
 import { ConfigFieldRenderer } from './shared/ConfigFieldRenderer';
 
@@ -29,6 +30,10 @@ const TRIGGER_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   ],
 };
 
+interface TriggerNodeEditorProps extends NodeEditorProps {
+  onTestClick?: () => void;
+}
+
 export function TriggerNodeEditor({
   node,
   config,
@@ -38,12 +43,23 @@ export function TriggerNodeEditor({
   availableConnections = [],
   connectionsLoading = false,
   nodeId,
-}: NodeEditorProps) {
+  onTestClick,
+}: TriggerNodeEditorProps) {
   const configSchema = TRIGGER_CONFIG_SCHEMAS[node.type] || [];
 
-  if (configSchema.length === 0) {
-    return null; // manual-trigger has no config
-  }
+  // Check if trigger can be tested
+  const canTestFormTrigger = node.type === 'form-trigger' && Boolean(config.formId);
+  const canTestWebhookTrigger = node.type === 'webhook-trigger';
+  const canTestManualTrigger = node.type === 'manual-trigger';
+  const canTest = canTestFormTrigger || canTestWebhookTrigger || canTestManualTrigger;
+
+  // Get test button label based on trigger type
+  const getTestLabel = () => {
+    if (node.type === 'form-trigger') return 'Test with Form';
+    if (node.type === 'webhook-trigger') return 'Test Webhook';
+    if (node.type === 'manual-trigger') return 'Run Test';
+    return 'Test';
+  };
 
   return (
     <Box>
@@ -54,12 +70,50 @@ export function TriggerNodeEditor({
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}
           connectionsLoading={connectionsLoading}
         />
       ))}
+
+      {/* Test button for testable triggers */}
+      {canTest && onTestClick && (
+        <Box sx={{ mt: 2 }}>
+          <Divider sx={{ mb: 2 }} />
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Test this trigger with sample data
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<TestIcon />}
+            onClick={onTestClick}
+            fullWidth
+            sx={{
+              borderColor: alpha('#00ED64', 0.5),
+              color: '#00ED64',
+              '&:hover': {
+                borderColor: '#00ED64',
+                bgcolor: alpha('#00ED64', 0.08),
+              },
+            }}
+          >
+            {getTestLabel()}
+          </Button>
+        </Box>
+      )}
+
+      {/* Manual trigger info */}
+      {node.type === 'manual-trigger' && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Manual triggers have no configuration. Use the &quot;Test&quot; button in the toolbar to run the workflow.
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }

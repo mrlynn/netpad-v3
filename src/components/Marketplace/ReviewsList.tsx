@@ -20,10 +20,10 @@ import {
   Divider,
   Chip,
   Alert,
-  CircularProgress,
 } from '@mui/material';
 import { RatingStars } from './RatingStars';
 import { formatDistanceToNow } from 'date-fns';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface Review {
   reviewId: string;
@@ -114,7 +114,7 @@ export function ReviewsList({
   if (loading && reviews.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="small" />
       </Box>
     );
   }

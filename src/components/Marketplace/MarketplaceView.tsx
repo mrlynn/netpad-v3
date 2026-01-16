@@ -20,7 +20,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  CircularProgress,
   Alert,
   Pagination,
   Stack,
@@ -41,6 +40,7 @@ import { parseOrgProjectFromPath } from '@/lib/routing';
 import { ApplicationCard } from './ApplicationCard';
 import { ApplicationDetailDialog } from './ApplicationDetailDialog';
 import { MyApplicationsView } from './MyApplicationsView';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface MarketplaceApplication {
   id: string;
@@ -195,6 +195,11 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   const handleImport = async (id: string) => {
     if (!organizationId) {
       alert('Please select an organization to import the application.');
+      return;
+    }
+
+    if (!projectId) {
+      alert('Please navigate to a project to import the application. Go to your organization, select a project, then access the Marketplace from the navigation menu.');
       return;
     }
 
@@ -460,18 +465,70 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       {/* Loading */}
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="medium" message="Loading marketplace..." />
         </Box>
       ) : applications.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            No applications found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {search || category !== 'all'
-              ? 'Try adjusting your search or filters'
-              : 'Check back later for new applications'}
-          </Typography>
+          {search || category !== 'all' ? (
+            <>
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                No applications found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Try adjusting your search or filters
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(0, 237, 100, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3,
+                }}
+              >
+                <Typography sx={{ fontSize: 32 }}>🛒</Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                Discover Ready-to-Use Solutions
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 450, mx: 'auto' }}>
+                The Marketplace is where you can find applications built by the community.
+                Install them in seconds and customize to your needs.
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                {[
+                  { icon: '📋', label: 'Pre-built forms' },
+                  { icon: '🔄', label: 'Ready workflows' },
+                  { icon: '⚡', label: 'Quick setup' },
+                ].map((item) => (
+                  <Box
+                    key={item.label}
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(0, 237, 100, 0.08)',
+                      border: '1px solid rgba(0, 237, 100, 0.2)',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>{item.icon}</span> {item.label}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 4 }}>
+                New applications are added regularly. Check back soon!
+              </Typography>
+            </>
+          )}
         </Box>
       ) : (
         <>

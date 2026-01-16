@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
   Container,
@@ -85,9 +85,13 @@ const STATUS_CONFIG: Record<WorkflowStatus, { color: string; icon: React.ReactEl
 export default function WorkflowsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const theme = useTheme();
   const orgId = params.orgId as string;
   const projectId = params.projectId as string;
+
+  // Get applicationId from URL if present (when coming from application context)
+  const urlApplicationId = searchParams?.get('applicationId') || '';
 
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,11 +103,19 @@ export default function WorkflowsPage() {
   const [newWorkflowDescription, setNewWorkflowDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [applications, setApplications] = useState<Array<{ applicationId: string; name: string; isDefault?: boolean }>>([]);
-  const [applicationId, setApplicationId] = useState<string>('');
+  const [applicationId, setApplicationId] = useState<string>(urlApplicationId);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [templates, setTemplates] = useState<Array<{ templateId: string; name: string; version: string; tags?: string[] }>>([]);
   const [templateId, setTemplateId] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Auto-open create dialog when coming from application context with applicationId in URL
+  useEffect(() => {
+    if (urlApplicationId && !loading && workflows.length === 0) {
+      // If coming from application context and no workflows exist, open create dialog
+      setCreateDialogOpen(true);
+    }
+  }, [urlApplicationId, loading, workflows.length]);
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement; workflow: WorkflowListItem } | null>(null);
@@ -152,8 +164,8 @@ export default function WorkflowsPage() {
           const apps = data.applications as Array<{ applicationId: string; name: string; isDefault?: boolean }>;
           setApplications(apps);
 
-          // Default to the project's default application if none selected
-          if (!applicationId) {
+          // If URL has applicationId, use that; otherwise default to project's default app
+          if (!applicationId && !urlApplicationId) {
             const defaultApp = apps.find((a) => a.isDefault);
             if (defaultApp) {
               setApplicationId(defaultApp.applicationId);
@@ -168,7 +180,7 @@ export default function WorkflowsPage() {
     };
 
     loadApplications();
-  }, [orgId, projectId, applicationId]);
+  }, [orgId, projectId, applicationId, urlApplicationId]);
 
   // Fetch workflow templates for this org (for template selector)
   useEffect(() => {
@@ -392,15 +404,43 @@ export default function WorkflowsPage() {
               borderRadius: 2,
             }}
           >
-            <AccountTree sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
-              No workflows yet
+            <AccountTree sx={{ fontSize: 48, color: '#9C27B0', mb: 2 }} />
+            <Typography variant="h5" sx={{ color: 'text.primary', mb: 1, fontWeight: 600 }}>
+              Automate Your Processes
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Create your first workflow to automate actions
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
+              Workflows connect your forms, data, and external services. Trigger actions automatically when forms are submitted, schedules run, or APIs are called.
             </Typography>
+
+            {/* Use Cases */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+              {[
+                { icon: '📧', label: 'Send notifications' },
+                { icon: '📊', label: 'Update databases' },
+                { icon: '🔗', label: 'Connect APIs' },
+                { icon: '⏰', label: 'Schedule tasks' },
+              ].map((item) => (
+                <Box
+                  key={item.label}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: alpha('#9C27B0', 0.08),
+                    border: '1px solid',
+                    borderColor: alpha('#9C27B0', 0.2),
+                  }}
+                >
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{item.icon}</span> {item.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+
             <Button
               variant="contained"
+              size="large"
               startIcon={<Add />}
               onClick={() => setCreateDialogOpen(true)}
               sx={{
@@ -408,11 +448,17 @@ export default function WorkflowsPage() {
                 color: 'white',
                 textTransform: 'none',
                 fontWeight: 600,
+                px: 4,
+                py: 1.5,
                 '&:hover': { bgcolor: '#7B1FA2' },
               }}
             >
               Create Your First Workflow
             </Button>
+
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
+              Start with a template or build from scratch
+            </Typography>
           </Paper>
         ) : (
           <Grid container spacing={3}>

@@ -608,6 +608,39 @@ export async function claimJob(workerId: string): Promise<WorkflowJob | null> {
 }
 
 /**
+ * Claim a specific job by ID (for immediate execution)
+ * This is used when we want to process a specific job we just created
+ */
+export async function claimJobById(
+  jobId: string,
+  workerId: string
+): Promise<WorkflowJob | null> {
+  const collection = await getJobsCollection();
+  const now = new Date();
+  const id = new ObjectId(jobId);
+
+  const job = await collection.findOneAndUpdate(
+    {
+      _id: id,
+      status: 'pending',
+    },
+    {
+      $set: {
+        status: 'processing',
+        lockedAt: now,
+        lockedBy: workerId,
+      },
+      $inc: { attempts: 1 },
+    },
+    {
+      returnDocument: 'after',
+    }
+  );
+
+  return job;
+}
+
+/**
  * Mark job as complete
  */
 export async function completeJob(

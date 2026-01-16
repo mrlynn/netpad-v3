@@ -9,6 +9,34 @@
 // TYPES
 // ============================================================================
 
+/**
+ * AI assistance configuration for a config field
+ * When aiAssist is present, the field supports AI-powered generation in the UI
+ */
+export interface AIAssistConfig {
+  /** Whether AI assistance is enabled for this field */
+  enabled: boolean;
+  /** Placeholder hint for the AI input (e.g., "Describe the headers you need...") */
+  promptHint?: string;
+  /** Custom button label (e.g., "Generate Headers") */
+  buttonLabel?: string;
+}
+
+/**
+ * Configuration field definition for workflow nodes
+ */
+export interface NodeConfigFieldDefinition {
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  default?: unknown;
+  options?: string[];
+  itemType?: string;
+  /** AI assistance configuration - when present, field supports AI generation */
+  aiAssist?: AIAssistConfig;
+}
+
 export interface WorkflowNodeConfig {
   id: string;
   type: string;
@@ -187,7 +215,7 @@ export const WORKFLOW_NODE_TYPES = {
         { key: 'database', label: 'Database', type: 'string', required: true },
         { key: 'collection', label: 'Collection', type: 'string', required: true },
         { key: 'operation', label: 'Operation', type: 'select', options: ['find', 'findOne', 'aggregate'] },
-        { key: 'filter', label: 'Filter', type: 'json' },
+        { key: 'filter', label: 'Filter', type: 'json', aiAssist: { enabled: true, promptHint: 'e.g., "Find users created in the last 7 days"', buttonLabel: 'Generate Query' } },
         { key: 'projection', label: 'Projection', type: 'json' },
         { key: 'sort', label: 'Sort', type: 'json' },
         { key: 'limit', label: 'Limit', type: 'number' },
@@ -221,7 +249,7 @@ export const WORKFLOW_NODE_TYPES = {
       inputs: [{ id: 'input', label: 'Input', type: 'any' }],
       outputs: [{ id: 'output', label: 'Output', type: 'any' }],
       configFields: [
-        { key: 'expression', label: 'Transform Expression', type: 'expression', required: true },
+        { key: 'expression', label: 'Transform Expression', type: 'expression', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Extract emails from user array" or "Add processed timestamp"', buttonLabel: 'Generate Transform' } },
       ],
     },
     {
@@ -254,9 +282,9 @@ export const WORKFLOW_NODE_TYPES = {
       inputs: [{ id: 'data', label: 'Template Data', type: 'object' }],
       outputs: [{ id: 'result', label: 'Result', type: 'object' }],
       configFields: [
-        { key: 'to', label: 'To', type: 'expression', required: true },
-        { key: 'subject', label: 'Subject', type: 'expression', required: true },
-        { key: 'body', label: 'Body', type: 'richtext', required: true },
+        { key: 'to', label: 'To', type: 'expression', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Send to form submitter email"', buttonLabel: 'Generate Recipients' } },
+        { key: 'subject', label: 'Subject', type: 'expression', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Create a thank you subject with user name"', buttonLabel: 'Generate Subject' } },
+        { key: 'body', label: 'Body', type: 'richtext', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Write a professional confirmation email"', buttonLabel: 'Generate Body' } },
         { key: 'from', label: 'From', type: 'string' },
         { key: 'replyTo', label: 'Reply To', type: 'string' },
       ],
@@ -275,10 +303,10 @@ export const WORKFLOW_NODE_TYPES = {
         { id: 'status', label: 'Status Code', type: 'number' },
       ],
       configFields: [
-        { key: 'url', label: 'URL', type: 'expression', required: true },
+        { key: 'url', label: 'URL', type: 'expression', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Build Slack webhook URL with channel"', buttonLabel: 'Generate URL' } },
         { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
-        { key: 'headers', label: 'Headers', type: 'json' },
-        { key: 'body', label: 'Body', type: 'json' },
+        { key: 'headers', label: 'Headers', type: 'json', aiAssist: { enabled: true, promptHint: 'e.g., "Add authorization and content-type headers"', buttonLabel: 'Generate Headers' } },
+        { key: 'body', label: 'Body', type: 'json', aiAssist: { enabled: true, promptHint: 'e.g., "Create Slack message payload from form data"', buttonLabel: 'Generate Body' } },
         { key: 'authentication', label: 'Authentication', type: 'select', options: ['none', 'basic', 'bearer', 'api_key'] },
       ],
     },
@@ -311,7 +339,7 @@ export const WORKFLOW_NODE_TYPES = {
       inputs: [{ id: 'context', label: 'Context', type: 'object' }],
       outputs: [{ id: 'response', label: 'AI Response', type: 'string' }],
       configFields: [
-        { key: 'prompt', label: 'Prompt', type: 'richtext', required: true },
+        { key: 'prompt', label: 'Prompt', type: 'richtext', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Write a prompt to summarize customer feedback"', buttonLabel: 'Generate Prompt' } },
         { key: 'model', label: 'Model', type: 'select', options: ['gpt-4', 'gpt-3.5-turbo', 'claude-3'] },
         { key: 'temperature', label: 'Temperature', type: 'number', default: 0.7 },
         { key: 'maxTokens', label: 'Max Tokens', type: 'number', default: 1000 },
@@ -331,8 +359,27 @@ export const WORKFLOW_NODE_TYPES = {
         { id: 'confidence', label: 'Confidence', type: 'number' },
       ],
       configFields: [
-        { key: 'categories', label: 'Categories', type: 'array', itemType: 'string', required: true },
-        { key: 'instructions', label: 'Classification Instructions', type: 'richtext' },
+        { key: 'categories', label: 'Categories', type: 'array', itemType: 'string', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Create sentiment categories" or "Support ticket priorities"', buttonLabel: 'Generate Categories' } },
+        { key: 'instructions', label: 'Classification Instructions', type: 'richtext', aiAssist: { enabled: true, promptHint: 'e.g., "Write instructions to classify support tickets by urgency"', buttonLabel: 'Generate Instructions' } },
+      ],
+    },
+  ],
+
+  // Custom
+  custom: [
+    {
+      type: 'code',
+      name: 'Custom Code',
+      description: 'Execute custom JavaScript code',
+      icon: 'code',
+      color: '#455A64',
+      category: 'custom',
+      stage: 'processor',
+      inputs: [{ id: 'input', label: 'Input', type: 'any' }],
+      outputs: [{ id: 'output', label: 'Output', type: 'any' }],
+      configFields: [
+        { key: 'code', label: 'JavaScript Code', type: 'code', required: true, aiAssist: { enabled: true, promptHint: 'e.g., "Calculate order total from items array"', buttonLabel: 'Generate Code' } },
+        { key: 'timeout', label: 'Timeout (ms)', type: 'number', default: 5000 },
       ],
     },
   ],

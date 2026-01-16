@@ -16,7 +16,6 @@ import {
   Button,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Chip,
   Divider,
@@ -55,6 +54,7 @@ import { ReviewForm } from './ReviewForm';
 import { ReviewsList } from './ReviewsList';
 import { RatingSummary } from './RatingSummary';
 import { useAuth } from '@/contexts/AuthContext';
+import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
 
 interface ApplicationDetailDialogProps {
   open: boolean;
@@ -298,6 +298,11 @@ export function ApplicationDetailDialog({
       return;
     }
 
+    if (!projectId) {
+      setError('Please navigate to a project to import the application. Go to your organization, select a project, then access the Marketplace from the navigation menu.');
+      return;
+    }
+
     setImporting(true);
     setError(null);
 
@@ -400,7 +405,7 @@ export function ApplicationDetailDialog({
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress sx={{ color: '#00ED64' }} />
+            <NetPadLoader size="small" message="Loading application details..." />
           </Box>
         ) : detail ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -776,7 +781,7 @@ export function ApplicationDetailDialog({
             onClick={() => handleInstallFromNpm(detail.sourcePackageName!)}
             variant="contained"
             disabled={!detail || importing}
-            startIcon={importing ? <CircularProgress size={16} /> : <InstallIcon />}
+            startIcon={importing ? <NetPadSpinner size={16} /> : <InstallIcon />}
             sx={{
               bgcolor: '#CB3837',
               '&:hover': {
@@ -791,7 +796,7 @@ export function ApplicationDetailDialog({
             onClick={handleImport}
             variant="contained"
             disabled={!detail || importing}
-            startIcon={importing ? <CircularProgress size={16} /> : <UploadIcon />}
+            startIcon={importing ? <NetPadSpinner size={16} /> : <UploadIcon />}
             sx={{
               bgcolor: '#00ED64',
               '&:hover': {

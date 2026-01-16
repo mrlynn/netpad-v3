@@ -27,11 +27,12 @@ interface CollectionsResponse {
 
 // Default SWR config for data explorer
 // - 5 minute cache (dedupingInterval)
-// - Revalidate on focus for fresh data
+// - Revalidate on focus with throttle to catch stale data without excess requests
 // - Don't retry on error (user can manually refresh)
 const defaultConfig: SWRConfiguration = {
   dedupingInterval: 5 * 60 * 1000, // 5 minutes - don't refetch if called within this window
-  revalidateOnFocus: false, // Don't refetch when tab regains focus (can be noisy)
+  revalidateOnFocus: true, // Refetch when tab regains focus to catch stale data
+  focusThrottleInterval: 60 * 1000, // Throttle focus revalidation to once per minute
   revalidateOnReconnect: true, // Refetch when network reconnects
   errorRetryCount: 2,
   errorRetryInterval: 1000,

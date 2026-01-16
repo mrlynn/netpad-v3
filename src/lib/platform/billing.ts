@@ -754,19 +754,34 @@ export async function hasAIFeature(
 ): Promise<AIFeatureAccessResult> {
   const org = await (await getOrganizationsCollection()).findOne({ orgId });
   if (!org) {
+    console.error(`[Billing] Organization not found: ${orgId}. This may indicate a data inconsistency.`);
     return {
       allowed: false,
-      reason: 'Organization not found',
+      reason: `Organization not found. Please try refreshing the page or signing out and back in.`,
     };
   }
 
   const tier = org.subscription?.tier || 'free';
   const tierConfig = SUBSCRIPTION_TIERS[tier];
 
+  // Handle invalid or missing tier configuration
+  if (!tierConfig) {
+    console.error(`[Billing] Invalid subscription tier '${tier}' for org ${orgId}. Falling back to 'free' tier.`);
+    // Fall back to free tier
+    const fallbackTierConfig = SUBSCRIPTION_TIERS['free'];
+    if (!fallbackTierConfig.aiFeatures.includes(feature)) {
+      return {
+        allowed: false,
+        reason: `This feature requires a pro subscription`,
+        requiredTier: 'pro',
+      };
+    }
+  }
+
   // Check subscription tier first
-  if (!tierConfig.aiFeatures.includes(feature)) {
+  if (!tierConfig?.aiFeatures.includes(feature)) {
     // Find the minimum tier that includes this feature
-    const tiersWithFeature = (['starter', 'team', 'enterprise'] as SubscriptionTier[]).filter(
+    const tiersWithFeature = (['pro', 'team', 'enterprise'] as SubscriptionTier[]).filter(
       (t) => SUBSCRIPTION_TIERS[t].aiFeatures.includes(feature)
     );
     const requiredTier = tiersWithFeature[0];

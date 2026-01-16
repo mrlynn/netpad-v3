@@ -24,7 +24,6 @@ import {
   DialogActions,
   IconButton,
   Alert,
-  CircularProgress,
   Menu,
   MenuItem,
 } from '@mui/material';
@@ -39,6 +38,7 @@ import {
   RestoreFromTrash,
   CompareArrows,
 } from '@mui/icons-material';
+import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
 import { ApplicationContract } from '@/types/application';
 import { ContractViewer } from './ContractViewer';
 import { ContractEditor } from './ContractEditor';
@@ -257,7 +257,7 @@ export function ContractsTab({ applicationId, orgId, projectId }: ContractsTabPr
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress />
+        <NetPadLoader size="small" message="Loading contracts..." />
       </Box>
     );
   }
@@ -381,7 +381,7 @@ export function ContractsTab({ applicationId, orgId, projectId }: ContractsTabPr
                       disabled={actionLoading === contract.contractId}
                     >
                       {actionLoading === contract.contractId ? (
-                        <CircularProgress size={20} />
+                        <NetPadSpinner size={20} />
                       ) : (
                         <MoreVert />
                       )}

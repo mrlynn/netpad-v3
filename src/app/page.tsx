@@ -44,6 +44,7 @@ import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 import { SpotlightCard, hexToRgb } from '@/components/marketing';
+import { OnboardingGate } from '@/components/OnboardingGate/OnboardingGate';
 
 // The four pillars of NetPad
 const pillars = [
@@ -280,7 +281,8 @@ const mcpServerFeatures = [
 export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  return (
+  // Wrap content in OnboardingGate for authenticated users
+  const content = (
     <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B' }}>
       {/* Show AppNavBar for authenticated users */}
       {!isLoading && isAuthenticated && <AppNavBar />}
@@ -2678,4 +2680,11 @@ $ netpad login --api-key np_live_xxx`}
       </Box>
     </Box>
   );
+
+  // Show onboarding gate for authenticated users who haven't completed setup
+  if (!isLoading && isAuthenticated) {
+    return <OnboardingGate>{content}</OnboardingGate>;
+  }
+
+  return content;
 }

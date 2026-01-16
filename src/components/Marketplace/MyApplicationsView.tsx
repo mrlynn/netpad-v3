@@ -23,7 +23,6 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  CircularProgress,
   alpha,
   Stack,
   Menu,
@@ -45,6 +44,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ApplicationCard } from './ApplicationCard';
 import { ApplicationPublishDialog } from '@/components/Projects/ApplicationPublishDialog';
 import { ApplicationDetailDialog } from './ApplicationDetailDialog';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 interface MyApplication {
   id: string;
@@ -240,7 +240,7 @@ export function MyApplicationsView({ organizationId }: MyApplicationsViewProps) 
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <CircularProgress />
+          <NetPadLoader size="medium" message="Loading your applications..." />
         </Box>
       </Container>
     );

@@ -2,6 +2,10 @@
  * Workflow Execute API Route
  *
  * POST /api/workflows/[workflowId]/execute - Trigger workflow execution
+ *
+ * Options:
+ * - processImmediately: If true, execute the workflow synchronously instead of queueing.
+ *   This is useful for testing and development where cron workers aren't running.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,8 +15,12 @@ import {
   createExecution,
   enqueueJob,
   canEnqueueJob,
+  claimJobById,
 } from '@/lib/workflow/db';
+import { executeWorkflowJob } from '@/lib/workflow/executor';
 import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
+import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { nanoid } from 'nanoid';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -32,13 +40,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { workflowId } = await params;
     const body = await request.json();
-    const { orgId, payload } = body;
+    const { orgId, payload, processImmediately = false } = body;
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this organization
+    // Verify user has access to this organization
+    const permissions = await getUserOrgPermissions(session.userId, orgId);
+    if (!permissions.orgRole) {
+      return NextResponse.json(
+        { error: 'Not a member of this organization' },
+        { status: 403 }
+      );
+    }
 
     // Get workflow
     const workflow = await getWorkflowById(orgId, workflowId);
@@ -102,15 +117,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const executionId = execution._id!.toString();
 
-    // For immediate execution mode, we could execute synchronously here
-    // For now, always queue for async processing
-    if (workflow.settings.executionMode === 'immediate' && workflow.canvas.nodes.length <= 5) {
-      // TODO: Implement immediate execution for simple workflows
-      // For now, still queue it
-    }
-
     // Queue the job for processing
-    await enqueueJob({
+    const jobId = await enqueueJob({
       workflowId,
       executionId,
       orgId,
@@ -125,6 +133,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       runAt: new Date(),
       maxAttempts: workflow.settings.retryPolicy.maxRetries + 1,
     });
+
+    // If processImmediately is requested, execute the job synchronously
+    // This is useful for testing in development where cron workers aren't running
+    if (processImmediately) {
+      const workerId = `immediate_${nanoid(8)}`;
+
+      try {
+        // Claim the job we just created
+        const job = await claimJobById(jobId, workerId);
+
+        if (job) {
+          console.log(`[ImmediateExecution] Processing job ${jobId} for workflow ${workflowId}`);
+          const success = await executeWorkflowJob(job);
+
+          return NextResponse.json({
+            executionId,
+            status: success ? 'completed' : 'failed',
+            message: success ? 'Workflow executed successfully' : 'Workflow execution failed',
+            processedImmediately: true,
+          });
+        } else {
+          // Job was already claimed by another worker (race condition, unlikely)
+          console.warn(`[ImmediateExecution] Could not claim job ${jobId}, it may have been processed already`);
+        }
+      } catch (execError) {
+        console.error(`[ImmediateExecution] Error executing job ${jobId}:`, execError);
+        // Return pending status - the job is queued and will be retried by cron
+        return NextResponse.json({
+          executionId,
+          status: 'pending',
+          message: 'Immediate execution failed, job queued for retry',
+          error: execError instanceof Error ? execError.message : 'Unknown error',
+        });
+      }
+    }
 
     return NextResponse.json({
       executionId,

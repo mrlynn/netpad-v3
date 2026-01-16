@@ -222,12 +222,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear auth state
       setState({
         user: null,
         session: null,
         isLoading: false,
         isAuthenticated: false,
       });
+      
+      // Clear any cached data in localStorage that might contain user-specific data
+      // Note: We don't clear everything, just user-specific items
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('selected_') ||
+          key.startsWith('recent_') ||
+          key.startsWith('user_') ||
+          key.includes('_cache')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
     }
   }, []);
 

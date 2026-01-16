@@ -50,15 +50,17 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
 import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useApplication } from '@/contexts/ApplicationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 import { OrganizationSelector } from './OrganizationSelector';
 import { ProjectSelectorNav } from './ProjectSelectorNav';
 import { RecentItemsMenu } from './RecentItemsMenu';
+import { ApplicationSwitcher, useApplicationSwitcherShortcut } from './ApplicationSwitcher';
 import { getOrgProjectUrl, parseOrgProjectFromPath } from '@/lib/routing';
 
 interface NavItem {
@@ -116,12 +118,21 @@ const NAV_ITEM_CONFIGS = [
 
 export function AppNavBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, isLoading, logout, registerPasskey } = useAuth();
-  const { organization, currentOrgId } = useOrganization();
+  const { organization, currentOrgId, organizations } = useOrganization();
+  const { currentApplication } = useApplication();
+  const isMultiOrg = organizations.length > 1;
   const { openSearch } = useHelp();
   const { mode, toggleTheme } = useAppTheme();
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
+
+  // Application Switcher state
+  const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
+
+  // Register global keyboard shortcut for app switcher (Cmd+K / Ctrl+K)
+  useApplicationSwitcherShortcut(() => setAppSwitcherOpen(true));
 
   // Get current org/project from URL or context
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
@@ -148,9 +159,9 @@ export function AppNavBar() {
           };
         }
         if (config.key === 'marketplace') {
-          // Marketplace is org-scoped in the new URL structure
+          // Marketplace is project-scoped to enable direct imports
           return {
-            href: `/orgs/${urlOrgId}/marketplace`,
+            href: `/orgs/${urlOrgId}/projects/${urlProjectId}/marketplace`,
             label: config.label,
             icon: config.icon,
             color: config.color,
@@ -257,11 +268,26 @@ export function AppNavBar() {
     const hrefMatch = item.href.match(/\/orgs\/[^/]+\/projects\/[^/]+\/(\w+)/);
     const pathnameMatch = pathname.match(/\/orgs\/[^/]+\/projects\/[^/]+\/(\w+)/);
 
-    if (hrefMatch && pathnameMatch && hrefMatch[1] === pathnameMatch[1]) {
-      return true;
+    if (hrefMatch && pathnameMatch) {
+      const hrefResource = hrefMatch[1];
+      const pathnameResource = pathnameMatch[1];
+
+      // Direct match
+      if (hrefResource === pathnameResource) {
+        return true;
+      }
+
+      // Check if current pathname resource is in matchPaths for this nav item
+      // e.g., Forms nav item should match both /forms and /builder paths
+      if (item.matchPaths?.some(matchPath => {
+        const pathSegment = matchPath.replace(/^\//, ''); // Remove leading slash
+        return pathnameResource === pathSegment;
+      })) {
+        return true;
+      }
     }
 
-    // Legacy path matching
+    // Legacy path matching for non-project-scoped routes
     if (item.matchPaths?.some(path => pathname.startsWith(path))) return true;
 
     return false;
@@ -286,6 +312,9 @@ export function AppNavBar() {
   const handleLogout = async () => {
     handleMenuClose();
     await logout();
+    // Redirect to login page after logout to prevent access to protected pages
+    router.push('/auth/login');
+    router.refresh();
   };
 
   const handleRegisterPasskey = async () => {
@@ -398,6 +427,90 @@ export function AppNavBar() {
                 <OrganizationSelector compact />
                 <ProjectSelectorNav compact currentProjectId={currentProjectId} />
               </Box>
+            </>
+          )}
+
+          {/* Application Context - Prominent app switcher trigger */}
+          {isAuthenticated && organization && currentApplication && !isMobile && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
+              <Tooltip title="Switch application (Cmd+K)">
+                <Button
+                  onClick={() => setAppSwitcherOpen(true)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    textTransform: 'none',
+                    color: 'text.primary',
+                    bgcolor: alpha('#00ED64', 0.08),
+                    border: '1px solid',
+                    borderColor: alpha('#00ED64', 0.2),
+                    '&:hover': {
+                      bgcolor: alpha('#00ED64', 0.15),
+                      borderColor: alpha('#00ED64', 0.3),
+                    },
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {/* App Icon */}
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 0.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: currentApplication.color || alpha('#00ED64', 0.2),
+                      color: currentApplication.color ? '#fff' : '#00ED64',
+                      fontWeight: 600,
+                      fontSize: '0.65rem',
+                    }}
+                  >
+                    {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
+                  </Box>
+                  {/* App Name + Org (for multi-org users) */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.8125rem',
+                        maxWidth: 150,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {currentApplication.name}
+                    </Typography>
+                    {/* Show org name for multi-org users */}
+                    {isMultiOrg && organization && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: '0.65rem',
+                          color: 'text.secondary',
+                          maxWidth: 150,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {organization.name}
+                      </Typography>
+                    )}
+                  </Box>
+                  {/* Dropdown indicator */}
+                  <ArrowDropDown sx={{ fontSize: 18, color: 'text.secondary', ml: -0.5 }} />
+                </Button>
+              </Tooltip>
             </>
           )}
         </Box>
@@ -824,6 +937,12 @@ export function AppNavBar() {
           </Box>
         )}
       </Toolbar>
+
+      {/* Application Switcher Modal */}
+      <ApplicationSwitcher
+        open={appSwitcherOpen}
+        onClose={() => setAppSwitcherOpen(false)}
+      />
 
       {/* Mobile Navigation Drawer */}
       <Drawer

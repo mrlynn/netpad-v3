@@ -11,7 +11,6 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -25,6 +24,7 @@ import {
 import { Close, Apps, AutoAwesome } from '@mui/icons-material';
 import { Application, ApplicationStatus } from '@/types/application';
 import AIApplicationGeneratorDialog from './AIApplicationGeneratorDialog';
+import { NetPadSpinner } from '@/components/common/NetPadLoader';
 import { GeneratedApplication } from '@/lib/ai/types';
 
 interface ApplicationDialogProps {
@@ -382,7 +382,7 @@ export function ApplicationDialog({
           onClick={handleSave}
           variant="contained"
           disabled={saving || !name.trim()}
-          startIcon={saving ? <CircularProgress size={16} /> : <Apps />}
+          startIcon={saving ? <NetPadSpinner size={16} /> : <Apps />}
           sx={{
             bgcolor: theme.palette.primary.main,
             color: theme.palette.primary.contrastText,

@@ -75,6 +75,7 @@ const aiFeatureNames: Record<AIFeature, string> = {
   ai_formula_assistant: 'Formula Assistant',
   ai_conditional_logic: 'Logic Builder',
   ai_validation_patterns: 'Validation Patterns',
+  ai_node_config_assistant: 'Workflow Node AI Assistant',
   agent_form_optimization: 'Form Optimization Agent',
   agent_response_processing: 'Response Processing Agent',
   agent_compliance_audit: 'Compliance Audit Agent',

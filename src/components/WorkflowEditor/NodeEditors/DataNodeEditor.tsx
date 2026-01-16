@@ -13,7 +13,17 @@ import { ConfigFieldRenderer } from './shared/ConfigFieldRenderer';
 // Config schemas for data nodes
 const DATA_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
   'transform': [
-    { key: 'expression', label: 'Transform Expression', type: 'code', description: 'JavaScript expression to transform data' },
+    {
+      key: 'expression',
+      label: 'Transform Expression',
+      type: 'code',
+      description: 'JavaScript expression to transform data',
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Extract emails from user array" or "Add processed timestamp"',
+        buttonLabel: 'Generate Transform',
+      },
+    },
   ],
   'filter': [
     { key: 'inputField', label: 'Input Array Field', type: 'text', description: 'Path to array to filter (default: "items")' },
@@ -47,6 +57,8 @@ export function DataNodeEditor({
           value={config[field.key]}
           onChange={onConfigChange}
           nodeId={nodeId}
+          nodeType={node.type}
+          allConfig={config}
           availableForms={availableForms}
           formsLoading={formsLoading}
           availableConnections={availableConnections}

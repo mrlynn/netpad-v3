@@ -17,7 +17,6 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress,
   Divider,
   Chip,
   alpha,
@@ -34,6 +33,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
+import { NetPadSpinner } from '@/components/common/NetPadLoader';
 
 interface InstalledApplication {
   installationId: string;
@@ -224,7 +224,7 @@ export function ApplicationUpgradeDialog({
           onClick={handleUpgrade}
           variant="contained"
           disabled={upgrading || !targetVersion}
-          startIcon={upgrading ? <CircularProgress size={16} /> : <UpgradeIcon />}
+          startIcon={upgrading ? <NetPadSpinner size={16} /> : <UpgradeIcon />}
           sx={{
             bgcolor: '#ff9800',
             '&:hover': { bgcolor: '#f57c00' },

@@ -3,6 +3,7 @@
  */
 
 import { WorkflowNode } from '@/types/workflow';
+import { AIAssistConfig } from '@/lib/ai/types/nodeConfig';
 
 /**
  * Config field definition
@@ -10,10 +11,12 @@ import { WorkflowNode } from '@/types/workflow';
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'email-credential-select' | 'condition-builder' | 'switch-cases';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'code' | 'password' | 'form-select' | 'connection-select' | 'email-credential-select' | 'condition-builder' | 'switch-cases' | 'mongodb-query-builder' | 'mongodb-options-builder' | 'mongodb-pipeline-builder';
   options?: string[];
   description?: string;
   required?: boolean;
+  /** AI assistance configuration for this field */
+  aiAssist?: AIAssistConfig;
 }
 
 /**

@@ -44,6 +44,7 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.562.0",
     "mammoth": "^1.11.0",
+    "mermaid": "^11.12.2",
     "mongodb": "^6.5.0",
     "mongodb-client-encryption": "^6.5.0",
     "nanoid": "^5.1.6",

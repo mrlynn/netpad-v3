@@ -46,6 +46,7 @@ import {
   FileDownload as FileDownloadIcon,
   FileUpload as FileUploadIcon,
   DeleteSweep as ClearCanvasIcon,
+  Science as TestIcon,
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
@@ -65,6 +66,8 @@ import { nanoid } from 'nanoid';
 import { WorkflowNode, WorkflowEdge } from '@/types/workflow';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
+import { WorkflowExportDialog } from './Dialogs/WorkflowExportDialog';
+import { WorkflowTestDialog } from './Dialogs/WorkflowTestDialog';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -233,6 +236,12 @@ function WorkflowEditorInner({
   // Clear canvas confirmation dialog state
   const [clearCanvasDialogOpen, setClearCanvasDialogOpen] = useState(false);
 
+  // Export dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  // Test dialog state
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
     if (selectedNodeId) {
@@ -378,6 +387,25 @@ function WorkflowEditorInner({
   const hasUnpublishedChanges = workflow && (
     !workflow.publishedVersion || workflow.version > workflow.publishedVersion
   );
+
+  // Check if workflow has a testable trigger
+  const testableTrigger = workflow?.canvas?.nodes?.find((n) =>
+    ['form-trigger', 'webhook-trigger', 'manual-trigger'].includes(n.type)
+  );
+  const hasFormTrigger = testableTrigger?.type === 'form-trigger' && testableTrigger?.config?.formId;
+  const hasWebhookTrigger = testableTrigger?.type === 'webhook-trigger';
+  const hasManualTrigger = testableTrigger?.type === 'manual-trigger';
+  const canTestWorkflow = Boolean(hasFormTrigger || hasWebhookTrigger || hasManualTrigger);
+
+  // Handle test execution started
+  const handleTestExecutionStarted = useCallback((executionId: string) => {
+    setSnackbar({
+      open: true,
+      message: `Test execution started (ID: ${executionId})`,
+      severity: 'success',
+    });
+    setLogsPanelOpen(true);
+  }, []);
 
   // Handle export workflow
   const handleExportWorkflow = useCallback(() => {
@@ -666,6 +694,28 @@ function WorkflowEditorInner({
             </span>
           </Tooltip>
 
+          {canTestWorkflow && (
+            <Tooltip title="Test workflow with sample data">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<TestIcon />}
+                onClick={() => setTestDialogOpen(true)}
+                disabled={!workflow}
+                sx={{
+                  borderColor: alpha('#00ED64', 0.5),
+                  color: '#00ED64',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.08),
+                  },
+                }}
+              >
+                Test
+              </Button>
+            </Tooltip>
+          )}
+
           <Button
             data-tour="workflow-run"
             variant="outlined"
@@ -730,6 +780,7 @@ function WorkflowEditorInner({
       <NodeConfigPanel
         open={nodeConfigPanelOpen}
         onClose={() => setNodeConfigPanelOpen(false)}
+        onTestWorkflow={canTestWorkflow ? () => setTestDialogOpen(true) : undefined}
       />
 
       {/* Edge Config Panel */}
@@ -807,11 +858,17 @@ function WorkflowEditorInner({
         open={Boolean(moreMenuAnchor)}
         onClose={() => setMoreMenuAnchor(null)}
       >
-        <MenuItem onClick={handleExportWorkflow} disabled={!workflow}>
+        <MenuItem
+          onClick={() => {
+            setMoreMenuAnchor(null);
+            setExportDialogOpen(true);
+          }}
+          disabled={!workflow}
+        >
           <ListItemIcon>
             <FileDownloadIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Export Workflow Definition</ListItemText>
+          <ListItemText>Export Workflow</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => importInputRef.current?.click()}>
           <ListItemIcon>
@@ -889,6 +946,22 @@ function WorkflowEditorInner({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Workflow Export Dialog */}
+      <WorkflowExportDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        workflow={workflow}
+      />
+
+      {/* Workflow Test Dialog */}
+      <WorkflowTestDialog
+        open={testDialogOpen}
+        onClose={() => setTestDialogOpen(false)}
+        workflow={workflow}
+        orgId={orgId}
+        onExecutionStarted={handleTestExecutionStarted}
+      />
     </Box>
   );
 }

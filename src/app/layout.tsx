@@ -4,6 +4,8 @@ import { ClientLayout } from '@/components/ClientLayout';
 import { PipelineProvider } from '@/contexts/PipelineContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
+import { ApplicationProvider } from '@/contexts/ApplicationContext';
+import { OnboardingGateProvider } from '@/contexts/OnboardingGateContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
 import { Analytics } from "@vercel/analytics/next"
 
@@ -35,9 +37,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ClientLayout>
           <AuthProvider>
             <OrganizationProvider>
-              <PipelineProvider>{children}</PipelineProvider>
-              <DevPanelWrapper />
-              <Analytics />
+              <ApplicationProvider>
+                <OnboardingGateProvider>
+                  <PipelineProvider>{children}</PipelineProvider>
+                  <DevPanelWrapper />
+                  <Analytics />
+                </OnboardingGateProvider>
+              </ApplicationProvider>
             </OrganizationProvider>
           </AuthProvider>
         </ClientLayout>
