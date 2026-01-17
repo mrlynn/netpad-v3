@@ -92,11 +92,13 @@ export async function POST(req: NextRequest) {
       email: user.email,
       deviceId,
       trustDevice,
+      waitlistStatus: platformUser.waitlistStatus,
     });
 
     await createSession(platformUser.userId, user.email, {
       deviceId,
       trustDevice,
+      waitlistStatus: platformUser.waitlistStatus,
     });
 
     console.log('[MagicLink] Session created successfully');

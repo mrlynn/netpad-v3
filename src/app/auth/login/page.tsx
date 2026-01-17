@@ -29,6 +29,8 @@ import {
   Home,
   Google,
   GitHub,
+  Lock,
+  BugReport,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -44,7 +46,8 @@ function LoginContent() {
   const { sendMagicLink, loginWithPasskey, isAuthenticated, isLoading } = useAuth();
 
   // Get returnUrl from query params (for form access flow)
-  const returnUrl = searchParams.get('returnUrl');
+  // Middleware uses 'redirect', some flows use 'returnUrl'
+  const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
   // Check if coming from signup flow
   const isSignupMode = searchParams.get('mode') === 'signup';
 
@@ -55,6 +58,9 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [hasPasskey, setHasPasskey] = useState(false);
   const [oauthProviders, setOauthProviders] = useState<{ google: boolean; github: boolean }>({ google: false, github: false });
+  const [testAuthAvailable, setTestAuthAvailable] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [password, setPassword] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -99,6 +105,22 @@ function LoginContent() {
       }
     };
     checkOAuthProviders();
+  }, []);
+
+  // Check if test/credentials auth is available (dev/test only)
+  useEffect(() => {
+    const checkTestAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/credentials');
+        if (response.ok) {
+          const data = await response.json();
+          setTestAuthAvailable(data.available);
+        }
+      } catch {
+        // Test auth not available
+      }
+    };
+    checkTestAuth();
   }, []);
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
@@ -146,6 +168,41 @@ function LoginContent() {
       router.push(destination);
     } else {
       setError(result.message);
+    }
+  };
+
+  const handlePasswordLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter email and password');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          createIfNotExists: true, // Auto-create test users
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const destination = returnUrl ? decodeURIComponent(returnUrl) : '/builder';
+        router.push(destination);
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -378,6 +435,100 @@ function LoginContent() {
               >
                 Send Magic Link
               </Button>
+
+              {/* Test/Dev Password Login */}
+              {testAuthAvailable && (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', my: 3 }}>
+                    <Divider sx={{ flex: 1, borderColor: borderColor }} />
+                    <Typography sx={{ px: 2, color: textMuted, fontSize: '0.875rem' }}>
+                      dev mode
+                    </Typography>
+                    <Divider sx={{ flex: 1, borderColor: borderColor }} />
+                  </Box>
+
+                  {!showPasswordField ? (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="large"
+                      startIcon={<BugReport />}
+                      onClick={() => setShowPasswordField(true)}
+                      sx={{
+                        py: 1.5,
+                        borderColor: alpha('#ff9800', 0.5),
+                        color: '#ff9800',
+                        fontWeight: 500,
+                        textTransform: 'none',
+                        fontSize: '0.9rem',
+                        borderRadius: 2,
+                        '&:hover': {
+                          borderColor: '#ff9800',
+                          bgcolor: alpha('#ff9800', 0.1),
+                        },
+                      }}
+                    >
+                      Use Test Credentials
+                    </Button>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <TextField
+                        fullWidth
+                        type="password"
+                        label="Password"
+                        placeholder="Enter test password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
+                        disabled={loading}
+                        InputProps={{
+                          startAdornment: <Lock sx={{ mr: 1, color: textMuted }} />,
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: inputBg,
+                            '&:hover': { bgcolor: inputBgHover },
+                            '& fieldset': { borderColor: alpha('#ff9800', 0.3) },
+                            '&:hover fieldset': { borderColor: alpha('#ff9800', 0.5) },
+                            '&.Mui-focused fieldset': { borderColor: '#ff9800' },
+                          },
+                          '& .MuiInputLabel-root': { color: textMuted },
+                          '& .MuiInputBase-input': { color: textColor },
+                        }}
+                      />
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        size="large"
+                        endIcon={loading ? <CircularProgress size={20} /> : <ArrowForward />}
+                        onClick={handlePasswordLogin}
+                        disabled={loading || !email || !password}
+                        sx={{
+                          py: 1.5,
+                          background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                          color: '#fff',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          borderRadius: 2,
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #ffb74d 0%, #ff9800 100%)',
+                          },
+                          '&.Mui-disabled': {
+                            background: alpha('#ff9800', 0.3),
+                            color: alpha('#fff', 0.5),
+                          },
+                        }}
+                      >
+                        Sign In (Test Mode)
+                      </Button>
+                      <Typography variant="caption" sx={{ color: alpha('#ff9800', 0.8), textAlign: 'center' }}>
+                        Test credentials auto-create accounts. Not available in production.
+                      </Typography>
+                    </Box>
+                  )}
+                </>
+              )}
 
               {/* OAuth Providers */}
               {(oauthProviders.google || oauthProviders.github) && (

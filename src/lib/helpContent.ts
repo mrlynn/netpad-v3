@@ -2360,7 +2360,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'text',
         content:
-          'The @netpad/mcp-server package (v2.0.0) is a comprehensive Model Context Protocol (MCP) server that integrates with AI assistants like Claude Desktop and Cursor IDE. It provides 75 AI-powered tools across 7 categories for building forms, applications, workflows, conversational experiences, and MongoDB integrations.',
+          'The @netpad/mcp-server package (v2.2.0) is a comprehensive Model Context Protocol (MCP) server that integrates with AI assistants like Claude Desktop and Cursor IDE. It provides 75 AI-powered tools across 7 categories for building forms, applications, workflows, conversational experiences, and MongoDB integrations. All tools now generate validated, self-contained TypeScript code that runs with `npx tsx` - no SDK dependencies required.',
       },
       {
         type: 'heading',
@@ -2436,6 +2436,22 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Data Browser (12 tools) - MongoDB queries, aggregations, schema analysis',
           'Reference & Helper (16 tools) - Documentation, best practices, debugging',
         ],
+      },
+      {
+        type: 'heading',
+        content: 'New in v2.2.0: Consolidated Tools',
+      },
+      {
+        type: 'list',
+        content: [
+          'get_reference - Unified access to field types, operators, formula functions, validation options, theme options, and documentation',
+          'browse_templates - Browse all 40+ templates (forms, applications, workflows, conversational, queries) with filtering and search',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use get_reference and browse_templates for a streamlined experience. The older individual tools (list_field_types, list_form_templates, etc.) still work but are deprecated.',
       },
       {
         type: 'heading',
@@ -3747,7 +3763,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'warning',
         content:
-          'Knowledge-guided forms require a MongoDB Atlas M10+ cluster for vector search capabilities. Free tier (M0) and shared clusters (M2/M5) do not support this feature.',
+          'For cloud deployments (netpad.io), knowledge-guided forms require a Team tier subscription AND MongoDB Atlas M10+ cluster for vector search. Self-hosted deployments can use Atlas Local (Docker) to enable these features without an M10 upgrade.',
       },
       {
         type: 'example',
@@ -3755,7 +3771,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'An HR onboarding form can be enhanced with the employee handbook, benefits guide, and company policies. When new hires ask about PTO policies or health insurance options, the AI responds with accurate, cited information from your actual documents.',
       },
     ],
-    relatedTopics: ['conversational-forms', 'rag-document-management', 'organizations'],
+    relatedTopics: ['conversational-forms', 'rag-document-management', 'organizations', 'self-hosted-rag'],
     keywords: [
       'RAG',
       'knowledge base',
@@ -3869,7 +3885,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Deleting a document removes it from the knowledge base immediately. This cannot be undone. Consider downloading important documents before deletion.',
       },
     ],
-    relatedTopics: ['knowledge-guided-forms', 'conversational-forms', 'mongodb-connection'],
+    relatedTopics: ['knowledge-guided-forms', 'conversational-forms', 'mongodb-connection', 'self-hosted-rag'],
     keywords: [
       'document upload',
       'PDF',
@@ -4010,8 +4026,153 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Use Vercel\'s preview deployments to test changes before deploying to production. Each pull request automatically gets a preview URL.',
       },
     ],
-    relatedTopics: ['organizations', 'mongodb-connection'],
+    relatedTopics: ['organizations', 'mongodb-connection', 'self-hosted-rag'],
     keywords: ['vercel', 'deploy', 'self-host', 'hosting', 'infrastructure', 'custom domain'],
+  },
+
+  'self-hosted-rag': {
+    id: 'self-hosted-rag',
+    title: 'Self-Hosted RAG with Atlas Local',
+    description:
+      'Enable RAG and Vector Search features in self-hosted deployments using MongoDB Atlas Local without requiring an M10+ cluster.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'Self-hosted NetPad deployments can use RAG (Retrieval-Augmented Generation) features without upgrading to an M10+ MongoDB Atlas cluster. This is made possible by MongoDB Atlas Local, a Docker-based local deployment that supports Vector Search.',
+      },
+      {
+        type: 'heading',
+        content: 'Deployment Modes',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad supports two deployment modes that determine feature availability:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Cloud Mode: Running as hosted SaaS (e.g., netpad.io on Vercel). RAG features require Team tier subscription AND M10+ Atlas cluster for production reliability.',
+          'Self-Hosted Mode: Running privately or locally. RAG features available to ALL subscription tiers when using Atlas Local for Vector Search.',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Setting Up Atlas Local',
+      },
+      {
+        type: 'text',
+        content:
+          'Atlas Local provides a Docker-based MongoDB deployment with Vector Search support. Choose one of these methods:',
+      },
+      {
+        type: 'heading',
+        content: 'Option 1: Using Atlas CLI',
+      },
+      {
+        type: 'code',
+        content: '# Install Atlas CLI\nbrew install mongodb-atlas-cli\n\n# Create local deployment\natlas deployments setup local --type local\n\n# Start the deployment\natlas deployments start local',
+      },
+      {
+        type: 'heading',
+        content: 'Option 2: Using Docker Directly',
+      },
+      {
+        type: 'code',
+        content: 'docker run -d -p 27017:27017 mongodb/mongodb-atlas-local',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'text',
+        content:
+          'Set the following environment variables for self-hosted mode:',
+      },
+      {
+        type: 'code',
+        content: '# Enable self-hosted mode\nNETPAD_DEPLOYMENT_MODE=self-hosted\n\n# Point to your Atlas Local instance\nMONGODB_URI=mongodb://localhost:27017/',
+      },
+      {
+        type: 'heading',
+        content: 'RAG Features Available',
+      },
+      {
+        type: 'list',
+        content: [
+          'Knowledge-Guided Forms: Conversational forms powered by document knowledge bases',
+          'Document Upload: PDF, DOCX, TXT, MD files for building knowledge bases',
+          'Vector Search: Semantic search across uploaded documents',
+          'AI Chat: Document-grounded responses in conversational forms',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Atlas Local Limitations',
+      },
+      {
+        type: 'text',
+        content:
+          'While Atlas Local enables RAG features for development and private deployments, it has some limitations compared to managed Atlas clusters:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Designed for development/testing, not production workloads',
+          'No automatic scaling or high availability',
+          'No managed backups (you handle your own)',
+          'Vector Search index refresh delay of ~1 second',
+          'No dedicated search nodes or multi-region support',
+          'Resource constraints based on local hardware',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Atlas Local is ideal for development, testing, and private self-hosted deployments. For production workloads with high availability requirements, consider upgrading to MongoDB Atlas M10+ clusters.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Self-hosted deployments can start with Atlas Local for RAG features and later migrate to a managed Atlas cluster when scaling requirements increase. The code and data are fully compatible.',
+      },
+      {
+        type: 'heading',
+        content: 'Verifying Your Setup',
+      },
+      {
+        type: 'text',
+        content:
+          'After configuration, verify your setup:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Check that Atlas Local is running: docker ps | grep mongodb-atlas-local',
+          'Verify connection: mongosh mongodb://localhost:27017/',
+          'Test Vector Search: Create a search index in the Atlas Local UI or via the API',
+          'Upload a test document in NetPad and verify processing completes',
+        ],
+      },
+    ],
+    relatedTopics: ['deployment-vercel', 'knowledge-guided-forms', 'rag-document-management', 'mongodb-connection'],
+    keywords: [
+      'self-hosted',
+      'atlas local',
+      'docker',
+      'vector search',
+      'RAG',
+      'deployment mode',
+      'M10',
+      'cluster tier',
+      'local development',
+    ],
   },
 
   'organizations': {
@@ -5034,6 +5195,319 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'upgrade',
       'compatibility',
       'semantic versioning',
+    ],
+  },
+
+  // ============================================
+  // Admin-Only Help Topics
+  // ============================================
+
+  'admin-dashboard': {
+    id: 'admin-dashboard',
+    title: 'Admin Dashboard',
+    description:
+      'Overview of the admin dashboard for platform administrators. Access user management, waitlist, AI analytics, and marketplace review.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'What is the Admin Dashboard?',
+      },
+      {
+        type: 'text',
+        content:
+          'The Admin Dashboard is the central hub for platform administrators to manage users, review waitlist applications, monitor AI usage, and oversee marketplace submissions. Only users with the platform admin role can access this area.',
+      },
+      {
+        type: 'heading',
+        content: 'Available Admin Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'User Management - View and manage all platform users, roles, and permissions',
+          'Waitlist - Review and approve pending waitlist applications',
+          'AI Analytics - Monitor AI usage, token consumption, and costs across all organizations',
+          'Marketplace Review - Review and approve marketplace template submissions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Accessing the Admin Dashboard',
+      },
+      {
+        type: 'text',
+        content:
+          'Navigate to /admin from the main navigation menu. You must have platform admin privileges to access this page. If you do not see the Admin option in the menu, contact your organization administrator.',
+      },
+      {
+        type: 'tip',
+        content:
+          'All admin actions are logged for security and compliance. Treat admin access as a privileged role with full visibility into platform operations.',
+      },
+    ],
+    relatedTopics: ['admin-user-management', 'admin-waitlist', 'admin-ai-analytics', 'admin-marketplace-review'],
+    keywords: ['admin', 'dashboard', 'administration', 'management', 'platform', 'settings'],
+  },
+
+  'admin-user-management': {
+    id: 'admin-user-management',
+    title: 'User Management',
+    description:
+      'Manage all platform users, view their organizations, and control access levels across the NetPad platform.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'User Management Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The User Management section allows platform administrators to view all registered users, their email verification status, organization memberships, and platform roles. Use this to monitor user activity and manage access.',
+      },
+      {
+        type: 'heading',
+        content: 'User Information',
+      },
+      {
+        type: 'list',
+        content: [
+          'Email - User email address and verification status',
+          'Name - User display name',
+          'Organizations - List of organizations the user belongs to',
+          'Platform Role - Admin or regular user',
+          'Last Active - When the user last accessed the platform',
+          'Registration Date - When the user account was created',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Available Actions',
+      },
+      {
+        type: 'list',
+        content: [
+          'View user details and activity history',
+          'Promote or demote users to/from admin role',
+          'View organization memberships',
+          'Monitor email verification status',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Changing a user\'s platform role affects their access to admin features. Only grant admin access to trusted users who need platform-wide visibility.',
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'admin-waitlist', 'organizations'],
+    keywords: ['users', 'management', 'admin', 'roles', 'permissions', 'access', 'organization', 'members'],
+  },
+
+  'admin-waitlist': {
+    id: 'admin-waitlist',
+    title: 'Waitlist Management',
+    description:
+      'Review, approve, or reject waitlist applications from users requesting access to the NetPad platform.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'Waitlist Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Waitlist section shows all pending, approved, and rejected applications from users who want to join the platform. As an admin, you can review applications and grant or deny access.',
+      },
+      {
+        type: 'heading',
+        content: 'Application Information',
+      },
+      {
+        type: 'list',
+        content: [
+          'Email - Applicant\'s email address',
+          'Name - Applicant\'s name',
+          'Company - Organization or company name',
+          'Use Case - How they plan to use NetPad',
+          'Status - Pending, Approved, or Rejected',
+          'Applied Date - When the application was submitted',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Approval Workflow',
+      },
+      {
+        type: 'list',
+        content: [
+          'Review the application details and use case',
+          'Click "Approve" to grant platform access',
+          'Click "Reject" to deny the application',
+          'Approved users receive an email invitation to complete registration',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Review use cases to understand how users plan to use NetPad. This helps prioritize users who align with platform goals and identify potential power users.',
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'admin-user-management'],
+    keywords: ['waitlist', 'applications', 'approval', 'access', 'registration', 'invite', 'pending'],
+  },
+
+  'admin-ai-analytics': {
+    id: 'admin-ai-analytics',
+    title: 'AI Analytics Dashboard',
+    description:
+      'Monitor AI usage across the platform including token consumption, costs, top users, and usage trends by feature and model.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'AI Analytics Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The AI Analytics dashboard provides comprehensive visibility into how AI features are being used across the platform. Track token consumption, estimated costs, latency metrics, and identify top users and organizations.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Metrics',
+      },
+      {
+        type: 'list',
+        content: [
+          'Total Requests - Number of AI API calls across all users',
+          'Total Tokens - Combined prompt and completion tokens used',
+          'Estimated Cost - Calculated cost based on model pricing',
+          'Average Latency - Mean response time for AI requests',
+          'Error Rate - Percentage of failed AI requests',
+          'Unique Users - Number of users who made AI requests',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Usage Breakdown',
+      },
+      {
+        type: 'list',
+        content: [
+          'By Feature - See which AI features (chat, form generation, formulas, etc.) are most used',
+          'By Model - Track usage across different AI models (GPT-4o-mini, GPT-4o, etc.)',
+          'By Organization - View top organizations by token consumption',
+          'By User - Identify top users by AI usage',
+          'Trends - Daily usage charts showing token consumption over time',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Time Range Selection',
+      },
+      {
+        type: 'text',
+        content:
+          'Use the time range selector to view analytics for different periods: 7 days, 30 days, or 90 days. This helps identify usage trends and plan for capacity.',
+      },
+      {
+        type: 'heading',
+        content: 'Data Retention',
+      },
+      {
+        type: 'text',
+        content:
+          'Detailed request logs are retained for 90 days. After this period, individual request data is automatically deleted, but aggregated statistics remain available.',
+      },
+      {
+        type: 'tip',
+        content:
+          'Monitor the cost trend to forecast AI expenses. If costs are rising unexpectedly, check the top users and features to understand the driving factors.',
+      },
+      {
+        type: 'warning',
+        content:
+          'AI analytics includes data from all organizations. Handle this information with appropriate confidentiality as it reveals usage patterns across the entire platform.',
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'admin-user-management'],
+    keywords: [
+      'ai',
+      'analytics',
+      'tokens',
+      'usage',
+      'cost',
+      'monitoring',
+      'openai',
+      'gpt',
+      'llm',
+      'metrics',
+      'dashboard',
+      'trends',
+    ],
+  },
+
+  'admin-marketplace-review': {
+    id: 'admin-marketplace-review',
+    title: 'Marketplace Review',
+    description:
+      'Review and approve marketplace template submissions before they are published to the public template gallery.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'Marketplace Review Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'When users submit templates to the marketplace, they require admin review before becoming publicly available. This section shows pending submissions and allows you to approve or reject them.',
+      },
+      {
+        type: 'heading',
+        content: 'Review Criteria',
+      },
+      {
+        type: 'list',
+        content: [
+          'Quality - Is the template well-designed and functional?',
+          'Completeness - Does it include description, screenshots, and documentation?',
+          'Originality - Is it original work or properly attributed?',
+          'Compliance - Does it follow platform guidelines and policies?',
+          'Security - Does it avoid potentially harmful patterns?',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Review Actions',
+      },
+      {
+        type: 'list',
+        content: [
+          'Preview Template - View the full template configuration',
+          'Approve - Publish the template to the marketplace',
+          'Request Changes - Ask the author to make modifications',
+          'Reject - Decline the submission with a reason',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'When rejecting or requesting changes, provide clear feedback to help authors improve their submissions. Good feedback leads to better marketplace content.',
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'marketplace', 'template-gallery'],
+    keywords: [
+      'marketplace',
+      'review',
+      'templates',
+      'submissions',
+      'approval',
+      'publish',
+      'gallery',
+      'moderation',
     ],
   },
 };

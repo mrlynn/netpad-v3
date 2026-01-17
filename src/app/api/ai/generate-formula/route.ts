@@ -3,12 +3,14 @@
  *
  * POST /api/ai/generate-formula
  * Generates a formula from natural language description.
+ *
+ * Uses centralized aiService for token tracking and analytics.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createFormulaAssistant } from '@/lib/ai/formulaAssistant';
+import { createFormulaAssistantWithContext } from '@/lib/ai/formulaAssistant';
 import { GenerateFormulaRequest } from '@/lib/ai/types';
-import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
+import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +46,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const assistant = createFormulaAssistant(apiKey);
+    // Use context-aware assistant for centralized analytics tracking
+    const assistant = createFormulaAssistantWithContext(
+      guard.context.userId,
+      guard.context.orgId,
+      guard.context.isGuest || false
+    );
 
     const formulaRequest: GenerateFormulaRequest = {
       description: body.description,
@@ -61,8 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Increment usage counter on successful generation
-    await recordAIUsage(guard.context.orgId);
+    // Token usage is automatically tracked by aiService - no need to call recordAIUsage
 
     return NextResponse.json(result);
   } catch (error) {

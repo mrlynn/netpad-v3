@@ -38,7 +38,7 @@ export interface CreateProjectInput {
 
 export type ClusterProviderName = 'TENANT' | 'AWS' | 'GCP' | 'AZURE';
 export type ClusterBackingProvider = 'AWS' | 'GCP' | 'AZURE';
-export type ClusterInstanceSize = 'M0' | 'M2' | 'M5' | 'M10' | 'M20' | 'M30' | 'M40' | 'M50' | 'M60';
+export type ClusterInstanceSize = 'LOCAL' | 'M0' | 'M2' | 'M5' | 'M10' | 'M20' | 'M30' | 'M40' | 'M50' | 'M60';
 export type ClusterState = 'CREATING' | 'UPDATING' | 'DELETING' | 'DELETED' | 'IDLE' | 'REPAIRING';
 
 // AWS regions that support M0

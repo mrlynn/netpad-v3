@@ -32,8 +32,6 @@ import {
 } from './application-tools.js';
 import {
   APPLICATION_TEMPLATES,
-  generateCreateApplicationCode,
-  generateApplicationConfig,
   generateApplicationContract,
   generateContractFromForms,
   generateApplicationRelease,
@@ -66,8 +64,6 @@ import {
 import {
   WORKFLOW_NODE_TYPES,
   WORKFLOW_TEMPLATES,
-  generateCreateWorkflowCode,
-  generateWorkflowConfig,
   generateAddNodeCode,
   generateConnectNodesCode,
   generateConfigureTriggerCode,
@@ -78,7 +74,6 @@ import {
   type WorkflowNodeConfig,
   type WorkflowEdgeConfig,
   type TriggerConfig,
-  type CreateWorkflowOptions,
   type TestWorkflowOptions,
 } from './workflow-tools.js';
 import {
@@ -127,6 +122,12 @@ import {
   type DataBrowserQueryOptions,
   type AggregationPipelineOptions,
 } from './data-browser-tools.js';
+import {
+  createToolOutput,
+  formatToolOutput,
+  generateSelfContainedCode,
+  STANDARD_ENV_VARS,
+} from './validation.js';
 
 const server = new McpServer({
   name: '@netpad/mcp-server',
@@ -242,23 +243,140 @@ server.resource(
 // Tool: Generate a complete form schema
 server.tool(
   'generate_form',
-  'Generate a complete NetPad form configuration from a description. Provide a natural language description of the form you want to create, and this tool will generate the full FormConfiguration object.',
+  'Generate a complete NetPad form configuration from a description. Returns validated TypeScript code by default (can optionally return JSON). The TypeScript output includes inline types, form config, and API functions - ready to run with `npx tsx`.',
   {
     description: z.string().describe('Natural language description of the form to generate'),
     formName: z.string().describe('Name of the form'),
     includeMultiPage: z.boolean().optional().describe('Whether to organize fields into multiple pages'),
     includeTheme: z.boolean().optional().describe('Whether to include theme configuration'),
+    outputFormat: z.enum(['typescript', 'json']).optional().describe('Output format: "typescript" (default) for complete working code, "json" for raw config'),
   },
-  async ({ description, formName, includeMultiPage, includeTheme }) => {
+  async ({ description, formName, includeMultiPage, includeTheme, outputFormat = 'typescript' }) => {
     const schema = generateFormSchema(description, formName, {
       multiPage: includeMultiPage,
       theme: includeTheme,
     });
+
+    // If JSON format requested, return the raw schema
+    if (outputFormat === 'json') {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(schema, null, 2),
+          },
+        ],
+      };
+    }
+
+    // Generate complete TypeScript file with inline types
+    const slug = formName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    const configCode = `export const formConfig: FormConfig = ${JSON.stringify({
+      ...schema,
+      slug,
+    }, null, 2)};`;
+
+    const functionsCode = `/**
+ * Submit form data to the NetPad API.
+ */
+export async function submitForm(data: Record<string, unknown>): Promise<SubmitResult> {
+  try {
+    const response = await fetch(
+      \`\${CONFIG.baseUrl}/api/forms/\${formConfig.slug}/submit\`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+        },
+        body: JSON.stringify({ data }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      return { success: false, error };
+    }
+
+    const result = await response.json() as { submissionId: string };
+    return { success: true, submissionId: result.submissionId };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Create the form in NetPad (run once to set up).
+ */
+export async function createForm(): Promise<{ formId: string } | { error: string }> {
+  try {
+    const response = await fetch(\`\${CONFIG.baseUrl}/api/forms\`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+      },
+      body: JSON.stringify({
+        ...formConfig,
+        organizationId: CONFIG.organizationId,
+        projectId: CONFIG.projectId,
+      }),
+    });
+
+    if (!response.ok) {
+      return { error: await response.text() };
+    }
+
+    const result = await response.json() as { form: { formId: string } };
+    return { formId: result.form.formId };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}`;
+
+    const mainCode = `// Example usage
+async function main() {
+  console.log('Creating form:', formConfig.name);
+
+  // Create the form (run once)
+  const createResult = await createForm();
+  if ('error' in createResult) {
+    console.error('Failed to create form:', createResult.error);
+    return;
+  }
+
+  console.log('✅ Form created with ID:', createResult.formId);
+  console.log('Form slug:', formConfig.slug);
+}
+
+// Uncomment to run:
+// main().catch(console.error);
+`;
+
+    const code = generateSelfContainedCode({
+      title: formName,
+      description: schema.description,
+      includeFormTypes: true,
+      configCode,
+      functionsCode,
+      mainCode,
+    });
+
+    const output = createToolOutput({
+      code,
+      filename: `${slug}.ts`,
+      envVars: STANDARD_ENV_VARS,
+    });
+
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(schema, null, 2),
+          text: formatToolOutput(output),
         },
       ],
     };
@@ -421,10 +539,461 @@ server.tool(
   }
 );
 
-// Tool: List all supported field types
+// ============================================================================
+// CONSOLIDATED REFERENCE TOOL
+// ============================================================================
+
+// Tool: Get reference information (consolidates 6 tools)
+server.tool(
+  'get_reference',
+  'Get NetPad reference information: field types, operators, formula functions, validation options, theme options, or documentation. This is the recommended way to access all reference data.',
+  {
+    type: z.enum([
+      'field_types',
+      'operators',
+      'formula_functions',
+      'validation_options',
+      'theme_options',
+      'documentation'
+    ]).describe('The type of reference to retrieve'),
+    category: z.string().optional().describe('Filter by category (for field_types: "text", "selection", "date"; for formula_functions: "math", "string", "date")'),
+    topic: z.enum(['readme', 'architecture', 'quick-start', 'examples', 'api-client']).optional().describe('Documentation topic (required when type is "documentation")'),
+  },
+  async ({ type, category, topic }) => {
+    switch (type) {
+      case 'field_types': {
+        let types = FIELD_TYPES;
+        if (category) {
+          types = types.filter(t => t.category.toLowerCase() === category.toLowerCase());
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              referenceType: 'field_types',
+              count: types.length,
+              categories: [...new Set(FIELD_TYPES.map(t => t.category))],
+              data: types,
+            }, null, 2),
+          }],
+        };
+      }
+      case 'operators': {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              referenceType: 'operators',
+              count: OPERATORS.length,
+              data: OPERATORS,
+            }, null, 2),
+          }],
+        };
+      }
+      case 'formula_functions': {
+        let functions = FORMULA_FUNCTIONS;
+        if (category) {
+          functions = functions.filter(f => f.category.toLowerCase() === category.toLowerCase());
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              referenceType: 'formula_functions',
+              count: functions.length,
+              categories: [...new Set(FORMULA_FUNCTIONS.map(f => f.category))],
+              data: functions,
+            }, null, 2),
+          }],
+        };
+      }
+      case 'validation_options': {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              referenceType: 'validation_options',
+              data: VALIDATION_OPTIONS,
+            }, null, 2),
+          }],
+        };
+      }
+      case 'theme_options': {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              referenceType: 'theme_options',
+              data: THEME_OPTIONS,
+            }, null, 2),
+          }],
+        };
+      }
+      case 'documentation': {
+        const docs: Record<string, string> = {
+          'readme': DOCUMENTATION.readme,
+          'architecture': ARCHITECTURE_GUIDE,
+          'quick-start': QUICK_START_GUIDE,
+          'examples': EXAMPLES,
+          'api-client': DOCUMENTATION.apiClient,
+        };
+        const selectedTopic = topic || 'readme';
+        return {
+          content: [{
+            type: 'text',
+            text: `# NetPad Documentation: ${selectedTopic}\n\n${docs[selectedTopic] || 'Documentation not found'}\n\n---\nAvailable topics: ${Object.keys(docs).join(', ')}`,
+          }],
+        };
+      }
+      default:
+        return {
+          content: [{
+            type: 'text',
+            text: 'Invalid reference type. Use: field_types, operators, formula_functions, validation_options, theme_options, or documentation',
+          }],
+        };
+    }
+  }
+);
+
+// ============================================================================
+// CONSOLIDATED TEMPLATE BROWSING TOOL
+// ============================================================================
+
+// Tool: Browse all templates (consolidates 11 template tools)
+server.tool(
+  'browse_templates',
+  'Browse all NetPad templates: forms (25+), applications (7), workflows (5), conversational (4), and query templates. This is the recommended way to discover and access all templates.',
+  {
+    templateType: z.enum([
+      'form',
+      'application',
+      'workflow',
+      'conversational',
+      'query',
+      'use_case',
+      'all'
+    ]).describe('Type of templates to browse'),
+    action: z.enum(['list', 'get', 'categories']).optional().describe('Action: "list" (default) returns summaries, "get" returns full details, "categories" lists available categories'),
+    templateId: z.string().optional().describe('Template ID (required when action is "get")'),
+    category: z.string().optional().describe('Filter templates by category'),
+    search: z.string().optional().describe('Search templates by name, description, or tags (form templates only)'),
+  },
+  async ({ templateType, action = 'list', templateId, category, search }) => {
+    // Helper to format template summary
+    const formatSummary = (id: string, name: string, desc: string, cat: string, extra: Record<string, unknown> = {}) => ({
+      id, name, description: desc, category: cat, ...extra
+    });
+
+    switch (templateType) {
+      case 'form': {
+        if (action === 'categories') {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                templateType: 'form',
+                categories: TEMPLATE_CATEGORIES,
+                totalTemplates: Object.keys(FORM_TEMPLATES).length,
+              }, null, 2),
+            }],
+          };
+        }
+        if (action === 'get' && templateId) {
+          const template = getTemplateById(templateId);
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Form template "${templateId}" not found`,
+                  availableTemplates: Object.keys(FORM_TEMPLATES),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List form templates
+        let templates: FormTemplate[];
+        if (search) {
+          templates = searchTemplates(search);
+        } else if (category) {
+          templates = getTemplatesByCategory(category);
+        } else {
+          templates = Object.values(FORM_TEMPLATES);
+        }
+        const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
+          tags: t.tags, icon: t.icon, fieldCount: t.fields.length, hasMultiPage: !!t.multiPage?.enabled,
+        }));
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'form',
+              templates: summary,
+              total: summary.length,
+              categories: [...new Set(templates.map(t => t.category))],
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'application': {
+        if (action === 'categories') {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                templateType: 'application',
+                categories: [...new Set(Object.values(APPLICATION_TEMPLATES).map(t => t.category))],
+                totalTemplates: Object.keys(APPLICATION_TEMPLATES).length,
+              }, null, 2),
+            }],
+          };
+        }
+        if (action === 'get' && templateId) {
+          const template = APPLICATION_TEMPLATES[templateId as ApplicationTemplateId];
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Application template "${templateId}" not found`,
+                  availableTemplates: Object.keys(APPLICATION_TEMPLATES),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List application templates
+        let templates = Object.values(APPLICATION_TEMPLATES);
+        if (category) {
+          templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+        }
+        const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
+          tags: t.tags, formsCount: t.structure.forms.length, workflowsCount: t.structure.workflows.length,
+        }));
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'application',
+              templates: summary,
+              total: summary.length,
+              categories: [...new Set(Object.values(APPLICATION_TEMPLATES).map(t => t.category))],
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'workflow': {
+        if (action === 'categories') {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                templateType: 'workflow',
+                categories: [...new Set(Object.values(WORKFLOW_TEMPLATES).map(t => t.category))],
+                totalTemplates: Object.keys(WORKFLOW_TEMPLATES).length,
+              }, null, 2),
+            }],
+          };
+        }
+        if (action === 'get' && templateId) {
+          const template = WORKFLOW_TEMPLATES[templateId as keyof typeof WORKFLOW_TEMPLATES];
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Workflow template "${templateId}" not found`,
+                  availableTemplates: Object.keys(WORKFLOW_TEMPLATES),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List workflow templates
+        let templates = Object.values(WORKFLOW_TEMPLATES);
+        if (category) {
+          templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+        }
+        const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
+          tags: t.tags, nodesCount: t.nodes.length, edgesCount: t.edges.length,
+        }));
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'workflow',
+              templates: summary,
+              total: summary.length,
+              categories: [...new Set(Object.values(WORKFLOW_TEMPLATES).map(t => t.category))],
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'conversational': {
+        if (action === 'categories') {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                templateType: 'conversational',
+                categories: [...new Set(Object.values(CONVERSATIONAL_TEMPLATES).map(t => t.category))],
+                totalTemplates: Object.keys(CONVERSATIONAL_TEMPLATES).length,
+              }, null, 2),
+            }],
+          };
+        }
+        if (action === 'get' && templateId) {
+          const template = CONVERSATIONAL_TEMPLATES[templateId as keyof typeof CONVERSATIONAL_TEMPLATES];
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Conversational template "${templateId}" not found`,
+                  availableTemplates: Object.keys(CONVERSATIONAL_TEMPLATES),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List conversational templates
+        let templates = Object.values(CONVERSATIONAL_TEMPLATES);
+        if (category) {
+          templates = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+        }
+        const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
+          tags: t.tags, topicsCount: t.defaultConfig.topics.length, extractionFieldsCount: t.defaultConfig.extractionSchema.length,
+        }));
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'conversational',
+              templates: summary,
+              total: summary.length,
+              categories: [...new Set(Object.values(CONVERSATIONAL_TEMPLATES).map(t => t.category))],
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'query': {
+        if (action === 'get' && templateId) {
+          const template = getQueryTemplate(templateId);
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Query template "${templateId}" not found`,
+                  availableTemplates: listQueryTemplates(),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List query templates
+        const templates = listQueryTemplates();
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'query',
+              templates,
+              total: templates.length,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'use_case': {
+        if (action === 'get' && templateId) {
+          const template = USE_CASE_TEMPLATES[templateId as keyof typeof USE_CASE_TEMPLATES];
+          if (!template) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Use case template "${templateId}" not found`,
+                  availableTemplates: Object.keys(USE_CASE_TEMPLATES),
+                }, null, 2),
+              }],
+            };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+        }
+        // List use case templates
+        const useCaseIds = Object.keys(USE_CASE_TEMPLATES);
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              templateType: 'use_case',
+              templates: useCaseIds,
+              total: useCaseIds.length,
+              note: 'Use action="get" with templateId to retrieve full template details',
+            }, null, 2),
+          }],
+        };
+      }
+
+      case 'all': {
+        // Return overview of all template types
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              overview: 'NetPad Template Catalog',
+              templateTypes: [
+                { type: 'form', count: Object.keys(FORM_TEMPLATES).length, categories: TEMPLATE_CATEGORIES.length, description: 'Pre-built form configurations with fields, validation, and styling' },
+                { type: 'application', count: Object.keys(APPLICATION_TEMPLATES).length, description: 'Complete applications with forms, workflows, and settings' },
+                { type: 'workflow', count: Object.keys(WORKFLOW_TEMPLATES).length, description: 'Automated workflow patterns with triggers, conditions, and actions' },
+                { type: 'conversational', count: Object.keys(CONVERSATIONAL_TEMPLATES).length, description: 'AI-powered conversational form templates' },
+                { type: 'query', count: listQueryTemplates().length, description: 'MongoDB query patterns for common operations' },
+                { type: 'use_case', count: Object.keys(USE_CASE_TEMPLATES).length, description: 'Industry use case blueprints' },
+              ],
+              totalTemplates:
+                Object.keys(FORM_TEMPLATES).length +
+                Object.keys(APPLICATION_TEMPLATES).length +
+                Object.keys(WORKFLOW_TEMPLATES).length +
+                Object.keys(CONVERSATIONAL_TEMPLATES).length +
+                listQueryTemplates().length +
+                Object.keys(USE_CASE_TEMPLATES).length,
+              usage: 'Use templateType to filter, action="get" with templateId to get details, or action="categories" to see available categories',
+            }, null, 2),
+          }],
+        };
+      }
+
+      default:
+        return {
+          content: [{
+            type: 'text',
+            text: 'Invalid templateType. Use: form, application, workflow, conversational, query, use_case, or all',
+          }],
+        };
+    }
+  }
+);
+
+// ============================================================================
+// DEPRECATED REFERENCE TOOLS (use get_reference instead)
+// ============================================================================
+
+// Tool: List all supported field types [DEPRECATED]
 server.tool(
   'list_field_types',
-  'List all supported field types in @netpad/forms with their descriptions and usage.',
+  '[DEPRECATED - use get_reference with type="field_types" instead] List all supported field types in @netpad/forms with their descriptions and usage.',
   {
     category: z.string().optional().describe('Filter by category (e.g., "text", "selection", "date")'),
   },
@@ -437,34 +1006,34 @@ server.tool(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(types, null, 2),
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="field_types" instead.\n\n${JSON.stringify(types, null, 2)}`,
         },
       ],
     };
   }
 );
 
-// Tool: List conditional logic operators
+// Tool: List conditional logic operators [DEPRECATED]
 server.tool(
   'list_operators',
-  'List all available conditional logic operators with descriptions.',
+  '[DEPRECATED - use get_reference with type="operators" instead] List all available conditional logic operators with descriptions.',
   {},
   async () => {
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(OPERATORS, null, 2),
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="operators" instead.\n\n${JSON.stringify(OPERATORS, null, 2)}`,
         },
       ],
     };
   }
 );
 
-// Tool: List formula functions
+// Tool: List formula functions [DEPRECATED]
 server.tool(
   'list_formula_functions',
-  'List all available formula functions for computed fields.',
+  '[DEPRECATED - use get_reference with type="formula_functions" instead] List all available formula functions for computed fields.',
   {
     category: z.string().optional().describe('Filter by category (e.g., "math", "string", "date")'),
   },
@@ -477,51 +1046,51 @@ server.tool(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(functions, null, 2),
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="formula_functions" instead.\n\n${JSON.stringify(functions, null, 2)}`,
         },
       ],
     };
   }
 );
 
-// Tool: List validation options
+// Tool: List validation options [DEPRECATED]
 server.tool(
   'list_validation_options',
-  'List all available validation options for form fields.',
+  '[DEPRECATED - use get_reference with type="validation_options" instead] List all available validation options for form fields.',
   {},
   async () => {
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(VALIDATION_OPTIONS, null, 2),
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="validation_options" instead.\n\n${JSON.stringify(VALIDATION_OPTIONS, null, 2)}`,
         },
       ],
     };
   }
 );
 
-// Tool: List theme options
+// Tool: List theme options [DEPRECATED]
 server.tool(
   'list_theme_options',
-  'List all available theme customization options.',
+  '[DEPRECATED - use get_reference with type="theme_options" instead] List all available theme customization options.',
   {},
   async () => {
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(THEME_OPTIONS, null, 2),
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="theme_options" instead.\n\n${JSON.stringify(THEME_OPTIONS, null, 2)}`,
         },
       ],
     };
   }
 );
 
-// Tool: Get documentation
+// Tool: Get documentation [DEPRECATED]
 server.tool(
   'get_documentation',
-  'Get NetPad forms documentation. Use this to learn about features, APIs, and best practices.',
+  '[DEPRECATED - use get_reference with type="documentation" instead] Get NetPad forms documentation. Use this to learn about features, APIs, and best practices.',
   {
     topic: z.enum(['readme', 'architecture', 'quick-start', 'examples', 'api-client']).describe('The documentation topic to retrieve'),
   },
@@ -537,7 +1106,7 @@ server.tool(
       content: [
         {
           type: 'text',
-          text: docs[topic] || 'Documentation not found',
+          text: `DEPRECATED: This tool is deprecated. Use get_reference with type="documentation" and topic="${topic}" instead.\n\n${docs[topic] || 'Documentation not found'}`,
         },
       ],
     };
@@ -547,67 +1116,409 @@ server.tool(
 // Tool: Generate React component code
 server.tool(
   'generate_react_code',
-  'Generate React component code that uses @netpad/forms to render a form.',
+  'Generate a complete, self-contained React component with inline types and fetch-based API calls. No external @netpad/* imports required - ready to copy-paste and use.',
   {
     formConfig: z.string().describe('The form configuration JSON'),
     componentName: z.string().optional().describe('Name of the React component'),
     includeSubmitHandler: z.boolean().optional().describe('Whether to include a submit handler'),
-    useNetPadClient: z.boolean().optional().describe('Whether to use NetPad API client for submission'),
+    includeApiSubmission: z.boolean().optional().describe('Whether to submit to NetPad API via fetch (default: true)'),
   },
-  async ({ formConfig, componentName = 'MyForm', includeSubmitHandler = true, useNetPadClient = false }) => {
-    let code = `import { FormRenderer } from '@netpad/forms';\n`;
-
-    if (useNetPadClient) {
-      code += `import { createNetPadClient } from '@netpad/forms';\n`;
-    }
-
-    code += `import type { FormConfiguration } from '@netpad/forms';\n\n`;
-
-    code += `const formConfig: FormConfiguration = ${formConfig};\n\n`;
-
-    if (useNetPadClient) {
-      code += `const client = createNetPadClient({
-  baseUrl: process.env.NEXT_PUBLIC_NETPAD_URL || 'https://your-netpad-instance.com',
-  apiKey: process.env.NETPAD_API_KEY || '',
-});\n\n`;
-    }
-
-    code += `export function ${componentName}() {\n`;
-
-    if (includeSubmitHandler) {
-      if (useNetPadClient) {
-        code += `  const handleSubmit = async (data: Record<string, unknown>) => {
+  async ({ formConfig, componentName = 'MyForm', includeSubmitHandler = true, includeApiSubmission = true }) => {
+    // Parse the config to extract form name/slug
+    let parsedConfig;
     try {
-      const result = await client.submitForm(formConfig.formId || formConfig.slug || '', data);
-      console.log('Submission successful:', result);
-      // Handle success (e.g., show notification, redirect)
-    } catch (error) {
-      console.error('Submission failed:', error);
-      // Handle error
+      parsedConfig = JSON.parse(formConfig);
+    } catch {
+      parsedConfig = { name: componentName, slug: componentName.toLowerCase().replace(/\s+/g, '-') };
     }
-  };\n\n`;
-      } else {
-        code += `  const handleSubmit = async (data: Record<string, unknown>) => {
-    console.log('Form submitted:', data);
-    // TODO: Handle form submission
-  };\n\n`;
+
+    const formSlug = parsedConfig.slug || parsedConfig.name?.toLowerCase().replace(/\s+/g, '-') || 'form';
+
+    const code = `/**
+ * ${componentName} - React Form Component
+ * Generated by NetPad
+ *
+ * This is a self-contained component with inline types.
+ * No @netpad/* imports required.
+ */
+
+'use client';
+
+import React, { useState, FormEvent, ChangeEvent } from 'react';
+
+// ============================================================================
+// Types (inline - no external dependencies)
+// ============================================================================
+
+interface FormFieldOption {
+  label: string;
+  value: string;
+}
+
+interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  errorMessage?: string;
+}
+
+interface FormField {
+  path: string;
+  label: string;
+  type: string;
+  included?: boolean;
+  required?: boolean;
+  placeholder?: string;
+  helpText?: string;
+  options?: FormFieldOption[];
+  validation?: FormFieldValidation;
+  fieldWidth?: 'full' | 'half' | 'third' | 'quarter';
+}
+
+interface FormConfig {
+  name: string;
+  slug?: string;
+  description?: string;
+  fieldConfigs: FormField[];
+  submitButtonText?: string;
+  successMessage?: string;
+}
+
+interface SubmitResult {
+  success: boolean;
+  submissionId?: string;
+  error?: string;
+}
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const CONFIG = {
+  baseUrl: process.env.NEXT_PUBLIC_NETPAD_URL ?? 'https://api.netpad.io',
+  apiKey: process.env.NEXT_PUBLIC_NETPAD_API_KEY ?? '',
+};
+
+const formConfig: FormConfig = ${formConfig};
+
+// ============================================================================
+// API Functions (using fetch - no SDK required)
+// ============================================================================
+
+${includeApiSubmission ? `async function submitToApi(data: Record<string, unknown>): Promise<SubmitResult> {
+  try {
+    const response = await fetch(
+      \`\${CONFIG.baseUrl}/api/forms/${formSlug}/submit\`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+        },
+        body: JSON.stringify({ data }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: errorText };
+    }
+
+    const result = await response.json() as { submissionId: string };
+    return { success: true, submissionId: result.submissionId };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}` : ''}
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function ${componentName}() {
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    for (const field of formConfig.fieldConfigs) {
+      if (!field.included) continue;
+
+      const value = formData[field.path] || '';
+
+      if (field.required && !value) {
+        newErrors[field.path] = \`\${field.label} is required\`;
+      }
+
+      if (field.validation) {
+        if (field.validation.minLength && value.length < field.validation.minLength) {
+          newErrors[field.path] = field.validation.errorMessage || \`Minimum \${field.validation.minLength} characters required\`;
+        }
+        if (field.validation.maxLength && value.length > field.validation.maxLength) {
+          newErrors[field.path] = field.validation.errorMessage || \`Maximum \${field.validation.maxLength} characters allowed\`;
+        }
+        if (field.validation.pattern && !new RegExp(field.validation.pattern).test(value)) {
+          newErrors[field.path] = field.validation.errorMessage || 'Invalid format';
+        }
       }
     }
 
-    code += `  return (
-    <FormRenderer
-      config={formConfig}
-      onSubmit={${includeSubmitHandler ? 'handleSubmit' : 'undefined'}}
-      mode="create"
-    />
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+${includeSubmitHandler ? `  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    setSubmitResult(null);
+
+    try {
+${includeApiSubmission ? `      const result = await submitToApi(formData);
+      setSubmitResult(result);` : `      // TODO: Implement your submission logic
+      console.log('Form data:', formData);
+      setSubmitResult({ success: true });`}
+    } catch (error) {
+      setSubmitResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Submission failed',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };` : ''}
+
+  const renderField = (field: FormField) => {
+    if (!field.included) return null;
+
+    const commonProps = {
+      id: field.path,
+      name: field.path,
+      value: formData[field.path] || '',
+      onChange: handleChange,
+      required: field.required,
+      placeholder: field.placeholder,
+      disabled: isSubmitting,
+      className: \`form-field \${errors[field.path] ? 'error' : ''}\`,
+    };
+
+    let input;
+
+    switch (field.type) {
+      case 'long_text':
+        input = <textarea {...commonProps} rows={4} />;
+        break;
+      case 'email':
+        input = <input {...commonProps} type="email" />;
+        break;
+      case 'number':
+        input = <input {...commonProps} type="number" />;
+        break;
+      case 'phone':
+        input = <input {...commonProps} type="tel" />;
+        break;
+      case 'date':
+        input = <input {...commonProps} type="date" />;
+        break;
+      case 'dropdown':
+      case 'select':
+        input = (
+          <select {...commonProps}>
+            <option value="">Select...</option>
+            {field.options?.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        );
+        break;
+      default:
+        input = <input {...commonProps} type="text" />;
+    }
+
+    return (
+      <div key={field.path} className={\`form-group field-width-\${field.fieldWidth || 'full'}\`}>
+        <label htmlFor={field.path}>
+          {field.label}
+          {field.required && <span className="required">*</span>}
+        </label>
+        {input}
+        {field.helpText && <small className="help-text">{field.helpText}</small>}
+        {errors[field.path] && <span className="error-message">{errors[field.path]}</span>}
+      </div>
+    );
+  };
+
+  if (submitResult?.success) {
+    return (
+      <div className="form-success">
+        <h3>✓ {formConfig.successMessage || 'Thank you for your submission!'}</h3>
+        {submitResult.submissionId && (
+          <p>Confirmation ID: {submitResult.submissionId}</p>
+        )}
+        <button onClick={() => {
+          setSubmitResult(null);
+          setFormData({});
+        }}>
+          Submit Another
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="form-container">
+      <h2>{formConfig.name}</h2>
+      {formConfig.description && <p className="form-description">{formConfig.description}</p>}
+
+      <form onSubmit={${includeSubmitHandler ? 'handleSubmit' : '(e) => e.preventDefault()'}}>
+        {formConfig.fieldConfigs.map(renderField)}
+
+        {submitResult?.error && (
+          <div className="form-error">
+            <p>Error: {submitResult.error}</p>
+          </div>
+        )}
+
+        <button type="submit" disabled={isSubmitting} className="submit-button">
+          {isSubmitting ? 'Submitting...' : (formConfig.submitButtonText || 'Submit')}
+        </button>
+      </form>
+
+      <style>{\`
+        .form-container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        .form-group {
+          margin-bottom: 16px;
+        }
+        .form-group label {
+          display: block;
+          margin-bottom: 4px;
+          font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 14px;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+          outline: none;
+          border-color: #1976d2;
+        }
+        .form-group .error {
+          border-color: #d32f2f;
+        }
+        .required {
+          color: #d32f2f;
+          margin-left: 4px;
+        }
+        .help-text {
+          display: block;
+          color: #666;
+          margin-top: 4px;
+        }
+        .error-message {
+          display: block;
+          color: #d32f2f;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+        .submit-button {
+          background: #1976d2;
+          color: white;
+          padding: 12px 24px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+        }
+        .submit-button:hover {
+          background: #1565c0;
+        }
+        .submit-button:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
+        .form-success {
+          text-align: center;
+          padding: 40px;
+        }
+        .form-error {
+          background: #ffebee;
+          color: #c62828;
+          padding: 12px;
+          border-radius: 4px;
+          margin-bottom: 16px;
+        }
+        .field-width-half {
+          display: inline-block;
+          width: calc(50% - 8px);
+          margin-right: 8px;
+        }
+        .field-width-third {
+          display: inline-block;
+          width: calc(33.33% - 8px);
+          margin-right: 8px;
+        }
+        .field-width-quarter {
+          display: inline-block;
+          width: calc(25% - 8px);
+          margin-right: 8px;
+        }
+      \`}</style>
+    </div>
   );
-}\n`;
+}
+
+export default ${componentName};
+`;
+
+    const output = createToolOutput({
+      code,
+      filename: `${componentName}.tsx`,
+      envVars: [
+        { name: 'NEXT_PUBLIC_NETPAD_URL', description: 'NetPad API URL (client-side accessible)', example: 'https://api.netpad.io' },
+        { name: 'NEXT_PUBLIC_NETPAD_API_KEY', description: 'NetPad API key (client-side accessible)', example: 'np_live_xxxxx' },
+      ],
+      dependencies: ['react'],
+    });
 
     return {
       content: [
         {
           type: 'text',
-          text: code,
+          text: formatToolOutput(output),
         },
       ],
     };
@@ -721,10 +1632,10 @@ server.tool(
   }
 );
 
-// Tool: Get use case template
+// Tool: Get use case template [DEPRECATED]
 server.tool(
   'get_use_case_template',
-  'Get a pre-built template for common form use cases including form configuration and workflow setup.',
+  '[DEPRECATED - use browse_templates with templateType="use_case" and action="get"] Get a pre-built template for common form use cases including form configuration and workflow setup.',
   {
     useCase: z.enum(['leadCapture', 'eventRegistration', 'feedbackSurvey']).describe('The use case template to retrieve'),
   },
@@ -1159,10 +2070,10 @@ ${context ? `\n**Context:** ${context}` : ''}
 // APPLICATION MANAGEMENT TOOLS (Phase 1 - Version 2.0.0)
 // ============================================================================
 
-// Tool: List application templates
+// Tool: List application templates [DEPRECATED]
 server.tool(
   'list_application_templates',
-  'List all available application templates for creating new NetPad applications. Templates include pre-configured forms, workflows, and settings.',
+  '[DEPRECATED - use browse_templates with templateType="application"] List all available application templates for creating new NetPad applications. Templates include pre-configured forms, workflows, and settings.',
   {
     category: z.string().optional().describe('Filter by category (e.g., "lead-generation", "events", "surveys", "hr", "ecommerce")'),
   },
@@ -1195,10 +2106,10 @@ server.tool(
   }
 );
 
-// Tool: Get application template details
+// Tool: Get application template details [DEPRECATED]
 server.tool(
   'get_application_template',
-  'Get detailed information about a specific application template including its forms, workflows, and field configurations.',
+  '[DEPRECATED - use browse_templates with templateType="application" and action="get"] Get detailed information about a specific application template including its forms, workflows, and field configurations.',
   {
     templateId: z.enum(['contact-form', 'lead-capture', 'event-registration', 'feedback-survey', 'job-application', 'order-form', 'blank']).describe('The template ID'),
   },
@@ -1225,7 +2136,7 @@ server.tool(
 // Tool: Create application (generates code)
 server.tool(
   'create_application',
-  'Generate code to create a new NetPad application. Can use a template or start from scratch. Returns API code and configuration.',
+  'Generate a single, complete TypeScript file that creates a NetPad application with all forms and workflows. Run with `npx tsx` - no SDK required.',
   {
     name: z.string().describe('Name of the application'),
     description: z.string().optional().describe('Description of the application'),
@@ -1238,13 +2149,274 @@ server.tool(
     organizationId: z.string().describe('Organization ID'),
   },
   async (options) => {
-    const code = generateCreateApplicationCode(options);
-    const config = generateApplicationConfig(options);
+    const { name, description, templateId, icon, color, tags, projectId, organizationId } = options;
+    const slug = options.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const template = templateId ? APPLICATION_TEMPLATES[templateId] : null;
+
+    // Generate form configs from template
+    const formConfigs = template?.structure.forms.map(form => ({
+      name: form.name,
+      slug: form.slug,
+      fieldConfigs: form.fields.map(f => ({ ...f, included: true })),
+      submitButtonText: 'Submit',
+      successMessage: 'Thank you for your submission!',
+    })) || [];
+
+    // Generate workflow configs from template
+    const workflowConfigs = template?.structure.workflows.map((workflow) => ({
+      name: workflow.name,
+      description: `Triggered on ${workflow.trigger}`,
+      nodes: [
+        {
+          id: 'trigger_1',
+          type: workflow.trigger === 'form_submission' ? 'form-trigger' : 'manual-trigger',
+          label: 'Trigger',
+          position: { x: 100, y: 200 },
+          config: { formSlug: formConfigs[0]?.slug || '' },
+          enabled: true,
+        },
+        ...workflow.steps.map((step, stepIdx) => ({
+          id: `step_${stepIdx + 1}`,
+          type: step.includes('email') ? 'email-send' : step.includes('database') ? 'mongodb-write' : 'transform',
+          label: step.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          position: { x: 100 + (stepIdx + 1) * 250, y: 200 },
+          config: {},
+          enabled: true,
+        })),
+      ],
+      edges: [
+        { id: 'edge_1', source: 'trigger_1', sourceHandle: 'form_data', target: 'step_1', targetHandle: 'input' },
+      ],
+    })) || [];
+
+    const configCode = `// Application Configuration
+const APPLICATION_CONFIG = {
+  name: ${JSON.stringify(name)},
+  description: ${JSON.stringify(description || `Application created from ${templateId || 'scratch'}`)},
+  slug: ${JSON.stringify(slug)},
+  icon: ${JSON.stringify(icon || '📋')},
+  color: ${JSON.stringify(color || '#00ED64')},
+  tags: ${JSON.stringify(tags || [])},
+  projectId: CONFIG.projectId,
+  organizationId: CONFIG.organizationId,
+};
+
+// Form Configurations
+const FORM_CONFIGS: FormConfig[] = ${JSON.stringify(formConfigs, null, 2)};
+
+// Workflow Configurations
+const WORKFLOW_CONFIGS: WorkflowConfig[] = ${JSON.stringify(workflowConfigs, null, 2)};`;
+
+    const functionsCode = `// ============================================================================
+// API Helper Functions
+// ============================================================================
+
+async function apiCall<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<{ success: boolean; data?: T; error?: string }> {
+  try {
+    const response = await fetch(\`\${CONFIG.baseUrl}\${endpoint}\`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      return { success: false, error };
+    }
+
+    const data = await response.json() as T;
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ============================================================================
+// Application Setup Functions
+// ============================================================================
+
+async function createApplication(): Promise<string | null> {
+  console.log('📱 Creating application:', APPLICATION_CONFIG.name);
+
+  const result = await apiCall<{ application: { applicationId: string } }>('/api/applications', {
+    method: 'POST',
+    body: JSON.stringify(APPLICATION_CONFIG),
+  });
+
+  if (!result.success || !result.data) {
+    console.error('❌ Failed to create application:', result.error);
+    return null;
+  }
+
+  console.log('✅ Application created:', result.data.application.applicationId);
+  return result.data.application.applicationId;
+}
+
+async function createForms(applicationId: string): Promise<string[]> {
+  const formIds: string[] = [];
+
+  for (const formConfig of FORM_CONFIGS) {
+    console.log('📝 Creating form:', formConfig.name);
+
+    const result = await apiCall<{ form: { formId: string } }>('/api/forms', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...formConfig,
+        applicationId,
+        projectId: CONFIG.projectId,
+        organizationId: CONFIG.organizationId,
+      }),
+    });
+
+    if (result.success && result.data) {
+      console.log('✅ Form created:', result.data.form.formId);
+      formIds.push(result.data.form.formId);
+    } else {
+      console.error('❌ Failed to create form:', formConfig.name, result.error);
+    }
+  }
+
+  return formIds;
+}
+
+async function createWorkflows(applicationId: string, formIds: string[]): Promise<string[]> {
+  const workflowIds: string[] = [];
+
+  for (const workflowConfig of WORKFLOW_CONFIGS) {
+    console.log('⚡ Creating workflow:', workflowConfig.name);
+
+    // Update trigger with actual form ID if available
+    const updatedNodes = workflowConfig.nodes.map(node => {
+      if (node.type === 'form-trigger' && formIds.length > 0) {
+        return { ...node, config: { ...node.config, formId: formIds[0] } };
+      }
+      return node;
+    });
+
+    const result = await apiCall<{ workflow: { id: string } }>('/api/workflows', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...workflowConfig,
+        nodes: updatedNodes,
+        applicationId,
+        projectId: CONFIG.projectId,
+        organizationId: CONFIG.organizationId,
+      }),
+    });
+
+    if (result.success && result.data) {
+      console.log('✅ Workflow created:', result.data.workflow.id);
+      workflowIds.push(result.data.workflow.id);
+    } else {
+      console.error('❌ Failed to create workflow:', workflowConfig.name, result.error);
+    }
+  }
+
+  return workflowIds;
+}
+
+async function activateWorkflows(workflowIds: string[]): Promise<void> {
+  for (const workflowId of workflowIds) {
+    console.log('🔄 Activating workflow:', workflowId);
+
+    const result = await apiCall(\`/api/workflows/\${workflowId}/activate\`, {
+      method: 'POST',
+    });
+
+    if (result.success) {
+      console.log('✅ Workflow activated');
+    } else {
+      console.warn('⚠️ Failed to activate workflow:', result.error);
+    }
+  }
+}`;
+
+    const mainCode = `// ============================================================================
+// Main Setup Script
+// ============================================================================
+
+async function setup() {
+  console.log('\\n🚀 Setting up ${name}...\\n');
+  console.log('Template: ${templateId || 'blank'}');
+  console.log('Project: ${projectId}');
+  console.log('Organization: ${organizationId}\\n');
+
+  // Validate configuration
+  if (!CONFIG.apiKey) {
+    console.error('❌ Error: NETPAD_API_KEY environment variable is required');
+    console.log('\\nSet it in your environment or .env file:');
+    console.log('  export NETPAD_API_KEY="np_live_xxxxx"\\n');
+    process.exit(1);
+  }
+
+  // Step 1: Create application
+  const applicationId = await createApplication();
+  if (!applicationId) {
+    process.exit(1);
+  }
+
+  // Step 2: Create forms
+  const formIds = await createForms(applicationId);
+  console.log(\`\\n📊 Created \${formIds.length} form(s)\\n\`);
+
+  // Step 3: Create workflows
+  const workflowIds = await createWorkflows(applicationId, formIds);
+  console.log(\`\\n⚡ Created \${workflowIds.length} workflow(s)\\n\`);
+
+  // Step 4: Activate workflows
+  if (workflowIds.length > 0) {
+    await activateWorkflows(workflowIds);
+  }
+
+  // Summary
+  console.log('\\n' + '='.repeat(50));
+  console.log('✅ Setup Complete!');
+  console.log('='.repeat(50));
+  console.log(\`
+Application: ${name}
+Application ID: \${applicationId}
+Forms: \${formIds.length}
+Workflows: \${workflowIds.length}
+
+Next steps:
+1. Visit your NetPad dashboard to customize forms and workflows
+2. Test form submissions
+3. Configure email templates and integrations
+\`);
+}
+
+// Run setup
+setup().catch((error) => {
+  console.error('❌ Setup failed:', error);
+  process.exit(1);
+});`;
+
+    const code = generateSelfContainedCode({
+      title: `${name} Setup`,
+      description: description || `Complete setup script for ${name}`,
+      includeFormTypes: true,
+      includeWorkflowTypes: true,
+      configCode,
+      functionsCode,
+      mainCode,
+    });
+
+    const output = createToolOutput({
+      code,
+      filename: `setup-${slug}.ts`,
+      envVars: STANDARD_ENV_VARS,
+    });
 
     return {
       content: [{
         type: 'text',
-        text: `## Application Creation Code\n\n${code}\n\n## Application Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+        text: formatToolOutput(output),
       }],
     };
   }
@@ -1669,10 +2841,10 @@ server.resource(
 // WORKFLOW AUTOMATION TOOLS (Phase 3 - Version 2.0.0)
 // ============================================================================
 
-// Tool: List workflow templates
+// Tool: List workflow templates [DEPRECATED]
 server.tool(
   'list_workflow_templates',
-  'List all available workflow templates for creating automated workflows.',
+  '[DEPRECATED - use browse_templates with templateType="workflow"] List all available workflow templates for creating automated workflows.',
   {
     category: z.string().optional().describe('Filter by category (e.g., "notifications", "data", "sales")'),
   },
@@ -1705,10 +2877,10 @@ server.tool(
   }
 );
 
-// Tool: Get workflow template details
+// Tool: Get workflow template details [DEPRECATED]
 server.tool(
   'get_workflow_template',
-  'Get detailed information about a specific workflow template including its nodes, edges, and configuration.',
+  '[DEPRECATED - use browse_templates with templateType="workflow" and action="get"] Get detailed information about a specific workflow template including its nodes, edges, and configuration.',
   {
     templateId: z.enum(['form-to-email', 'form-to-database', 'lead-qualification', 'webhook-to-database', 'scheduled-report']).describe('The template ID'),
   },
@@ -1780,24 +2952,253 @@ server.tool(
 // Tool: Create workflow from template
 server.tool(
   'create_workflow_from_template',
-  'Generate code to create a new workflow, optionally using a template.',
+  'Generate a complete, self-contained TypeScript file to create a workflow. Returns validated code with inline types - run with `npx tsx`.',
   {
     name: z.string().describe('Name of the workflow'),
     description: z.string().optional().describe('Description of the workflow'),
     templateId: z.enum(['form-to-email', 'form-to-database', 'lead-qualification', 'webhook-to-database', 'scheduled-report']).optional().describe('Template to use'),
+    formId: z.string().optional().describe('Form ID for form-triggered workflows'),
+    formSlug: z.string().optional().describe('Form slug for form-triggered workflows'),
     applicationId: z.string().optional().describe('Application ID to attach workflow to'),
     projectId: z.string().describe('Project ID'),
     organizationId: z.string().describe('Organization ID'),
     tags: z.array(z.string()).optional().describe('Tags for categorization'),
+    salesEmail: z.string().optional().describe('Email address for sales notifications'),
   },
   async (options) => {
-    const code = generateCreateWorkflowCode(options as CreateWorkflowOptions);
-    const config = generateWorkflowConfig(options as CreateWorkflowOptions);
+    const { name, description, templateId, formId, formSlug, applicationId, tags, salesEmail } = options;
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    // Get template if specified
+    const template = templateId ? WORKFLOW_TEMPLATES[templateId] : null;
+
+    // Build workflow config
+    const workflowNodes = template?.nodes || [
+      {
+        id: 'trigger_1',
+        type: 'manual-trigger',
+        label: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        config: {},
+        enabled: true,
+      },
+    ];
+
+    const workflowEdges = template?.edges || [];
+
+    // Update form trigger with provided formId/slug if available
+    const updatedNodes = workflowNodes.map(node => {
+      if (node.type === 'form-trigger') {
+        return {
+          ...node,
+          config: {
+            ...node.config,
+            formId: formId || node.config.formId || '',
+            formSlug: formSlug || node.config.formSlug || '',
+          },
+        };
+      }
+      if (node.type === 'email-send' && salesEmail) {
+        return {
+          ...node,
+          config: {
+            ...node.config,
+            to: salesEmail,
+          },
+        };
+      }
+      return node;
+    });
+
+    const configCode = `// Workflow Configuration
+const WORKFLOW_CONFIG: WorkflowConfig = {
+  name: ${JSON.stringify(name)},
+  description: ${JSON.stringify(description || template?.description || 'Custom workflow')},
+  tags: ${JSON.stringify(tags || template?.tags || [])},
+  nodes: ${JSON.stringify(updatedNodes, null, 2)},
+  edges: ${JSON.stringify(workflowEdges, null, 2)},
+  settings: {
+    executionMode: 'auto',
+    maxExecutionTime: 300000,
+    retryPolicy: {
+      maxRetries: 3,
+      backoffMultiplier: 2,
+      initialDelayMs: 1000,
+    },
+  },
+};`;
+
+    const functionsCode = `/**
+ * Create the workflow via NetPad API.
+ */
+export async function createWorkflow(): Promise<CreateWorkflowResult> {
+  try {
+    const response = await fetch(\`\${CONFIG.baseUrl}/api/workflows\`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+      },
+      body: JSON.stringify({
+        ...WORKFLOW_CONFIG,
+        ${applicationId ? `applicationId: '${applicationId}',` : ''}
+        projectId: CONFIG.projectId,
+        organizationId: CONFIG.organizationId,
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    const result = await response.json() as { workflow: { id: string } };
+    return { success: true, workflowId: result.workflow.id };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Activate the workflow to start processing.
+ */
+export async function activateWorkflow(workflowId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch(
+      \`\${CONFIG.baseUrl}/api/workflows/\${workflowId}/activate\`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Test the workflow with sample data.
+ */
+export async function testWorkflow(workflowId: string, testData: Record<string, unknown>): Promise<{ success: boolean; executionId?: string; error?: string }> {
+  try {
+    const response = await fetch(
+      \`\${CONFIG.baseUrl}/api/workflows/\${workflowId}/execute\`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': \`Bearer \${CONFIG.apiKey}\`,
+        },
+        body: JSON.stringify({ payload: testData }),
+      }
+    );
+
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    const result = await response.json() as { executionId: string };
+    return { success: true, executionId: result.executionId };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}`;
+
+    const mainCode = `// ============================================================================
+// Main Setup
+// ============================================================================
+
+async function setup() {
+  console.log('⚡ Creating workflow:', WORKFLOW_CONFIG.name);
+  console.log('Template: ${templateId || 'custom'}');
+  ${formId ? `console.log('Form ID: ${formId}');` : ''}
+  ${formSlug ? `console.log('Form Slug: ${formSlug}');` : ''}
+  console.log('');
+
+  // Validate configuration
+  if (!CONFIG.apiKey) {
+    console.error('❌ Error: NETPAD_API_KEY environment variable is required');
+    process.exit(1);
+  }
+
+  // Create the workflow
+  const createResult = await createWorkflow();
+  if (!createResult.success) {
+    console.error('❌ Failed to create workflow:', createResult.error);
+    process.exit(1);
+  }
+
+  console.log('✅ Workflow created:', createResult.workflowId);
+
+  // Activate the workflow
+  console.log('\\n🔄 Activating workflow...');
+  const activateResult = await activateWorkflow(createResult.workflowId!);
+  if (activateResult.success) {
+    console.log('✅ Workflow activated');
+  } else {
+    console.warn('⚠️ Failed to activate:', activateResult.error);
+  }
+
+  // Summary
+  console.log('\\n' + '='.repeat(50));
+  console.log('✅ Workflow Setup Complete!');
+  console.log('='.repeat(50));
+  console.log(\`
+Workflow: ${name}
+Workflow ID: \${createResult.workflowId}
+Nodes: ${updatedNodes.length}
+Edges: ${workflowEdges.length}
+${templateId ? `Template: ${templateId}` : ''}
+
+Next steps:
+1. Configure node settings in the NetPad dashboard
+2. Test with sample data
+3. Monitor executions
+\`);
+}
+
+// Uncomment to run:
+// setup().catch(console.error);
+
+// Export for use as module
+export { WORKFLOW_CONFIG, createWorkflow, activateWorkflow, testWorkflow };`;
+
+    const code = generateSelfContainedCode({
+      title: name,
+      description: description || `Workflow created from ${templateId || 'scratch'}`,
+      includeFormTypes: false,
+      includeWorkflowTypes: true,
+      configCode,
+      functionsCode,
+      mainCode,
+    });
+
+    const output = createToolOutput({
+      code,
+      filename: `${slug}-workflow.ts`,
+      envVars: STANDARD_ENV_VARS,
+    });
 
     return {
       content: [{
         type: 'text',
-        text: `## Workflow Creation Code\n\n\`\`\`typescript\n${code}\n\`\`\`\n\n## Workflow Configuration\n\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\``,
+        text: formatToolOutput(output),
       }],
     };
   }
@@ -1984,10 +3385,10 @@ server.resource(
 // CONVERSATIONAL & SEARCH FORMS TOOLS (Phase 4 - Version 2.0.0)
 // ============================================================================
 
-// Tool: List conversational form templates
+// Tool: List conversational form templates [DEPRECATED]
 server.tool(
   'list_conversational_templates',
-  'List all available conversational form templates for AI-powered data collection.',
+  '[DEPRECATED - use browse_templates with templateType="conversational"] List all available conversational form templates for AI-powered data collection.',
   {
     category: z.string().optional().describe('Filter by category (e.g., "support", "feedback", "intake")'),
   },
@@ -2020,10 +3421,10 @@ server.tool(
   }
 );
 
-// Tool: Get conversational template details
+// Tool: Get conversational template details [DEPRECATED]
 server.tool(
   'get_conversational_template',
-  'Get detailed information about a specific conversational form template including topics, extraction schema, and persona configuration.',
+  '[DEPRECATED - use browse_templates with templateType="conversational" and action="get"] Get detailed information about a specific conversational form template including topics, extraction schema, and persona configuration.',
   {
     templateId: z.enum(['it-helpdesk', 'customer-feedback', 'lead-qualification', 'patient-intake']).describe('The template ID'),
   },
@@ -2330,10 +3731,10 @@ server.resource(
 // ENHANCED TEMPLATES TOOLS (Phase 6 - Version 2.0.0)
 // ============================================================================
 
-// Tool: List template categories
+// Tool: List template categories [DEPRECATED]
 server.tool(
   'list_template_categories',
-  'List all available form template categories with descriptions and template counts.',
+  '[DEPRECATED - use browse_templates with templateType="form" and action="categories"] List all available form template categories with descriptions and template counts.',
   {},
   async () => {
     return {
@@ -2349,10 +3750,10 @@ server.tool(
   }
 );
 
-// Tool: List form templates
+// Tool: List form templates [DEPRECATED]
 server.tool(
   'list_form_templates',
-  'List all available form templates (25+) across multiple categories. Returns template summaries with field counts.',
+  '[DEPRECATED - use browse_templates with templateType="form"] List all available form templates (25+) across multiple categories. Returns template summaries with field counts.',
   {
     category: z.string().optional().describe('Filter by category (business, events, feedback, support, ecommerce, healthcare, hr, finance, education, real-estate, or "all")'),
     search: z.string().optional().describe('Search templates by name, description, or tags'),
@@ -2393,10 +3794,10 @@ server.tool(
   }
 );
 
-// Tool: Get form template details
+// Tool: Get form template details [DEPRECATED]
 server.tool(
   'get_form_template',
-  'Get detailed information about a specific form template including all fields, validation rules, and configuration.',
+  '[DEPRECATED - use browse_templates with templateType="form" and action="get"] Get detailed information about a specific form template including all fields, validation rules, and configuration.',
   {
     templateId: z.string().describe('Template ID (e.g., "contact-form", "lead-capture", "patient-intake")'),
   },
@@ -2578,10 +3979,10 @@ server.tool(
   }
 );
 
-// Tool: List query templates
+// Tool: List query templates [DEPRECATED]
 server.tool(
   'list_query_templates',
-  'List all available MongoDB query templates for common operations.',
+  '[DEPRECATED - use browse_templates with templateType="query"] List all available MongoDB query templates for common operations.',
   {},
   async () => {
     const templates = listQueryTemplates();
@@ -2597,10 +3998,10 @@ server.tool(
   }
 );
 
-// Tool: Get query template
+// Tool: Get query template [DEPRECATED]
 server.tool(
   'get_query_template',
-  'Get a specific query template with example code.',
+  '[DEPRECATED - use browse_templates with templateType="query" and action="get"] Get a specific query template with example code.',
   {
     templateId: z.string().describe('Template ID (e.g., "find-all", "aggregate-group-count")'),
   },

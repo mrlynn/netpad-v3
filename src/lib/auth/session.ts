@@ -10,6 +10,7 @@ export interface SessionData {
   isPasskeyAuth?: boolean;
   deviceTrustToken?: string;
   createdAt?: number;
+  waitlistStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 const SESSION_OPTIONS = {
@@ -45,6 +46,7 @@ export async function createSession(
     isPasskeyAuth?: boolean;
     deviceId?: string;
     trustDevice?: boolean;
+    waitlistStatus?: 'pending' | 'approved' | 'rejected';
   }
 ): Promise<void> {
   const session = await getSession();
@@ -63,6 +65,10 @@ export async function createSession(
 
   if (options?.trustDevice) {
     session.deviceTrustToken = crypto.randomBytes(32).toString('hex');
+  }
+
+  if (options?.waitlistStatus) {
+    session.waitlistStatus = options.waitlistStatus;
   }
 
   await session.save();

@@ -30,8 +30,14 @@ export type DeploymentEnvironment = 'production' | 'staging' | 'development';
 
 /**
  * Database provisioning mode
+ *
+ * - 'auto': Automatically provision an M0 cluster via Atlas Admin API
+ * - 'manual': User provides their own connection string
+ * - 'existing': Use an existing connection from the vault
+ * - 'atlas-local': Use Atlas Local (Docker) for self-hosted deployments
+ *                  Supports Vector Search without requiring M10+ cluster
  */
-export type DatabaseProvisioning = 'auto' | 'manual' | 'existing';
+export type DatabaseProvisioning = 'auto' | 'manual' | 'existing' | 'atlas-local';
 
 /**
  * Deployment Configuration

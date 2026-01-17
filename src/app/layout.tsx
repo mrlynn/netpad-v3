@@ -3,6 +3,8 @@ import { ReactNode } from 'react';
 import { ClientLayout } from '@/components/ClientLayout';
 import { PipelineProvider } from '@/contexts/PipelineContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { HelpProvider } from '@/contexts/HelpContext';
+import { TourProvider } from '@/contexts/TourContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ApplicationProvider } from '@/contexts/ApplicationContext';
 import { OnboardingGateProvider } from '@/contexts/OnboardingGateContext';
@@ -36,15 +38,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ClientLayout>
           <AuthProvider>
-            <OrganizationProvider>
-              <ApplicationProvider>
-                <OnboardingGateProvider>
-                  <PipelineProvider>{children}</PipelineProvider>
-                  <DevPanelWrapper />
-                  <Analytics />
-                </OnboardingGateProvider>
-              </ApplicationProvider>
-            </OrganizationProvider>
+            <HelpProvider>
+              <TourProvider>
+                <OrganizationProvider>
+                  <ApplicationProvider>
+                    <OnboardingGateProvider>
+                      <PipelineProvider>{children}</PipelineProvider>
+                      <DevPanelWrapper />
+                      <Analytics />
+                    </OnboardingGateProvider>
+                  </ApplicationProvider>
+                </OrganizationProvider>
+              </TourProvider>
+            </HelpProvider>
           </AuthProvider>
         </ClientLayout>
       </body>

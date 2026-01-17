@@ -7,6 +7,11 @@ export interface HelpTopic {
   content: HelpContent[];
   relatedTopics?: string[];
   keywords?: string[];
+  /**
+   * If true, this help topic is only visible to platform admins.
+   * Used for admin-specific documentation like AI Analytics, User Management, etc.
+   */
+  adminOnly?: boolean;
 }
 
 export interface HelpContent {
@@ -65,6 +70,7 @@ export type HelpTopicId =
   | 'rag-document-management'
   | 'projects-management'
   | 'deployment-vercel'
+  | 'self-hosted-rag'
   | 'organizations'
   | 'connection-vault'
   | 'template-gallery'
@@ -72,4 +78,10 @@ export type HelpTopicId =
   | 'application-releases'
   | 'application-contracts'
   | 'marketplace'
-  | 'npm-packages';
+  | 'npm-packages'
+  // Admin-only topics
+  | 'admin-dashboard'
+  | 'admin-user-management'
+  | 'admin-waitlist'
+  | 'admin-ai-analytics'
+  | 'admin-marketplace-review';

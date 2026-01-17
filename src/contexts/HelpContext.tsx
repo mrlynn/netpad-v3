@@ -5,6 +5,7 @@ import { HelpTopic, HelpTopicId } from '@/types/help';
 import { HelpModal } from '@/components/Help/HelpModal';
 import { HelpSearchModal } from '@/components/Help/HelpSearchModal';
 import { helpTopics } from '@/lib/helpContent';
+import { useAuth } from './AuthContext';
 
 interface HelpContextValue {
   openHelp: (topicId: HelpTopicId) => void;
@@ -20,10 +21,14 @@ interface HelpContextValue {
 const HelpContext = createContext<HelpContextValue | null>(null);
 
 export function HelpProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [currentTopic, setCurrentTopic] = useState<HelpTopic | null>(null);
   const [startTourCallback, setStartTourCallbackState] = useState<(() => void) | null>(null);
+
+  // Check if user is a platform admin
+  const isPlatformAdmin = user?.platformRole === 'admin';
 
   const setStartTourCallback = useCallback((callback: (() => void) | null) => {
     setStartTourCallbackState(() => callback);
@@ -133,6 +138,7 @@ export function HelpProvider({ children }: { children: ReactNode }) {
         onClose={closeSearch}
         onSelectTopic={handleSelectFromSearch}
         onStartTour={startTourCallback || undefined}
+        showAdminTopics={isPlatformAdmin}
       />
     </HelpContext.Provider>
   );

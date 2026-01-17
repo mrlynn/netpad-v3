@@ -1,6 +1,6 @@
 {
   "name": "@netpad/forms",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Render NetPad forms in your React applications. Build sophisticated multi-page wizards with conditional logic, computed fields, and MongoDB integration.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -54,8 +54,8 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
     "date-fns": "^4.1.0"

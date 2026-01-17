@@ -193,10 +193,45 @@ export interface PlatformUser {
   passkeys?: PasskeyCredential[];
   trustedDevices?: TrustedDevice[];
 
+  // Test credentials (only for dev/test environments)
+  passwordHash?: string;
+
+  // Waitlist
+  waitlistStatus?: WaitlistStatus;
+  waitlistMetadata?: WaitlistMetadata;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
+}
+
+// ============================================
+// Waitlist
+// ============================================
+
+export type WaitlistStatus = 'pending' | 'approved' | 'rejected';
+
+export interface WaitlistMetadata {
+  company?: string;
+  useCase?: string;
+  source?: string;           // "homepage", "referral", etc.
+  referralCode?: string;
+  notes?: string;            // Admin notes
+  appliedAt: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string;       // Admin userId
+  rejectionReason?: string;
+
+  // Extended fields for better understanding of applicants
+  howDidYouHear?: string;    // "social_media", "colleague", "search", "event", "other"
+  howDidYouHearOther?: string; // If "other", what specifically?
+  role?: string;             // "developer", "data_engineer", "product_manager", "executive", "other"
+  teamSize?: string;         // "solo", "2-5", "6-20", "21-100", "100+"
+  timeline?: string;         // "immediately", "1-3_months", "3-6_months", "exploring"
+  interests?: string[];      // ["forms", "workflows", "ai", "mongodb", "automation"]
+  currentTools?: string;     // What tools they currently use
+  biggestChallenge?: string; // Their primary pain point
 }
 
 // ============================================
@@ -511,7 +546,7 @@ export interface FormDataSource {
 // Rate Limiting
 // ============================================
 
-export type RateLimitResource = 'form_submit_public' | 'form_submit_auth' | 'api' | 'magic_link';
+export type RateLimitResource = 'form_submit_public' | 'form_submit_auth' | 'api' | 'magic_link' | 'waitlist_signup';
 
 export interface RateLimitConfig {
   limit: number;
@@ -523,6 +558,7 @@ export const DEFAULT_RATE_LIMITS: Record<RateLimitResource, RateLimitConfig> = {
   form_submit_auth: { limit: 50, windowSeconds: 3600 },     // 50/hour per user
   api: { limit: 1000, windowSeconds: 3600 },                // 1000/hour per user
   magic_link: { limit: 5, windowSeconds: 3600 },            // 5/hour per email
+  waitlist_signup: { limit: 5, windowSeconds: 3600 },       // 5/hour per email
 };
 
 export interface RateLimitEntry {
@@ -603,6 +639,8 @@ export type AuditEventType =
   | 'user.login'
   | 'user.logout'
   | 'user.created'
+  | 'user.updated'
+  | 'user.deleted'
   | 'org.created'
   | 'org.updated'
   | 'org.deleted'
@@ -837,6 +875,53 @@ export interface TierFeatures {
   limits: TierLimits;
   aiFeatures: AIFeature[];
   platformFeatures: PlatformFeature[];
+}
+
+/**
+ * RAG features that are gated by cluster tier in cloud mode
+ * but available to all tiers in self-hosted mode (with Atlas Local)
+ */
+export const RAG_FEATURES: AIFeature[] = [
+  'rag_conversational_forms',
+  'rag_document_upload',
+  'rag_vector_search',
+];
+
+/**
+ * Get features available for a tier, adjusted for deployment mode
+ *
+ * In self-hosted mode, RAG features are available to all tiers
+ * (user is responsible for running Atlas Local with Vector Search support)
+ *
+ * @param tier - Subscription tier
+ * @param deploymentMode - 'cloud' or 'self-hosted'
+ * @returns TierFeatures with adjusted aiFeatures based on deployment mode
+ */
+export function getTierFeaturesForDeployment(
+  tier: SubscriptionTier,
+  deploymentMode: 'cloud' | 'self-hosted'
+): TierFeatures {
+  const baseFeatures = SUBSCRIPTION_TIERS[tier];
+
+  // In cloud mode, use standard tier features (RAG gated to team+)
+  if (deploymentMode === 'cloud') {
+    return baseFeatures;
+  }
+
+  // In self-hosted mode, add RAG features to all tiers
+  // User is responsible for running Atlas Local with Vector Search
+  const hasAllRagFeatures = RAG_FEATURES.every(f => baseFeatures.aiFeatures.includes(f));
+
+  if (hasAllRagFeatures) {
+    // Tier already has RAG features
+    return baseFeatures;
+  }
+
+  // Add RAG features for self-hosted deployments
+  return {
+    ...baseFeatures,
+    aiFeatures: [...baseFeatures.aiFeatures, ...RAG_FEATURES],
+  };
 }
 
 export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {

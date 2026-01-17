@@ -3,11 +3,13 @@
  *
  * POST /api/ai/explain-formula
  * Explains an existing formula in plain language.
+ *
+ * Uses centralized aiService for token tracking and analytics.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createFormulaAssistant } from '@/lib/ai/formulaAssistant';
-import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
+import { createFormulaAssistantWithContext } from '@/lib/ai/formulaAssistant';
+import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +45,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const assistant = createFormulaAssistant(apiKey);
+    // Use context-aware assistant for centralized analytics tracking
+    const assistant = createFormulaAssistantWithContext(
+      guard.context.userId,
+      guard.context.orgId,
+      guard.context.isGuest || false
+    );
 
     const result = await assistant.explainFormula(body.formula, body.availableFields);
 
@@ -54,8 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Increment usage counter on successful generation
-    await recordAIUsage(guard.context.orgId);
+    // Token usage is automatically tracked by aiService - no need to call recordAIUsage
 
     return NextResponse.json(result);
   } catch (error) {

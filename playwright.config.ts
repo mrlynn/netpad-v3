@@ -14,34 +14,53 @@ export default defineConfig({
     ['html', { open: 'never' }],
     ['list'],
   ],
+  // Global setup for authentication
+  globalSetup: require.resolve('./tests/e2e/global-setup'),
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    // Use saved auth state for authenticated tests
+    storageState: './playwright/.auth/user.json',
   },
 
   projects: [
+    // Unauthenticated tests (no storage state)
+    {
+      name: 'unauthenticated',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: undefined, // No auth
+      },
+      testMatch: /\.unauth\.spec\.ts/,
+    },
+    // Authenticated tests
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /\.unauth\.spec\.ts/,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: /\.unauth\.spec\.ts/,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: /\.unauth\.spec\.ts/,
     },
     // Mobile viewports
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'] },
+      testIgnore: /\.unauth\.spec\.ts/,
     },
     {
       name: 'mobile-safari',
       use: { ...devices['iPhone 12'] },
+      testIgnore: /\.unauth\.spec\.ts/,
     },
   ],
 

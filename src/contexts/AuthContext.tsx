@@ -16,12 +16,14 @@ interface User {
   createdAt: string;
   lastLoginAt?: string;
   platformRole?: 'admin' | 'support' | null;
+  waitlistStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 interface SessionInfo {
   isPasskeyAuth: boolean;
   deviceId?: string;
   createdAt?: number;
+  waitlistStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 interface AuthState {

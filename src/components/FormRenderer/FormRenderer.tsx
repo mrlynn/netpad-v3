@@ -2379,6 +2379,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         );
       }
 
+      case 'multiple_choice':
       case 'multiple-choice':
       case 'radio': {
         const options = (config.validation?.options || []).map((opt: string | { value: any; label: string }) =>
@@ -3623,13 +3624,38 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
     '& .MuiOutlinedInput-root': {
       borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
       fontFamily: theme.fontFamily,
+      color: theme.textColor,
+      '& fieldset': {
+        borderColor: isDarkMode ? alpha('#fff', 0.23) : alpha('#000', 0.23),
+      },
+      '&:hover fieldset': {
+        borderColor: isDarkMode ? alpha('#fff', 0.5) : alpha('#000', 0.5),
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: theme.primaryColor || '#00ED64',
+      },
     },
     '& .MuiFilledInput-root': {
       borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
       bgcolor: theme.surfaceColor,
+      color: theme.textColor,
     },
     '& .MuiInputLabel-root': {
       fontFamily: theme.fontFamily,
+      color: theme.textSecondaryColor,
+      '&.Mui-focused': {
+        color: theme.primaryColor || '#00ED64',
+      },
+    },
+    '& .MuiInputBase-input': {
+      color: theme.textColor,
+      '&::placeholder': {
+        color: theme.textSecondaryColor,
+        opacity: 0.7,
+      },
+    },
+    '& .MuiSelect-icon': {
+      color: theme.textSecondaryColor,
     },
   };
 

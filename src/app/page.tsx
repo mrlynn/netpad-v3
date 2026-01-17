@@ -36,6 +36,9 @@ import {
   ChatBubble,
   FolderSpecial,
   Speed as SpeedIcon,
+  FilterList,
+  Store,
+  MenuBook,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -53,7 +56,7 @@ const pillars = [
     icon: <Description sx={{ fontSize: 40 }} />,
     title: 'Collect',
     subtitle: 'Forms',
-    description: 'Build beautiful, MongoDB-connected forms with 30+ field types, validation, and conditional logic.',
+    description: 'Build beautiful, MongoDB-connected forms with 33 field types, validation, and conditional logic.',
     href: '/builder',
     cta: 'Build a Form',
     color: '#00ED64',
@@ -91,10 +94,10 @@ const pillars = [
 ];
 
 const heroStats = [
-  { value: '30+', label: 'Field Types' },
-  { value: '160+', label: 'API Endpoints' },
-  { value: '12+', label: 'AI Agents' },
-  { value: 'Free', label: 'MongoDB Atlas' },
+  { value: '33', label: 'Field Types' },
+  { value: '165+', label: 'API Endpoints' },
+  { value: '15+', label: 'AI Agents' },
+  { value: '55+', label: 'Templates' },
 ];
 
 // Forms features
@@ -272,10 +275,10 @@ const workflowsApiFeatures = [
 
 // MCP Server features
 const mcpServerFeatures = [
-  { title: '22 AI Tools', description: 'Form generation, workflow integration, app scaffolding & more' },
+  { title: '75 AI Tools', description: 'Form generation, workflow building, marketplace access, RAG & more' },
   { title: 'Natural Language', description: 'Describe your form in plain English, get complete configs' },
-  { title: 'Best Practices', description: 'Built-in guidance for form design, security & workflows' },
-  { title: 'Full Stack Generation', description: 'Generate Next.js apps, API routes & MongoDB queries' },
+  { title: 'Validated TypeScript', description: 'Auto-validated, self-contained TypeScript output' },
+  { title: '40+ Templates', description: 'Forms, workflows, applications, conversational & query templates' },
 ];
 
 export default function LandingPage() {
@@ -448,7 +451,7 @@ export default function LandingPage() {
               </Button>
               <Button
                 component={Link}
-                href="/auth/login"
+                href="/waitlist"
                 variant="contained"
                 size="large"
                 sx={{
@@ -462,8 +465,49 @@ export default function LandingPage() {
                   },
                 }}
               >
-                Get access
+                Join the Waitlist
               </Button>
+            </Box>
+
+            {/* Waitlist Notice */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+                mb: 2,
+              }}
+            >
+              <Chip
+                label="Early Access"
+                size="small"
+                sx={{
+                  bgcolor: alpha('#E91E63', 0.15),
+                  color: '#E91E63',
+                  fontWeight: 600,
+                  fontSize: '0.7rem',
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.6),
+                  fontSize: '0.85rem',
+                }}
+              >
+                We're onboarding users from the waitlist weekly.{' '}
+                <Link
+                  href="/demo/conversational"
+                  style={{
+                    color: '#00ED64',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  Try the demo →
+                </Link>
+              </Typography>
             </Box>
           </Box>
 
@@ -670,7 +714,7 @@ export default function LandingPage() {
                 <br />Connect to MongoDB
               </Typography>
               <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Create professional data collection forms with 30+ field types, validation,
+                Create professional data collection forms with 33 field types, validation,
                 conditional logic, and computed fields. Data flows directly to your MongoDB collections.
               </Typography>
               <Button
@@ -908,8 +952,118 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* Conversational Forms Section - 4th Pillar */}
+      {/* Search Forms Section - Build Admin Interfaces */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    bgcolor: alpha('#FF9800', 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FF9800',
+                  }}
+                >
+                  <FilterList />
+                </Box>
+                <Typography variant="overline" sx={{ color: '#FF9800', fontWeight: 700, letterSpacing: 1.5 }}>
+                  Search & Query
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
+                Build Admin Interfaces
+                <br />That Query MongoDB
+              </Typography>
+              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                Create powerful search forms with configurable operators per field. Users can search, filter, and find data
+                without writing queries. Results display as tables, cards, or lists with pagination and actions.
+              </Typography>
+              <Button
+                component={Link}
+                href="/builder"
+                variant="contained"
+                startIcon={<FilterList />}
+                sx={{
+                  background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+                  color: '#fff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)',
+                  }
+                }}
+              >
+                Build Search Form
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Grid container spacing={2}>
+                {[
+                  {
+                    icon: <FilterList sx={{ fontSize: 28 }} />,
+                    title: 'Field-Level Operators',
+                    description: 'Equals, contains, between, regex, in/not-in per field type.',
+                  },
+                  {
+                    icon: <TableChart sx={{ fontSize: 28 }} />,
+                    title: 'Result Display Options',
+                    description: 'Table, card, or list views with configurable columns.',
+                  },
+                  {
+                    icon: <Search sx={{ fontSize: 28 }} />,
+                    title: 'Smart Dropdowns',
+                    description: 'Auto-populate filter options from distinct database values.',
+                  },
+                  {
+                    icon: <DataObject sx={{ fontSize: 28 }} />,
+                    title: 'Pre-built Templates',
+                    description: 'Customer search, order search, ticket search — ready to use.',
+                  },
+                ].map((feature, index) => (
+                  <Grid item xs={12} sm={6} key={index}>
+                    <SpotlightCard
+                      spotlightColor="255, 152, 0"
+                      hoverBorderColor={alpha('#FF9800', 0.3)}
+                      sx={{ p: 2.5, height: '100%' }}
+                    >
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 1.5,
+                          bgcolor: alpha('#FF9800', 0.1),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#FF9800',
+                          mb: 1.5
+                        }}
+                      >
+                        {feature.icon}
+                      </Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
+                        {feature.description}
+                      </Typography>
+                    </SpotlightCard>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Conversational Forms Section - 4th Pillar */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={5}>
@@ -938,6 +1092,27 @@ export default function LandingPage() {
               </Typography>
               <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
                 Replace traditional form fields with natural language dialogue. AI-powered conversational forms guide users through data collection, ask clarifying questions, and extract structured data automatically.
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip
+                  label="RAG-Powered"
+                  size="small"
+                  sx={{ bgcolor: alpha('#E91E63', 0.15), color: '#E91E63', fontWeight: 600 }}
+                />
+                <Chip
+                  label="Knowledge Base"
+                  size="small"
+                  sx={{ bgcolor: alpha('#E91E63', 0.1), color: alpha('#fff', 0.7) }}
+                />
+                <Chip
+                  label="Source Citations"
+                  size="small"
+                  sx={{ bgcolor: alpha('#E91E63', 0.1), color: alpha('#fff', 0.7) }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), mb: 3, lineHeight: 1.6 }}>
+                <strong style={{ color: alpha('#E91E63', 0.9) }}>Knowledge-Guided AI:</strong> Upload documents (PDF, DOCX, TXT) to create a knowledge base.
+                AI answers questions using your documents with traceable source citations.
               </Typography>
               <Button
                 component={Link}
@@ -1035,7 +1210,7 @@ export default function LandingPage() {
               }}
             />
             <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 1.5 }}>
-              12+ AI Agents at Your Service
+              15+ AI Agents at Your Service
             </Typography>
             <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 600, mx: 'auto' }}>
               Generate forms and workflows from natural language. AI helps you build faster, optimize performance, ensure compliance, and translate content.
@@ -1105,8 +1280,135 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* Application Ownership & Portability Section */}
+      {/* Template Gallery & Marketplace Section */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Chip
+              label="Marketplace"
+              icon={<Store sx={{ fontSize: 14 }} />}
+              size="small"
+              sx={{
+                mb: 2,
+                bgcolor: alpha('#4CAF50', 0.1),
+                color: '#4CAF50',
+                fontWeight: 600,
+                '& .MuiChip-icon': { color: '#4CAF50' }
+              }}
+            />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 1.5 }}>
+              55+ Ready-to-Use Templates
+            </Typography>
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 700, mx: 'auto', mb: 4 }}>
+              Don't start from scratch. Browse our template gallery with forms, workflows, and complete applications.
+              Install from the marketplace or npm. Share your creations with the community.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            {[
+              {
+                icon: <Description sx={{ fontSize: 32 }} />,
+                title: '25+ Form Templates',
+                description: 'Business, events, feedback, healthcare, finance, education, and more.',
+                color: '#00ED64',
+              },
+              {
+                icon: <AccountTree sx={{ fontSize: 32 }} />,
+                title: '11 Workflow Templates',
+                description: 'Form-to-email, data sync, notifications, AI classification, and batch processing.',
+                color: '#9C27B0',
+              },
+              {
+                icon: <ChatBubble sx={{ fontSize: 32 }} />,
+                title: '4 Conversational Templates',
+                description: 'IT helpdesk, customer feedback, lead qualification, patient intake.',
+                color: '#E91E63',
+              },
+              {
+                icon: <Store sx={{ fontSize: 32 }} />,
+                title: 'Application Marketplace',
+                description: 'Discover and install complete applications. Publish your own to npm.',
+                color: '#4CAF50',
+              },
+            ].map((item, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <SpotlightCard
+                  spotlightColor={hexToRgb(item.color)}
+                  hoverBorderColor={alpha(item.color, 0.3)}
+                  sx={{ p: 3, height: '100%', textAlign: 'center' }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 2,
+                      bgcolor: alpha(item.color, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: item.color,
+                      mx: 'auto',
+                      mb: 2
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.6 }}>
+                    {item.description}
+                  </Typography>
+                </SpotlightCard>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box sx={{ textAlign: 'center', mt: 4 }}>
+            <Button
+              component={Link}
+              href="/marketplace"
+              variant="outlined"
+              startIcon={<Store />}
+              sx={{
+                borderColor: alpha('#4CAF50', 0.5),
+                color: '#4CAF50',
+                textTransform: 'none',
+                fontWeight: 600,
+                mr: 2,
+                '&:hover': {
+                  borderColor: '#4CAF50',
+                  bgcolor: alpha('#4CAF50', 0.1),
+                }
+              }}
+            >
+              Browse Marketplace
+            </Button>
+            <Button
+              component="a"
+              href="https://www.npmjs.com/search?q=%40netpad"
+              target="_blank"
+              variant="text"
+              startIcon={<Terminal />}
+              sx={{
+                color: alpha('#fff', 0.6),
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  color: '#fff',
+                  bgcolor: alpha('#fff', 0.05),
+                }
+              }}
+            >
+              View on npm
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Application Ownership & Portability Section */}
+      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
             <Chip
@@ -1160,14 +1462,14 @@ export default function LandingPage() {
                 description: 'Forms, workflows, and data models export as versioned JSON specs. Git-friendly, diffable, and human-readable.',
               },
               {
-                icon: <Cloud sx={{ fontSize: 32 }} />,
-                title: 'Run Anywhere',
-                description: 'Host with NetPad or deploy to your own infrastructure. Export to Express, Next.js, serverless, or Docker.',
+                icon: <MenuBook sx={{ fontSize: 32 }} />,
+                title: 'Application Contracts',
+                description: 'Define public APIs with inputs, outputs, and side effects. Contracts enforce versioning rules and document behavior.',
               },
               {
-                icon: <Code sx={{ fontSize: 32 }} />,
-                title: 'Framework-Friendly',
-                description: 'Export to Node.js, serverless functions, or edge runtimes. Integrate with your existing stack.',
+                icon: <RocketLaunch sx={{ fontSize: 32 }} />,
+                title: 'Semantic Releases',
+                description: 'Version applications with X.Y.Z releases. Changelogs, breaking change detection, and rollback instructions included.',
               },
               {
                 icon: <GitHub sx={{ fontSize: 32 }} />,
@@ -1175,14 +1477,14 @@ export default function LandingPage() {
                 description: 'Diff, review, version, and ship like real software. Your application definitions live in version control.',
               },
               {
-                icon: <RocketLaunch sx={{ fontSize: 32 }} />,
-                title: 'One-Click Eject',
-                description: 'Export your entire application as runnable code. NetPad is optional at runtime—your app works without us.',
+                icon: <Cloud sx={{ fontSize: 32 }} />,
+                title: 'Run Anywhere',
+                description: 'Host with NetPad or deploy to your own infrastructure. Export to Express, Next.js, serverless, or Docker.',
               },
               {
-                icon: <CompareArrows sx={{ fontSize: 32 }} />,
-                title: 'Version Migration',
-                description: 'Every export includes migration guides. Breaking changes are explicit, with rollback instructions included.',
+                icon: <Code sx={{ fontSize: 32 }} />,
+                title: 'One-Click Eject',
+                description: 'Export your entire application as runnable code. NetPad is optional at runtime—your app works without us.',
               },
             ].map((feature, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
@@ -1971,7 +2273,7 @@ console.log('Output:', result.execution.result?.output);`}
                   <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
                     AI Form Generation
                   </Typography>
-                  <Chip label="22 Tools" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                  <Chip label="75 Tools" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
                 </Box>
                 <Box sx={{ p: 2 }}>
                   <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto', maxHeight: 200 }}>
@@ -2013,8 +2315,8 @@ console.log('Output:', result.execution.result?.output);`}
                 <br />Form Development
               </Typography>
               <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                The MCP server provides 22 specialized tools for AI assistants. Generate forms, validate configs,
-                scaffold Next.js apps, and get best practices — all through conversation.
+                The MCP server provides 75 specialized tools across 7 categories for AI assistants. Generate forms, build workflows,
+                access the marketplace, manage RAG documents, and get validated TypeScript — all through conversation.
               </Typography>
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
@@ -2325,13 +2627,13 @@ $ netpad login --api-key np_live_xxx`}
             />
             <Chip
               icon={<Code sx={{ fontSize: 14 }} />}
-              label="160+ API Endpoints"
+              label="165+ API Endpoints"
               size="small"
               sx={{ bgcolor: alpha('#fff', 0.1), color: '#fff' }}
             />
             <Chip
               icon={<AutoAwesome sx={{ fontSize: 14 }} />}
-              label="12+ AI Agents"
+              label="15+ AI Agents"
               size="small"
               sx={{ bgcolor: alpha('#E91E63', 0.2), color: '#fff', fontWeight: 600 }}
             />
@@ -2545,9 +2847,34 @@ $ netpad login --api-key np_live_xxx`}
                   '&:hover': { color: alpha('#fff', 0.8) }
                 }}
               >
-                Request access
+                Join Waitlist
+              </Typography>
+              <Typography
+                component={Link}
+                href="/demo/conversational"
+                variant="body2"
+                sx={{
+                  color: '#00ED64',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  '&:hover': { color: '#4DFF9F' }
+                }}
+              >
+                Try Demo
               </Typography>
               <Box sx={{ width: '1px', bgcolor: alpha('#fff', 0.1) }} />
+              <Typography
+                component={Link}
+                href="/blog"
+                variant="body2"
+                sx={{
+                  color: alpha('#fff', 0.4),
+                  textDecoration: 'none',
+                  '&:hover': { color: '#00ED64' }
+                }}
+              >
+                Blog
+              </Typography>
               <Typography
                 component={Link}
                 href="/why-netpad"

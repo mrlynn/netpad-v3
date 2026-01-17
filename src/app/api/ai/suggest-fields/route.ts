@@ -3,12 +3,14 @@
  *
  * POST /api/ai/suggest-fields
  * Suggests additional fields for an existing form.
+ *
+ * Uses centralized aiService for token tracking and analytics.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createFormGenerator } from '@/lib/ai/formGenerator';
+import { createFormGeneratorWithContext } from '@/lib/ai/formGenerator';
 import { FieldSuggestionRequest } from '@/lib/ai/types';
-import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
+import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +39,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const generator = createFormGenerator(apiKey);
+    // Use context-aware generator for centralized analytics tracking
+    const generator = createFormGeneratorWithContext(
+      guard.context.userId,
+      guard.context.orgId,
+      guard.context.isGuest || false,
+      'ai_inline_suggestions'
+    );
 
     const suggestionRequest: FieldSuggestionRequest = {
       currentForm: body.currentForm,
@@ -54,8 +62,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Increment usage counter on successful generation
-    await recordAIUsage(guard.context.orgId);
+    // Token usage is automatically tracked by aiService - no need to call recordAIUsage
 
     return NextResponse.json(result);
   } catch (error) {

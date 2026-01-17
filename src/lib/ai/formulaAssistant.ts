@@ -2,6 +2,9 @@
  * AI Formula Assistant Service
  *
  * Converts natural language descriptions into formula expressions for computed fields.
+ *
+ * NOTE: This class now uses the centralized aiService for token tracking.
+ * For direct usage with analytics, use the createFormulaAssistantWithContext function.
  */
 
 import OpenAI from 'openai';
@@ -12,6 +15,9 @@ import {
 } from './types';
 import { SYSTEM_PROMPTS, buildFormulaPrompt } from './prompts';
 import { evaluateFormula } from '@/lib/formulaEngine';
+import { aiService, createAIContext, AIServiceStreamConfig } from './aiService';
+import { AIServiceContext } from '@/types/ai-analytics';
+import { Message } from './providers/base';
 
 // ============================================
 // Service Configuration
@@ -28,14 +34,20 @@ const DEFAULT_CONFIG: Partial<AIServiceConfig> = {
 // ============================================
 
 export class FormulaAssistant {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
   private config: AIServiceConfig;
+  private aiContext: AIServiceContext | null = null;
 
-  constructor(config: AIServiceConfig) {
+  constructor(config: AIServiceConfig, aiContext?: AIServiceContext) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.client = new OpenAI({
-      apiKey: this.config.apiKey,
-    });
+    this.aiContext = aiContext || null;
+
+    // Only create OpenAI client if not using centralized service
+    if (!aiContext && config.apiKey) {
+      this.client = new OpenAI({
+        apiKey: config.apiKey,
+      });
+    }
   }
 
   /**
@@ -49,18 +61,53 @@ export class FormulaAssistant {
         request.outputType
       );
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPTS.formulaAssistant },
-          { role: 'user', content: prompt },
-        ],
-        temperature: this.config.temperature,
-        max_tokens: this.config.maxTokens,
-        response_format: { type: 'json_object' },
-      });
+      const messages: Message[] = [
+        { role: 'system', content: SYSTEM_PROMPTS.formulaAssistant },
+        { role: 'user', content: prompt },
+      ];
 
-      const responseText = completion.choices[0]?.message?.content;
+      let responseText: string;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens,
+          responseFormat: { type: 'json_object' },
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        responseText = result.data;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
+          response_format: { type: 'json_object' },
+        });
+
+        responseText = completion.choices[0]?.message?.content || '';
+      }
+
       if (!responseText) {
         return {
           success: false,
@@ -120,20 +167,54 @@ ${fieldContext}
 
 Provide a clear explanation that a non-technical person would understand.`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that explains formulas in plain language. Be concise and clear.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.5,
-        max_tokens: 500,
-      });
+      const messages: Message[] = [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that explains formulas in plain language. Be concise and clear.',
+        },
+        { role: 'user', content: prompt },
+      ];
 
-      const explanation = completion.choices[0]?.message?.content;
+      let explanation: string;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: 0.5,
+          maxTokens: 500,
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        explanation = result.data;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: 0.5,
+          max_tokens: 500,
+        });
+
+        explanation = completion.choices[0]?.message?.content || '';
+      }
+
       if (!explanation) {
         return {
           success: false,
@@ -174,18 +255,53 @@ Consider:
 
 Respond with JSON: { "suggestions": ["suggestion 1", "suggestion 2"] }`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPTS.formulaAssistant },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.6,
-        max_tokens: 500,
-        response_format: { type: 'json_object' },
-      });
+      const messages: Message[] = [
+        { role: 'system', content: SYSTEM_PROMPTS.formulaAssistant },
+        { role: 'user', content: prompt },
+      ];
 
-      const responseText = completion.choices[0]?.message?.content;
+      let responseText: string;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: 0.6,
+          maxTokens: 500,
+          responseFormat: { type: 'json_object' },
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        responseText = result.data;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: 0.6,
+          max_tokens: 500,
+          response_format: { type: 'json_object' },
+        });
+
+        responseText = completion.choices[0]?.message?.content || '';
+      }
+
       if (!responseText) {
         return {
           success: false,
@@ -376,11 +492,13 @@ Respond with JSON: { "suggestions": ["suggestion 1", "suggestion 2"] }`;
 }
 
 // ============================================
-// Factory Function
+// Factory Functions
 // ============================================
 
 /**
  * Create a FormulaAssistant instance with default configuration
+ *
+ * @deprecated Use createFormulaAssistantWithContext for analytics tracking
  */
 export function createFormulaAssistant(apiKey?: string): FormulaAssistant {
   const key = apiKey || process.env.OPENAI_API_KEY;
@@ -389,4 +507,41 @@ export function createFormulaAssistant(apiKey?: string): FormulaAssistant {
   }
 
   return new FormulaAssistant({ apiKey: key });
+}
+
+/**
+ * Create a FormulaAssistant instance with AI context for centralized analytics tracking
+ *
+ * This is the preferred method for creating a FormulaAssistant as it enables:
+ * - Automatic token usage tracking
+ * - Request logging with latency metrics
+ * - Cost estimation
+ * - Billing integration
+ *
+ * @example
+ * ```typescript
+ * const assistant = createFormulaAssistantWithContext(
+ *   guard.context.userId,
+ *   guard.context.orgId,
+ *   guard.context.isGuest || false
+ * );
+ * const result = await assistant.generateFormula(request);
+ * // Token usage is automatically logged - no need to call recordAIUsage
+ * ```
+ */
+export function createFormulaAssistantWithContext(
+  userId: string,
+  orgId: string,
+  isGuest: boolean = false,
+  feature: 'ai_formula_assistant' = 'ai_formula_assistant'
+): FormulaAssistant {
+  const aiContext = createAIContext(
+    userId,
+    orgId,
+    feature,
+    '/api/ai/generate-formula',
+    isGuest
+  );
+
+  return new FormulaAssistant({ apiKey: '' }, aiContext);
 }

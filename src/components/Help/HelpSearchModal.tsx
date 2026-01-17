@@ -27,6 +27,7 @@ import {
   KeyboardReturn,
   KeyboardCommandKey,
   PlayCircleOutline,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import { HelpTopic, HelpTopicId } from '@/types/help';
 import { helpTopics } from '@/lib/helpContent';
@@ -36,10 +37,13 @@ interface HelpSearchModalProps {
   onClose: () => void;
   onSelectTopic: (topicId: HelpTopicId) => void;
   onStartTour?: () => void;
+  /** If true, admin-only help topics will be shown */
+  showAdminTopics?: boolean;
 }
 
 // Category icons and labels
 const categoryConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+  'admin': { icon: <AdminPanelSettings fontSize="small" />, label: 'Admin', color: '#f44336' },
   'form': { icon: <Description fontSize="small" />, label: 'Form Builder', color: '#00ED64' },
   'pipeline': { icon: <Widgets fontSize="small" />, label: 'Pipeline', color: '#2196f3' },
   'mongodb': { icon: <Storage fontSize="small" />, label: 'MongoDB', color: '#13AA52' },
@@ -62,16 +66,21 @@ function getTopicCategory(topicId: string): { icon: React.ReactNode; label: stri
   return { icon: <Help fontSize="small" />, label: 'General', color: '#9e9e9e' };
 }
 
-function searchTopics(query: string): HelpTopic[] {
+function searchTopics(query: string, showAdminTopics: boolean = false): HelpTopic[] {
+  // Get all topics, filtering out admin-only topics if user is not admin
+  const availableTopics = Object.values(helpTopics).filter(
+    (topic) => showAdminTopics || !topic.adminOnly
+  );
+
   if (!query.trim()) {
-    // Return all topics when no search query
-    return Object.values(helpTopics);
+    // Return all available topics when no search query
+    return availableTopics;
   }
 
   const lowerQuery = query.toLowerCase().trim();
   const words = lowerQuery.split(/\s+/);
 
-  const results = Object.values(helpTopics).map((topic) => {
+  const results = availableTopics.map((topic) => {
     let score = 0;
     const searchableText = [
       topic.title.toLowerCase(),
@@ -152,13 +161,13 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   );
 }
 
-export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour }: HelpSearchModalProps) {
+export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, showAdminTopics = false }: HelpSearchModalProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const results = useMemo(() => searchTopics(query), [query]);
+  const results = useMemo(() => searchTopics(query, showAdminTopics), [query, showAdminTopics]);
 
   // Reset selection when results change
   useEffect(() => {

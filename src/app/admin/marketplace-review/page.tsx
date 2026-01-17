@@ -33,7 +33,10 @@ import {
   Tooltip,
   FormControlLabel,
   Checkbox,
+  Breadcrumbs,
+  Link as MuiLink,
 } from '@mui/material';
+import Link from 'next/link';
 import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
@@ -41,6 +44,7 @@ import {
   Refresh as RefreshIcon,
   Pending as PendingIcon,
   Verified as VerifiedIcon,
+  NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -214,6 +218,14 @@ export default function MarketplaceReviewPage() {
     <>
       <AppNavBar />
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        {/* Breadcrumb Navigation */}
+        <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 2 }}>
+          <MuiLink component={Link} href="/admin" color="inherit" underline="hover">
+            Admin Dashboard
+          </MuiLink>
+          <Typography color="text.primary">Marketplace Review</Typography>
+        </Breadcrumbs>
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" fontWeight={600}>
             Marketplace Review Console

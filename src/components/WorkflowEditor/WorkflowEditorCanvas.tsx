@@ -65,6 +65,9 @@ const nodeTypes: NodeTypes = {
   'merge': BaseNode,
   'mongodb-query': BaseNode,
   'mongodb-write': BaseNode,
+  // Atlas nodes
+  'atlas-cluster': BaseNode,
+  'atlas-data-api': BaseNode,
   // AI nodes
   'ai-prompt': BaseNode,
   'ai-classify': BaseNode,

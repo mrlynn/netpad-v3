@@ -2,6 +2,9 @@
  * AI Form Generator Service
  *
  * Generates form configurations from natural language descriptions using OpenAI.
+ *
+ * NOTE: This class now uses the centralized aiService for token tracking.
+ * For direct usage with analytics, use the createFormGeneratorWithContext function.
  */
 
 import OpenAI from 'openai';
@@ -23,6 +26,9 @@ import {
   suggestFieldType,
 } from './prompts';
 import { sortFieldsByPriority } from './fieldOrdering';
+import { aiService, createAIContext, AIServiceStreamConfig } from './aiService';
+import { AIServiceContext } from '@/types/ai-analytics';
+import { Message } from './providers/base';
 
 // ============================================
 // Service Configuration
@@ -39,14 +45,20 @@ const DEFAULT_CONFIG: Partial<AIServiceConfig> = {
 // ============================================
 
 export class FormGenerator {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
   private config: AIServiceConfig;
+  private aiContext: AIServiceContext | null = null;
 
-  constructor(config: AIServiceConfig) {
+  constructor(config: AIServiceConfig, aiContext?: AIServiceContext) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.client = new OpenAI({
-      apiKey: this.config.apiKey,
-    });
+    this.aiContext = aiContext || null;
+
+    // Only create OpenAI client if not using centralized service
+    if (!aiContext && config.apiKey) {
+      this.client = new OpenAI({
+        apiKey: config.apiKey,
+      });
+    }
   }
 
   /**
@@ -61,18 +73,64 @@ export class FormGenerator {
         maxFields: request.options?.maxFields,
       });
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPTS.formGenerator },
-          { role: 'user', content: prompt },
-        ],
-        temperature: this.config.temperature,
-        max_tokens: this.config.maxTokens,
-        response_format: { type: 'json_object' },
-      });
+      const messages: Message[] = [
+        { role: 'system', content: SYSTEM_PROMPTS.formGenerator },
+        { role: 'user', content: prompt },
+      ];
 
-      const responseText = completion.choices[0]?.message?.content;
+      let responseText: string;
+      let promptTokens = 0;
+      let completionTokens = 0;
+      let totalTokens = 0;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens,
+          responseFormat: { type: 'json_object' },
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            confidence: 0,
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        responseText = result.data;
+        promptTokens = result.usage?.promptTokens || 0;
+        completionTokens = result.usage?.completionTokens || 0;
+        totalTokens = result.usage?.totalTokens || 0;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            confidence: 0,
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
+          response_format: { type: 'json_object' },
+        });
+
+        responseText = completion.choices[0]?.message?.content || '';
+        promptTokens = completion.usage?.prompt_tokens || 0;
+        completionTokens = completion.usage?.completion_tokens || 0;
+        totalTokens = completion.usage?.total_tokens || 0;
+      }
+
       if (!responseText) {
         return {
           success: false,
@@ -106,9 +164,9 @@ export class FormGenerator {
         confidence: metadata.confidence,
         suggestions: this.generateSuggestions(normalizedForm),
         usage: {
-          promptTokens: completion.usage?.prompt_tokens || 0,
-          completionTokens: completion.usage?.completion_tokens || 0,
-          totalTokens: completion.usage?.total_tokens || 0,
+          promptTokens,
+          completionTokens,
+          totalTokens,
         },
       };
     } catch (error) {
@@ -169,18 +227,55 @@ Create appropriate labels, field types, and validation based on the schema field
         request.limit || 5
       );
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPTS.fieldSuggester },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.8,
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      });
+      const messages: Message[] = [
+        { role: 'system', content: SYSTEM_PROMPTS.fieldSuggester },
+        { role: 'user', content: prompt },
+      ];
 
-      const responseText = completion.choices[0]?.message?.content;
+      let responseText: string;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: 0.8,
+          maxTokens: 2000,
+          responseFormat: { type: 'json_object' },
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            suggestions: [],
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        responseText = result.data;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            suggestions: [],
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: 0.8,
+          max_tokens: 2000,
+          response_format: { type: 'json_object' },
+        });
+
+        responseText = completion.choices[0]?.message?.content || '';
+      }
+
       if (!responseText) {
         return {
           success: false,
@@ -442,11 +537,13 @@ Create appropriate labels, field types, and validation based on the schema field
 }
 
 // ============================================
-// Factory Function
+// Factory Functions
 // ============================================
 
 /**
  * Create a FormGenerator instance with default configuration
+ *
+ * @deprecated Use createFormGeneratorWithContext for analytics tracking
  */
 export function createFormGenerator(apiKey?: string): FormGenerator {
   const key = apiKey || process.env.OPENAI_API_KEY;
@@ -455,4 +552,41 @@ export function createFormGenerator(apiKey?: string): FormGenerator {
   }
 
   return new FormGenerator({ apiKey: key });
+}
+
+/**
+ * Create a FormGenerator instance with AI context for centralized analytics tracking
+ *
+ * This is the preferred method for creating a FormGenerator as it enables:
+ * - Automatic token usage tracking
+ * - Request logging with latency metrics
+ * - Cost estimation
+ * - Billing integration
+ *
+ * @example
+ * ```typescript
+ * const generator = createFormGeneratorWithContext(
+ *   guard.context.userId,
+ *   guard.context.orgId,
+ *   guard.context.isGuest || false
+ * );
+ * const result = await generator.generateForm(request);
+ * // Token usage is automatically logged - no need to call recordAIUsage
+ * ```
+ */
+export function createFormGeneratorWithContext(
+  userId: string,
+  orgId: string,
+  isGuest: boolean = false,
+  feature: 'ai_form_generator' | 'ai_inline_suggestions' = 'ai_form_generator'
+): FormGenerator {
+  const aiContext = createAIContext(
+    userId,
+    orgId,
+    feature,
+    feature === 'ai_form_generator' ? '/api/ai/generate-form' : '/api/ai/suggest-fields',
+    isGuest
+  );
+
+  return new FormGenerator({ apiKey: '' }, aiContext);
 }

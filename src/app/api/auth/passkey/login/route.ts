@@ -99,9 +99,10 @@ export async function POST(req: NextRequest) {
       avatarUrl: user.avatarUrl,
     });
 
-    // Create session with platform userId (not auth _id)
+    // Create session with platform userId (not auth _id) and waitlist status
     await createSession(platformUser.userId, user.email, {
       isPasskeyAuth: true,
+      waitlistStatus: platformUser.waitlistStatus,
     });
 
     // Return user data

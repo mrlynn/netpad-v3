@@ -3,12 +3,46 @@
  *
  * Utilities to verify cluster tier requirements for features like Vector Search
  * Uses caching to avoid hitting Atlas Admin API on every request
+ *
+ * Deployment Mode Support:
+ * - 'cloud': Requires M10+ clusters for Vector Search (production SLA)
+ * - 'self-hosted': Allows LOCAL tier (Atlas Local/Docker) for Vector Search
  */
 
 import { ClusterInstanceSize } from '@/lib/atlas/types';
 import { getProvisionedClusterForOrg } from '@/lib/atlas/provisioning';
 import { getAtlasClient } from '@/lib/atlas/client';
 import type { AtlasCluster } from '@/lib/atlas/types';
+
+// ============================================
+// Deployment Mode Configuration
+// ============================================
+
+export type DeploymentMode = 'cloud' | 'self-hosted';
+
+/**
+ * Get the current deployment mode from environment
+ * Defaults to 'self-hosted' if not set (safer for local dev)
+ */
+export function getDeploymentMode(): DeploymentMode {
+  const mode = process.env.NETPAD_DEPLOYMENT_MODE;
+  if (mode === 'cloud') return 'cloud';
+  return 'self-hosted';
+}
+
+/**
+ * Check if running in self-hosted mode
+ */
+export function isSelfHosted(): boolean {
+  return getDeploymentMode() === 'self-hosted';
+}
+
+/**
+ * Check if running in cloud mode (e.g., Vercel)
+ */
+export function isCloudDeployment(): boolean {
+  return getDeploymentMode() === 'cloud';
+}
 
 // ============================================
 // Cache Configuration
@@ -31,34 +65,62 @@ const clusterTierCache = new Map<string, { tier: ClusterInstanceSize | null; che
 // ============================================
 
 /**
- * Check if cluster tier supports vector search (M10+)
+ * Check if cluster tier supports vector search
+ *
+ * Behavior depends on deployment mode:
+ * - Cloud mode: Requires M10+ (production reliability, managed SLA)
+ * - Self-hosted mode: Allows LOCAL tier (Atlas Local/Docker) or M10+
+ *
+ * @param instanceSize - The cluster instance size to check
+ * @returns true if the tier supports vector search in the current deployment mode
  */
 export function supportsVectorSearch(instanceSize: ClusterInstanceSize): boolean {
-  const tierOrder: ClusterInstanceSize[] = ['M0', 'M2', 'M5', 'M10', 'M20', 'M30', 'M40', 'M50', 'M60'];
+  // In self-hosted mode, LOCAL tier supports vector search via Atlas Local
+  if (isSelfHosted() && instanceSize === 'LOCAL') {
+    return true;
+  }
+
+  // Standard tier check: M10+ required
+  const tierOrder: ClusterInstanceSize[] = ['LOCAL', 'M0', 'M2', 'M5', 'M10', 'M20', 'M30', 'M40', 'M50', 'M60'];
   const tierIndex = tierOrder.indexOf(instanceSize);
   const m10Index = tierOrder.indexOf('M10');
-  
+
   if (tierIndex === -1) return false;
-  
+
   return tierIndex >= m10Index;
+}
+
+/**
+ * Get the minimum required cluster tier for vector search in the current deployment mode
+ */
+export function getMinVectorSearchTier(): ClusterInstanceSize {
+  return isSelfHosted() ? 'LOCAL' : 'M10';
 }
 
 /**
  * Compare two cluster tiers
  * @returns -1 if tier1 < tier2, 0 if equal, 1 if tier1 > tier2
+ *
+ * Note: LOCAL tier is treated as equivalent to M10 for comparison purposes
+ * in self-hosted mode, since it supports the same Vector Search features.
  */
 function compareClusterTiers(
   tier1: ClusterInstanceSize,
   tier2: ClusterInstanceSize
 ): number {
   const tierOrder: ClusterInstanceSize[] = ['M0', 'M2', 'M5', 'M10', 'M20', 'M30', 'M40', 'M50', 'M60'];
-  const index1 = tierOrder.indexOf(tier1);
-  const index2 = tierOrder.indexOf(tier2);
-  
+
+  // In self-hosted mode, treat LOCAL as equivalent to M10 for feature comparison
+  const effectiveTier1 = (isSelfHosted() && tier1 === 'LOCAL') ? 'M10' : tier1;
+  const effectiveTier2 = (isSelfHosted() && tier2 === 'LOCAL') ? 'M10' : tier2;
+
+  const index1 = tierOrder.indexOf(effectiveTier1);
+  const index2 = tierOrder.indexOf(effectiveTier2);
+
   if (index1 === -1 || index2 === -1) {
     throw new Error(`Invalid cluster tier: ${tier1} or ${tier2}`);
   }
-  
+
   if (index1 < index2) return -1;
   if (index1 > index2) return 1;
   return 0;
@@ -149,6 +211,10 @@ export function clearClusterTierCache(): void {
  * Check if organization has a cluster that meets the minimum tier requirement
  * Uses caching to avoid hitting Atlas API on every request
  *
+ * Behavior depends on deployment mode:
+ * - Cloud mode: Requires M10+ for vector search features
+ * - Self-hosted mode: Allows LOCAL tier (user manages their own Atlas Local instance)
+ *
  * @param organizationId - Organization ID
  * @param minTier - Minimum required cluster tier (e.g., 'M10')
  * @returns Object with hasAccess boolean and details
@@ -161,8 +227,22 @@ export async function checkClusterTierRequirement(
   currentTier: ClusterInstanceSize | null;
   reason?: string;
   clusterId?: string;
+  deploymentMode?: DeploymentMode;
 }> {
+  const deploymentMode = getDeploymentMode();
+
   try {
+    // In self-hosted mode with LOCAL tier requirement, grant access
+    // The user is responsible for running their own Atlas Local instance
+    if (isSelfHosted() && minTier === 'LOCAL') {
+      return {
+        hasAccess: true,
+        currentTier: 'LOCAL',
+        deploymentMode,
+        reason: 'Self-hosted mode: Using Atlas Local deployment',
+      };
+    }
+
     // Get cluster tier (from cache or fresh fetch)
     const currentTier = await getCachedClusterTier(organizationId);
 
@@ -170,17 +250,40 @@ export async function checkClusterTierRequirement(
     const provisionedCluster = await getProvisionedClusterForOrg(organizationId);
 
     if (!provisionedCluster) {
+      // In self-hosted mode, no provisioned cluster is okay - user manages their own
+      if (isSelfHosted()) {
+        return {
+          hasAccess: true,
+          currentTier: 'LOCAL',
+          deploymentMode,
+          reason: 'Self-hosted mode: No cluster check required. Ensure Atlas Local is running.',
+        };
+      }
+
       return {
         hasAccess: false,
         currentTier: null,
+        deploymentMode,
         reason: 'No cluster provisioned. Please provision a cluster first.',
       };
     }
 
     if (!currentTier) {
+      // In self-hosted mode, allow access even if we can't determine tier
+      if (isSelfHosted()) {
+        return {
+          hasAccess: true,
+          currentTier: 'LOCAL',
+          deploymentMode,
+          clusterId: provisionedCluster.clusterId,
+          reason: 'Self-hosted mode: Cluster tier check skipped.',
+        };
+      }
+
       return {
         hasAccess: false,
         currentTier: null,
+        deploymentMode,
         reason: 'Unable to determine cluster tier. Please ensure your cluster is accessible.',
         clusterId: provisionedCluster.clusterId,
       };
@@ -191,10 +294,15 @@ export async function checkClusterTierRequirement(
 
     if (comparison < 0) {
       // Current tier is lower than required
+      const tierMessage = isSelfHosted()
+        ? `Vector search requires ${minTier} or higher (or use Atlas Local). Current cluster: ${currentTier}.`
+        : `Vector search requires ${minTier} or higher. Current cluster: ${currentTier}. Please upgrade your Atlas cluster.`;
+
       return {
         hasAccess: false,
         currentTier,
-        reason: `Vector search requires ${minTier} or higher. Current cluster: ${currentTier}. Please upgrade your Atlas cluster.`,
+        deploymentMode,
+        reason: tierMessage,
         clusterId: provisionedCluster.clusterId,
       };
     }
@@ -202,17 +310,29 @@ export async function checkClusterTierRequirement(
     return {
       hasAccess: true,
       currentTier,
+      deploymentMode,
       clusterId: provisionedCluster.clusterId,
     };
   } catch (error: any) {
     console.error('[ClusterCheck] Error checking cluster tier:', error);
-    
+
+    // In self-hosted mode, allow access on error (user manages their own setup)
+    if (isSelfHosted()) {
+      return {
+        hasAccess: true,
+        currentTier: 'LOCAL',
+        deploymentMode,
+        reason: 'Self-hosted mode: Cluster check failed, but access granted. Ensure Atlas Local is running.',
+      };
+    }
+
     // Try to return cached value on error
     const cachedTier = clusterTierCache.get(organizationId)?.tier;
-    
+
     return {
       hasAccess: false,
       currentTier: cachedTier ?? null,
+      deploymentMode,
       reason: error.message || 'Unable to verify cluster tier. Please try again later.',
     };
   }
@@ -223,18 +343,38 @@ export async function checkClusterTierRequirement(
 // ============================================
 
 /**
- * Feature requirements map
- * Maps feature names to their cluster tier requirements
+ * Get the required cluster tier for a feature based on deployment mode
+ *
+ * In cloud mode: M10 required for RAG features
+ * In self-hosted mode: LOCAL (Atlas Local) is sufficient
+ */
+function getFeatureClusterTier(feature: string): ClusterInstanceSize | undefined {
+  const ragFeatures = ['rag_conversational_forms', 'rag_document_upload', 'rag_vector_search'];
+
+  if (ragFeatures.includes(feature)) {
+    return getMinVectorSearchTier();
+  }
+
+  return undefined;
+}
+
+/**
+ * Feature requirements map (static, for reference)
+ * Actual tier requirement is computed dynamically based on deployment mode
  */
 export const FEATURE_REQUIREMENTS: Record<string, { clusterTier?: ClusterInstanceSize }> = {
-  rag_conversational_forms: { clusterTier: 'M10' },
-  rag_document_upload: { clusterTier: 'M10' },
-  rag_vector_search: { clusterTier: 'M10' },
+  rag_conversational_forms: { clusterTier: 'M10' },  // Or LOCAL in self-hosted mode
+  rag_document_upload: { clusterTier: 'M10' },       // Or LOCAL in self-hosted mode
+  rag_vector_search: { clusterTier: 'M10' },         // Or LOCAL in self-hosted mode
 };
 
 /**
  * Check if organization has access to a feature considering cluster requirements
  * Returns detailed access information including current and required tiers
+ *
+ * Behavior depends on deployment mode:
+ * - Cloud mode: RAG features require M10+ cluster
+ * - Self-hosted mode: RAG features work with LOCAL tier (Atlas Local)
  *
  * @param organizationId - Organization ID
  * @param feature - Feature name (must be in FEATURE_REQUIREMENTS for cluster check)
@@ -248,32 +388,38 @@ export async function checkFeatureAccess(
   reason?: string;
   requiredClusterTier?: ClusterInstanceSize;
   currentClusterTier?: ClusterInstanceSize | null;
+  deploymentMode?: DeploymentMode;
 }> {
-  const requirements = FEATURE_REQUIREMENTS[feature];
+  const deploymentMode = getDeploymentMode();
+  const requiredTier = getFeatureClusterTier(feature);
 
   // If feature has no special cluster requirements, grant access
-  if (!requirements) {
-    return { hasAccess: true };
+  if (!requiredTier) {
+    return { hasAccess: true, deploymentMode };
   }
 
-  // Check cluster tier requirement if specified
-  if (requirements.clusterTier) {
-    const clusterCheck = await checkClusterTierRequirement(
-      organizationId,
-      requirements.clusterTier
-    );
+  // Check cluster tier requirement
+  const clusterCheck = await checkClusterTierRequirement(
+    organizationId,
+    requiredTier
+  );
 
-    if (!clusterCheck.hasAccess) {
-      return {
-        hasAccess: false,
-        reason: clusterCheck.reason,
-        requiredClusterTier: requirements.clusterTier,
-        currentClusterTier: clusterCheck.currentTier,
-      };
-    }
+  if (!clusterCheck.hasAccess) {
+    return {
+      hasAccess: false,
+      reason: clusterCheck.reason,
+      requiredClusterTier: requiredTier,
+      currentClusterTier: clusterCheck.currentTier,
+      deploymentMode,
+    };
   }
 
-  return { hasAccess: true };
+  return {
+    hasAccess: true,
+    requiredClusterTier: requiredTier,
+    currentClusterTier: clusterCheck.currentTier,
+    deploymentMode,
+  };
 }
 
 /**

@@ -54,9 +54,10 @@ export async function GET(
     // Handle the OAuth callback
     const result = await handleOAuthCallback(provider, code, state);
 
-    // Create session
+    // Create session with waitlist status
     await createSession(result.user.userId, result.user.email, {
       isPasskeyAuth: false,
+      waitlistStatus: result.user.waitlistStatus,
     });
 
     // Determine redirect URL

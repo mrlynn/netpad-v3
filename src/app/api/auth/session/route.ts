@@ -57,11 +57,13 @@ export async function GET(req: NextRequest) {
           createdAt: platformUser?.createdAt || authUser?.createdAt,
           lastLoginAt: platformUser?.lastLoginAt || authUser?.lastLoginAt,
           platformRole: platformUser?.platformRole || null,
+          waitlistStatus: platformUser?.waitlistStatus || undefined,
         },
         session: {
           isPasskeyAuth: session.isPasskeyAuth || false,
           deviceId: session.deviceId,
           createdAt: session.createdAt,
+          waitlistStatus: session.waitlistStatus || undefined,
         },
       });
     } catch (dbError) {

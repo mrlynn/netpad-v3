@@ -19,6 +19,7 @@ import {
   AtlasInvitationRecord,
   Project,
 } from '@/types/platform';
+import { AIRequestLog, AIUsageAggregate } from '@/types/ai-analytics';
 import { Deployment } from '@/types/deployment';
 import { Application, ApplicationContract, ApplicationRelease, ConfigSchema, WorkflowTemplate } from '@/types/application';
 
@@ -122,6 +123,9 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await users.createIndex({ userId: 1 }, { unique: true });
     await users.createIndex({ 'organizations.orgId': 1 });
     await users.createIndex({ 'oauthConnections.provider': 1, 'oauthConnections.providerId': 1 });
+    // Waitlist indexes
+    await users.createIndex({ waitlistStatus: 1 });
+    await users.createIndex({ waitlistStatus: 1, 'waitlistMetadata.appliedAt': -1 });
 
     // Organizations collection
     const orgs = db.collection('organizations');
@@ -234,6 +238,32 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await marketplaceApps.createIndex({ 'stats.downloads': -1 });
     await marketplaceApps.createIndex({ 'stats.rating': -1 });
     await marketplaceApps.createIndex({ '_syncMetadata.lastSyncedAt': -1 }, { sparse: true }); // For npm sync tracking
+
+    // AI Request Logs collection (platform database)
+    const aiRequestLogs = db.collection('ai_request_logs');
+    await aiRequestLogs.createIndex({ requestId: 1 }, { unique: true });
+    await aiRequestLogs.createIndex({ organizationId: 1, requestedAt: -1 });
+    await aiRequestLogs.createIndex({ userId: 1, requestedAt: -1 });
+    await aiRequestLogs.createIndex({ feature: 1, requestedAt: -1 });
+    await aiRequestLogs.createIndex({ model: 1 });
+    await aiRequestLogs.createIndex({ provider: 1 });
+    await aiRequestLogs.createIndex({ success: 1 });
+    await aiRequestLogs.createIndex({ requestedAt: -1 });
+    // TTL index for automatic cleanup (90 days retention)
+    await aiRequestLogs.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 90 * 24 * 60 * 60 }
+    );
+
+    // AI Usage Aggregates collection (platform database)
+    const aiUsageAggregates = db.collection('ai_usage_aggregates');
+    await aiUsageAggregates.createIndex(
+      { organizationId: 1, period: 1, periodType: 1 },
+      { unique: true }
+    );
+    await aiUsageAggregates.createIndex({ period: 1 });
+    await aiUsageAggregates.createIndex({ periodType: 1 });
+    await aiUsageAggregates.createIndex({ totalTokens: -1 }); // For sorting by usage
 
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
@@ -425,6 +455,16 @@ export async function getUsageCollection(): Promise<Collection<OrganizationUsage
 export async function getBillingEventsCollection(): Promise<Collection<BillingEvent>> {
   const db = await getPlatformDb();
   return db.collection<BillingEvent>('billing_events');
+}
+
+export async function getAIRequestLogsCollection(): Promise<Collection<AIRequestLog>> {
+  const db = await getPlatformDb();
+  return db.collection<AIRequestLog>('ai_request_logs');
+}
+
+export async function getAIUsageAggregatesCollection(): Promise<Collection<AIUsageAggregate>> {
+  const db = await getPlatformDb();
+  return db.collection<AIUsageAggregate>('ai_usage_aggregates');
 }
 
 export async function getAtlasInvitationsCollection(): Promise<Collection<AtlasInvitationRecord>> {

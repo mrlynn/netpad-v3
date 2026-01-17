@@ -3,12 +3,14 @@
  *
  * POST /api/ai/generate-conditional-logic
  * Generates conditional logic rules from natural language description.
+ *
+ * Uses centralized aiService for token tracking and analytics.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createConditionalLogicGenerator } from '@/lib/ai/conditionalLogicGenerator';
+import { createConditionalLogicGeneratorWithContext } from '@/lib/ai/conditionalLogicGenerator';
 import { GenerateConditionalLogicRequest } from '@/lib/ai/types';
-import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
+import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +53,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const generator = createConditionalLogicGenerator(apiKey);
+    // Use context-aware generator for centralized analytics tracking
+    const generator = createConditionalLogicGeneratorWithContext(
+      guard.context.userId,
+      guard.context.orgId,
+      guard.context.isGuest || false
+    );
 
     const logicRequest: GenerateConditionalLogicRequest = {
       description: body.description,
@@ -68,8 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Increment usage counter on successful generation
-    await recordAIUsage(guard.context.orgId);
+    // Token usage is automatically tracked by aiService - no need to call recordAIUsage
 
     return NextResponse.json(result);
   } catch (error) {

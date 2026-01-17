@@ -52,6 +52,7 @@ export async function createUser(
     oauthConnections: options?.oauthConnection ? [options.oauthConnection] : [],
     passkeys: [],
     trustedDevices: [],
+    waitlistStatus: 'pending', // All new users start as pending until approved
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -187,6 +188,7 @@ export async function ensurePlatformUser(
     oauthConnections: [],
     passkeys: [],
     trustedDevices: [],
+    waitlistStatus: 'pending', // All new users start as pending until approved
     createdAt: new Date(),
     updatedAt: new Date(),
   };

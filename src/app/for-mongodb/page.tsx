@@ -429,9 +429,9 @@ export default function Page() {
                 >
                   <Stack spacing={0.75}>
                     <Typography variant="body1">• Forms write directly to collections</Typography>
-                    <Typography variant="body1">• APIs support programmatic ingestion</Typography>
+                    <Typography variant="body1">• Search forms query and filter data</Typography>
                     <Typography variant="body1">
-                      • Conversational input collects structured data
+                      • Conversational AI collects structured data
                     </Typography>
                   </Stack>
                 </SpotlightCard>
@@ -606,13 +606,14 @@ export default function Page() {
               body={
                 <>
                   NetPad uses AI to support operational work: triage, enrichment, routing suggestions,
-                  and summarization. The workflow stays deterministic. Humans stay accountable.
+                  and summarization. RAG-powered conversations reference your documents with source citations.
+                  The workflow stays deterministic. Humans stay accountable.
                 </>
               }
             />
 
             <Grid container spacing={2.25}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <SpotlightCard
                   eyebrow="triage"
                   title="Route faster with smarter intake"
@@ -625,7 +626,20 @@ export default function Page() {
                   </Typography>
                 </SpotlightCard>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
+                <SpotlightCard
+                  eyebrow="knowledge"
+                  title="RAG-powered conversations with your docs"
+                  icon={<AutoAwesomeIcon />}
+                  tone="green"
+                >
+                  <Typography variant="body1">
+                    Upload PDFs, policies, and guides. AI answers questions using your documents
+                    with traceable source citations — grounded, not hallucinated.
+                  </Typography>
+                </SpotlightCard>
+              </Grid>
+              <Grid item xs={12} md={6}>
                 <SpotlightCard
                   eyebrow="enrichment"
                   title="Enrich documents at creation time"
@@ -638,7 +652,7 @@ export default function Page() {
                   </Typography>
                 </SpotlightCard>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <SpotlightCard
                   eyebrow="context"
                   title="Give reviewers the story, not the noise"
@@ -763,12 +777,12 @@ export default function Page() {
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   {[
-                    'Platform engineering',
+                    'Admin interfaces',
                     'Internal tools',
                     'Security & compliance',
                     'Risk reviews',
                     'IT intake',
-                    'RevOps workflows',
+                    'Data search & lookup',
                     'Solutions architects',
                     'Developer enablement',
                   ].map((x) => (

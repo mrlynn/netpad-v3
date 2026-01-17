@@ -2,6 +2,9 @@
  * AI Validation Rule Generator Service
  *
  * Generates validation patterns and rules from natural language descriptions.
+ *
+ * NOTE: This class now uses the centralized aiService for token tracking.
+ * For direct usage with analytics, use the createValidationGeneratorWithContext function.
  */
 
 import OpenAI from 'openai';
@@ -11,6 +14,9 @@ import {
   AIServiceConfig,
 } from './types';
 import { SYSTEM_PROMPTS, buildValidationPrompt } from './prompts';
+import { aiService, createAIContext } from './aiService';
+import { AIServiceContext } from '@/types/ai-analytics';
+import { Message } from './providers/base';
 
 // ============================================
 // Service Configuration
@@ -147,14 +153,20 @@ export const COMMON_PATTERNS = {
 // ============================================
 
 export class ValidationGenerator {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
   private config: AIServiceConfig;
+  private aiContext: AIServiceContext | null = null;
 
-  constructor(config: AIServiceConfig) {
+  constructor(config: AIServiceConfig, aiContext?: AIServiceContext) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.client = new OpenAI({
-      apiKey: this.config.apiKey,
-    });
+    this.aiContext = aiContext || null;
+
+    // Only create OpenAI client if not using centralized service
+    if (!aiContext && config.apiKey) {
+      this.client = new OpenAI({
+        apiKey: config.apiKey,
+      });
+    }
   }
 
   /**
@@ -173,18 +185,53 @@ export class ValidationGenerator {
       // Otherwise, use AI to generate the pattern
       const prompt = buildValidationPrompt(request.field, request.description);
 
-      const completion = await this.client.chat.completions.create({
-        model: this.config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPTS.validationGenerator },
-          { role: 'user', content: prompt },
-        ],
-        temperature: this.config.temperature,
-        max_tokens: this.config.maxTokens,
-        response_format: { type: 'json_object' },
-      });
+      const messages: Message[] = [
+        { role: 'system', content: SYSTEM_PROMPTS.validationGenerator },
+        { role: 'user', content: prompt },
+      ];
 
-      const responseText = completion.choices[0]?.message?.content;
+      let responseText: string;
+
+      // Use centralized aiService if context is provided (with analytics tracking)
+      if (this.aiContext) {
+        const result = await aiService.complete(this.aiContext, messages, {
+          model: this.config.model,
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens,
+          responseFormat: { type: 'json_object' },
+        });
+
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            error: result.error || 'No response from AI model',
+          };
+        }
+
+        responseText = result.data;
+      } else {
+        // Fallback to direct OpenAI client (legacy path without analytics)
+        if (!this.client) {
+          return {
+            success: false,
+            error: 'OpenAI client not configured',
+          };
+        }
+
+        const completion = await this.client.chat.completions.create({
+          model: this.config.model || 'gpt-4o-mini',
+          messages: messages.map((m) => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content,
+          })),
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
+          response_format: { type: 'json_object' },
+        });
+
+        responseText = completion.choices[0]?.message?.content || '';
+      }
+
       if (!responseText) {
         return {
           success: false,
@@ -412,11 +459,13 @@ export class ValidationGenerator {
 }
 
 // ============================================
-// Factory Function
+// Factory Functions
 // ============================================
 
 /**
  * Create a ValidationGenerator instance with default configuration
+ *
+ * @deprecated Use createValidationGeneratorWithContext for analytics tracking
  */
 export function createValidationGenerator(apiKey?: string): ValidationGenerator {
   const key = apiKey || process.env.OPENAI_API_KEY;
@@ -425,4 +474,23 @@ export function createValidationGenerator(apiKey?: string): ValidationGenerator 
   }
 
   return new ValidationGenerator({ apiKey: key });
+}
+
+/**
+ * Create a ValidationGenerator instance with AI context for centralized analytics tracking
+ */
+export function createValidationGeneratorWithContext(
+  userId: string,
+  orgId: string,
+  isGuest: boolean = false
+): ValidationGenerator {
+  const aiContext = createAIContext(
+    userId,
+    orgId,
+    'ai_validation_patterns',
+    '/api/ai/generate-validation',
+    isGuest
+  );
+
+  return new ValidationGenerator({ apiKey: '' }, aiContext);
 }

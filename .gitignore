@@ -73,6 +73,8 @@ ehthumbs.db
 # Test artifacts
 playwright-report/
 test-results/
+playwright/.auth/
+screenshots/
 
 # Temporary files
 *.tmp

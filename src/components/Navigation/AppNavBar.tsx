@@ -896,6 +896,31 @@ export function AppNavBar() {
                     <ListItemText primary="System Status" />
                   </MenuItem>
 
+                  {/* Admin Section - only visible to admins */}
+                  {user?.platformRole === 'admin' && (
+                    <>
+                      <Divider />
+                      <MenuItem
+                        component={Link}
+                        href="/admin"
+                        onClick={handleMenuClose}
+                        sx={{
+                          bgcolor: alpha('#9C27B0', 0.05),
+                          '&:hover': { bgcolor: alpha('#9C27B0', 0.1) },
+                        }}
+                      >
+                        <ListItemIcon>
+                          <AdminPanelSettings sx={{ fontSize: 18, color: '#9C27B0' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Admin Dashboard"
+                          secondary="Users, Waitlist, Reviews"
+                          primaryTypographyProps={{ sx: { color: '#9C27B0', fontWeight: 500 } }}
+                        />
+                      </MenuItem>
+                    </>
+                  )}
+
                   <Divider />
 
                     <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

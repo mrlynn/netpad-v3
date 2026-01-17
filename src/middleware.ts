@@ -66,6 +66,8 @@ const PUBLIC_ROUTES = [
   '/api/forms', // Form submission endpoints can be public
   '/forms', // Public form pages
   '/wizard', // Public wizard pages
+  '/waitlist', // Public waitlist signup
+  '/waitlist/pending', // Waitlist pending page
 ];
 
 // API routes that can be accessed without auth (public endpoints)
@@ -73,6 +75,7 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/',
   '/api/forms/', // Form submission endpoints
   '/api/onboarding/', // Onboarding endpoints (has separate auth)
+  '/api/waitlist/signup', // Waitlist signup endpoint
 ];
 
 /**
@@ -237,7 +240,26 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // User is authenticated, allow access
+    // Check waitlist status for authenticated users
+    // Block users with 'pending' or 'rejected' status
+    // Allow 'approved' users and legacy users (undefined status) through
+    // Note: New users now get 'pending' status by default
+    const waitlistStatus = session.waitlistStatus;
+    if (waitlistStatus === 'pending' || waitlistStatus === 'rejected') {
+      // For API routes, return 403
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Account pending waitlist approval' },
+          { status: 403 }
+        );
+      }
+
+      // For page routes, redirect to waitlist pending page
+      const pendingUrl = new URL('/waitlist/pending', request.url);
+      return NextResponse.redirect(pendingUrl);
+    }
+
+    // User is authenticated and approved (or legacy user), allow access
     // Return the response that iron-session may have modified
     return response;
   } catch (error) {

@@ -8,9 +8,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createDefaultProvider, Message } from '@/lib/ai/providers';
 import { ProviderError } from '@/lib/ai/providers/base';
-import { validateAIRequestWithGuestAccess, recordAIUsage, recordGuestUsage } from '@/lib/ai/aiRequestGuard';
+import { validateAIRequestWithGuestAccess, recordGuestUsage } from '@/lib/ai/aiRequestGuard';
 import { ChatRequest, ChatResponse, ChatAction, FormBuilderContext, WorkflowBuilderContext } from '@/types/chat';
 import { getSearchFormsCapability, getTemplateGalleryCapability, getConversationalFormsCapability, getNpmPackagesCapability, getApplicationContractsCapability } from '@/lib/ai/chatCapabilities';
+import { aiService, createAIContext } from '@/lib/ai/aiService';
 
 // ============================================
 // System Prompt
@@ -768,17 +769,47 @@ export async function POST(request: NextRequest) {
       content: body.message,
     });
 
-    // Call provider (works with both OpenAI and Ollama)
+    // Call AI service with usage tracking
     let responseContent = '';
     try {
-      const stream = provider.streamChat(messages, {
-        temperature: 0.7,
-        maxTokens: isContactQuery ? 500 : 1000, // Shorter responses for support queries
-      });
+      // Create context for AI service (for analytics tracking)
+      const aiContext = createAIContext(
+        guardContext.userId,
+        guardContext.orgId,
+        'ai_chat',
+        '/api/ai/chat',
+        guardContext.isGuest || false
+      );
 
-      // Collect all chunks from the stream
-      for await (const chunk of stream) {
-        responseContent += chunk;
+      // Use aiService for tracked requests, provider directly for support queries
+      if (shouldRecordUsage && !guardContext.isGuest) {
+        // Use centralized AI service with full tracking
+        const { stream, getUsage } = await aiService.streamChat(aiContext, messages, {
+          temperature: 0.7,
+          maxTokens: isContactQuery ? 500 : 1000,
+        });
+
+        for await (const chunk of stream) {
+          responseContent += chunk;
+        }
+
+        // Get usage triggers logging and billing automatically
+        await getUsage();
+      } else {
+        // For guest users or support queries, use provider directly (lighter weight)
+        const stream = provider.streamChat(messages, {
+          temperature: 0.7,
+          maxTokens: isContactQuery ? 500 : 1000,
+        });
+
+        for await (const chunk of stream) {
+          responseContent += chunk;
+        }
+
+        // Record guest usage separately (IP-based rate limiting only)
+        if (shouldRecordUsage && guardContext.isGuest) {
+          recordGuestUsage(request);
+        }
       }
     } catch (error) {
       if (error instanceof ProviderError) {
@@ -796,15 +827,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { message, action } = parseActionFromResponse(responseContent);
-
-    // Record usage only for form/workflow queries (not contact/support)
-    if (shouldRecordUsage) {
-      if (guardContext.isGuest) {
-        recordGuestUsage(request);
-      } else {
-        await recordAIUsage(guardContext.orgId);
-      }
-    }
 
     const response: ChatResponse = {
       success: true,
