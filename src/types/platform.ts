@@ -35,6 +35,7 @@ export interface Organization {
   orgId: string;                      // "org_abc123"
   name: string;
   slug: string;                       // URL-friendly: "acme-corp"
+  slugChangedAt?: Date;               // When slug was last changed (for cooldown)
 
   // Legacy plan field (deprecated - use subscription.tier)
   plan: OrgPlan;

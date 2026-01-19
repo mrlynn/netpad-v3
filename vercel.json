@@ -35,5 +35,17 @@
       "destination": "https://docs.netpad.io",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<org>[a-z0-9-]+).netpad.io"
+        }
+      ],
+      "destination": "/portal/:org/:path*"
+    }
   ]
 }

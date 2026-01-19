@@ -1,13 +1,17 @@
 /**
  * Next.js Middleware
- * 
- * Protects authenticated routes and redirects unauthenticated users to login
+ *
+ * Handles:
+ * 1. Subdomain routing for organization portals (acme.netpad.io → /portal/acme)
+ * 2. Authentication protection for private routes
+ * 3. Waitlist status checking
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getIronSession } from 'iron-session';
 import type { SessionData } from '@/lib/auth/session';
+import { extractOrgSlug } from '@/lib/slugs';
 
 const SESSION_OPTIONS = {
   cookieName: 'mdb_tools_session',
@@ -143,6 +147,37 @@ function isLegacyApplicationUrl(pathname: string): {
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  const hostname = request.headers.get('host') || '';
+
+  // ============================================
+  // Subdomain Routing (Organization Portals)
+  // ============================================
+  // Handle subdomain-based routing for organization portals
+  // e.g., acme.netpad.io/help → /portal/acme/help
+
+  const orgSlug = extractOrgSlug(hostname);
+
+  if (orgSlug) {
+    // Skip API routes, static files, etc.
+    if (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/_next/') ||
+      pathname.startsWith('/static/') ||
+      pathname.includes('.')
+    ) {
+      return NextResponse.next();
+    }
+
+    // Rewrite to portal route
+    const url = request.nextUrl.clone();
+    url.pathname = `/portal/${orgSlug}${pathname}`;
+
+    return NextResponse.rewrite(url);
+  }
+
+  // ============================================
+  // Standard Routing (Main Domain)
+  // ============================================
 
   // Check for legacy application URLs and redirect
   const legacyCheck = isLegacyApplicationUrl(pathname);
