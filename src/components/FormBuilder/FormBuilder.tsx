@@ -1052,6 +1052,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
               organizationId,
               projectId,
             }}
+            organizationSlug={organization?.slug}
             disabled={fieldConfigs.length === 0}
             onPublished={(info) => {
               setCurrentFormId(info.id);

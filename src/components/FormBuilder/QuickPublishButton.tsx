@@ -35,7 +35,8 @@ import {
 import { FormConfiguration, FormDataSource } from '@/types/form';
 import { saveFormConfiguration } from '@/lib/formStorage';
 import { usePipeline } from '@/contexts/PipelineContext';
-import { QuickPublishPopover } from './QuickPublishPopover';
+import { PublishDialog } from './PublishDialog';
+import { buildFormUrl } from '@/lib/slugs';
 
 interface QuickPublishButtonProps {
   formConfig: Omit<FormConfiguration, 'createdAt' | 'updatedAt'> & {
@@ -44,6 +45,7 @@ interface QuickPublishButtonProps {
     isPublished?: boolean;
     name?: string;
   };
+  organizationSlug?: string;
   onPublished?: (info: { id: string; slug: string; url: string }) => void;
   onConfigureStorage?: () => void;
   disabled?: boolean;
@@ -51,13 +53,14 @@ interface QuickPublishButtonProps {
 
 export function QuickPublishButton({
   formConfig,
+  organizationSlug,
   onPublished,
   onConfigureStorage,
   disabled = false,
 }: QuickPublishButtonProps) {
   const { connectionString } = usePipeline();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [showStorageWarning, setShowStorageWarning] = useState(false);
   const [formName, setFormName] = useState(formConfig.name || '');
   const [publishing, setPublishing] = useState(false);
@@ -78,41 +81,37 @@ export function QuickPublishButton({
       return;
     }
 
-    // Open popover
-    setPopoverOpen(true);
+    // Open dialog
+    setDialogOpen(true);
   };
 
-  const handlePublish = async (name: string, dataSource?: FormDataSource) => {
-    if (!name.trim()) {
-      setError('Please enter a form name');
-      return;
-    }
-
+  const handlePublish = async (config: { name: string; slug: string; dataSource?: FormDataSource }): Promise<{ success: boolean; error?: string }> => {
     setPublishing(true);
     setError(null);
-    setFormName(name);
+    setFormName(config.name);
 
     try {
-      const config: FormConfiguration = {
+      const formConfigToSave: FormConfiguration = {
         ...formConfig,
-        name: name.trim(),
+        name: config.name.trim(),
+        slug: config.slug.trim(),
         connectionString: connectionString || undefined,
-        dataSource: dataSource || formConfig.dataSource,
+        dataSource: config.dataSource || formConfig.dataSource,
       };
 
       // Debug: Log theme being published
       console.log('[QuickPublish] Publishing form with theme:', {
-        hasTheme: !!config.theme,
-        theme: config.theme,
-        pageBackgroundColor: config.theme?.pageBackgroundColor,
-        pageBackgroundGradient: config.theme?.pageBackgroundGradient,
-        primaryColor: config.theme?.primaryColor,
+        hasTheme: !!formConfigToSave.theme,
+        theme: formConfigToSave.theme,
+        pageBackgroundColor: formConfigToSave.theme?.pageBackgroundColor,
+        pageBackgroundGradient: formConfigToSave.theme?.pageBackgroundGradient,
+        primaryColor: formConfigToSave.theme?.primaryColor,
       });
 
       const response = await fetch('/api/forms-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formConfig: config, publish: true }),
+        body: JSON.stringify({ formConfig: formConfigToSave, publish: true }),
       });
 
       const data = await response.json();
@@ -122,20 +121,20 @@ export function QuickPublishButton({
       }
 
       // Save to localStorage
-      const localConfig = { ...config, id: data.form.id, slug: data.form.slug };
+      const localConfig = { ...formConfigToSave, id: data.form.id, slug: data.form.slug };
       saveFormConfiguration(localConfig);
 
-      // Generate shareable URL
-      const url = `${window.location.origin}/forms/${data.form.slug}`;
-      setPublishedUrl(url);
-      
-      // Store form info for embed code
-      if (data.form.id && data.form.slug) {
-        // Embed code will use these values
+      // Generate shareable URL - use subdomain if org slug available
+      let url: string;
+      if (organizationSlug) {
+        url = buildFormUrl(organizationSlug, data.form.slug, {
+          protocol: window.location.protocol === 'http:' ? 'http' : 'https',
+          rootDomain: window.location.hostname.includes('localhost') ? 'localhost:3000' : 'netpad.io',
+        });
+      } else {
+        url = `${window.location.origin}/forms/${data.form.slug}`;
       }
-
-      // Close popover
-      setPopoverOpen(false);
+      setPublishedUrl(url);
 
       // Notify parent
       onPublished?.({
@@ -143,17 +142,19 @@ export function QuickPublishButton({
         slug: data.form.slug,
         url,
       });
+
+      return { success: true };
     } catch (err: any) {
       setError(err.message);
-      // Keep popover open on error so user can retry
+      return { success: false, error: err.message };
     } finally {
       setPublishing(false);
     }
   };
 
-  const handlePopoverClose = () => {
+  const handleDialogClose = () => {
     if (!publishing) {
-      setPopoverOpen(false);
+      setDialogOpen(false);
       setError(null);
     }
   };
@@ -253,22 +254,22 @@ export function QuickPublishButton({
         {publishing ? 'Publishing...' : 'Publish'}
       </Button>
 
-      {/* Quick Publish Popover */}
-      <QuickPublishPopover
-        open={popoverOpen}
-        anchorEl={buttonRef.current}
-        onClose={handlePopoverClose}
-        formName={formName}
+      {/* Publish Dialog with slug editing */}
+      <PublishDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        formName={formConfig.name || ''}
+        formSlug={formConfig.slug}
         formConfigDataSource={formConfig.dataSource}
         organizationId={formConfig.organizationId}
+        organizationSlug={organizationSlug}
         projectId={formConfig.projectId}
+        isPublished={formConfig.isPublished}
         onPublish={handlePublish}
         onConfigureStorage={() => {
-          setPopoverOpen(false);
+          setDialogOpen(false);
           onConfigureStorage?.();
         }}
-        publishing={publishing}
-        error={error}
       />
 
       {/* Success Dialog - Show after publishing */}
