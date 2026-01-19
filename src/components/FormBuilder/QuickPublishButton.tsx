@@ -191,22 +191,17 @@ export function QuickPublishButton({
   };
 
 
-  // If already published, show different state
+  // If already published, show Published button that opens dialog to update URL
   if (formConfig.isPublished && formConfig.slug) {
-    const currentUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/forms/${formConfig.slug}`;
-
     return (
       <>
-        <Tooltip title="Form is published - click to copy link">
+        <Tooltip title="Click to update form URL or settings">
           <Button
+            ref={buttonRef}
             variant="contained"
             size="small"
             startIcon={<Public />}
-            onClick={() => {
-              navigator.clipboard.writeText(currentUrl);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
+            onClick={() => setDialogOpen(true)}
             sx={{
               background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
               color: '#001E2B',
@@ -216,11 +211,145 @@ export function QuickPublishButton({
               },
             }}
           >
-            {copied ? 'Copied!' : 'Published'}
+            Published
           </Button>
         </Tooltip>
+
+        {/* Publish Dialog for updating slug */}
+        <PublishDialog
+          open={dialogOpen}
+          onClose={handleDialogClose}
+          formName={formConfig.name || ''}
+          formSlug={formConfig.slug}
+          formConfigDataSource={formConfig.dataSource}
+          organizationId={formConfig.organizationId}
+          organizationSlug={organizationSlug}
+          projectId={formConfig.projectId}
+          isPublished={true}
+          onPublish={handlePublish}
+          onConfigureStorage={() => {
+            setDialogOpen(false);
+            onConfigureStorage?.();
+          }}
+        />
+
+        {/* Success Dialog - Show after publishing */}
+        <Dialog
+          open={!!publishedUrl}
+          onClose={() => setPublishedUrl(null)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              overflow: 'hidden',
+            },
+          }}
+        >
+          {publishedUrl && (
+            <>
+              <DialogTitle sx={{ pb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check sx={{ color: '#001E2B' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Form Updated!
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Your changes are now live
+                    </Typography>
+                  </Box>
+                </Box>
+              </DialogTitle>
+
+              <DialogContent>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha('#00ED64', 0.05),
+                    border: '2px solid',
+                    borderColor: '#00ED64',
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Form URL
+                  </Typography>
+                  <TextField
+                    value={publishedUrl}
+                    fullWidth
+                    InputProps={{
+                      readOnly: true,
+                      sx: {
+                        bgcolor: 'background.paper',
+                        fontFamily: 'monospace',
+                        fontSize: '0.9rem',
+                      },
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title="Copy link">
+                            <IconButton onClick={handleCopyUrl} edge="end">
+                              {copied ? <Check sx={{ color: '#00ED64' }} /> : <ContentCopy />}
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<OpenInNew />}
+                    onClick={() => window.open(publishedUrl, '_blank')}
+                    sx={{
+                      flex: 1,
+                      borderColor: alpha('#00ED64', 0.5),
+                      color: '#00ED64',
+                      '&:hover': {
+                        borderColor: '#00ED64',
+                        bgcolor: alpha('#00ED64', 0.05),
+                      },
+                    }}
+                  >
+                    Open Form
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Share />}
+                    onClick={handleShare}
+                    sx={{ flex: 1 }}
+                  >
+                    Share
+                  </Button>
+                </Box>
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, pb: 3 }}>
+                <Button onClick={() => setPublishedUrl(null)} variant="contained" fullWidth>
+                  Done
+                </Button>
+              </DialogActions>
+            </>
+          )}
+        </Dialog>
+
         <Snackbar
-          open={copied}
+          open={copied && !publishedUrl}
           autoHideDuration={2000}
           onClose={() => setCopied(false)}
           message="Link copied to clipboard"
