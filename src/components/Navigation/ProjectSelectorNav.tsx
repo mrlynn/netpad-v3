@@ -28,7 +28,7 @@ import {
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { Project } from '@/types/platform';
-import { parseOrgProjectFromPath, getOrgProjectUrl } from '@/lib/routing';
+import { parseOrgProjectFromPath, getOrgProjectUrl, getAppUrl } from '@/lib/routing';
 
 interface ProjectSelectorNavProps {
   compact?: boolean;
@@ -101,18 +101,34 @@ export function ProjectSelectorNav({ compact = false, currentProjectId }: Projec
     setAnchorEl(null);
   };
 
-  const handleSelectProject = (projectId: string) => {
+  const handleSelectProject = async (projectId: string) => {
     // Store selected project in localStorage
     localStorage.setItem('selected_project_id', projectId);
     handleClose();
-    
-    // If we're in the new URL structure, navigate to the project's forms page
+
+    // Find the first application in this project and navigate to it
+    if (organization?.orgId) {
+      try {
+        const response = await fetch(`/api/applications?orgId=${organization.orgId}&projectId=${projectId}`);
+        const data = await response.json();
+        const apps = data.applications || [];
+
+        if (apps.length > 0) {
+          const defaultApp = apps[0];
+          localStorage.setItem('selected_app_slug', defaultApp.slug);
+          router.push(getAppUrl(defaultApp.slug, 'forms'));
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to fetch applications:', error);
+      }
+    }
+
+    // Fallback: If no apps found, navigate to legacy project forms page
     const { orgId: urlOrgId } = parseOrgProjectFromPath(pathname);
     if (urlOrgId && organization?.orgId === urlOrgId) {
-      // We're in org context, navigate to project's forms page
       router.push(getOrgProjectUrl(organization.orgId, projectId, 'forms'));
     } else {
-      // Legacy route or no org context, just refresh
       router.refresh();
     }
   };

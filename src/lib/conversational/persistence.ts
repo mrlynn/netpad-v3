@@ -7,6 +7,7 @@
 import { ConversationState, ConversationSubmission } from '@/types/conversational';
 import { getConversationSubmissionsCollection } from '@/lib/platform/db';
 import { randomBytes } from 'crypto';
+import { getProviderConfigFromEnv } from '@/lib/ai/providers/factory';
 
 /**
  * Save conversation state to database
@@ -37,8 +38,8 @@ export async function saveConversationState(
             (state.completedAt.getTime() - state.startedAt.getTime()) / 1000
           )
         : Math.floor((Date.now() - state.startedAt.getTime()) / 1000),
-      model: 'gpt-4o-mini', // TODO: Get from provider
-      provider: 'openai' as const,
+      model: getProviderConfigFromEnv()?.defaultModel || 'unknown',
+      provider: (getProviderConfigFromEnv()?.type === 'ollama' ? 'self-hosted' : 'openai') as 'openai' | 'self-hosted',
     },
     submittedAt: state.updatedAt,
     status: state.status === 'completed' ? 'submitted' : 'draft',

@@ -119,6 +119,9 @@ const FIELD_TYPE_KEYWORDS: Record<string, string[]> = {
   nps: ['nps', 'recommend', 'likelihood', 'net promoter'],
   autocomplete: ['search', 'autocomplete', 'typeahead'],
   tags: ['tags', 'keywords', 'labels'],
+  file: ['file', 'upload', 'attachment', 'attach'],
+  image_upload: ['photo', 'picture', 'image upload', 'profile photo', 'avatar', 'thumbnail'],
+  document_upload: ['document', 'resume', 'cv', 'pdf', 'contract', 'agreement'],
 };
 
 // Infer field type from label/description

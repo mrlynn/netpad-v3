@@ -8,6 +8,7 @@
  * - Breadcrumb: Applications > [App Name] > [Current Section]
  * - Quick switch dropdown to change applications
  * - Compact mode for editors (forms, workflows)
+ * - Persistent mode for app-centric navigation (sticky header)
  */
 
 'use client';
@@ -27,6 +28,7 @@ import {
   ListItemText,
   Divider,
   Breadcrumbs,
+  Button,
 } from '@mui/material';
 import {
   Apps,
@@ -39,12 +41,18 @@ import {
   Storage,
   SwapHoriz,
   CheckCircle,
+  ArrowDropDown,
+  Home,
+  Settings,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useParams, useSearchParams, usePathname } from 'next/navigation';
-import { getOrgProjectUrl } from '@/lib/routing';
+import { getOrgProjectUrl, getAppUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { ApplicationSwitcher } from './ApplicationSwitcher';
 
 type ContextSection = 'forms' | 'workflows' | 'data' | 'releases' | 'contracts' | 'permissions' | 'overview';
 
@@ -469,5 +477,251 @@ export function ApplicationContextBar({
         </>
       )}
     </Box>
+  );
+}
+
+// ============================================
+// Persistent Application Context Bar
+// ============================================
+
+/**
+ * Persistent Application Context Bar (App-Centric)
+ *
+ * This is a sticky header that shows when the user is inside an application
+ * using the app-centric routes (/apps/[slug]/...). It provides:
+ *
+ * 1. Application identity (icon, name) with click to switch
+ * 2. Navigation tabs (Forms, Workflows, Data, Settings)
+ * 3. Breadcrumb showing org context
+ *
+ * The bar NEVER disappears while inside an application,
+ * ensuring users always know which application they're working in.
+ *
+ * This addresses the UX concern: "If I screenshot this, would a user
+ * know which application they're in?"
+ */
+
+interface NavTab {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+}
+
+export function PersistentApplicationBar() {
+  const pathname = usePathname();
+  const applicationContext = useApplicationSafe();
+  const currentApplication = applicationContext?.currentApplication ?? null;
+  const { organization } = useOrganization();
+
+  const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
+
+  // Don't render if no application is selected
+  if (!currentApplication) {
+    return null;
+  }
+
+  const appSlug = currentApplication.slug;
+
+  // Navigation tabs for within the application
+  const navTabs: NavTab[] = [
+    {
+      key: 'overview',
+      label: 'Overview',
+      icon: <Home sx={{ fontSize: 16 }} />,
+      href: `/apps/${appSlug}`,
+    },
+    {
+      key: 'forms',
+      label: 'Forms',
+      icon: <Description sx={{ fontSize: 16 }} />,
+      href: getAppUrl(appSlug, 'forms'),
+    },
+    {
+      key: 'workflows',
+      label: 'Workflows',
+      icon: <AccountTree sx={{ fontSize: 16 }} />,
+      href: getAppUrl(appSlug, 'workflows'),
+    },
+    {
+      key: 'data',
+      label: 'Data',
+      icon: <Storage sx={{ fontSize: 16 }} />,
+      href: getAppUrl(appSlug, 'data'),
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      icon: <Settings sx={{ fontSize: 16 }} />,
+      href: getAppUrl(appSlug, 'settings'),
+    },
+  ];
+
+  // Determine which tab is active based on pathname
+  const getActiveTab = (): string => {
+    if (!pathname) return 'overview';
+    // Check specific sections first
+    if (pathname.includes('/forms') || pathname.includes('/builder')) return 'forms';
+    if (pathname.includes('/workflows')) return 'workflows';
+    if (pathname.includes('/data')) return 'data';
+    if (pathname.includes('/settings')) return 'settings';
+    // If just /apps/[slug] with no sub-path, it's overview
+    if (pathname.match(/^\/apps\/[^/]+\/?$/)) return 'overview';
+    return 'overview'; // default to overview
+  };
+
+  const activeTab = getActiveTab();
+
+  return (
+    <>
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 48, // Below the main navbar (48px)
+          zIndex: 100,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          px: 2,
+          py: 0.75,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          // Subtle app-branded gradient
+          background: (theme) =>
+            theme.palette.mode === 'dark'
+              ? `linear-gradient(180deg, ${alpha(currentApplication.color || '#00ED64', 0.08)} 0%, ${theme.palette.background.paper} 100%)`
+              : `linear-gradient(180deg, ${alpha(currentApplication.color || '#00ED64', 0.04)} 0%, ${theme.palette.background.paper} 100%)`,
+        }}
+      >
+        {/* Application Identity */}
+        <Tooltip title="Switch application (⌘K)">
+          <Button
+            onClick={() => setAppSwitcherOpen(true)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1,
+              textTransform: 'none',
+              color: 'text.primary',
+              '&:hover': {
+                bgcolor: alpha(currentApplication.color || '#00ED64', 0.1),
+              },
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {/* App Icon */}
+            <Box
+              sx={{
+                width: 24,
+                height: 24,
+                borderRadius: 0.75,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: currentApplication.color || alpha('#00ED64', 0.2),
+                color: currentApplication.color ? '#fff' : '#00ED64',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+              }}
+            >
+              {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
+            </Box>
+            {/* App Name */}
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 600,
+                maxWidth: 200,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {currentApplication.name}
+            </Typography>
+            <ArrowDropDown sx={{ fontSize: 18, color: 'text.secondary', ml: -0.5 }} />
+          </Button>
+        </Tooltip>
+
+        {/* Divider */}
+        <Divider orientation="vertical" flexItem sx={{ height: 24, my: 'auto' }} />
+
+        {/* Navigation Tabs */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {navTabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <Box
+                key={tab.key}
+                component={Link}
+                href={tab.href}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  textDecoration: 'none',
+                  color: isActive ? (currentApplication.color || '#00ED64') : 'text.secondary',
+                  fontWeight: isActive ? 600 : 400,
+                  fontSize: '0.8125rem',
+                  bgcolor: isActive ? alpha(currentApplication.color || '#00ED64', 0.1) : 'transparent',
+                  '&:hover': {
+                    bgcolor: alpha(currentApplication.color || '#00ED64', 0.08),
+                    color: isActive ? (currentApplication.color || '#00ED64') : 'text.primary',
+                  },
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {tab.icon}
+                {tab.label}
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* Spacer */}
+        <Box sx={{ flex: 1 }} />
+
+        {/* Breadcrumb - shows org context */}
+        {organization && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              color: 'text.secondary',
+              fontSize: '0.75rem',
+            }}
+          >
+            <Home sx={{ fontSize: 14 }} />
+            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+              {organization.name}
+            </Typography>
+            <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 500,
+                color: currentApplication.color || '#00ED64',
+              }}
+            >
+              {currentApplication.name}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Application Switcher Modal */}
+      <ApplicationSwitcher
+        open={appSwitcherOpen}
+        onClose={() => setAppSwitcherOpen(false)}
+      />
+    </>
   );
 }

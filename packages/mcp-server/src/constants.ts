@@ -327,6 +327,58 @@ export const FIELD_TYPES = [
       layout: { type: 'image', imageUrl: 'https://example.com/logo.png', alignment: 'center' },
     },
   },
+  // File upload fields
+  {
+    type: 'file',
+    category: 'file',
+    description: 'File upload field for images and documents',
+    muiComponent: 'FileUpload (custom)',
+    example: {
+      path: 'attachment',
+      label: 'Upload File',
+      type: 'file',
+      included: true,
+      validation: { maxSize: 10485760 }, // 10MB
+    },
+  },
+  {
+    type: 'file_upload',
+    category: 'file',
+    description: 'File upload field (alias for file)',
+    muiComponent: 'FileUpload (custom)',
+    example: {
+      path: 'document',
+      label: 'Upload Document',
+      type: 'file_upload',
+      included: true,
+    },
+  },
+  {
+    type: 'image_upload',
+    category: 'file',
+    description: 'Image-specific upload field with preview',
+    muiComponent: 'ImageUpload (custom)',
+    example: {
+      path: 'profilePhoto',
+      label: 'Profile Photo',
+      type: 'image_upload',
+      included: true,
+      validation: { accept: 'image/*' },
+    },
+  },
+  {
+    type: 'document_upload',
+    category: 'file',
+    description: 'Document upload field (PDF, Word, Excel)',
+    muiComponent: 'DocumentUpload (custom)',
+    example: {
+      path: 'resume',
+      label: 'Resume',
+      type: 'document_upload',
+      included: true,
+      validation: { accept: '.pdf,.doc,.docx' },
+    },
+  },
 ];
 
 // Conditional logic operators

@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { WorkflowTemplate } from '@/lib/templates/loader';
+import { TemplateIcon } from './TemplateIcon';
 
 // Node type to icon/color mapping (from AIWorkflowGeneratorDialog)
 const NODE_DISPLAY: Record<string, { icon: string; color: string }> = {
@@ -92,7 +93,7 @@ export function WorkflowTemplatePreview({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography sx={{ fontSize: 32 }}>{template.icon}</Typography>
+            <TemplateIcon icon={template.icon} size={32} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {template.name}

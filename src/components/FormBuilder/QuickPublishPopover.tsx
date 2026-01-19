@@ -224,11 +224,11 @@ export function QuickPublishPopover({
           onChange={(e) => setFormName(e.target.value)}
           fullWidth
           required
-          autoFocus
+          autoFocus={!initialFormName}
           size="small"
           placeholder="e.g., Contact Form, Event Registration"
           sx={{ mb: 2 }}
-          helperText="Give your form a name"
+          helperText={initialFormName ? "You can change the name if needed" : "Give your form a name"}
         />
 
         {/* Collection Selection (if needed) */}

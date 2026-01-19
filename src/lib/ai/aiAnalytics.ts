@@ -1699,3 +1699,209 @@ async function getAIUsageSummaryForPeriod(
     successRate: Math.round(successRate * 10) / 10,
   };
 }
+
+/**
+ * Organization with AI usage info
+ */
+export interface OrganizationWithUsage {
+  organizationId: string;
+  name?: string;
+  requests: number;
+  tokens: number;
+  costUsd: number;
+  isDemo: boolean;
+}
+
+/**
+ * Get all organizations with AI usage for filter dropdown
+ *
+ * Returns all orgs that have made AI requests, including demo_guest.
+ */
+export async function getOrganizationsWithAIUsage(
+  days: number = 90
+): Promise<OrganizationWithUsage[]> {
+  const logsCollection = await getAIRequestLogsCollection();
+  const orgsCollection = await getOrganizationsCollection();
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const pipeline = [
+    { $match: { requestedAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: '$organizationId',
+        requests: { $sum: 1 },
+        tokens: { $sum: '$tokens.total' },
+        costUsd: { $sum: '$estimatedCostUsd' },
+      },
+    },
+    { $sort: { tokens: -1 } },
+  ];
+
+  const results = await logsCollection.aggregate(pipeline).toArray();
+
+  // Fetch organization names
+  const orgIds = results.map((r) => r._id).filter((id) => id !== 'demo_guest');
+  const orgs = await orgsCollection
+    .find({ organizationId: { $in: orgIds } })
+    .project({ organizationId: 1, name: 1 })
+    .toArray();
+
+  const orgMap = new Map(orgs.map((o) => [o.organizationId, o.name]));
+
+  return results.map((r) => ({
+    organizationId: r._id,
+    name: r._id === 'demo_guest' ? 'Demo / Guest Users' : orgMap.get(r._id) || r._id,
+    requests: r.requests,
+    tokens: r.tokens,
+    costUsd: Math.round(r.costUsd * 10000) / 10000,
+    isDemo: r._id === 'demo_guest',
+  }));
+}
+
+/**
+ * Demo analytics summary
+ */
+export interface DemoAnalyticsSummary {
+  totalRequests: number;
+  totalTokens: number;
+  totalCostUsd: number;
+  uniqueVisitors: number;
+  avgLatencyMs: number;
+  successRate: number;
+  byTemplate: Array<{
+    templateId: string;
+    requests: number;
+    tokens: number;
+  }>;
+  byDay: Array<{
+    date: string;
+    requests: number;
+    tokens: number;
+  }>;
+  topIPs: Array<{
+    ip: string;
+    requests: number;
+  }>;
+}
+
+/**
+ * Get demo-specific analytics
+ *
+ * Returns detailed analytics for demo/guest usage.
+ */
+export async function getDemoAnalytics(
+  days: number = 30
+): Promise<DemoAnalyticsSummary> {
+  const collection = await getAIRequestLogsCollection();
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  startDate.setHours(0, 0, 0, 0);
+
+  const match = {
+    requestedAt: { $gte: startDate },
+    organizationId: 'demo_guest',
+  };
+
+  // Get summary stats
+  const summaryPipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        totalRequests: { $sum: 1 },
+        totalTokens: { $sum: '$tokens.total' },
+        totalCostUsd: { $sum: '$estimatedCostUsd' },
+        avgLatencyMs: { $avg: '$latencyMs' },
+        successCount: { $sum: { $cond: ['$success', 1, 0] } },
+        uniqueVisitors: { $addToSet: '$userId' },
+      },
+    },
+  ];
+
+  // Get usage by template (extracted from endpoint/formId)
+  const byTemplatePipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: '$endpoint',
+        requests: { $sum: 1 },
+        tokens: { $sum: '$tokens.total' },
+      },
+    },
+    { $sort: { requests: -1 } },
+    { $limit: 10 },
+  ];
+
+  // Get usage by day
+  const byDayPipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$requestedAt' } },
+        requests: { $sum: 1 },
+        tokens: { $sum: '$tokens.total' },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ];
+
+  // Get top IPs (from userId which is guest_{ip})
+  const topIPsPipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: '$userId',
+        requests: { $sum: 1 },
+      },
+    },
+    { $sort: { requests: -1 } },
+    { $limit: 10 },
+  ];
+
+  const [summaryResults, byTemplate, byDay, topIPs] = await Promise.all([
+    collection.aggregate(summaryPipeline).toArray(),
+    collection.aggregate(byTemplatePipeline).toArray(),
+    collection.aggregate(byDayPipeline).toArray(),
+    collection.aggregate(topIPsPipeline).toArray(),
+  ]);
+
+  const summary = summaryResults[0] || {
+    totalRequests: 0,
+    totalTokens: 0,
+    totalCostUsd: 0,
+    avgLatencyMs: 0,
+    successCount: 0,
+    uniqueVisitors: [],
+  };
+
+  const successRate =
+    summary.totalRequests > 0
+      ? (summary.successCount / summary.totalRequests) * 100
+      : 0;
+
+  return {
+    totalRequests: summary.totalRequests,
+    totalTokens: summary.totalTokens,
+    totalCostUsd: Math.round(summary.totalCostUsd * 10000) / 10000,
+    uniqueVisitors: summary.uniqueVisitors?.length || 0,
+    avgLatencyMs: Math.round(summary.avgLatencyMs || 0),
+    successRate: Math.round(successRate * 10) / 10,
+    byTemplate: byTemplate.map((t) => ({
+      templateId: t._id,
+      requests: t.requests,
+      tokens: t.tokens,
+    })),
+    byDay: byDay.map((d) => ({
+      date: d._id,
+      requests: d.requests,
+      tokens: d.tokens,
+    })),
+    topIPs: topIPs.map((ip) => ({
+      ip: ip._id.replace('guest_', '').replace(/_/g, '.'),
+      requests: ip.requests,
+    })),
+  };
+}

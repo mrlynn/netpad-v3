@@ -7,6 +7,32 @@
 import { Message, MessageRole } from '@/lib/ai/providers/base';
 
 /**
+ * File attachment for conversational messages
+ */
+export interface FileAttachment {
+  /** Unique file ID */
+  id: string;
+  /** Public URL of the uploaded file */
+  url: string;
+  /** Direct download URL */
+  downloadUrl: string;
+  /** Original file name */
+  originalName: string;
+  /** MIME type */
+  mimeType: string;
+  /** File size in bytes */
+  size: number;
+  /** Data extracted from the file by AI */
+  extractedData?: Record<string, any>;
+  /** Confidence score for extraction (0-1) */
+  extractionConfidence?: number;
+  /** Current extraction status */
+  extractionStatus?: 'pending' | 'processing' | 'completed' | 'error';
+  /** Error message if extraction failed */
+  extractionError?: string;
+}
+
+/**
  * Topic coverage tracking
  */
 export interface TopicCoverage {
@@ -137,7 +163,7 @@ export interface ExtractionSchema {
   /** Field name in output */
   field: string;
   /** Field type */
-  type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object';
+  type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object' | 'file';
   /** Whether field is required */
   required: boolean;
   /** Description of what to extract */

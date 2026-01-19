@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@netpad/templates": "file:../templates",
     "typescript": "^5.4.0"
   },
   "devDependencies": {

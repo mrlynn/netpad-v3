@@ -57,6 +57,8 @@ interface WorkflowTestDialogProps {
   workflow: WorkflowDocument | null;
   orgId: string;
   onExecutionStarted: (executionId: string) => void;
+  onSaveBeforeTest?: () => Promise<boolean>;
+  isDirty?: boolean;
 }
 
 // ============================================
@@ -187,9 +189,12 @@ export function WorkflowTestDialog({
   workflow,
   orgId,
   onExecutionStarted,
+  onSaveBeforeTest,
+  isDirty,
 }: WorkflowTestDialogProps) {
   const theme = useTheme();
   const [payloadPreviewExpanded, setPayloadPreviewExpanded] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const {
     triggerType,
@@ -212,12 +217,23 @@ export function WorkflowTestDialog({
 
   // Handle test execution
   const handleRunTest = useCallback(async () => {
+    setSaveError(null);
+
+    // Save workflow first if there are unsaved changes
+    if (isDirty && onSaveBeforeTest) {
+      const saved = await onSaveBeforeTest();
+      if (!saved) {
+        setSaveError('Failed to save workflow. Please save manually before testing.');
+        return;
+      }
+    }
+
     const result = await executeTest();
     if (result.success && result.executionId) {
       onExecutionStarted(result.executionId);
       onClose();
     }
-  }, [executeTest, onExecutionStarted, onClose]);
+  }, [executeTest, onExecutionStarted, onClose, isDirty, onSaveBeforeTest]);
 
   // Generate payload preview
   const payloadPreview = useMemo(() => {
@@ -302,6 +318,20 @@ export function WorkflowTestDialog({
             </Typography>
           )}
         </Box>
+
+        {/* Save error or dirty warning */}
+        {saveError && (
+          <Box sx={{ px: 3, pt: 2 }}>
+            <Alert severity="error">{saveError}</Alert>
+          </Box>
+        )}
+        {isDirty && !saveError && (
+          <Box sx={{ px: 3, pt: 2 }}>
+            <Alert severity="info">
+              You have unsaved changes. The workflow will be saved automatically before testing.
+            </Alert>
+          </Box>
+        )}
 
         {/* Content based on trigger type */}
         <Box sx={{ p: 3 }}>

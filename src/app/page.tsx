@@ -6,7 +6,6 @@ import {
   GitHub,
   Storage,
   Rule,
-  Link as LinkIcon,
   Functions,
   Webhook,
   AutoAwesome,
@@ -21,11 +20,7 @@ import {
   Tune,
   Code,
   AccountTree,
-  PlayArrow,
-  Schedule,
   Description,
-  Search,
-  TableChart,
   CompareArrows,
   Terminal,
   ContentCopy,
@@ -36,7 +31,6 @@ import {
   ChatBubble,
   FolderSpecial,
   Speed as SpeedIcon,
-  FilterList,
   Store,
   MenuBook,
 } from '@mui/icons-material';
@@ -47,7 +41,8 @@ import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 import { SpotlightCard, hexToRgb } from '@/components/marketing';
-import { OnboardingGate } from '@/components/OnboardingGate/OnboardingGate';
+import { IntentOnboardingGate } from '@/components/Onboarding/IntentOnboardingGate';
+import { InstantFormBuilder, PillarsTabs } from '@/components/Landing';
 
 // The four pillars of NetPad
 const pillars = [
@@ -97,56 +92,9 @@ const heroStats = [
   { value: '33', label: 'Field Types' },
   { value: '165+', label: 'API Endpoints' },
   { value: '15+', label: 'AI Agents' },
-  { value: '55+', label: 'Templates' },
+  { value: '100+', label: 'Templates' },
 ];
 
-// Forms features
-const formFeatures = [
-  {
-    icon: <Storage sx={{ fontSize: 28 }} />,
-    title: 'Schema Import',
-    description: 'Auto-generate forms from your MongoDB collection schema.',
-  },
-  {
-    icon: <Rule sx={{ fontSize: 28 }} />,
-    title: 'Conditional Logic',
-    description: 'Show or hide fields based on user input dynamically.',
-  },
-  {
-    icon: <LinkIcon sx={{ fontSize: 28 }} />,
-    title: 'Lookup Fields',
-    description: 'Reference data from other collections with autocomplete.',
-  },
-  {
-    icon: <Functions sx={{ fontSize: 28 }} />,
-    title: 'Computed Fields',
-    description: 'Formula-based calculations that update in real-time.',
-  },
-];
-
-// Data Explorer features
-const dataFeatures = [
-  {
-    icon: <Search sx={{ fontSize: 28 }} />,
-    title: 'Visual Search',
-    description: 'Find documents instantly with full-text and field-specific search.',
-  },
-  {
-    icon: <TableChart sx={{ fontSize: 28 }} />,
-    title: 'Multiple Views',
-    description: 'Switch between table, card, and JSON views for your data.',
-  },
-  {
-    icon: <DataObject sx={{ fontSize: 28 }} />,
-    title: 'Document Editor',
-    description: 'Edit documents directly with a schema-aware visual editor.',
-  },
-  {
-    icon: <ImportExport sx={{ fontSize: 28 }} />,
-    title: 'Import & Export',
-    description: 'Bulk import data or export to JSON and CSV formats.',
-  },
-];
 
 const platformFeatures = [
   {
@@ -227,29 +175,6 @@ const aiFeatures = [
   { icon: <Functions />, title: 'Formula Helper', description: 'Generate and explain calculated field formulas' },
 ];
 
-const workflowFeatures = [
-  {
-    icon: <AccountTree sx={{ fontSize: 28 }} />,
-    title: 'Visual Workflow Builder',
-    description: 'Design automation flows with our drag-and-drop canvas. No coding required.',
-  },
-  {
-    icon: <PlayArrow sx={{ fontSize: 28 }} />,
-    title: 'MongoDB Triggers',
-    description: 'React to database events like inserts, updates, and deletes automatically.',
-  },
-  {
-    icon: <Schedule sx={{ fontSize: 28 }} />,
-    title: 'Scheduled Jobs',
-    description: 'Run workflows on a schedule with cron expressions. Perfect for reports and maintenance.',
-  },
-  {
-    icon: <Webhook sx={{ fontSize: 28 }} />,
-    title: 'Data Transformations',
-    description: 'Transform, filter, and route data between collections and external services.',
-  },
-];
-
 const securityFeatures = [
   { icon: <Lock />, title: 'Encrypted Vault', description: 'Connection strings encrypted at rest' },
   { icon: <Fingerprint />, title: 'Passkey Login', description: 'WebAuthn/FIDO2 biometric authentication' },
@@ -278,7 +203,7 @@ const mcpServerFeatures = [
   { title: '75 AI Tools', description: 'Form generation, workflow building, marketplace access, RAG & more' },
   { title: 'Natural Language', description: 'Describe your form in plain English, get complete configs' },
   { title: 'Validated TypeScript', description: 'Auto-validated, self-contained TypeScript output' },
-  { title: '40+ Templates', description: 'Forms, workflows, applications, conversational & query templates' },
+  { title: '100+ Templates', description: 'Forms, workflows, applications, conversational & query templates' },
 ];
 
 export default function LandingPage() {
@@ -290,227 +215,17 @@ export default function LandingPage() {
       {/* Show AppNavBar for authenticated users */}
       {!isLoading && isAuthenticated && <AppNavBar />}
 
-      {/* Hero Section */}
+      {/* Hero Section - Instant Form Builder */}
+      <InstantFormBuilder />
+
+      {/* Platform Overview Section */}
       <Box
         sx={{
-          pt: { xs: 6, md: 8 },
-          pb: { xs: 6, md: 8 },
+          py: { xs: 4, md: 6 },
           position: 'relative',
-          overflow: 'hidden',
-          // Layered background for depth
-          background: `
-            radial-gradient(ellipse at top, rgba(0, 237, 100, 0.15) 0%, transparent 60%),
-            radial-gradient(ellipse at 80% 20%, rgba(0, 212, 170, 0.08) 0%, transparent 40%)
-          `,
-          // NetPad signature grid pattern overlay
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: netpadColors.gridPatternDark,
-            backgroundSize: '32px 32px',
-            opacity: 0.5,
-            pointerEvents: 'none',
-          },
         }}
       >
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            {/* Logo */}
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Image
-                src="/logo-300px.png"
-                alt="NetPad"
-                width={100}
-                height={100}
-                priority
-                style={{
-                  filter: 'drop-shadow(0 8px 24px rgba(0, 237, 100, 0.2))',
-                }}
-              />
-            </Box>
-
-            {/* Brand Name */}
-            <Typography
-              variant="h2"
-              sx={{
-                fontSize: { xs: '1.75rem', md: '2rem' },
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                mb: 1,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              NetPad
-            </Typography>
-
-            <Chip
-              label="Open Source"
-              icon={<GitHub sx={{ fontSize: 14 }} />}
-              size="small"
-              sx={{
-                mb: 2,
-                bgcolor: alpha('#00ED64', 0.1),
-                color: '#00ED64',
-                fontWeight: 600,
-                '& .MuiChip-icon': { color: '#00ED64' }
-              }}
-            />
-
-            <Typography
-              variant="h1"
-              sx={{
-                fontSize: { xs: '1.75rem', md: '2.5rem', lg: '3rem' },
-                fontWeight: 700,
-                color: '#fff',
-                mb: 2,
-                lineHeight: 1.2
-              }}
-            >
-              The Complete MongoDB
-              <Box
-                component="span"
-                sx={{
-                  display: 'block',
-                  background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}
-              >
-                Data Platform
-              </Box>
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{
-                color: alpha('#fff', 0.7),
-                maxWidth: 700,
-                mx: 'auto',
-                mb: 4,
-                fontWeight: 400,
-                lineHeight: 1.6,
-                fontSize: { xs: '0.95rem', md: '1.1rem' }
-              }}
-            >
-              Collect data with forms or conversations. Automate with workflows. Explore with a visual data browser.
-              All connected to MongoDB. Powered by AI. No code required.
-            </Typography>
-
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                opacity: 0.6, 
-                maxWidth: 700, 
-                mx: 'auto',
-                mb: 4,
-                textAlign: 'center'
-              }}
-            >
-              <Link 
-                href="/manifesto" 
-                style={{ 
-                  color: '#00ED64', 
-                  textDecoration: 'none',
-                  fontWeight: 500
-                }}
-              >
-                Our philosophy and values →
-              </Link>
-            </Typography>
-
-            {/* Primary CTAs - deliberate, not pushy */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mb: 4 }}>
-              <Button
-                component={Link}
-                href="/why-netpad"
-                variant="outlined"
-                size="large"
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  borderColor: alpha('#00ED64', 0.5),
-                  color: '#00ED64',
-                  fontWeight: 600,
-                  '&:hover': {
-                    borderColor: '#00ED64',
-                    bgcolor: alpha('#00ED64', 0.1),
-                  },
-                }}
-              >
-                Explore how it works
-              </Button>
-              <Button
-                component={Link}
-                href="/waitlist"
-                variant="contained"
-                size="large"
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
-                  color: '#001E2B',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
-                  },
-                }}
-              >
-                Join the Waitlist
-              </Button>
-            </Box>
-
-            {/* Waitlist Notice */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1,
-                mb: 2,
-              }}
-            >
-              <Chip
-                label="Early Access"
-                size="small"
-                sx={{
-                  bgcolor: alpha('#E91E63', 0.15),
-                  color: '#E91E63',
-                  fontWeight: 600,
-                  fontSize: '0.7rem',
-                }}
-              />
-              <Typography
-                variant="body2"
-                sx={{
-                  color: alpha('#fff', 0.6),
-                  fontSize: '0.85rem',
-                }}
-              >
-                We're onboarding users from the waitlist weekly.{' '}
-                <Link
-                  href="/demo/conversational"
-                  style={{
-                    color: '#00ED64',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                  }}
-                >
-                  Try the demo →
-                </Link>
-              </Typography>
-            </Box>
-          </Box>
-
           {/* Four Pillars - The Core Value Proposition */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {pillars.map((pillar, index) => (
@@ -685,385 +400,34 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* Forms Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={5}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    bgcolor: alpha('#00ED64', 0.1),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00ED64',
-                  }}
-                >
-                  <Description />
-                </Box>
-                <Typography variant="overline" sx={{ color: '#00ED64', fontWeight: 700, letterSpacing: 1.5 }}>
-                  Collect
-                </Typography>
-              </Box>
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
-                Build Forms That
-                <br />Connect to MongoDB
-              </Typography>
-              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Create professional data collection forms with 33 field types, validation,
-                conditional logic, and computed fields. Data flows directly to your MongoDB collections.
-              </Typography>
-              <Button
-                component={Link}
-                href="/builder"
-                variant="contained"
-                startIcon={<Description />}
-                sx={{
-                  background: 'linear-gradient(135deg, #00ED64 0%, #00CC55 100%)',
-                  color: '#001E2B',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #00FF6A 0%, #00ED64 100%)',
-                  }
-                }}
-              >
-                Start Building
-              </Button>
-            </Grid>
-            <Grid item xs={12} md={7}>
-              <Grid container spacing={2}>
-                {formFeatures.map((feature, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <SpotlightCard
-                      spotlightColor="0, 237, 100"
-                      hoverBorderColor={alpha('#00ED64', 0.3)}
-                      sx={{ p: 2.5, height: '100%' }}
-                    >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: alpha('#00ED64', 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#00ED64',
-                          mb: 1.5
-                        }}
-                      >
-                        {feature.icon}
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
-                        {feature.description}
-                      </Typography>
-                    </SpotlightCard>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Workflows Section */}
+      {/* Four Pillars Detail Section - Tabbed Interface */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={7} sx={{ order: { xs: 2, md: 1 } }}>
-              <Grid container spacing={2}>
-                {workflowFeatures.map((feature, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <SpotlightCard
-                      spotlightColor="156, 39, 176"
-                      hoverBorderColor={alpha('#9C27B0', 0.3)}
-                      sx={{ p: 2.5, height: '100%' }}
-                    >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: alpha('#9C27B0', 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#9C27B0',
-                          mb: 1.5
-                        }}
-                      >
-                        {feature.icon}
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
-                        {feature.description}
-                      </Typography>
-                    </SpotlightCard>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-            <Grid item xs={12} md={5} sx={{ order: { xs: 1, md: 2 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    bgcolor: alpha('#9C27B0', 0.1),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#9C27B0',
-                  }}
-                >
-                  <AccountTree />
-                </Box>
-                <Typography variant="overline" sx={{ color: '#9C27B0', fontWeight: 700, letterSpacing: 1.5 }}>
-                  Automate
-                </Typography>
-              </Box>
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
-                Visual Workflow
-                <br />Automation
-              </Typography>
-              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Build powerful automations with a drag-and-drop canvas. Trigger workflows from
-                form submissions, schedules, or database events. AI-assisted workflow generation included.
-              </Typography>
-              <Button
-                component={Link}
-                href="/workflows"
-                variant="contained"
-                startIcon={<AccountTree />}
-                sx={{
-                  background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                  color: '#fff',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
-                  }
-                }}
-              >
-                Create Workflow
-              </Button>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Data Explorer Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={5}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    bgcolor: alpha('#2196F3', 0.1),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#2196F3',
-                  }}
-                >
-                  <Storage />
-                </Box>
-                <Typography variant="overline" sx={{ color: '#2196F3', fontWeight: 700, letterSpacing: 1.5 }}>
-                  Explore
-                </Typography>
-              </Box>
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
-                Visual Data
-                <br />Browser
-              </Typography>
-              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Browse, search, and manage your MongoDB collections without writing queries.
-                View data as tables, cards, or raw JSON. Edit documents with a schema-aware editor.
-              </Typography>
-              <Button
-                component={Link}
-                href="/data"
-                variant="contained"
-                startIcon={<Storage />}
-                sx={{
-                  background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                  color: '#fff',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #42A5F5 0%, #2196F3 100%)',
-                  }
-                }}
-              >
-                Explore Data
-              </Button>
-            </Grid>
-            <Grid item xs={12} md={7}>
-              <Grid container spacing={2}>
-                {dataFeatures.map((feature, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <SpotlightCard
-                      spotlightColor="33, 150, 243"
-                      hoverBorderColor={alpha('#2196F3', 0.3)}
-                      sx={{ p: 2.5, height: '100%' }}
-                    >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: alpha('#2196F3', 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#2196F3',
-                          mb: 1.5
-                        }}
-                      >
-                        {feature.icon}
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
-                        {feature.description}
-                      </Typography>
-                    </SpotlightCard>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Search Forms Section - Build Admin Interfaces */}
-      <Box sx={{ py: { xs: 6, md: 8 } }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={5}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    bgcolor: alpha('#FF9800', 0.1),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FF9800',
-                  }}
-                >
-                  <FilterList />
-                </Box>
-                <Typography variant="overline" sx={{ color: '#FF9800', fontWeight: 700, letterSpacing: 1.5 }}>
-                  Search & Query
-                </Typography>
-              </Box>
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>
-                Build Admin Interfaces
-                <br />That Query MongoDB
-              </Typography>
-              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Create powerful search forms with configurable operators per field. Users can search, filter, and find data
-                without writing queries. Results display as tables, cards, or lists with pagination and actions.
-              </Typography>
-              <Button
-                component={Link}
-                href="/builder"
-                variant="contained"
-                startIcon={<FilterList />}
-                sx={{
-                  background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
-                  color: '#fff',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)',
-                  }
-                }}
-              >
-                Build Search Form
-              </Button>
-            </Grid>
-            <Grid item xs={12} md={7}>
-              <Grid container spacing={2}>
-                {[
-                  {
-                    icon: <FilterList sx={{ fontSize: 28 }} />,
-                    title: 'Field-Level Operators',
-                    description: 'Equals, contains, between, regex, in/not-in per field type.',
-                  },
-                  {
-                    icon: <TableChart sx={{ fontSize: 28 }} />,
-                    title: 'Result Display Options',
-                    description: 'Table, card, or list views with configurable columns.',
-                  },
-                  {
-                    icon: <Search sx={{ fontSize: 28 }} />,
-                    title: 'Smart Dropdowns',
-                    description: 'Auto-populate filter options from distinct database values.',
-                  },
-                  {
-                    icon: <DataObject sx={{ fontSize: 28 }} />,
-                    title: 'Pre-built Templates',
-                    description: 'Customer search, order search, ticket search — ready to use.',
-                  },
-                ].map((feature, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <SpotlightCard
-                      spotlightColor="255, 152, 0"
-                      hoverBorderColor={alpha('#FF9800', 0.3)}
-                      sx={{ p: 2.5, height: '100%' }}
-                    >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: alpha('#FF9800', 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#FF9800',
-                          mb: 1.5
-                        }}
-                      >
-                        {feature.icon}
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.5 }}>
-                        {feature.description}
-                      </Typography>
-                    </SpotlightCard>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </Grid>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                color: '#fff',
+                mb: 1,
+                fontSize: { xs: '1.5rem', md: '2rem' },
+              }}
+            >
+              Everything You Need to Build Data Applications
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{ color: alpha('#fff', 0.6), maxWidth: 600, mx: 'auto' }}
+            >
+              Four integrated pillars that work together seamlessly
+            </Typography>
+          </Box>
+          <PillarsTabs />
         </Container>
       </Box>
 
       {/* Conversational Forms Section - 4th Pillar */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={5}>
@@ -1194,7 +558,7 @@ export default function LandingPage() {
       </Box>
 
       {/* AI Features Section - Expanded */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Chip
@@ -1280,135 +644,246 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* Template Gallery & Marketplace Section */}
-      <Box sx={{ py: { xs: 6, md: 8 } }}>
+      {/* Template Gallery Section - 100+ Templates */}
+      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: alpha('#00ED64', 0.02) }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
             <Chip
-              label="Marketplace"
-              icon={<Store sx={{ fontSize: 14 }} />}
+              label="Template Gallery"
+              icon={<Description sx={{ fontSize: 14 }} />}
               size="small"
               sx={{
                 mb: 2,
-                bgcolor: alpha('#4CAF50', 0.1),
-                color: '#4CAF50',
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
                 fontWeight: 600,
-                '& .MuiChip-icon': { color: '#4CAF50' }
+                '& .MuiChip-icon': { color: '#00ED64' }
               }}
             />
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 1.5 }}>
-              55+ Ready-to-Use Templates
+            <Typography variant="h3" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+              100+ Professional Form Templates
             </Typography>
-            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 700, mx: 'auto', mb: 4 }}>
-              Don't start from scratch. Browse our template gallery with forms, workflows, and complete applications.
-              Install from the marketplace or npm. Share your creations with the community.
+            <Typography variant="h6" sx={{ color: alpha('#fff', 0.6), maxWidth: 800, mx: 'auto', mb: 1, fontWeight: 400 }}>
+              Don't start from scratch. Choose from our extensive library of professionally designed templates
+              across 15 industry categories. Each template is ready to customize and deploy.
             </Typography>
           </Box>
 
-          <Grid container spacing={3}>
+          {/* Category Pills */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mb: 5 }}>
+            {[
+              { name: 'Business & Sales', count: 10 },
+              { name: 'HR & Recruitment', count: 8 },
+              { name: 'Customer Service', count: 8 },
+              { name: 'Healthcare', count: 7 },
+              { name: 'Education', count: 7 },
+              { name: 'Events', count: 7 },
+              { name: 'Real Estate', count: 7 },
+              { name: 'Finance', count: 6 },
+              { name: 'Technology', count: 6 },
+              { name: 'Legal', count: 6 },
+              { name: 'Nonprofit', count: 6 },
+              { name: 'Marketing', count: 8 },
+              { name: 'Sports', count: 6 },
+              { name: 'Travel', count: 7 },
+              { name: 'Government', count: 7 },
+            ].map((cat) => (
+              <Chip
+                key={cat.name}
+                label={`${cat.name} (${cat.count})`}
+                size="small"
+                sx={{
+                  bgcolor: alpha('#fff', 0.05),
+                  color: alpha('#fff', 0.7),
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: alpha('#00ED64', 0.1),
+                    color: '#00ED64',
+                  }
+                }}
+              />
+            ))}
+          </Box>
+
+          {/* Featured Template Cards */}
+          <Grid container spacing={3} sx={{ mb: 5 }}>
             {[
               {
-                icon: <Description sx={{ fontSize: 32 }} />,
-                title: '25+ Form Templates',
-                description: 'Business, events, feedback, healthcare, finance, education, and more.',
-                color: '#00ED64',
+                name: 'Contact Form',
+                description: 'Simple contact form for website inquiries',
+                category: 'Business & Sales',
+                fields: 5,
+                time: '2 min',
+                color: '#3b82f6',
               },
               {
-                icon: <AccountTree sx={{ fontSize: 32 }} />,
-                title: '11 Workflow Templates',
-                description: 'Form-to-email, data sync, notifications, AI classification, and batch processing.',
-                color: '#9C27B0',
+                name: 'Job Application',
+                description: 'Complete application with resume upload',
+                category: 'HR & Recruitment',
+                fields: 15,
+                time: '8 min',
+                color: '#8b5cf6',
               },
               {
-                icon: <ChatBubble sx={{ fontSize: 32 }} />,
-                title: '4 Conversational Templates',
-                description: 'IT helpdesk, customer feedback, lead qualification, patient intake.',
-                color: '#E91E63',
+                name: 'Event Registration',
+                description: 'Conference and workshop registration',
+                category: 'Events',
+                fields: 12,
+                time: '5 min',
+                color: '#f59e0b',
               },
               {
-                icon: <Store sx={{ fontSize: 32 }} />,
-                title: 'Application Marketplace',
-                description: 'Discover and install complete applications. Publish your own to npm.',
-                color: '#4CAF50',
+                name: 'Patient Intake',
+                description: 'Medical history and insurance info',
+                category: 'Healthcare',
+                fields: 25,
+                time: '10 min',
+                color: '#ef4444',
               },
-            ].map((item, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <SpotlightCard
-                  spotlightColor={hexToRgb(item.color)}
-                  hoverBorderColor={alpha(item.color, 0.3)}
-                  sx={{ p: 3, height: '100%', textAlign: 'center' }}
+              {
+                name: 'Customer Feedback',
+                description: 'Satisfaction survey with NPS scoring',
+                category: 'Customer Service',
+                fields: 8,
+                time: '3 min',
+                color: '#22c55e',
+              },
+              {
+                name: 'Lead Capture',
+                description: 'Qualify prospects with budget & timeline',
+                category: 'Business & Sales',
+                fields: 14,
+                time: '4 min',
+                color: '#06b6d4',
+              },
+            ].map((template, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    height: '100%',
+                    bgcolor: alpha('#fff', 0.02),
+                    border: '1px solid',
+                    borderColor: alpha('#fff', 0.1),
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    display: 'block',
+                    '&:hover': {
+                      borderColor: '#00ED64',
+                      bgcolor: alpha('#00ED64', 0.02),
+                      transform: 'translateY(-4px)',
+                    }
+                  }}
+                  component={Link}
+                  href="/templates"
                 >
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 2,
-                      bgcolor: alpha(item.color, 0.1),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: item.color,
-                      mx: 'auto',
-                      mb: 2
-                    }}
-                  >
-                    {item.icon}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 1.5,
+                        bgcolor: alpha(template.color, 0.1),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Description sx={{ fontSize: 20, color: template.color }} />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>
+                        {template.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
+                        {template.category}
+                      </Typography>
+                    </Box>
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
-                    {item.title}
+                  <Typography variant="body2" sx={{ color: alpha('#fff', 0.6), mb: 2, minHeight: 40 }}>
+                    {template.description}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), lineHeight: 1.6 }}>
-                    {item.description}
-                  </Typography>
-                </SpotlightCard>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Chip
+                      label={`${template.fields} fields`}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.7rem',
+                        bgcolor: alpha('#fff', 0.05),
+                        color: alpha('#fff', 0.6),
+                      }}
+                    />
+                    <Chip
+                      label={`~${template.time}`}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.7rem',
+                        bgcolor: alpha('#fff', 0.05),
+                        color: alpha('#fff', 0.6),
+                      }}
+                    />
+                  </Box>
+                </Paper>
               </Grid>
             ))}
           </Grid>
 
-          <Box sx={{ textAlign: 'center', mt: 4 }}>
+          {/* CTA Buttons */}
+          <Box sx={{ textAlign: 'center' }}>
+            <Button
+              component={Link}
+              href="/templates"
+              variant="contained"
+              size="large"
+              endIcon={<ArrowForward />}
+              sx={{
+                bgcolor: '#00ED64',
+                color: '#001E2B',
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 4,
+                py: 1.5,
+                mr: 2,
+                '&:hover': {
+                  bgcolor: '#00CC55',
+                }
+              }}
+            >
+              Browse All 100+ Templates
+            </Button>
             <Button
               component={Link}
               href="/marketplace"
               variant="outlined"
+              size="large"
               startIcon={<Store />}
               sx={{
-                borderColor: alpha('#4CAF50', 0.5),
-                color: '#4CAF50',
+                borderColor: alpha('#fff', 0.3),
+                color: '#fff',
                 textTransform: 'none',
                 fontWeight: 600,
-                mr: 2,
+                px: 4,
+                py: 1.5,
                 '&:hover': {
-                  borderColor: '#4CAF50',
-                  bgcolor: alpha('#4CAF50', 0.1),
-                }
-              }}
-            >
-              Browse Marketplace
-            </Button>
-            <Button
-              component="a"
-              href="https://www.npmjs.com/search?q=%40netpad"
-              target="_blank"
-              variant="text"
-              startIcon={<Terminal />}
-              sx={{
-                color: alpha('#fff', 0.6),
-                textTransform: 'none',
-                fontWeight: 500,
-                '&:hover': {
-                  color: '#fff',
+                  borderColor: alpha('#fff', 0.5),
                   bgcolor: alpha('#fff', 0.05),
                 }
               }}
             >
-              View on npm
+              Marketplace
             </Button>
           </Box>
         </Container>
       </Box>
 
       {/* Application Ownership & Portability Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
             <Chip
@@ -1540,7 +1015,7 @@ export default function LandingPage() {
       </Box>
 
       {/* Platform & Security Section - Combined */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Typography
             variant="h4"
@@ -1780,7 +1255,7 @@ export default function LandingPage() {
       </Box>
 
       {/* Example App Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
@@ -2019,7 +1494,7 @@ const onboardingForm: FormConfiguration = {
       </Box>
 
       {/* Workflow Integration Demo Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
@@ -2257,7 +1732,7 @@ console.log('Output:', result.execution.result?.output);`}
       </Box>
 
       {/* MCP Server Demo Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
@@ -2373,7 +1848,7 @@ console.log('Output:', result.execution.result?.output);`}
       </Box>
 
       {/* CLI Section */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -2596,7 +2071,7 @@ $ netpad login --api-key np_live_xxx`}
       </Box>
 
       {/* Developer Section */}
-      <Box sx={{ py: { xs: 5, md: 6 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 5, md: 6 } }}>
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 700, color: '#fff', mb: 1 }}>
@@ -3008,9 +2483,9 @@ $ netpad login --api-key np_live_xxx`}
     </Box>
   );
 
-  // Show onboarding gate for authenticated users who haven't completed setup
+  // Show intent onboarding gate for authenticated users who haven't completed setup
   if (!isLoading && isAuthenticated) {
-    return <OnboardingGate>{content}</OnboardingGate>;
+    return <IntentOnboardingGate>{content}</IntentOnboardingGate>;
   }
 
   return content;

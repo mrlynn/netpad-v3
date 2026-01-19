@@ -87,6 +87,40 @@ export type LayoutFieldType =
   | 'image'
   | 'spacer';
 
+// ============================================
+// File Upload Types
+// ============================================
+
+export type FileFieldType = 'file' | 'file_upload' | 'image_upload' | 'document_upload';
+
+/**
+ * Uploaded file information
+ */
+export interface UploadedFile {
+  id: string;
+  url: string;
+  downloadUrl: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
+/**
+ * File upload configuration for file fields
+ */
+export interface FileUploadConfig {
+  /** Accepted MIME types (e.g., 'image/*', '.pdf,.doc') */
+  accept?: string;
+  /** Maximum file size in bytes */
+  maxSize?: number;
+  /** Maximum number of files (for multi-file upload) */
+  maxFiles?: number;
+  /** Whether to allow multiple files */
+  multiple?: boolean;
+  /** Whether to show image preview for image uploads */
+  showPreview?: boolean;
+}
+
 export interface LayoutConfig {
   type: LayoutFieldType;
   title?: string;
@@ -138,6 +172,7 @@ export interface FieldConfig {
   computed?: ComputedConfig;
   repeater?: RepeaterConfig;
   layout?: LayoutConfig;
+  fileUpload?: FileUploadConfig;
 
   // Metadata
   source?: 'schema' | 'custom';

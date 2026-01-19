@@ -297,7 +297,7 @@ function FAQSection() {
           Ready to transform your forms?
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-          Join the waitlist to be among the first to build conversational forms for your applications. Early access coming soon!
+          Join the waitlist to be among the first to build conversational forms and applications. Early access coming soon!
         </Typography>
         <Button
           variant="contained"

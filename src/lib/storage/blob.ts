@@ -77,32 +77,11 @@ export const DEFAULT_MAX_FILE_SIZE: Record<SubscriptionTier, number> = {
   enterprise: 500 * 1024 * 1024, // 500 MB
 };
 
-// Image MIME types
-export const IMAGE_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'image/heic',
-  'image/heif',
-];
+// Import MIME type constants from client-safe module
+import { IMAGE_MIME_TYPES, DOCUMENT_MIME_TYPES, ALL_ALLOWED_MIME_TYPES } from './mimeTypes';
 
-// Document MIME types
-export const DOCUMENT_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/plain',
-  'text/csv',
-];
-
-// All allowed MIME types
-export const ALL_ALLOWED_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOCUMENT_MIME_TYPES];
+// Re-export for backward compatibility
+export { IMAGE_MIME_TYPES, DOCUMENT_MIME_TYPES, ALL_ALLOWED_MIME_TYPES };
 
 // ============================================
 // Storage Quota Functions

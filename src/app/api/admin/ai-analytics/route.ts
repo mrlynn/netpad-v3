@@ -24,6 +24,8 @@ import {
   detectCostAnomalies,
   getQualityMetrics,
   getComparativeMetrics,
+  getOrganizationsWithAIUsage,
+  getDemoAnalytics,
 } from '@/lib/ai/aiAnalytics';
 
 export async function GET(request: NextRequest) {
@@ -54,6 +56,10 @@ export async function GET(request: NextRequest) {
     const includeAnomalies = searchParams.get('includeAnomalies') === 'true';
     const includeQuality = searchParams.get('includeQuality') === 'true';
 
+    // Parse additional parameters
+    const includeOrgList = searchParams.get('includeOrgList') !== 'false'; // Default true
+    const includeDemoAnalytics = searchParams.get('includeDemoAnalytics') === 'true';
+
     // Fetch all analytics in parallel
     const [
       summary,
@@ -72,6 +78,8 @@ export async function GET(request: NextRequest) {
       costAnomalies,
       qualityMetrics,
       comparative,
+      organizationList,
+      demoAnalytics,
     ] = await Promise.all([
       getAIUsageSummary(validDays, orgId),
       getAIUsageByDay(validDays, orgId),
@@ -91,6 +99,8 @@ export async function GET(request: NextRequest) {
       comparePeriod
         ? getComparativeMetrics(parseInt(comparePeriod, 10), validDays, orgId)
         : Promise.resolve(null),
+      includeOrgList ? getOrganizationsWithAIUsage(validDays) : Promise.resolve([]),
+      includeDemoAnalytics ? getDemoAnalytics(validDays) : Promise.resolve(null),
     ]);
 
     return NextResponse.json({
@@ -116,6 +126,10 @@ export async function GET(request: NextRequest) {
       costAnomalies: includeAnomalies ? costAnomalies : undefined,
       qualityMetrics: includeQuality ? qualityMetrics : undefined,
       comparative: comparative || undefined,
+      // Organization filter options
+      organizations: includeOrgList ? organizationList : undefined,
+      // Demo analytics (separate section)
+      demoAnalytics: includeDemoAnalytics ? demoAnalytics : undefined,
     });
   } catch (error) {
     console.error('[Admin AI Analytics] Error:', error);

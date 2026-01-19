@@ -7,7 +7,7 @@ import { HelpProvider } from '@/contexts/HelpContext';
 import { TourProvider } from '@/contexts/TourContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ApplicationProvider } from '@/contexts/ApplicationContext';
-import { OnboardingGateProvider } from '@/contexts/OnboardingGateContext';
+import { IntentOnboardingProvider } from '@/contexts/IntentOnboardingContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
 import { Analytics } from "@vercel/analytics/next"
 
@@ -42,11 +42,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <TourProvider>
                 <OrganizationProvider>
                   <ApplicationProvider>
-                    <OnboardingGateProvider>
+                    <IntentOnboardingProvider>
                       <PipelineProvider>{children}</PipelineProvider>
                       <DevPanelWrapper />
                       <Analytics />
-                    </OnboardingGateProvider>
+                    </IntentOnboardingProvider>
                   </ApplicationProvider>
                 </OrganizationProvider>
               </TourProvider>

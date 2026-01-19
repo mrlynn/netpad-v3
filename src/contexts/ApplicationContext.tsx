@@ -389,6 +389,15 @@ export function useApplication() {
   return context;
 }
 
+/**
+ * Safe version of useApplication that returns null when outside provider
+ * Use this in components that may render before providers are ready (e.g., during navigation)
+ */
+export function useApplicationSafe(): ApplicationContextValue | null {
+  const context = useContext(ApplicationContext);
+  return context ?? null;
+}
+
 // ============================================
 // Helper Hooks
 // ============================================
@@ -423,7 +432,9 @@ export function useRequireApplication() {
  * Get recent applications for the switcher
  */
 export function useRecentApplications(limit: number = 5) {
-  const { recentApplications, isLoading } = useApplication();
+  const context = useApplicationSafe();
+  const recentApplications = context?.recentApplications ?? [];
+  const isLoading = context?.isLoading ?? true;
 
   return {
     recentApps: recentApplications.slice(0, limit),
@@ -435,7 +446,9 @@ export function useRecentApplications(limit: number = 5) {
  * Get applications grouped by project for the switcher
  */
 export function useApplicationsByProject() {
-  const { applications, isLoading } = useApplication();
+  const context = useApplicationSafe();
+  const applications = context?.applications ?? [];
+  const isLoading = context?.isLoading ?? true;
 
   const grouped = useMemo(() => {
     const groups: Map<string, { projectId: string; applications: Application[] }> = new Map();

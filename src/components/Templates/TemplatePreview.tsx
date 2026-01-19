@@ -21,10 +21,13 @@ import {
   Close,
   CheckCircle,
   Edit,
+  Lock,
+  Shield,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { FormTemplate } from '@/lib/templates/loader';
 import { FieldConfig } from '@/types/form';
+import { TemplateIcon } from './TemplateIcon';
 
 interface TemplatePreviewProps {
   open: boolean;
@@ -96,7 +99,7 @@ export function TemplatePreview({
                 />
               </Box>
             ) : (
-              <Typography sx={{ fontSize: 32 }}>{template.icon}</Typography>
+              <TemplateIcon icon={template.icon} size={32} />
             )}
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -163,6 +166,20 @@ export function TemplatePreview({
                 variant="outlined"
               />
             )}
+            {/* Encryption indicator if template has encrypted fields */}
+            {template.fields.some((f: any) => f.encryption?.enabled) && (
+              <Chip
+                icon={<Shield sx={{ fontSize: 14 }} />}
+                label={`${template.fields.filter((f: any) => f.encryption?.enabled).length} encrypted`}
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(34, 197, 94, 0.15)',
+                  color: '#22c55e',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': { color: '#22c55e' },
+                }}
+              />
+            )}
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -222,14 +239,21 @@ export function TemplatePreview({
                         />
                         {field.encryption?.enabled && (
                           <Chip
-                            label="Encrypted"
+                            icon={<Lock sx={{ fontSize: 10 }} />}
+                            label={field.encryption?.algorithm === 'Indexed' ? 'Queryable' : 'Encrypted'}
                             size="small"
-                            variant="outlined"
-                            color="warning"
                             sx={{
                               height: 18,
                               fontSize: 10,
+                              bgcolor: field.encryption?.algorithm === 'Indexed'
+                                ? 'rgba(59, 130, 246, 0.15)'
+                                : 'rgba(139, 92, 246, 0.15)',
+                              color: field.encryption?.algorithm === 'Indexed' ? '#3b82f6' : '#8b5cf6',
                               '& .MuiChip-label': { px: 0.5 },
+                              '& .MuiChip-icon': {
+                                fontSize: 10,
+                                color: field.encryption?.algorithm === 'Indexed' ? '#3b82f6' : '#8b5cf6',
+                              },
                             }}
                           />
                         )}

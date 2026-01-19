@@ -6,6 +6,7 @@ import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material'
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { PersistentApplicationBar } from '@/components/Navigation/ApplicationContextBar';
 import { Application } from '@/types/application';
 
 /**
@@ -173,11 +174,15 @@ export default function AppSlugLayout({
     );
   }
 
-  // App resolved - render children
+  // App resolved - render children with persistent application context bar
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ height: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <AppNavBar />
-      {children}
+      {/* Persistent Application Bar - shows app context, never disappears */}
+      <PersistentApplicationBar />
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {children}
+      </Box>
     </Box>
   );
 }

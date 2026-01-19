@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createFormGeneratorWithContext } from '@/lib/ai/formGenerator';
 import { GenerateFormRequest } from '@/lib/ai/types';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
+import { getProviderConfigFromEnv } from '@/lib/ai/providers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,11 +31,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    // Check for configured LLM provider (supports Ollama, OpenAI, OpenRouter)
+    const providerConfig = getProviderConfigFromEnv();
+    if (!providerConfig) {
       return NextResponse.json(
-        { success: false, error: 'AI service is not configured. Please set OPENAI_API_KEY.' },
+        { success: false, error: 'AI service is not configured. Please configure OLLAMA_BASE_URL, OPENAI_API_KEY, or OPENROUTER_API_KEY.' },
         { status: 503 }
       );
     }

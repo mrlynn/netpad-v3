@@ -1,7 +1,7 @@
 /**
  * Legacy Route: /my-forms
- * 
- * Redirects to new org/project structure
+ *
+ * Redirects to app-centric /apps/[slug]/forms URL
  */
 
 'use client';
@@ -9,7 +9,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { getOrgProjectUrl } from '@/lib/routing';
+import { getAppUrl } from '@/lib/routing';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Box } from '@mui/material';
 
@@ -24,22 +24,23 @@ export default function MyFormsRedirect() {
       return;
     }
 
-    // Get default project from localStorage or use first project
-    const storedProjectId = localStorage.getItem('selected_project_id');
-    
-    if (storedProjectId) {
-      router.replace(getOrgProjectUrl(organization.orgId, storedProjectId, 'forms'));
+    // Get selected app from localStorage or fetch first available app
+    const storedAppSlug = localStorage.getItem('selected_app_slug');
+
+    if (storedAppSlug) {
+      router.replace(getAppUrl(storedAppSlug, 'forms'));
     } else {
-      // Fetch projects to get default
-      fetch(`/api/projects?orgId=${organization.orgId}`)
+      // Fetch applications to get default
+      fetch(`/api/applications?orgId=${organization.orgId}`)
         .then(res => res.json())
         .then(data => {
-          const projects = data.projects || [];
-          if (projects.length > 0) {
-            const defaultProject = projects.find((p: any) => p.slug === 'general') || projects[0];
-            router.replace(getOrgProjectUrl(organization.orgId, defaultProject.projectId, 'forms'));
-      } else {
-            // No projects, redirect to projects page
+          const apps = data.applications || [];
+          if (apps.length > 0) {
+            const defaultApp = apps[0];
+            localStorage.setItem('selected_app_slug', defaultApp.slug);
+            router.replace(getAppUrl(defaultApp.slug, 'forms'));
+          } else {
+            // No apps, redirect to create one
             router.replace(`/orgs/${organization.orgId}/projects`);
           }
         })

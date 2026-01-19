@@ -5,7 +5,7 @@ import { Box, Typography, Button, alpha } from '@mui/material';
 import { Apps, RocketLaunch } from '@mui/icons-material';
 import { useAutoNavigateToApp } from '@/hooks/useAutoNavigateToApp';
 import { ApplicationSwitcher } from './ApplicationSwitcher';
-import { useApplication } from '@/contexts/ApplicationContext';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 /**
@@ -32,7 +32,9 @@ export function AppAutoNavigator({
 }: AppAutoNavigatorProps) {
   const { isNavigating, isResolving, shouldShowAppSelection, navigateToLastApp } =
     useAutoNavigateToApp({ onNavigate });
-  const { applications, hasApplications } = useApplication();
+  const applicationContext = useApplicationSafe();
+  const applications = applicationContext?.applications ?? [];
+  const hasApplications = applicationContext?.hasApplications ?? false;
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Show loading while resolving

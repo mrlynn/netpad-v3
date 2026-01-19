@@ -1,88 +1,236 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Box, CircularProgress, Typography } from '@mui/material';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  TextField,
+  Button,
+  alpha,
+  useTheme as useMuiTheme,
+  Divider,
+  Alert,
+  Snackbar,
+} from '@mui/material';
+import { Settings, Save, Delete, Download as DownloadIcon } from '@mui/icons-material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
-import { getOrgProjectUrl } from '@/lib/routing';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { DownloadAppDialog } from '@/components/Download/DownloadAppDialog';
 
 /**
  * /apps/[appSlug]/settings
  *
- * This page redirects to the canonical application settings URL while maintaining
- * the application context. The simplified URL is for user convenience.
+ * App-centric settings page. Configure application name, description, and other settings.
  */
 export default function AppSettingsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const appSlug = params.appSlug as string;
+  const theme = useMuiTheme();
 
-  const { currentOrgId, isLoading: isOrgLoading } = useOrganization();
-  const { currentApplication, applications, isLoading: isAppLoading } = useApplication();
+  const { currentOrgId } = useOrganization();
+  const { currentApplication, isLoading: isAppLoading, refreshApplications } = useApplication();
 
-  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(currentApplication?.name || '');
+  const [description, setDescription] = useState(currentApplication?.description || '');
+  const [saving, setSaving] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
+  // Update local state when application loads
   useEffect(() => {
-    // Wait for data to load
-    if (isOrgLoading || isAppLoading) return;
-
-    // Find the app by slug
-    const app = applications.find(a => a.slug === appSlug) || currentApplication;
-
-    if (!app) {
-      setError(`Application "${appSlug}" not found`);
-      return;
+    if (currentApplication) {
+      setName(currentApplication.name);
+      setDescription(currentApplication.description || '');
     }
+  }, [currentApplication]);
 
-    if (!currentOrgId) {
-      setError('No organization context');
-      return;
+  const handleSave = async () => {
+    if (!currentApplication || !currentOrgId) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/applications/${currentApplication.applicationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: currentOrgId,
+          name,
+          description,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSnackbar({ open: true, message: 'Settings saved successfully', severity: 'success' });
+        refreshApplications();
+      } else {
+        setSnackbar({ open: true, message: data.error || 'Failed to save settings', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error saving settings', severity: 'error' });
+    } finally {
+      setSaving(false);
     }
+  };
 
-    // Redirect to canonical application settings URL
-    const canonicalUrl = getOrgProjectUrl(
-      currentOrgId,
-      app.projectId,
-      'applications',
-      app.applicationId
-    );
-    router.replace(canonicalUrl);
-  }, [appSlug, currentOrgId, currentApplication, applications, isOrgLoading, isAppLoading, router]);
-
-  if (error) {
+  if (isAppLoading || !currentApplication) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 'calc(100vh - 48px)',
-          gap: 2,
-          p: 3,
-        }}
-      >
-        <Typography color="error">{error}</Typography>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <NetPadLoader size="large" message="Loading application..." />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 'calc(100vh - 48px)',
-        gap: 2,
-      }}
-    >
-      <CircularProgress size={32} />
-      <Typography variant="body2" color="text.secondary">
-        Loading application settings...
-      </Typography>
+    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }}>
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.5) }}>
+        <Container maxWidth="lg">
+          <Box sx={{ py: { xs: 2, sm: 3 } }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+              Settings
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Configure {currentApplication.name}
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Settings sx={{ color: theme.palette.primary.main }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              General Settings
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              label="Application Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              fullWidth
+              helperText="The display name for this application"
+            />
+
+            <TextField
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              fullWidth
+              multiline
+              rows={3}
+              helperText="A brief description of what this application does"
+            />
+
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<Save />}
+                onClick={handleSave}
+                disabled={saving}
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
+                }}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 4 }} />
+
+          {/* Download Section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <DownloadIcon sx={{ color: '#00ED64' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Download Standalone App
+            </Typography>
+          </Box>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Export this application as a standalone Next.js project that you can deploy anywhere.
+            The downloaded app includes all forms, workflows, and configuration needed to run independently.
+          </Typography>
+
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={() => setDownloadDialogOpen(true)}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderColor: '#00ED64',
+              color: '#00ED64',
+              '&:hover': {
+                borderColor: '#00CC55',
+                bgcolor: 'rgba(0, 237, 100, 0.05)',
+              },
+            }}
+          >
+            Download as ZIP
+          </Button>
+
+          <Divider sx={{ my: 4 }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Delete sx={{ color: theme.palette.error.main }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.error.main }}>
+              Danger Zone
+            </Typography>
+          </Box>
+
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Deleting an application will permanently remove all associated forms, workflows, and data. This action cannot be undone.
+          </Alert>
+
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<Delete />}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Delete Application
+          </Button>
+        </Paper>
+      </Container>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Download Dialog */}
+      {currentApplication && currentOrgId && (
+        <DownloadAppDialog
+          open={downloadDialogOpen}
+          onClose={() => setDownloadDialogOpen(false)}
+          applicationId={currentApplication.applicationId}
+          applicationName={currentApplication.name}
+          orgId={currentOrgId}
+          formCount={currentApplication.stats?.formsCount || 0}
+          workflowCount={currentApplication.stats?.workflowsCount || 0}
+        />
+      )}
     </Box>
   );
 }

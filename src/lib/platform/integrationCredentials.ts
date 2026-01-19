@@ -52,6 +52,7 @@ export type CredentialData =
   | ServiceAccountCredentials
   | ApiKeyCredentials
   | BasicAuthCredentials
+  | SmtpCredentials
   | AtlasApiKeyCredentials
   | AtlasDataApiCredentials;
 

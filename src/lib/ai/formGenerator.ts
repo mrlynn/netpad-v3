@@ -84,9 +84,9 @@ export class FormGenerator {
       let totalTokens = 0;
 
       // Use centralized aiService if context is provided (with analytics tracking)
+      // Don't pass model explicitly - let aiService use the provider's default model
       if (this.aiContext) {
         const result = await aiService.complete(this.aiContext, messages, {
-          model: this.config.model,
           temperature: this.config.temperature,
           maxTokens: this.config.maxTokens,
           responseFormat: { type: 'json_object' },
@@ -235,9 +235,9 @@ Create appropriate labels, field types, and validation based on the schema field
       let responseText: string;
 
       // Use centralized aiService if context is provided (with analytics tracking)
+      // Don't pass model explicitly - let aiService use the provider's default model
       if (this.aiContext) {
         const result = await aiService.complete(this.aiContext, messages, {
-          model: this.config.model,
           temperature: 0.8,
           maxTokens: 2000,
           responseFormat: { type: 'json_object' },
@@ -396,7 +396,25 @@ Create appropriate labels, field types, and validation based on the schema field
         minLength: field.validation.minLength,
         maxLength: field.validation.maxLength,
         pattern: field.validation.pattern,
+        // Include options for dropdown/select/checkbox fields
+        options: field.validation.options,
+        // Include other choice-related properties
+        searchable: field.validation.searchable,
+        allowCreate: field.validation.allowCreate,
+        clearable: field.validation.clearable,
+        multiple: field.validation.multiple,
+        minSelections: field.validation.minSelections,
+        maxSelections: field.validation.maxSelections,
       };
+    }
+
+    // Handle options at field level (common in MCP/AI output)
+    // Options should be in validation for the UI to render them
+    if (field.options && Array.isArray(field.options)) {
+      if (!normalized.validation) {
+        normalized.validation = {};
+      }
+      normalized.validation.options = field.options;
     }
 
     // Add conditional logic if present

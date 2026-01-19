@@ -492,7 +492,7 @@ export default function WhyNetPadPage() {
       </Box>
 
       {/* Side-by-Side Code Comparison */}
-      <Box sx={{ py: 8, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: 8 }}>
         <Container maxWidth="lg">
           <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
             See the Difference
@@ -582,7 +582,7 @@ export default function WhyNetPadPage() {
       </Box>
 
       {/* Lifecycle Section */}
-      <Box sx={{ py: 8, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: 8 }}>
         <Container maxWidth="lg">
           <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
             Built around the document lifecycle
@@ -986,7 +986,7 @@ export default function WhyNetPadPage() {
       </Box>
 
       {/* NPM Package & Example Section */}
-      <Box sx={{ py: 8, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: 8 }}>
         <Container maxWidth="lg">
           <Typography variant="h3" fontWeight="bold" textAlign="center" gutterBottom sx={{ color: 'white' }}>
             Get Started Your Way

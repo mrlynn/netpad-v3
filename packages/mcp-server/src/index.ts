@@ -814,7 +814,19 @@ server.tool(
               }],
             };
           }
-          return { content: [{ type: 'text', text: JSON.stringify(template, null, 2) }] };
+          // Wrap nodes and edges in canvas object for NetPad UI compatibility
+          const workflowForUI = {
+            id: template.id,
+            name: template.name,
+            description: template.description,
+            category: template.category,
+            tags: template.tags,
+            canvas: {
+              nodes: template.nodes,
+              edges: template.edges,
+            },
+          };
+          return { content: [{ type: 'text', text: JSON.stringify(workflowForUI, null, 2) }] };
         }
         // List workflow templates
         let templates = Object.values(WORKFLOW_TEMPLATES);
@@ -2895,10 +2907,23 @@ server.tool(
       };
     }
 
+    // Wrap nodes and edges in canvas object for NetPad UI compatibility
+    const workflowForUI = {
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      tags: template.tags,
+      canvas: {
+        nodes: template.nodes,
+        edges: template.edges,
+      },
+    };
+
     return {
       content: [{
         type: 'text',
-        text: JSON.stringify(template, null, 2),
+        text: JSON.stringify(workflowForUI, null, 2),
       }],
     };
   }
@@ -3015,8 +3040,10 @@ const WORKFLOW_CONFIG: WorkflowConfig = {
   name: ${JSON.stringify(name)},
   description: ${JSON.stringify(description || template?.description || 'Custom workflow')},
   tags: ${JSON.stringify(tags || template?.tags || [])},
-  nodes: ${JSON.stringify(updatedNodes, null, 2)},
-  edges: ${JSON.stringify(workflowEdges, null, 2)},
+  canvas: {
+    nodes: ${JSON.stringify(updatedNodes, null, 2)},
+    edges: ${JSON.stringify(workflowEdges, null, 2)},
+  },
   settings: {
     executionMode: 'auto',
     maxExecutionTime: 300000,
@@ -3355,15 +3382,34 @@ server.tool(
 server.resource(
   'netpad-workflow-templates',
   'netpad://reference/workflow-templates',
-  async () => ({
-    contents: [
-      {
-        uri: 'netpad://reference/workflow-templates',
-        mimeType: 'application/json',
-        text: JSON.stringify(WORKFLOW_TEMPLATES, null, 2),
-      },
-    ],
-  })
+  async () => {
+    // Transform templates to wrap nodes/edges in canvas object for NetPad UI compatibility
+    const templatesForUI = Object.fromEntries(
+      Object.entries(WORKFLOW_TEMPLATES).map(([key, template]) => [
+        key,
+        {
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          category: template.category,
+          tags: template.tags,
+          canvas: {
+            nodes: template.nodes,
+            edges: template.edges,
+          },
+        },
+      ])
+    );
+    return {
+      contents: [
+        {
+          uri: 'netpad://reference/workflow-templates',
+          mimeType: 'application/json',
+          text: JSON.stringify(templatesForUI, null, 2),
+        },
+      ],
+    };
+  }
 );
 
 // Resource: Workflow Node Types Reference
@@ -3474,7 +3520,7 @@ server.tool(
     })).describe('Topics to cover in conversation'),
     extractionSchema: z.array(z.object({
       field: z.string().describe('Field name'),
-      type: z.enum(['string', 'number', 'boolean', 'enum', 'array', 'object']).describe('Field type'),
+      type: z.enum(['string', 'number', 'boolean', 'enum', 'array', 'object', 'file']).describe('Field type'),
       required: z.boolean().describe('Whether required'),
       description: z.string().describe('Field description'),
       options: z.array(z.string()).optional().describe('Options for enum type'),

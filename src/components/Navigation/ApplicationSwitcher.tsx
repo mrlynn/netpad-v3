@@ -36,7 +36,7 @@ import {
   ErrorOutline,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { useApplication, useRecentApplications, useApplicationsByProject } from '@/contexts/ApplicationContext';
+import { useApplicationSafe, useRecentApplications, useApplicationsByProject } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { Application } from '@/types/application';
 import { getAppUrl } from '@/lib/routing';
@@ -114,7 +114,13 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
   const router = useRouter();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { currentOrgId, organization } = useOrganization();
-  const { selectApplication, currentApplication, isLoading, applications, error, refreshApplications } = useApplication();
+  const applicationContext = useApplicationSafe();
+  const selectApplication = applicationContext?.selectApplication;
+  const currentApplication = applicationContext?.currentApplication ?? null;
+  const isLoading = applicationContext?.isLoading ?? true;
+  const applications = applicationContext?.applications ?? [];
+  const error = applicationContext?.error ?? null;
+  const refreshApplications = applicationContext?.refreshApplications;
   const { recentApps } = useRecentApplications(5);
   const { groups: projectGroups } = useApplicationsByProject();
 
@@ -144,6 +150,7 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
 
   // Handle retry after error
   const handleRetry = useCallback(async () => {
+    if (!refreshApplications) return;
     setIsRetrying(true);
     try {
       await refreshApplications();
@@ -213,7 +220,9 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
     setIsNavigating(true);
     try {
       // Select application in context (updates localStorage, recent apps, etc.)
-      await selectApplication(app.applicationId, { navigate: false });
+      if (selectApplication) {
+        await selectApplication(app.applicationId, { navigate: false });
+      }
 
       // Navigate to the new app-centric URL structure
       const url = getAppUrl(app.slug, 'forms');
@@ -525,7 +534,7 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
             <Button
               variant="contained"
               startIcon={<Refresh />}
-              onClick={() => refreshApplications()}
+              onClick={() => refreshApplications?.()}
               sx={{ minHeight: 44 }} // Ensure touch target size
             >
               Retry

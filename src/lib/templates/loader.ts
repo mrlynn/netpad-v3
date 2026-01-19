@@ -1,13 +1,26 @@
 /**
  * Template Loader
- * 
- * Loads form and workflow templates from JSON files.
+ *
+ * Loads form and workflow templates from JSON files and TypeScript definitions.
  * Supports both static imports (build-time) and fallback to hardcoded templates.
+ *
+ * Two template systems are available:
+ * 1. JSON templates (legacy) - simple templates from JSON files
+ * 2. Definition templates (new) - comprehensive templates with full field configs
  */
 
 import { formTemplates as jsonTemplates, templateCategories } from './formTemplates';
 import { workflowTemplates as jsonWorkflowTemplates, workflowTemplateCategories } from './workflowTemplates';
+import {
+  ALL_TEMPLATES as definitionTemplates,
+  getTemplatesByCategory as getDefTemplatesByCategory,
+  getTemplateById as getDefTemplateById,
+  getFeaturedTemplates as getDefFeaturedTemplates,
+  searchTemplates as searchDefTemplates,
+  getTemplateCounts as getDefTemplateCounts,
+} from './definitions';
 import type { FormType, SearchConfig } from '@/types/form';
+import type { FormTemplate as NewFormTemplate, TEMPLATE_CATEGORIES } from '@/types/formTemplate';
 
 export interface FormTemplate {
   id: string;
@@ -156,3 +169,75 @@ export function loadWorkflowTemplate(id: string): WorkflowTemplate | null {
 export function getWorkflowTemplateCategories() {
   return workflowTemplateCategories;
 }
+
+// ============================================
+// New Template System (definitions/)
+// ============================================
+// These exports provide access to the comprehensive 100+ template gallery
+
+/**
+ * Get all gallery templates (from definitions/)
+ */
+export function loadGalleryTemplates(): NewFormTemplate[] {
+  return definitionTemplates;
+}
+
+/**
+ * Get gallery template by ID
+ */
+export function loadGalleryTemplate(id: string): NewFormTemplate | undefined {
+  return getDefTemplateById(id);
+}
+
+/**
+ * Get gallery templates by category
+ */
+export function loadGalleryTemplatesByCategory(category: string): NewFormTemplate[] {
+  return getDefTemplatesByCategory(category);
+}
+
+/**
+ * Get featured gallery templates
+ */
+export function loadFeaturedGalleryTemplates(limit?: number): NewFormTemplate[] {
+  return getDefFeaturedTemplates(limit);
+}
+
+/**
+ * Search gallery templates
+ */
+export function searchGalleryTemplates(query: string): NewFormTemplate[] {
+  return searchDefTemplates(query);
+}
+
+/**
+ * Get template counts by category
+ */
+export function getGalleryTemplateCounts(): Record<string, number> {
+  return getDefTemplateCounts();
+}
+
+/**
+ * Convert a gallery template to the legacy FormTemplate format
+ * for use with existing components
+ */
+export function convertGalleryToLegacy(template: NewFormTemplate): FormTemplate {
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.shortDescription,
+    icon: template.icon,
+    category: template.category,
+    fields: template.fieldConfigs,
+    tags: template.tags,
+    complexity: template.complexity === 'moderate' ? 'moderate' : template.complexity,
+    estimatedTime: `${template.estimatedTime} min`,
+    previewImageUrl: template.previewImage,
+    formType: template.formType === 'hybrid' ? 'both' : template.formType === 'conversational' ? 'conversational' : 'data-entry',
+    conversationalConfig: template.conversationalConfig,
+  };
+}
+
+// Re-export types and constants from definitions
+export { TEMPLATE_CATEGORIES } from '@/types/formTemplate';
+export type { NewFormTemplate };

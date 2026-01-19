@@ -35,10 +35,17 @@ import {
   Warning,
   Edit,
   CheckCircleOutline,
+  AttachFile,
+  Close,
+  InsertDriveFile,
+  Image as ImageIcon,
+  Description,
 } from '@mui/icons-material';
 import { useConversationalForm, ConversationalMessage } from '@/hooks/useConversationalForm';
-import { TopicCoverage, ConversationalFormConfig, ConversationState } from '@/types/conversational';
+import { useFileUpload, UploadedFile } from '@/hooks/useFileUpload';
+import { TopicCoverage, ConversationalFormConfig, ConversationState, FileAttachment } from '@/types/conversational';
 import { SourceCitation } from './SourceCitation';
+import { ALL_ALLOWED_MIME_TYPES } from '@/lib/storage/mimeTypes';
 
 /**
  * Props for ConversationalFormChat
@@ -52,6 +59,8 @@ interface ConversationalFormChatProps {
   onComplete?: (conversationState: ConversationState) => void;
   /** Custom styles */
   sx?: object;
+  /** API endpoint to use (defaults to authenticated endpoint, use demo for public previews) */
+  endpoint?: '/api/conversational/stream' | '/api/demo/conversational-stream';
 }
 
 /**
@@ -64,6 +73,7 @@ function MessageBubble({
 }) {
   const isUser = message.role === 'user';
   const hasSources = !isUser && message.ragSources && message.ragSources.length > 0;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
 
   return (
     <Box
@@ -126,6 +136,15 @@ function MessageBubble({
             />
           )}
         </Typography>
+
+        {/* File Attachments */}
+        {hasAttachments && (
+          <Box sx={{ mt: 1 }}>
+            {message.attachments!.map((attachment) => (
+              <MessageAttachment key={attachment.id} attachment={attachment} />
+            ))}
+          </Box>
+        )}
 
         {/* RAG Source Citations */}
         {hasSources && !message.isStreaming && (
@@ -245,6 +264,215 @@ function TopicProgress({
         </Box>
       </Collapse>
     </Paper>
+  );
+}
+
+/**
+ * Get file icon based on MIME type
+ */
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) {
+    return <ImageIcon sx={{ fontSize: 16 }} />;
+  }
+  if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('word')) {
+    return <Description sx={{ fontSize: 16 }} />;
+  }
+  return <InsertDriveFile sx={{ fontSize: 16 }} />;
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Attachment preview for pending files
+ */
+function PendingFilePreview({
+  file,
+  onRemove,
+  isUploading,
+}: {
+  file: UploadedFile;
+  onRemove: () => void;
+  isUploading: boolean;
+}) {
+  const isImage = file.mimeType.startsWith('image/');
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        p: 1,
+        bgcolor: alpha('#000', 0.05),
+        borderRadius: 1,
+        position: 'relative',
+      }}
+    >
+      {isImage && file.url ? (
+        <Box
+          component="img"
+          src={file.url}
+          alt={file.originalName}
+          sx={{
+            width: 32,
+            height: 32,
+            objectFit: 'cover',
+            borderRadius: 0.5,
+          }}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: alpha('#2196f3', 0.1),
+            borderRadius: 0.5,
+          }}
+        >
+          {getFileIcon(file.mimeType)}
+        </Box>
+      )}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {file.originalName}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {formatFileSize(file.size)}
+        </Typography>
+      </Box>
+      {isUploading ? (
+        <CircularProgress size={16} />
+      ) : (
+        <IconButton size="small" onClick={onRemove} sx={{ p: 0.25 }}>
+          <Close sx={{ fontSize: 14 }} />
+        </IconButton>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Attachment display in message bubble
+ */
+function MessageAttachment({
+  attachment,
+}: {
+  attachment: FileAttachment;
+}) {
+  const isImage = attachment.mimeType.startsWith('image/');
+  const hasExtraction = attachment.extractionStatus === 'completed' && attachment.extractedData;
+  const isProcessing = attachment.extractionStatus === 'processing' || attachment.extractionStatus === 'pending';
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        p: 1,
+        mt: 1,
+        bgcolor: alpha('#000', 0.1),
+        borderRadius: 1,
+      }}
+    >
+      {isImage && attachment.url ? (
+        <Box
+          component="img"
+          src={attachment.url}
+          alt={attachment.originalName}
+          sx={{
+            width: 48,
+            height: 48,
+            objectFit: 'cover',
+            borderRadius: 0.5,
+            cursor: 'pointer',
+          }}
+          onClick={() => window.open(attachment.url, '_blank')}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: alpha('#fff', 0.2),
+            borderRadius: 0.5,
+          }}
+        >
+          {getFileIcon(attachment.mimeType)}
+        </Box>
+      )}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {attachment.originalName}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+            {formatFileSize(attachment.size)}
+          </Typography>
+          {isProcessing && (
+            <>
+              <Typography variant="caption" sx={{ opacity: 0.6 }}>•</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CircularProgress size={10} sx={{ color: 'inherit' }} />
+                Analyzing...
+              </Typography>
+            </>
+          )}
+          {hasExtraction && (
+            <>
+              <Typography variant="caption" sx={{ opacity: 0.6 }}>•</Typography>
+              <Tooltip title={`${Object.keys(attachment.extractedData || {}).length} fields extracted`}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                  <CheckCircle sx={{ fontSize: 12, color: '#00ED64' }} />
+                  <Typography variant="caption" sx={{ color: '#00ED64' }}>
+                    {Math.round((attachment.extractionConfidence || 0) * 100)}%
+                  </Typography>
+                </Box>
+              </Tooltip>
+            </>
+          )}
+          {attachment.extractionStatus === 'error' && (
+            <>
+              <Typography variant="caption" sx={{ opacity: 0.6 }}>•</Typography>
+              <Tooltip title={attachment.extractionError || 'Extraction failed'}>
+                <Warning sx={{ fontSize: 12, color: 'warning.main' }} />
+              </Tooltip>
+            </>
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
@@ -467,11 +695,14 @@ export function ConversationalFormChat({
   config,
   onComplete,
   sx,
+  endpoint,
 }: ConversationalFormChatProps) {
   const [input, setInput] = useState('');
   const [topicsExpanded, setTopicsExpanded] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<UploadedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     messages,
@@ -495,6 +726,25 @@ export function ConversationalFormChat({
       // Pass full conversation state for submission with metadata
       onComplete?.(state);
     },
+    endpoint,
+  });
+
+  // File upload hook - using a placeholder orgId for demo (should come from context in production)
+  const {
+    upload,
+    isUploading,
+    error: uploadError,
+    validateFile,
+  } = useFileUpload({
+    organizationId: 'demo', // In production, get from context
+    formId,
+    fileType: 'any',
+    onUploadComplete: (files) => {
+      setPendingFiles((prev) => [...prev, ...files]);
+    },
+    onUploadError: (error) => {
+      console.error('[ConversationalFormChat] Upload error:', error);
+    },
   });
 
   // Start conversation on mount
@@ -507,13 +757,48 @@ export function ConversationalFormChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Validate files
+    const fileArray = Array.from(files);
+    const validFiles: File[] = [];
+
+    for (const file of fileArray) {
+      const validation = validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        console.warn('[ConversationalFormChat] File validation failed:', validation.error);
+      }
+    }
+
+    if (validFiles.length > 0) {
+      await upload(validFiles);
+    }
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Remove pending file
+  const handleRemoveFile = (fileId: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
   // Handle send
   const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
+    if ((!input.trim() && pendingFiles.length === 0) || isStreaming || isUploading) return;
 
-    const message = input.trim();
+    const message = input.trim() || (pendingFiles.length > 0 ? '[Attached files]' : '');
+    const filesToSend = [...pendingFiles];
+
     setInput('');
-    await sendMessage(message);
+    setPendingFiles([]);
+
+    await sendMessage(message, filesToSend.length > 0 ? filesToSend : undefined);
 
     // Focus input after sending
     inputRef.current?.focus();
@@ -625,11 +910,61 @@ export function ConversationalFormChat({
           bgcolor: 'background.paper',
         }}
       >
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        {/* Pending files preview */}
+        {pendingFiles.length > 0 && (
+          <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {pendingFiles.map((file) => (
+              <PendingFilePreview
+                key={file.id}
+                file={file}
+                onRemove={() => handleRemoveFile(file.id)}
+                isUploading={isUploading}
+              />
+            ))}
+          </Box>
+        )}
+
+        {/* Upload error */}
+        {uploadError && (
+          <Alert severity="error" sx={{ mb: 1 }} onClose={() => {}}>
+            {uploadError}
+          </Alert>
+        )}
+
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ALL_ALLOWED_MIME_TYPES.join(',')}
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
+
+          {/* Attach file button */}
+          <Tooltip title="Attach files (images, PDFs, documents)">
+            <IconButton
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming || isUploading}
+              size="small"
+              sx={{
+                color: 'text.secondary',
+                '&:hover': { color: 'primary.main' },
+              }}
+            >
+              {isUploading ? (
+                <CircularProgress size={20} />
+              ) : (
+                <AttachFile />
+              )}
+            </IconButton>
+          </Tooltip>
+
           <TextField
-            ref={inputRef}
+            inputRef={inputRef}
             fullWidth
-            placeholder="Type your message..."
+            placeholder={pendingFiles.length > 0 ? 'Add a message or send files...' : 'Type your message...'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -644,7 +979,7 @@ export function ConversationalFormChat({
           />
           <IconButton
             onClick={handleSend}
-            disabled={!input.trim() || isStreaming}
+            disabled={(!input.trim() && pendingFiles.length === 0) || isStreaming || isUploading}
             sx={{
               bgcolor: '#00ED64',
               color: 'white',

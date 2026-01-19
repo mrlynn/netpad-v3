@@ -28,6 +28,24 @@ import {
   RAGTurnContext,
   RAGSource,
 } from '@/lib/conversational/ragIntegration';
+import {
+  extractDataFromFile,
+  isImageFile,
+  getFileDescription,
+  FileInput,
+} from '@/lib/conversational/fileExtraction';
+
+/**
+ * Attachment input from the client
+ */
+interface AttachmentInput {
+  id: string;
+  url: string;
+  downloadUrl: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
 
 /**
  * Create SSE response for streaming
@@ -71,7 +89,7 @@ function createSSEStream(
 
 /**
  * POST /api/conversational/stream
- * 
+ *
  * Request body:
  * {
  *   conversationId: string;
@@ -79,6 +97,7 @@ function createSSEStream(
  *   message: string;
  *   state?: ConversationState;
  *   config: ConversationalFormConfig;
+ *   attachments?: AttachmentInput[]; // File attachments (images/documents)
  * }
  */
 export async function POST(request: NextRequest) {
@@ -320,10 +339,79 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Process file attachments if present
+    const attachments: AttachmentInput[] = body.attachments || [];
+    const fileExtractionResults: Array<{
+      fileId: string;
+      extractedData: Record<string, any>;
+      confidence: number;
+      status: 'completed' | 'error';
+      error?: string;
+    }> = [];
+    let fileContextForLLM = '';
+
+    if (attachments.length > 0) {
+      console.log('[Conversational Stream] Processing file attachments:', {
+        count: attachments.length,
+        files: attachments.map((a) => ({ name: a.originalName, type: a.mimeType })),
+      });
+
+      // Get extraction schema for file extraction
+      const extractionSchema = getExtractionSchemaForConfig(body.config);
+
+      // Process each attachment
+      for (const attachment of attachments) {
+        try {
+          // Add file description to context for LLM
+          fileContextForLLM += `\n${getFileDescription(attachment)}`;
+
+          // Extract data from file
+          const result = await extractDataFromFile(
+            attachment as FileInput,
+            extractionSchema || [],
+            provider
+          );
+
+          fileExtractionResults.push({
+            fileId: attachment.id,
+            extractedData: result.extractedData,
+            confidence: result.confidence,
+            status: 'completed',
+          });
+
+          console.log('[Conversational Stream] File extraction completed:', {
+            fileId: attachment.id,
+            fileName: attachment.originalName,
+            confidence: result.confidence,
+            fieldsExtracted: Object.keys(result.extractedData).length,
+          });
+        } catch (error: any) {
+          console.error('[Conversational Stream] File extraction error:', {
+            fileId: attachment.id,
+            fileName: attachment.originalName,
+            error: error.message,
+          });
+
+          fileExtractionResults.push({
+            fileId: attachment.id,
+            extractedData: {},
+            confidence: 0,
+            status: 'error',
+            error: error.message || 'Extraction failed',
+          });
+        }
+      }
+
+      // Add file context to guidance so the AI knows about the attachments
+      if (fileContextForLLM) {
+        enhancedGuidance += `\n\nThe user has attached the following files with their message:${fileContextForLLM}\n\nPlease acknowledge the files and incorporate any relevant extracted information into the conversation.`;
+      }
+    }
+
     // Build messages for LLM with guidance
     const systemMessage = engineMessages.find(m => m.role === 'system');
     const conversationMessages = engineMessages.filter(m => m.role !== 'system');
-    
+
     // Debug: Log message count to verify memory is working
     console.log('[Conversational Stream] Message count:', {
       total: engineMessages.length,
@@ -332,7 +420,7 @@ export async function POST(request: NextRequest) {
       userMessages: conversationMessages.filter(m => m.role === 'user').length,
       assistantMessages: conversationMessages.filter(m => m.role === 'assistant').length,
     });
-    
+
     // Add guidance as a system message before the assistant response
     const messagesForLLM: Message[] = [
       ...(systemMessage ? [{
@@ -354,10 +442,10 @@ export async function POST(request: NextRequest) {
 
     // Stream AI response with retry
     // Note: streamChat returns AsyncIterable<string> directly, not a Promise
+    // Don't specify model - let the provider use its configured default
     const stream = await withRetryStream(
       async () => {
         const chatStream = provider.streamChat(messagesForLLM, {
-          model: 'gpt-4o-mini', // Fast and cost-effective
           temperature: 0.7,
           maxTokens: 1000,
         });
@@ -560,6 +648,55 @@ export async function POST(request: NextRequest) {
               console.log('[Conversational Stream] Sent RAG sources event:', {
                 sourceCount: ragSources.length,
               });
+            }
+
+            // Send file extraction events if we processed files
+            if (fileExtractionResults.length > 0) {
+              for (const fileResult of fileExtractionResults) {
+                const fileExtractionEvent = `data: ${JSON.stringify({
+                  type: 'file_extraction',
+                  fileId: fileResult.fileId,
+                  extractedData: fileResult.extractedData,
+                  confidence: fileResult.confidence,
+                  status: fileResult.status,
+                  error: fileResult.error,
+                })}\n\n`;
+                controller.enqueue(new TextEncoder().encode(fileExtractionEvent));
+              }
+
+              // Merge file extraction results into state partialExtractions
+              const successfulExtractions = fileExtractionResults.filter(
+                (r) => r.status === 'completed' && Object.keys(r.extractedData).length > 0
+              );
+
+              if (successfulExtractions.length > 0) {
+                // Merge file-extracted data with conversation-extracted data
+                // Prefer file extraction if confidence is higher
+                for (const fileResult of successfulExtractions) {
+                  for (const [key, value] of Object.entries(fileResult.extractedData)) {
+                    if (value !== null && value !== undefined) {
+                      // Check if we already have this field with higher confidence
+                      // For simplicity, always take file extraction as it's more direct
+                      state.partialExtractions[key] = value;
+                    }
+                  }
+                }
+
+                // Recalculate confidence including file extractions
+                const fileConfidences = successfulExtractions.map((r) => r.confidence);
+                const avgFileConfidence =
+                  fileConfidences.reduce((a, b) => a + b, 0) / fileConfidences.length;
+                // Blend with existing confidence
+                state.confidence = Math.max(state.confidence, avgFileConfidence);
+
+                console.log('[Conversational Stream] Merged file extractions:', {
+                  extractionCount: successfulExtractions.length,
+                  fieldsAdded: successfulExtractions.flatMap((r) =>
+                    Object.keys(r.extractedData)
+                  ),
+                  newConfidence: state.confidence,
+                });
+              }
             }
           }
 

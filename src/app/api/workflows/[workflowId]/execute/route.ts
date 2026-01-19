@@ -99,12 +99,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Determine trigger type from payload (form_submission, webhook, manual)
+    // The payload.type is set by the test dialog based on the trigger node type
+    const triggerType = payload?.type || 'manual';
+
     // Create execution record
     const execution = await createExecution(
       workflowId,
       orgId,
       {
-        type: 'manual',
+        type: triggerType,
         payload: payload || {},
         source: {
           userId: session.userId,
@@ -124,14 +128,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       orgId,
       priority: 1,
       trigger: {
-        type: 'manual',
+        type: triggerType,
         payload: payload || {},
         source: {
           userId: session.userId,
         },
       },
       runAt: new Date(),
-      maxAttempts: workflow.settings.retryPolicy.maxRetries + 1,
+      maxAttempts: (workflow.settings?.retryPolicy?.maxRetries ?? 0) + 1,
     });
 
     // If processImmediately is requested, execute the job synchronously

@@ -228,6 +228,51 @@ export async function POST(
           apiSecret: apiSecret,
         };
       }
+    } else if (authType === 'basic_auth') {
+      // Handle basic auth credentials (used for SMTP)
+      if (provider === 'smtp') {
+        // SMTP email server credentials
+        const host = credentials.host as string | undefined;
+        const port = credentials.port as number | undefined;
+        const username = credentials.username as string | undefined;
+        const password = credentials.password as string | undefined;
+        const secure = credentials.secure as boolean | undefined;
+        const fromEmail = credentials.fromEmail as string | undefined;
+        const fromName = credentials.fromName as string | undefined;
+
+        if (!host || !port || !username || !password) {
+          return NextResponse.json(
+            { error: 'SMTP requires host, port, username, and password' },
+            { status: 400 }
+          );
+        }
+
+        credentialData = {
+          host,
+          port,
+          secure: secure ?? (port === 465),
+          username,
+          password,
+          fromEmail,
+          fromName,
+        };
+      } else {
+        // Generic basic auth credentials
+        const username = credentials.username as string | undefined;
+        const password = credentials.password as string | undefined;
+
+        if (!username || !password) {
+          return NextResponse.json(
+            { error: 'Basic auth requires username and password' },
+            { status: 400 }
+          );
+        }
+
+        credentialData = {
+          username,
+          password,
+        };
+      }
     } else {
       return NextResponse.json(
         { error: 'Unsupported auth type' },

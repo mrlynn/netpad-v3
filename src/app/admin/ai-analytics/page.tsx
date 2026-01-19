@@ -31,6 +31,12 @@ import {
   Skeleton,
   Breadcrumbs,
   Link as MuiLink,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Divider,
+  Alert,
 } from '@mui/material';
 import Link from 'next/link';
 import {
@@ -43,6 +49,8 @@ import {
   Error as ErrorIcon,
   CheckCircle as SuccessIcon,
   NavigateNext as NavigateNextIcon,
+  Visibility as VisibilityIcon,
+  Science as ScienceIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -232,6 +240,36 @@ interface AIAnalyticsData {
     };
     insights: string[];
   };
+  organizations?: Array<{
+    organizationId: string;
+    name?: string;
+    requests: number;
+    tokens: number;
+    costUsd: number;
+    isDemo: boolean;
+  }>;
+  demoAnalytics?: {
+    totalRequests: number;
+    totalTokens: number;
+    totalCostUsd: number;
+    uniqueVisitors: number;
+    avgLatencyMs: number;
+    successRate: number;
+    byTemplate: Array<{
+      templateId: string;
+      requests: number;
+      tokens: number;
+    }>;
+    byDay: Array<{
+      date: string;
+      requests: number;
+      tokens: number;
+    }>;
+    topIPs: Array<{
+      ip: string;
+      requests: number;
+    }>;
+  };
 }
 
 interface TopUsersData {
@@ -326,10 +364,12 @@ export default function AIAnalyticsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [days, setDays] = useState(30);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(''); // Empty = all orgs
+  const [showDemoAnalytics, setShowDemoAnalytics] = useState(true);
 
   // Build API URL with optional Phase 3 parameters
   const apiUrl = user?.platformRole === 'admin'
-    ? `/api/admin/ai-analytics?days=${days}${showAdvanced ? '&includeJourneys=true&includeAnomalies=true&includeQuality=true&comparePeriod=30' : ''}`
+    ? `/api/admin/ai-analytics?days=${days}${selectedOrgId ? `&orgId=${selectedOrgId}` : ''}${showAdvanced ? '&includeJourneys=true&includeAnomalies=true&includeQuality=true&comparePeriod=30' : ''}&includeDemoAnalytics=${showDemoAnalytics}`
     : null;
 
   // Fetch main analytics data
@@ -380,6 +420,8 @@ export default function AIAnalyticsPage() {
   const costAnomalies = analyticsData?.costAnomalies || [];
   const qualityMetrics = analyticsData?.qualityMetrics || [];
   const comparative = analyticsData?.comparative;
+  const organizations = analyticsData?.organizations || [];
+  const demoAnalytics = analyticsData?.demoAnalytics;
 
   return (
     <>
@@ -394,7 +436,7 @@ export default function AIAnalyticsPage() {
         </Breadcrumbs>
 
         {/* Header */}
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography variant="h4" fontWeight={700}>
               AI Usage Analytics
@@ -403,7 +445,41 @@ export default function AIAnalyticsPage() {
               Monitor AI usage, token consumption, and costs across all organizations
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Organization Filter */}
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Organization</InputLabel>
+              <Select
+                value={selectedOrgId}
+                label="Organization"
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Organizations</em>
+                </MenuItem>
+                <Divider />
+                {organizations.filter(o => o.isDemo).map((org) => (
+                  <MenuItem key={org.organizationId} value={org.organizationId}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ScienceIcon fontSize="small" color="warning" />
+                      {org.name || org.organizationId}
+                      <Chip size="small" label={formatNumber(org.requests)} sx={{ ml: 'auto' }} />
+                    </Box>
+                  </MenuItem>
+                ))}
+                {organizations.filter(o => o.isDemo).length > 0 && <Divider />}
+                {organizations.filter(o => !o.isDemo).map((org) => (
+                  <MenuItem key={org.organizationId} value={org.organizationId}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                        {org.name || org.organizationId.slice(0, 20)}
+                      </Typography>
+                      <Chip size="small" label={formatNumber(org.requests)} sx={{ ml: 'auto' }} />
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <ToggleButtonGroup
               value={days}
               exclusive
@@ -424,6 +500,27 @@ export default function AIAnalyticsPage() {
             </ToggleButton>
           </Box>
         </Box>
+
+        {/* Selected Org Alert */}
+        {selectedOrgId && (
+          <Alert
+            severity={selectedOrgId === 'demo_guest' ? 'warning' : 'info'}
+            sx={{ mb: 3 }}
+            action={
+              <Chip
+                label="Clear Filter"
+                size="small"
+                onClick={() => setSelectedOrgId('')}
+                sx={{ cursor: 'pointer' }}
+              />
+            }
+          >
+            {selectedOrgId === 'demo_guest'
+              ? 'Showing Demo/Guest usage only. This data is from unauthenticated template previews.'
+              : `Filtered to organization: ${organizations.find(o => o.organizationId === selectedOrgId)?.name || selectedOrgId}`
+            }
+          </Alert>
+        )}
 
         {/* Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -533,6 +630,124 @@ export default function AIAnalyticsPage() {
               />
             </Grid>
           </Grid>
+        )}
+
+        {/* Demo Analytics Section */}
+        {demoAnalytics && !selectedOrgId && (
+          <Paper sx={{ p: 3, mb: 4, bgcolor: alpha('#FF9800', 0.05), border: '1px solid', borderColor: alpha('#FF9800', 0.3) }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: alpha('#FF9800', 0.1),
+                  color: '#FF9800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ScienceIcon />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={600}>
+                  Demo / Guest Usage
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  AI usage from template previews and unauthenticated demo sessions
+                </Typography>
+              </Box>
+              <Chip
+                label="View Details"
+                color="warning"
+                variant="outlined"
+                onClick={() => setSelectedOrgId('demo_guest')}
+                sx={{ cursor: 'pointer' }}
+              />
+            </Box>
+
+            <Grid container spacing={3}>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color="warning.main">
+                    {formatNumber(demoAnalytics.totalRequests)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Demo Requests
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color="warning.main">
+                    {formatNumber(demoAnalytics.totalTokens)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Tokens Used
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color="warning.main">
+                    {formatCurrency(demoAnalytics.totalCostUsd)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Demo Cost
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color="warning.main">
+                    {demoAnalytics.uniqueVisitors}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Unique Visitors
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color="warning.main">
+                    {demoAnalytics.avgLatencyMs}ms
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Avg Latency
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight={700} color={demoAnalytics.successRate > 90 ? 'success.main' : 'error.main'}>
+                    {demoAnalytics.successRate}%
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Success Rate
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* Top Demo Visitors */}
+            {demoAnalytics.topIPs.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Top Demo Visitors (by IP)
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {demoAnalytics.topIPs.slice(0, 5).map((ip, idx) => (
+                    <Chip
+                      key={idx}
+                      size="small"
+                      label={`${ip.ip.slice(0, 10)}... (${ip.requests} req)`}
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Paper>
         )}
 
         {/* Charts Row */}

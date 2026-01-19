@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getUserOrganizations } from '@/lib/platform/organizations';
 import { listProjects } from '@/lib/platform/projects';
+import { listApplications } from '@/lib/platform/applications';
 import { listUserVaults } from '@/lib/platform/connectionVault';
 import { getProvisioningStatus } from '@/lib/atlas/provisioning';
 import { ConnectionVault } from '@/types/platform';
@@ -36,6 +37,7 @@ export async function GET() {
         authenticated: true,
         hasOrganization: false,
         hasProject: false,
+        hasApplication: false,
         hasDatabase: false,
         organization: null,
         project: null,
@@ -58,6 +60,7 @@ export async function GET() {
         authenticated: true,
         hasOrganization: true,
         hasProject: false,
+        hasApplication: false,
         hasDatabase: false,
         organization: {
           orgId: organization.orgId,
@@ -68,6 +71,13 @@ export async function GET() {
         vault: null,
       });
     }
+
+    // Check for applications in the first project
+    const { applications } = await listApplications(organization.orgId, project!.projectId, {
+      page: 1,
+      pageSize: 1,
+    });
+    const hasApplication = applications.length > 0;
 
     // Check for database connections - either vaults OR a provisioned cluster
     const vaults = await listUserVaults(organization.orgId, session.userId);
@@ -90,6 +100,7 @@ export async function GET() {
       authenticated: true,
       hasOrganization,
       hasProject,
+      hasApplication,
       hasDatabase,
       hasVault,
       hasProvisionedCluster,

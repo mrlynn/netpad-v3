@@ -16,19 +16,41 @@ import { Box } from '@mui/material';
 function BuilderRedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organization } = useOrganization();
+  const { organization, isLoading } = useOrganization();
   const formId = searchParams.get('formId');
+  const restore = searchParams.get('restore');
+  const templateId = searchParams.get('template');
 
   useEffect(() => {
+    // Wait for organization context to finish loading
+    if (isLoading) {
+      return;
+    }
+
     if (!organization?.orgId) {
-      router.replace('/settings');
+      // If restoring a form or loading template and no org exists yet, preserve the param
+      if (restore === 'true') {
+        router.replace('/settings?restore=true');
+      } else if (templateId) {
+        router.replace(`/settings?template=${templateId}`);
+      } else {
+        router.replace('/settings');
+      }
       return;
     }
 
     const storedProjectId = localStorage.getItem('selected_project_id');
 
     const redirectToBuilder = (projectId: string) => {
-      const url = getOrgProjectUrl(organization.orgId, projectId, 'builder', formId || undefined);
+      let url = getOrgProjectUrl(organization.orgId, projectId, 'builder', formId || undefined);
+      // Preserve restore param for landing page form restoration
+      if (restore === 'true') {
+        url += (url.includes('?') ? '&' : '?') + 'restore=true';
+      }
+      // Preserve template param
+      if (templateId) {
+        url += (url.includes('?') ? '&' : '?') + `template=${templateId}`;
+      }
       router.replace(url);
     };
 
@@ -50,7 +72,7 @@ function BuilderRedirectContent() {
           router.replace(`/orgs/${organization.orgId}/projects`);
         });
     }
-  }, [organization, router, formId]);
+  }, [organization, router, formId, restore, templateId, isLoading]);
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>

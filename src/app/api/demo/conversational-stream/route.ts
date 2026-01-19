@@ -4,11 +4,15 @@
  * POST /api/demo/conversational-stream
  * A simplified streaming endpoint for the conversational forms demo.
  * Allows guest access with rate limiting.
+ *
+ * Analytics: Uses aiService for token tracking under 'demo_guest' organization.
  */
 
 import { NextRequest } from 'next/server';
-import { createDefaultProvider, Message } from '@/lib/ai/providers';
+import { Message } from '@/lib/ai/providers';
+import { aiService, createAIContext } from '@/lib/ai/aiService';
 import { ConversationalFormConfig, ConversationState } from '@/types/conversational';
+import { TokenUsage } from '@/types/ai-analytics';
 
 // Simple in-memory rate limiting for demo
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -63,7 +67,8 @@ Guidelines:
 - Keep responses brief (1-2 sentences)
 - If someone provides multiple pieces of info at once, acknowledge all of them
 - Don't be robotic - have a natural conversation
-- When you have all required info (name and email), let them know you have what you need
+- When you have all required info, let them know you have what you need and thank them
+- IMPORTANT: If someone wants to correct or change information they previously gave (e.g., "Actually my email is...", "I meant to say...", "Can I change my..."), acknowledge the correction warmly and confirm the updated value
 
 Example flow:
 User: "Hi"
@@ -73,7 +78,11 @@ User: "I'm Sarah"
 You: "Nice to meet you, Sarah! What's the best email to reach you at?"
 
 User: "sarah@example.com"
-You: "Got it, sarah@example.com. And what company are you with?"`;
+You: "Got it, sarah@example.com. And what company are you with?"
+
+Example correction:
+User: "Actually, my email is sarah.jones@example.com"
+You: "No problem! I've updated your email to sarah.jones@example.com. Thanks for the correction!"`;
 }
 
 /**
@@ -136,9 +145,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get AI provider
-    const provider = createDefaultProvider();
-    if (!provider) {
+    // Check if AI service is available
+    const isAvailable = await aiService.isAvailable();
+    if (!isAvailable) {
       return new Response(
         `data: ${JSON.stringify({ type: 'error', error: 'AI service not configured', code: 'NO_PROVIDER' })}\n\n`,
         {
@@ -147,6 +156,15 @@ export async function POST(request: NextRequest) {
         }
       );
     }
+
+    // Create AI context for analytics tracking
+    const aiContext = createAIContext(
+      `guest_${ip.replace(/\./g, '_')}`, // anonymized user ID based on IP
+      'demo_guest',                       // dedicated org ID for demo analytics
+      'rag_conversational_forms',         // conversational forms feature
+      '/api/demo/conversational-stream',
+      true                                // isGuest = true
+    );
 
     // Build conversation messages
     const systemPrompt = buildSystemPrompt(config);
@@ -165,17 +183,18 @@ export async function POST(request: NextRequest) {
       ...conversationHistory,
     ];
 
-    // Stream response - don't specify model, let provider use its default
-    const stream = provider.streamChat(messages, {
+    // Stream response using aiService for analytics tracking
+    const streamResult = await aiService.streamChat(aiContext, messages, {
       temperature: 0.7,
       maxTokens: 500,
     });
 
     // Collect full response for extraction
     let fullResponse = '';
+    let getUsage: (() => Promise<TokenUsage | null>) | null = streamResult.getUsage;
 
     async function* processStream() {
-      for await (const chunk of stream) {
+      for await (const chunk of streamResult.stream) {
         fullResponse += chunk;
         yield chunk;
       }
@@ -200,14 +219,15 @@ export async function POST(request: NextRequest) {
 
         // After stream completes, do extraction
         if (fullResponse) {
-          const allMessages = [
-            ...(state?.messages || []).map((m) => m.content),
-            message,
-            fullResponse,
+          // IMPORTANT: Only extract from USER messages to avoid false positives
+          // from AI's conversational text like "I'm excited to help!"
+          const userMessages = [
+            ...(state?.messages || []).filter((m) => m.role === 'user').map((m) => m.content),
+            message, // Current user message
           ].join('\n');
 
           // Simple extraction using patterns
-          const extraction = await extractFromConversation(allMessages, config);
+          const extraction = await extractFromConversation(userMessages, config);
 
           // Send extraction update
           const extractionEvent = `data: ${JSON.stringify({
@@ -254,6 +274,21 @@ export async function POST(request: NextRequest) {
           }
         }
       } finally {
+        // Log token usage to analytics (this triggers the aiService logging)
+        if (getUsage) {
+          try {
+            const usage = await getUsage();
+            if (usage) {
+              console.log('[Demo Stream] Token usage:', {
+                prompt: usage.prompt,
+                completion: usage.completion,
+                total: usage.total,
+              });
+            }
+          } catch (usageError) {
+            console.error('[Demo Stream] Failed to log usage:', usageError);
+          }
+        }
         await writer.close();
       }
     })();
@@ -281,60 +316,148 @@ export async function POST(request: NextRequest) {
 /**
  * Extract structured data from conversation using simple pattern matching
  * For demo purposes - production uses AI extraction
+ *
+ * IMPORTANT: This should only be called with USER messages, not assistant messages,
+ * to avoid false positives from AI's conversational phrases.
+ *
+ * Messages are processed in order, with later corrections overriding earlier values.
  */
 async function extractFromConversation(
-  conversation: string,
+  userMessagesText: string,
   config: ConversationalFormConfig
 ): Promise<{ data: Record<string, any>; confidence: Record<string, number> }> {
   const data: Record<string, any> = {};
   const confidence: Record<string, number> = {};
 
-  // Email pattern
-  const emailMatch = conversation.match(/[\w.-]+@[\w.-]+\.\w+/i);
-  if (emailMatch) {
-    data.email = emailMatch[0].toLowerCase();
-    confidence.email = 0.95;
-  }
+  // Common words to filter out - these are NOT names or companies
+  const commonWords = new Set([
+    'ok', 'okay', 'sure', 'yes', 'no', 'hi', 'hello', 'hey', 'thanks', 'thank',
+    'please', 'help', 'need', 'want', 'get', 'started', 'begin', 'simple',
+    'excited', 'great', 'good', 'fine', 'well', 'what', 'information', 'you',
+    'the', 'and', 'for', 'that', 'this', 'with', 'have', 'are', 'was', 'were',
+    'not', 'actually', 'meant', 'should', 'it', 'is', 'was', 'be', 'let',
+  ]);
 
-  // Name extraction - look for patterns like "I'm [Name]", "My name is [Name]", "name is [Name]"
-  const namePatterns = [
-    /(?:my name is|i'm|i am|call me|this is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-    /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*$/m,
-  ];
-  for (const pattern of namePatterns) {
-    const match = conversation.match(pattern);
-    if (match && match[1] && match[1].length > 1) {
-      data.fullName = match[1].trim();
-      confidence.fullName = 0.85;
-      break;
+  const isCommonWord = (word: string) => commonWords.has(word.toLowerCase());
+
+  // Split into individual messages for ordered processing
+  const messages = userMessagesText.split('\n').filter(m => m.trim());
+
+  // Process each message in order - later messages can override earlier ones
+  for (const message of messages) {
+    const msg = message.trim();
+
+    // Check for CORRECTIONS first - these have highest priority
+    // Patterns like: "actually it's X", "not X - Y", "name was Y not X", "should be X"
+    // Note: Use case-insensitive patterns since users may type names in lowercase
+    const correctionPatterns = [
+      // "actually my name is X" / "actually it's X"
+      /actually\s+(?:my\s+)?(?:name\s+)?(?:is|it's|its)\s+([a-z]+)/i,
+      // "the name was X" / "name was X not Y" / "the victim's name was X"
+      /(?:the\s+)?(?:\w+'s\s+)?name\s+(?:was|is|should be)\s+([a-z]+)(?:\s*[-,]\s*not)?/i,
+      // "it was X not Y"
+      /it\s+(?:was|is|should be)\s+([a-z]+)(?:\s*[-,]\s*not)?/i,
+      // "not X - Y" or "not X, Y" for name correction (captures the SECOND name)
+      /not\s+[a-z]+\s*[-,.]\s*([a-z]+)/i,
+      // "should be X"
+      /should\s+be\s+([a-z]+)/i,
+      // "I meant X"
+      /i\s+meant\s+([a-z]+)/i,
+    ];
+
+    for (const pattern of correctionPatterns) {
+      const match = msg.match(pattern);
+      if (match && match[1]) {
+        const correctedName = match[1].trim();
+        // Capitalize the first letter for proper name formatting
+        const formattedName = correctedName.charAt(0).toUpperCase() + correctedName.slice(1).toLowerCase();
+        if (formattedName.length > 2 && !isCommonWord(formattedName.toLowerCase())) {
+          data.fullName = formattedName;
+          confidence.fullName = 0.95; // Higher confidence for explicit corrections
+        }
+      }
+    }
+
+    // Email correction patterns
+    const emailCorrectionMatch = msg.match(/(?:actually|correct|should be|it's|its)\s+[\w.-]+@[\w.-]+\.\w{2,}/i);
+    if (emailCorrectionMatch) {
+      const emailMatch = msg.match(/[\w.-]+@[\w.-]+\.\w{2,}/i);
+      if (emailMatch) {
+        data.email = emailMatch[0].toLowerCase();
+        confidence.email = 0.95;
+      }
+    }
+
+    // Standard email extraction (if no correction found yet)
+    if (!data.email) {
+      const emailMatch = msg.match(/[\w.-]+@[\w.-]+\.\w{2,}/i);
+      if (emailMatch) {
+        data.email = emailMatch[0].toLowerCase();
+        confidence.email = 0.95;
+      }
+    }
+
+    // Name extraction - standard patterns (only if no correction set it)
+    if (!data.fullName) {
+      const namePatterns = [
+        /(?:my name is|i'm|i am|call me|name's)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+        // Single word that's just a capitalized name (likely answering "what's your name?")
+        /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+)?)$/,
+      ];
+      for (const pattern of namePatterns) {
+        const match = msg.match(pattern);
+        if (match && match[1]) {
+          const name = match[1].trim();
+          const firstWord = name.split(' ')[0].toLowerCase();
+          if (name.length > 2 && !isCommonWord(firstWord)) {
+            data.fullName = name;
+            confidence.fullName = 0.85;
+            break;
+          }
+        }
+      }
     }
   }
 
-  // Company extraction
+  // Company extraction - scan full text
   const companyPatterns = [
-    /(?:work(?:ing)?\s+(?:at|for)|company is|from|with)\s+([A-Z][A-Za-z0-9\s&.-]+?)(?:\.|,|$|\n)/i,
-    /(?:at|for)\s+([A-Z][A-Za-z0-9\s&.-]+?)\s+(?:as|doing)/i,
+    /(?:work(?:ing)?\s+(?:at|for)|company is|from|with)\s+([A-Z][A-Za-z0-9\s&.-]{2,}?)(?:\.|,|$|\n)/i,
+    /(?:at|for)\s+([A-Z][A-Za-z0-9\s&.-]{2,}?)\s+(?:as|doing)/i,
   ];
   for (const pattern of companyPatterns) {
-    const match = conversation.match(pattern);
-    if (match && match[1] && match[1].length > 1) {
-      data.company = match[1].trim();
-      confidence.company = 0.8;
-      break;
+    const match = userMessagesText.match(pattern);
+    if (match && match[1]) {
+      const company = match[1].trim();
+      const firstWord = company.split(' ')[0].toLowerCase();
+      if (company.length > 2 && !isCommonWord(firstWord)) {
+        data.company = company;
+        confidence.company = 0.8;
+        break;
+      }
     }
   }
 
-  // Interest extraction - look for what they're interested in
+  // Phone number extraction
+  const phoneMatch = userMessagesText.match(/(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/);
+  if (phoneMatch) {
+    data.phone = phoneMatch[0].replace(/[^\d+]/g, '');
+    confidence.phone = 0.9;
+  }
+
+  // Interest/reason extraction
   const interestPatterns = [
-    /(?:interested in|looking (?:for|into)|want to|curious about|need help with)\s+(.+?)(?:\.|$|\n)/i,
-    /(?:here (?:to|for)|checking out)\s+(.+?)(?:\.|$|\n)/i,
+    /(?:interested in|looking (?:for|into)|want to learn about|curious about|need help with)\s+(.{5,}?)(?:\.|$|\n)/i,
+    /(?:here (?:to|for)|checking out)\s+(.{5,}?)(?:\.|$|\n)/i,
   ];
   for (const pattern of interestPatterns) {
-    const match = conversation.match(pattern);
-    if (match && match[1] && match[1].length > 3) {
-      data.interest = match[1].trim();
-      confidence.interest = 0.7;
-      break;
+    const match = userMessagesText.match(pattern);
+    if (match && match[1]) {
+      const interest = match[1].trim();
+      if (interest.length > 5 && !isCommonWord(interest.split(' ')[0])) {
+        data.interest = interest;
+        confidence.interest = 0.7;
+        break;
+      }
     }
   }
 

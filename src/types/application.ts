@@ -48,6 +48,10 @@ export interface Application {
   // Marketplace metadata (for imported applications)
   marketplaceApplicationId?: string;  // ID of marketplace app this was imported from
   marketplaceVersion?: string;        // Version imported from marketplace
+
+  // Source tracking - where this application originated
+  source?: ApplicationSource;         // 'user' | 'installed' | 'system' | 'template'
+  sourceTemplateId?: string;          // Original template ID if source is 'template'
   
   // Permissions (Phase 10)
   defaultAccess?: 'org_members' | 'explicit';  // Default: 'org_members'
@@ -62,9 +66,15 @@ export type ApplicationStatus = 'draft' | 'active' | 'archived';
 
 /**
  * Application Source - Where the application came from
- * Used for filtering and visual treatment
+ * Used for filtering, visual treatment, and analytics
+ *
+ * - 'scratch': Created from blank by user
+ * - 'template': Created from a gallery template
+ * - 'marketplace': Installed from the marketplace
+ * - 'import': Imported from external source (file upload, etc.)
+ * - 'system': Auto-created by system (e.g., default application)
  */
-export type ApplicationSource = 'user' | 'installed' | 'system' | 'template';
+export type ApplicationSource = 'scratch' | 'template' | 'marketplace' | 'import' | 'system';
 
 // ============================================
 // Application Permissions (Phase 10)

@@ -11,6 +11,7 @@ import {
   createOrganization,
   getUserOrganizations,
   repairUserOrgMemberships,
+  autoScaffoldForUser,
 } from '@/lib/platform/organizations';
 import { findUserById } from '@/lib/platform/users';
 
@@ -49,7 +50,24 @@ export async function GET() {
       }
     }
 
-    const organizations = await getUserOrganizations(currentUser.userId);
+    let organizations = await getUserOrganizations(currentUser.userId);
+
+    // Auto-scaffold: If user still has no organizations, create one automatically
+    // This eliminates the "create org" step for new users (Phase 1 UX improvement)
+    if (organizations.length === 0) {
+      console.log(`[Organizations API] No organizations found for user ${currentUser.userId}, auto-scaffolding...`);
+      const scaffoldResult = await autoScaffoldForUser(
+        currentUser.userId,
+        currentUser.email,
+        currentUser.displayName
+      );
+
+      if (scaffoldResult) {
+        // Refetch organizations after scaffolding
+        organizations = await getUserOrganizations(currentUser.userId);
+        console.log(`[Organizations API] Auto-scaffold complete. User now has ${organizations.length} organization(s).`);
+      }
+    }
 
     return NextResponse.json({
       organizations: organizations.map(org => ({

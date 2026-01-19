@@ -76,6 +76,8 @@ const PUBLIC_API_ROUTES = [
   '/api/forms/', // Form submission endpoints
   '/api/onboarding/', // Onboarding endpoints (has separate auth)
   '/api/waitlist/signup', // Waitlist signup endpoint
+  '/api/workflows/process', // Workflow cron processor (has separate CRON_SECRET auth)
+  '/api/workflows/public/', // Public workflow execution endpoints
 ];
 
 /**

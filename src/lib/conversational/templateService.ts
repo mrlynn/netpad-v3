@@ -447,7 +447,7 @@ export async function cloneFromBuiltIn(
     }>;
     extractionSchema: Array<{
       field: string;
-      type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object';
+      type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object' | 'file';
       required: boolean;
       description: string;
       options?: string[];

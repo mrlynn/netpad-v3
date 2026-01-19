@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useApplication } from '@/contexts/ApplicationContext';
-import { getOrgProjectUrl } from '@/lib/routing';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { getAppUrl } from '@/lib/routing';
 
 /**
  * Hook for auto-navigating authenticated users to their last application
@@ -58,13 +58,12 @@ export function useAutoNavigateToApp(
   const searchParams = useSearchParams();
 
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { organization, currentOrgId, isLoading: isOrgLoading } = useOrganization();
-  const {
-    currentApplication,
-    applications,
-    recentApplications,
-    isLoading: isAppLoading,
-  } = useApplication();
+  const { isLoading: isOrgLoading } = useOrganization();
+  const applicationContext = useApplicationSafe();
+  const currentApplication = applicationContext?.currentApplication ?? null;
+  const applications = applicationContext?.applications ?? [];
+  const recentApplications = applicationContext?.recentApplications ?? [];
+  const isAppLoading = applicationContext?.isLoading ?? true;
 
   const [isNavigating, setIsNavigating] = useState(false);
   const [destination, setDestination] = useState<string | null>(null);
@@ -88,24 +87,27 @@ export function useAutoNavigateToApp(
     !destination;
 
   /**
-   * Navigate to a specific application
+   * Navigate to a specific application using app-centric URLs
+   * Uses /apps/[slug]/forms instead of /orgs/.../applications/...
    */
   const navigateToApp = useCallback(
     (appId: string) => {
       const app = applications.find(a => a.applicationId === appId);
-      if (!app || !currentOrgId) return null;
+      if (!app) return null;
 
-      const url = getOrgProjectUrl(currentOrgId, app.projectId, 'applications', app.applicationId);
+      // Use app-centric URL structure: /apps/[slug]/forms
+      const url = getAppUrl(app.slug, 'forms');
       return url;
     },
-    [applications, currentOrgId]
+    [applications]
   );
 
   /**
    * Navigate to the last-used or default application
+   * Uses app-centric URLs for a cleaner user experience
    */
   const navigateToLastApp = useCallback(async () => {
-    if (!currentOrgId || applications.length === 0) return;
+    if (applications.length === 0) return;
 
     setIsNavigating(true);
 
@@ -142,7 +144,6 @@ export function useAutoNavigateToApp(
       setIsNavigating(false);
     }
   }, [
-    currentOrgId,
     applications,
     recentApplications,
     currentApplication,

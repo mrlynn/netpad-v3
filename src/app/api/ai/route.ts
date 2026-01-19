@@ -6,15 +6,17 @@
  */
 
 import { NextResponse } from 'next/server';
+import { getProviderConfigFromEnv } from '@/lib/ai/providers';
 
 export async function GET() {
-  const hasApiKey = !!process.env.OPENAI_API_KEY;
+  const providerConfig = getProviderConfigFromEnv();
+  const hasProvider = !!providerConfig;
 
   return NextResponse.json({
-    status: hasApiKey ? 'available' : 'unconfigured',
-    message: hasApiKey
+    status: hasProvider ? 'available' : 'unconfigured',
+    message: hasProvider
       ? 'AI services are available and ready to use.'
-      : 'AI services require OPENAI_API_KEY to be configured.',
+      : 'AI services require OLLAMA_BASE_URL, OPENAI_API_KEY, or OPENROUTER_API_KEY to be configured.',
     endpoints: {
       'POST /api/ai/generate-form': {
         description: 'Generate a form from natural language description',

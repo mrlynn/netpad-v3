@@ -5,10 +5,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ConversationState, ConversationalFormConfig, TopicCoverage } from '@/types/conversational';
+import { ConversationState, ConversationalFormConfig, TopicCoverage, FileAttachment } from '@/types/conversational';
 // Import directly from state to avoid pulling in server-side dependencies (persistence uses MongoDB)
 import { createConversationState } from '@/lib/conversational/state';
 import { RetrievedChunk } from '@/types/rag';
+import { UploadedFile } from '@/hooks/useFileUpload';
 
 /**
  * SSE event types from the streaming endpoint
@@ -69,7 +70,16 @@ interface SSERAGSourcesEvent {
   sources: RetrievedChunk[];
 }
 
-type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSECompleteEvent | SSEErrorEvent | SSERAGSourcesEvent;
+interface SSEFileExtractionEvent {
+  type: 'file_extraction';
+  fileId: string;
+  extractedData: Record<string, any>;
+  confidence: number;
+  status: 'completed' | 'error';
+  error?: string;
+}
+
+type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSECompleteEvent | SSEErrorEvent | SSERAGSourcesEvent | SSEFileExtractionEvent;
 
 /**
  * Message in the conversation
@@ -82,6 +92,8 @@ export interface ConversationalMessage {
   isStreaming?: boolean;
   /** RAG sources for assistant messages (if RAG is enabled) */
   ragSources?: RetrievedChunk[];
+  /** File attachments for this message */
+  attachments?: FileAttachment[];
 }
 
 /**
@@ -114,8 +126,8 @@ export interface UseConversationalFormState {
  * Hook return type
  */
 export interface UseConversationalFormReturn extends UseConversationalFormState {
-  /** Send a message to the conversation */
-  sendMessage: (message: string) => Promise<void>;
+  /** Send a message to the conversation, optionally with file attachments */
+  sendMessage: (message: string, attachments?: UploadedFile[]) => Promise<void>;
   /** Start a new conversation */
   startConversation: () => void;
   /** Reset the conversation */
@@ -138,6 +150,8 @@ export interface UseConversationalFormOptions {
   onComplete?: (state: ConversationState) => void;
   /** Callback on error */
   onError?: (error: string) => void;
+  /** API endpoint to use (defaults to /api/conversational/stream) */
+  endpoint?: '/api/conversational/stream' | '/api/demo/conversational-stream';
 }
 
 /**
@@ -155,7 +169,7 @@ function generateId(): string {
 export function useConversationalForm(
   options: UseConversationalFormOptions
 ): UseConversationalFormReturn {
-  const { formId, config, onComplete, onError } = options;
+  const { formId, config, onComplete, onError, endpoint = '/api/conversational/stream' } = options;
 
   // State
   const [messages, setMessages] = useState<ConversationalMessage[]>([]);
@@ -214,19 +228,31 @@ export function useConversationalForm(
   }, [startConversation]);
 
   // Send a message
-  const sendMessage = useCallback(async (message: string) => {
+  const sendMessage = useCallback(async (message: string, attachments?: UploadedFile[]) => {
     if (!message.trim() || isStreaming || !stateRef.current) {
       return;
     }
 
     setError(null);
 
-    // Add user message
+    // Convert uploaded files to file attachments
+    const fileAttachments: FileAttachment[] | undefined = attachments?.map((f) => ({
+      id: f.id,
+      url: f.url,
+      downloadUrl: f.downloadUrl,
+      originalName: f.originalName,
+      mimeType: f.mimeType,
+      size: f.size,
+      extractionStatus: 'pending' as const,
+    }));
+
+    // Add user message with attachments
     const userMessage: ConversationalMessage = {
       id: generateId(),
       role: 'user',
       content: message.trim(),
       timestamp: new Date(),
+      attachments: fileAttachments,
     };
     setMessages((prev) => [...prev, userMessage]);
 
@@ -247,7 +273,7 @@ export function useConversationalForm(
 
     try {
       // Make SSE request
-      const response = await fetch('/api/conversational/stream', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,6 +284,15 @@ export function useConversationalForm(
           message: message.trim(),
           state: stateRef.current,
           config,
+          // Include file attachments if present
+          attachments: fileAttachments?.map((f) => ({
+            id: f.id,
+            url: f.url,
+            downloadUrl: f.downloadUrl,
+            originalName: f.originalName,
+            mimeType: f.mimeType,
+            size: f.size,
+          })),
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -429,6 +464,33 @@ export function useConversationalForm(
             m.id === messageId ? { ...m, ragSources: event.sources } : m
           )
         );
+        break;
+
+      case 'file_extraction':
+        // Update file attachment with extraction results
+        setMessages((prev) =>
+          prev.map((m) => ({
+            ...m,
+            attachments: m.attachments?.map((a) =>
+              a.id === event.fileId
+                ? {
+                    ...a,
+                    extractedData: event.extractedData,
+                    extractionConfidence: event.confidence,
+                    extractionStatus: event.status,
+                    extractionError: event.error,
+                  }
+                : a
+            ),
+          }))
+        );
+        // Also merge extracted data into the overall extracted data
+        if (event.status === 'completed' && event.extractedData) {
+          setExtractedData((prev) => ({
+            ...prev,
+            ...event.extractedData,
+          }));
+        }
         break;
     }
   }, [onError]);

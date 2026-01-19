@@ -55,7 +55,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useHelp } from '@/contexts/HelpContext';
 import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useApplication } from '@/contexts/ApplicationContext';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 import { OrganizationSelector } from './OrganizationSelector';
 import { ProjectSelectorNav } from './ProjectSelectorNav';
@@ -121,7 +121,8 @@ export function AppNavBar() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout, registerPasskey } = useAuth();
   const { organization, currentOrgId, organizations } = useOrganization();
-  const { currentApplication } = useApplication();
+  const applicationContext = useApplicationSafe();
+  const currentApplication = applicationContext?.currentApplication ?? null;
   const isMultiOrg = organizations.length > 1;
   const { openSearch } = useHelp();
   const { mode, toggleTheme } = useAppTheme();
@@ -419,22 +420,22 @@ export function AppNavBar() {
             </Box>
           </Tooltip>
 
-          {/* Organization & Project Selectors - Compact, quieter */}
-          {isAuthenticated && organization && !isMobile && (
+          {/* Organization & Project Selectors - Hidden by default, shown only for multi-org/multi-project users */}
+          {/* These are secondary to the Application Switcher which is the primary entry point */}
+          {isAuthenticated && organization && !isMobile && isMultiOrg && (
             <>
-              <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto', opacity: 0.3 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.7 }}>
                 <OrganizationSelector compact />
-                <ProjectSelectorNav compact currentProjectId={currentProjectId} />
               </Box>
             </>
           )}
 
-          {/* Application Context - Prominent app switcher trigger */}
-          {isAuthenticated && organization && currentApplication && !isMobile && (
+          {/* Application Switcher - PRIMARY ENTRY POINT (always visible when authenticated) */}
+          {isAuthenticated && organization && !isMobile && (
             <>
               <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
-              <Tooltip title="Switch application (Cmd+K)">
+              <Tooltip title={currentApplication ? "Switch application (⌘K)" : "Select an application (⌘K)"}>
                 <Button
                   onClick={() => setAppSwitcherOpen(true)}
                   sx={{
@@ -446,67 +447,102 @@ export function AppNavBar() {
                     borderRadius: 1,
                     textTransform: 'none',
                     color: 'text.primary',
-                    bgcolor: alpha('#00ED64', 0.08),
+                    bgcolor: currentApplication
+                      ? alpha('#00ED64', 0.08)
+                      : alpha('#00ED64', 0.15),
                     border: '1px solid',
-                    borderColor: alpha('#00ED64', 0.2),
+                    borderColor: currentApplication
+                      ? alpha('#00ED64', 0.2)
+                      : alpha('#00ED64', 0.4),
                     '&:hover': {
-                      bgcolor: alpha('#00ED64', 0.15),
-                      borderColor: alpha('#00ED64', 0.3),
+                      bgcolor: alpha('#00ED64', 0.2),
+                      borderColor: alpha('#00ED64', 0.4),
                     },
                     transition: 'all 0.15s ease',
+                    // Pulse animation when no app selected to draw attention
+                    ...((!currentApplication) && {
+                      animation: 'pulse 2s ease-in-out infinite',
+                      '@keyframes pulse': {
+                        '0%, 100%': {
+                          boxShadow: `0 0 0 0 ${alpha('#00ED64', 0.4)}`,
+                        },
+                        '50%': {
+                          boxShadow: `0 0 0 4px ${alpha('#00ED64', 0.1)}`,
+                        },
+                      },
+                    }),
                   }}
                 >
-                  {/* App Icon */}
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 0.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: currentApplication.color || alpha('#00ED64', 0.2),
-                      color: currentApplication.color ? '#fff' : '#00ED64',
-                      fontWeight: 600,
-                      fontSize: '0.65rem',
-                    }}
-                  >
-                    {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
-                  </Box>
-                  {/* App Name + Org (for multi-org users) */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.8125rem',
-                        maxWidth: 150,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {currentApplication.name}
-                    </Typography>
-                    {/* Show org name for multi-org users */}
-                    {isMultiOrg && organization && (
-                      <Typography
-                        variant="caption"
+                  {currentApplication ? (
+                    <>
+                      {/* App Icon */}
+                      <Box
                         sx={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: currentApplication.color || alpha('#00ED64', 0.2),
+                          color: currentApplication.color ? '#fff' : '#00ED64',
+                          fontWeight: 600,
                           fontSize: '0.65rem',
-                          color: 'text.secondary',
-                          maxWidth: 150,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          lineHeight: 1,
                         }}
                       >
-                        {organization.name}
+                        {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
+                      </Box>
+                      {/* App Name + Org (for multi-org users) */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: '0.8125rem',
+                            maxWidth: 150,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {currentApplication.name}
+                        </Typography>
+                        {/* Show org name for multi-org users */}
+                        {isMultiOrg && organization && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: '0.65rem',
+                              color: 'text.secondary',
+                              maxWidth: 150,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {organization.name}
+                          </Typography>
+                        )}
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      {/* No app selected - show prompt */}
+                      <Apps sx={{ fontSize: 18, color: '#00ED64' }} />
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.8125rem',
+                          color: '#00ED64',
+                        }}
+                      >
+                        Select App
                       </Typography>
-                    )}
-                  </Box>
+                    </>
+                  )}
                   {/* Dropdown indicator */}
                   <ArrowDropDown sx={{ fontSize: 18, color: 'text.secondary', ml: -0.5 }} />
                 </Button>

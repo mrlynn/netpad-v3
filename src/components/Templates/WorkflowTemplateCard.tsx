@@ -3,6 +3,7 @@
 import { Box, Paper, Typography, Chip, alpha } from '@mui/material';
 import Image from 'next/image';
 import { WorkflowTemplate } from '@/lib/templates/loader';
+import { TemplateIcon } from './TemplateIcon';
 
 interface WorkflowTemplateCardProps {
   template: WorkflowTemplate;
@@ -64,9 +65,11 @@ export function WorkflowTemplateCard({ template, onClick, variant = 'default' }:
             />
           </Box>
         ) : (
-          <Typography sx={{ fontSize: variant === 'compact' ? 24 : 28, flexShrink: 0 }}>
-            {template.icon}
-          </Typography>
+          <TemplateIcon
+            icon={template.icon}
+            size={variant === 'compact' ? 24 : 28}
+            sx={{ flexShrink: 0 }}
+          />
         )}
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography

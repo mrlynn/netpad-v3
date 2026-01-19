@@ -42,7 +42,7 @@ export interface ExtractionSchema {
   /** Field name */
   field: string;
   /** Field type */
-  type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object';
+  type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object' | 'file';
   /** Whether field is required */
   required: boolean;
   /** Description of what to extract */
@@ -101,6 +101,28 @@ export interface CostEstimate {
 }
 
 /**
+ * Options for image analysis (vision)
+ */
+export interface ImageAnalysisOptions {
+  /** Prompt describing what to extract/analyze */
+  prompt: string;
+  /** Maximum tokens for the response */
+  maxTokens?: number;
+}
+
+/**
+ * Result of image analysis
+ */
+export interface ImageAnalysisResult {
+  /** Extracted data from the image */
+  data: Record<string, any>;
+  /** Confidence score (0-1) */
+  confidence: number;
+  /** Description of what was found */
+  description: string;
+}
+
+/**
  * Base interface for all LLM providers
  */
 export interface LLMProvider {
@@ -154,10 +176,24 @@ export interface LLMProvider {
 
   /**
    * Check if provider is configured and available
-   * 
+   *
    * @returns True if provider can be used
    */
   isAvailable(): Promise<boolean>;
+
+  /**
+   * Analyze an image using vision capabilities (optional)
+   *
+   * Not all providers support this. Check if the method exists before calling.
+   *
+   * @param imageUrl - URL of the image to analyze
+   * @param options - Analysis options including prompt
+   * @returns Analysis result with extracted data
+   */
+  analyzeImage?(
+    imageUrl: string,
+    options: ImageAnalysisOptions
+  ): Promise<ImageAnalysisResult>;
 }
 
 /**

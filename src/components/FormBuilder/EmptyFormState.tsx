@@ -1069,13 +1069,29 @@ export function EmptyFormState({
           // If connection context is provided, use the new handler that sets up the data source
           if (connectionContext && onAIGenerateWithConnection && form.fieldConfigs) {
             onAIGenerateWithConnection(form.fieldConfigs, connectionContext);
-          } else if (form.fieldConfigs) {
-            // Fall back to adding fields one by one
-            form.fieldConfigs.forEach((field, index) => {
-              setTimeout(() => {
-                onAddField(field);
-              }, index * 50);
-            });
+          } else if (form.fieldConfigs && form.fieldConfigs.length > 0) {
+            // Use onAddTemplate to add all fields at once (handles new form dialog if needed)
+            if (onAddTemplate) {
+              const template: FormTemplate = {
+                id: 'ai-generated',
+                name: form.name || 'AI Generated Form',
+                description: form.description || '',
+                icon: '✨',
+                category: 'general',
+                fields: form.fieldConfigs,
+                formType: form.formType,
+                searchConfig: form.searchConfig,
+                conversationalConfig: form.conversationalConfig,
+              };
+              onAddTemplate(template);
+            } else {
+              // Fallback: add fields one by one (only if no template handler)
+              form.fieldConfigs.forEach((field, index) => {
+                setTimeout(() => {
+                  onAddField(field);
+                }, index * 50);
+              });
+            }
           }
           setAiDialogOpen(false);
         }}

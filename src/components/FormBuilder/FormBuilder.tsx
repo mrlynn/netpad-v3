@@ -33,7 +33,7 @@ import { WYSIWYGFormEditor } from './WYSIWYGFormEditor';
 import { FieldConfigDrawer } from './FieldConfigDrawer';
 import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { ConnectionStatusChip } from './ConnectionStatusChip';
-import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings } from '@/types/form';
+import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings, FormConfiguration } from '@/types/form';
 import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
 import { useChat } from '@/contexts/ChatContext';
@@ -48,12 +48,13 @@ import { useProjectDefaultVault } from '@/lib/swr';
 
 interface FormBuilderProps {
   initialFormId?: string;
+  initialFormConfig?: FormConfiguration;
   organizationId?: string;
   projectId?: string;
   applicationId?: string;
 }
 
-export function FormBuilder({ initialFormId, organizationId: propOrganizationId, projectId: propProjectId, applicationId: propApplicationId }: FormBuilderProps) {
+export function FormBuilder({ initialFormId, initialFormConfig, organizationId: propOrganizationId, projectId: propProjectId, applicationId: propApplicationId }: FormBuilderProps) {
   const { connectionString, databaseName, collection, sampleDocs, dispatch } = usePipeline();
   const { currentOrgId, organization } = useOrganization();
   const pathname = usePathname();
@@ -66,7 +67,7 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   // Fetch project's default vault with SWR caching (10 min cache)
   const { data: defaultVaultData } = useProjectDefaultVault(effectiveProjectId);
 
-  const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
+  const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>(initialFormConfig?.fieldConfigs || []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -78,8 +79,8 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   const [themeConfig, setThemeConfig] = useState<FormTheme | undefined>(undefined);
 
   const [currentFormId, setCurrentFormId] = useState<string | undefined>(undefined);
-  const [currentFormName, setCurrentFormName] = useState<string>('');
-  const [currentFormDescription, setCurrentFormDescription] = useState<string>('');
+  const [currentFormName, setCurrentFormName] = useState<string>(initialFormConfig?.name || '');
+  const [currentFormDescription, setCurrentFormDescription] = useState<string>(initialFormConfig?.description || '');
   const [currentFormSlug, setCurrentFormSlug] = useState<string | undefined>(undefined);
   const [currentFormIsPublished, setCurrentFormIsPublished] = useState<boolean>(false);
   const [notification, setNotification] = useState<{
@@ -88,9 +89,9 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
   }>({ open: false, savedForm: null });
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
-  const [formType, setFormType] = useState<FormType>('data-entry');
+  const [formType, setFormType] = useState<FormType>(initialFormConfig?.formType || 'data-entry');
   const [searchConfig, setSearchConfig] = useState<SearchConfig | undefined>(undefined);
-  const [conversationalConfig, setConversationalConfig] = useState<import('@/types/conversational').ConversationalFormConfig | undefined>(undefined);
+  const [conversationalConfig, setConversationalConfig] = useState<import('@/types/conversational').ConversationalFormConfig | undefined>(initialFormConfig?.conversationalConfig);
   const [projectId, setProjectId] = useState<string | undefined>(propProjectId);
   const [dataSource, setDataSource] = useState<FormDataSource | undefined>(undefined);
   const [accessControl, setAccessControl] = useState<FormAccessControl | undefined>(undefined);
@@ -422,6 +423,22 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFormId]);
 
+  // Load form from initialFormConfig when provided (e.g., from landing page generation)
+  useEffect(() => {
+    if (initialFormConfig && !initialFormId) {
+      console.log('[FormBuilder] Loading from initialFormConfig:', initialFormConfig.name);
+      setFieldConfigs(initialFormConfig.fieldConfigs || []);
+      setCurrentFormName(initialFormConfig.name || 'Generated Form');
+      setCurrentFormDescription(initialFormConfig.description || '');
+      setFormType(initialFormConfig.formType || 'conversational');
+      setConversationalConfig(initialFormConfig.conversationalConfig);
+      setOrganizationId(initialFormConfig.organizationId);
+      setProjectId(initialFormConfig.projectId);
+      setFormData({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFormConfig]);
+
   const loadFormById = async (formId: string) => {
     setIsLoading(true);
     setError(null);
@@ -476,10 +493,10 @@ export function FormBuilder({ initialFormId, organizationId: propOrganizationId,
     } else if (connectionString && databaseName && collection) {
       // Fetch sample documents if not available
       fetchSampleDocs();
-    } else {
-      setFieldConfigs([]);
-      setFormData({});
     }
+    // Note: We no longer reset fieldConfigs to [] here when there's no connection.
+    // This allows templates and initialFormConfig to work without being wiped out.
+    // Fields are only reset when explicitly loading from a connection/collection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionString, databaseName, collection, sampleDocs]);
 

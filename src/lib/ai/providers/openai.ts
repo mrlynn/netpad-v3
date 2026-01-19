@@ -15,6 +15,8 @@ import {
   CostEstimate,
   TokenUsage,
   ProviderError,
+  ImageAnalysisOptions,
+  ImageAnalysisResult,
 } from './base';
 
 /**
@@ -237,6 +239,71 @@ export class OpenAIProvider implements LLMProvider {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Analyze an image using GPT-4o vision capabilities
+   */
+  async analyzeImage(
+    imageUrl: string,
+    options: ImageAnalysisOptions
+  ): Promise<ImageAnalysisResult> {
+    try {
+      // Use gpt-4o for vision (has best vision capabilities)
+      const completion = await this.client.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: options.prompt },
+              {
+                type: 'image_url',
+                image_url: { url: imageUrl },
+              },
+            ],
+          },
+        ],
+        max_tokens: options.maxTokens || 1000,
+        response_format: { type: 'json_object' },
+      });
+
+      const responseText = completion.choices[0]?.message?.content;
+      if (!responseText) {
+        throw new ProviderError('No response from vision API', 'openai', 'NO_RESPONSE');
+      }
+
+      const parsed = JSON.parse(responseText);
+
+      return {
+        data: parsed.data || {},
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+        description: parsed.description || 'Image analyzed',
+      };
+    } catch (error: any) {
+      // Handle rate limiting
+      if (error.status === 429) {
+        const retryAfterHeader = error.headers?.['retry-after'];
+        const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+        throw new ProviderError(
+          `Rate limit exceeded. Please retry after ${retryAfter} seconds.`,
+          'openai',
+          'RATE_LIMIT_EXCEEDED',
+          429,
+          retryAfter
+        );
+      }
+
+      if (error instanceof ProviderError) {
+        throw error;
+      }
+
+      throw new ProviderError(
+        error.message || 'Vision analysis failed',
+        'openai',
+        'VISION_ERROR'
+      );
     }
   }
 

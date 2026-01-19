@@ -961,6 +961,11 @@ function WorkflowEditorInner({
         workflow={workflow}
         orgId={orgId}
         onExecutionStarted={handleTestExecutionStarted}
+        isDirty={isDirty}
+        onSaveBeforeTest={async () => {
+          const success = await saveWorkflow(orgId);
+          return success;
+        }}
       />
     </Box>
   );

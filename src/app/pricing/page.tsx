@@ -506,7 +506,7 @@ export default function PricingPage() {
       </Box>
 
       {/* Feature Comparison Table */}
-      <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: alpha('#000', 0.2) }}>
+      <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
           <Typography
             variant="h3"

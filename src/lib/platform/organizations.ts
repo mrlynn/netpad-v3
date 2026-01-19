@@ -641,6 +641,66 @@ async function logOrgEvent(event: Omit<AuditLogEntry, '_id'>): Promise<void> {
 }
 
 // ============================================
+// Auto-Scaffolding for New Users
+// ============================================
+
+/**
+ * Auto-scaffold organization, project, and application for a new user.
+ * This eliminates the need for users to manually create these resources.
+ *
+ * Flow: Org → Project (via ensureDefaultProject) → Application (via ensureDefaultApplication)
+ */
+export async function autoScaffoldForUser(userId: string, userEmail: string, displayName?: string): Promise<{
+  organization: Organization;
+  projectId: string;
+  applicationId: string;
+} | null> {
+  try {
+    // Generate org name from display name or email
+    const orgName = displayName
+      ? `${displayName}'s Workspace`
+      : `${userEmail.split('@')[0]}'s Workspace`;
+
+    // Generate slug from email prefix (sanitized)
+    const emailPrefix = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 40);
+    const baseSlug = `${emailPrefix}-workspace`;
+
+    // Ensure unique slug by appending timestamp if needed
+    const orgsCollection = await getOrganizationsCollection();
+    const existingSlug = await orgsCollection.findOne({ slug: baseSlug });
+    const slug = existingSlug ? `${baseSlug}-${Date.now().toString(36)}` : baseSlug;
+
+    console.log(`[AutoScaffold] Creating organization "${orgName}" (${slug}) for user ${userId}`);
+
+    // Create organization
+    const organization = await createOrganization({
+      name: orgName,
+      slug,
+      createdBy: userId,
+    });
+
+    // Create default project (this also creates default application)
+    const { ensureDefaultProject } = await import('./projects');
+    const project = await ensureDefaultProject(organization.orgId, userId);
+
+    // Get the default application that was created
+    const { getDefaultApplication } = await import('./applications');
+    const application = await getDefaultApplication(organization.orgId, project.projectId);
+
+    console.log(`[AutoScaffold] Complete: org=${organization.orgId}, project=${project.projectId}, app=${application?.applicationId}`);
+
+    return {
+      organization,
+      projectId: project.projectId,
+      applicationId: application?.applicationId || '',
+    };
+  } catch (error) {
+    console.error('[AutoScaffold] Failed to auto-scaffold for user:', error);
+    return null;
+  }
+}
+
+// ============================================
 // Data Repair Utilities
 // ============================================
 
