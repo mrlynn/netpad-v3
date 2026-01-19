@@ -63,6 +63,11 @@ import { fetcher } from '@/lib/swr';
 import { ApplicationPublishDialog } from '@/components/Projects/ApplicationPublishDialog';
 import { ContractsTab } from '@/components/Applications/ContractsTab';
 import { PermissionsTab } from '@/components/Applications/PermissionsTab';
+import { PublishDialog } from '@/components/FormBuilder/PublishDialog';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { FormDataSource } from '@/types/form';
+import { Rocket } from '@mui/icons-material';
+import { buildFormUrl } from '@/lib/slugs';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,6 +104,7 @@ interface FormsListResponse {
 }
 
 function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFormsTabProps) {
+  const { organization } = useOrganization();
   const {
     data,
     error,
@@ -122,6 +128,8 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
     message: '',
     severity: 'success',
   });
+  const [publishDialogForm, setPublishDialogForm] = useState<any | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   const handleDelete = async (formId: string) => {
     if (!confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
@@ -162,6 +170,57 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
 
   const handleMenuClose = () => {
     setMenuAnchor({ el: null, formId: null });
+  };
+
+  const handlePublishForm = async (config: { name: string; slug: string; dataSource?: FormDataSource }): Promise<{ success: boolean; error?: string }> => {
+    if (!publishDialogForm) return { success: false, error: 'No form selected' };
+
+    setPublishing(true);
+    try {
+      const response = await fetch('/api/forms-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formConfig: {
+            ...publishDialogForm,
+            id: publishDialogForm.id,
+            name: config.name.trim(),
+            slug: config.slug.trim(),
+            dataSource: config.dataSource || publishDialogForm.dataSource,
+            organizationId: orgId,
+            projectId,
+          },
+          publish: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to publish form');
+      }
+
+      // Generate the URL for the snackbar message
+      let url: string;
+      if (organization?.slug) {
+        url = buildFormUrl(organization.slug, data.form.slug, {
+          protocol: window.location.protocol === 'http:' ? 'http' : 'https',
+          rootDomain: window.location.hostname.includes('localhost') ? 'localhost:3000' : 'netpad.io',
+        });
+      } else {
+        url = `${window.location.origin}/forms/${data.form.slug}`;
+      }
+
+      setSnackbar({ open: true, message: `Form published! URL: ${url}`, severity: 'success' });
+      setPublishDialogForm(null);
+      await mutate(); // Refresh forms list
+      return { success: true };
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.message, severity: 'error' });
+      return { success: false, error: err.message };
+    } finally {
+      setPublishing(false);
+    }
   };
 
   if (isLoading && !data && !error) {
@@ -300,6 +359,32 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
               >
                 Edit
               </Button>
+              <Button
+                size="small"
+                variant={form.isPublished ? 'outlined' : 'contained'}
+                startIcon={<Rocket sx={{ fontSize: 16 }} />}
+                onClick={() => setPublishDialogForm(form)}
+                sx={{
+                  textTransform: 'none',
+                  ...(form.isPublished
+                    ? {
+                        borderColor: alpha('#00ED64', 0.5),
+                        color: '#00ED64',
+                        '&:hover': {
+                          borderColor: '#00ED64',
+                          bgcolor: alpha('#00ED64', 0.1),
+                        },
+                      }
+                    : {
+                        background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #7b1fa2 0%, #ab47bc 100%)',
+                        },
+                      }),
+                }}
+              >
+                {form.isPublished ? 'Update URL' : 'Publish'}
+              </Button>
               {form.isPublished && (
                 <Button
                   size="small"
@@ -386,6 +471,22 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Form Publish Dialog */}
+      {publishDialogForm && (
+        <PublishDialog
+          open={!!publishDialogForm}
+          onClose={() => setPublishDialogForm(null)}
+          formName={publishDialogForm.name || ''}
+          formSlug={publishDialogForm.slug}
+          formConfigDataSource={publishDialogForm.dataSource}
+          organizationId={orgId}
+          organizationSlug={organization?.slug}
+          projectId={projectId}
+          isPublished={publishDialogForm.isPublished}
+          onPublish={handlePublishForm}
+        />
+      )}
     </Box>
   );
 }
