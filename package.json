@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:packages": "npm run build --prefix packages/templates && npm run build --prefix packages/forms",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
