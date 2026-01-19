@@ -94,6 +94,17 @@ export function PublishDialog({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Sync form name and slug when dialog opens or props change
+  useEffect(() => {
+    if (open) {
+      setFormName(initialFormName || '');
+      setSlug(initialFormSlug || '');
+      setIsEditingSlug(false);
+      setSlugError(null);
+      setError(null);
+    }
+  }, [open, initialFormName, initialFormSlug]);
+
   // Auto-generate slug from form name if not set
   useEffect(() => {
     if (!slug && formName) {
