@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Box, Typography, Button, Container, Grid, Paper, alpha, Chip } from '@mui/material';
 import {
   ArrowForward,
@@ -210,7 +211,7 @@ const mcpServerFeatures = [
   { title: '100+ Templates', description: 'Forms, workflows, applications, conversational & query templates' },
 ];
 
-export default function LandingPage() {
+function LandingPageContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   // Smart landing: auto-navigate authenticated users to their last app
@@ -2606,4 +2607,29 @@ $ netpad login --api-key np_live_xxx`}
   }
 
   return content;
+}
+
+// Loading fallback for Suspense boundary
+function LandingPageFallback() {
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B', display: 'flex', flexDirection: 'column' }}>
+      <AppNavBar />
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ color: alpha('#fff', 0.7) }}>
+            Loading...
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// Wrap in Suspense to handle useSearchParams in useAutoNavigateToApp hook
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<LandingPageFallback />}>
+      <LandingPageContent />
+    </Suspense>
+  );
 }
