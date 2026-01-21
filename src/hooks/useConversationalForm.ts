@@ -385,7 +385,12 @@ export function useConversationalForm(
         setTopics((prev) =>
           prev.map((t) => {
             const updated = event.state.topics.find((ut) => ut.topicId === t.topicId);
-            return updated ? { ...t, covered: updated.covered, depth: updated.depth } : t;
+            return updated ? { 
+              ...t, 
+              covered: updated.covered, 
+              depth: updated.depth,
+              turnCount: updated.turnCount !== undefined ? updated.turnCount : t.turnCount,
+            } : t;
           })
         );
         // Update ref state with full state including messages
@@ -400,7 +405,7 @@ export function useConversationalForm(
               covered: t.covered,
               depth: t.depth,
               priority: stateRef.current!.topics.find(ot => ot.topicId === t.topicId)?.priority || 'optional',
-              turnCount: stateRef.current!.topics.find(ot => ot.topicId === t.topicId)?.turnCount || 0,
+              turnCount: t.turnCount !== undefined ? t.turnCount : (stateRef.current!.topics.find(ot => ot.topicId === t.topicId)?.turnCount || 0),
             })),
             partialExtractions: event.state.partialExtractions || stateRef.current.partialExtractions,
             messages: event.state.messages.map((msg: any) => ({

@@ -13,6 +13,11 @@ import { Message } from '@/lib/ai/providers';
 import { aiService, createAIContext } from '@/lib/ai/aiService';
 import { ConversationalFormConfig, ConversationState } from '@/types/conversational';
 import { TokenUsage } from '@/types/ai-analytics';
+import { 
+  updateTopicCoverageFromExtractions,
+  addMessageToState,
+  updatePartialExtractions,
+} from '@/lib/conversational/state';
 
 // Simple in-memory rate limiting for demo
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -261,33 +266,78 @@ export async function POST(request: NextRequest) {
           // Simple extraction using patterns
           const extraction = await extractFromConversation(userMessages, config);
 
+          // Start with current state or create new one
+          let updatedState: ConversationState = state || {
+            conversationId: `demo_${Date.now()}`,
+            formId: config.templateId || 'demo',
+            messages: [],
+            topics: config.topics.map((t) => ({
+              topicId: t.id,
+              name: t.name,
+              covered: false,
+              depth: 0,
+              priority: t.priority,
+              turnCount: 0,
+            })),
+            partialExtractions: {},
+            confidence: 0,
+            turnCount: 0,
+            maxTurns: config.conversationLimits.maxTurns,
+            status: 'active',
+            startedAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          // Add user message to state
+          updatedState = addMessageToState(updatedState, 'user', message);
+          
+          // Add assistant message to state
+          updatedState = addMessageToState(updatedState, 'assistant', fullResponse);
+
+          // Update partial extractions
+          updatedState = updatePartialExtractions(
+            updatedState,
+            extraction.data,
+            extraction.confidence.overall || 0.5
+          );
+
+          // Update topic coverage based on extractions (this is the key fix!)
+          updatedState = updateTopicCoverageFromExtractions(
+            updatedState,
+            extraction.data,
+            config.extractionSchema,
+            config.topics
+          );
+
           // Send extraction update
           const extractionEvent = `data: ${JSON.stringify({
             type: 'extraction_update',
             data: extraction.data,
             confidence: extraction.confidence,
-            overallConfidence: extraction.confidence.overall || 0.5,
+            overallConfidence: updatedState.confidence,
           })}\n\n`;
           await writer.write(encoder.encode(extractionEvent));
 
-          // Send state update with new turn count
+          // Send state update with properly calculated topic coverage
           const stateUpdate = `data: ${JSON.stringify({
             type: 'state_update',
             state: {
-              turnCount: (state?.turnCount || 0) + 1,
-              confidence: extraction.confidence.overall || 0.5,
-              topics: config.topics.map((t) => ({
-                topicId: t.id,
+              conversationId: updatedState.conversationId,
+              turnCount: updatedState.turnCount,
+              confidence: updatedState.confidence,
+              topics: updatedState.topics.map((t) => ({
+                topicId: t.topicId,
                 name: t.name,
-                covered: !!extraction.data[t.extractionField || t.id],
-                depth: extraction.data[t.extractionField || t.id] ? 1 : 0,
+                covered: t.covered,
+                depth: t.depth,
+                turnCount: t.turnCount,
               })),
-              partialExtractions: extraction.data,
-              messages: [
-                ...(state?.messages || []),
-                { role: 'user', content: message, timestamp: new Date().toISOString() },
-                { role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() },
-              ],
+              partialExtractions: updatedState.partialExtractions,
+              messages: updatedState.messages.map((m) => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+              })),
             },
           })}\n\n`;
           await writer.write(encoder.encode(stateUpdate));
@@ -404,8 +454,12 @@ async function extractFromConversation(
         // Capitalize the first letter for proper name formatting
         const formattedName = correctedName.charAt(0).toUpperCase() + correctedName.slice(1).toLowerCase();
         if (formattedName.length > 2 && !isCommonWord(formattedName.toLowerCase())) {
-          data.fullName = formattedName;
-          confidence.fullName = 0.95; // Higher confidence for explicit corrections
+          // Map to 'name' field if it exists in schema, otherwise use 'fullName'
+          const nameField = config.extractionSchema.find(f => 
+            f.field === 'name' || f.description?.toLowerCase().includes('name')
+          )?.field || 'fullName';
+          data[nameField] = formattedName;
+          confidence[nameField] = 0.95; // Higher confidence for explicit corrections
         }
       }
     }
@@ -442,8 +496,12 @@ async function extractFromConversation(
           const name = match[1].trim();
           const firstWord = name.split(' ')[0].toLowerCase();
           if (name.length > 2 && !isCommonWord(firstWord)) {
-            data.fullName = name;
-            confidence.fullName = 0.85;
+            // Map to 'name' field if it exists in schema, otherwise use 'fullName'
+            const nameField = config.extractionSchema.find(f => 
+              f.field === 'name' || f.description?.toLowerCase().includes('name')
+            )?.field || 'fullName';
+            data[nameField] = name;
+            confidence[nameField] = 0.85;
             break;
           }
         }
@@ -493,10 +551,89 @@ async function extractFromConversation(
     }
   }
 
+  // Extract additional fields based on schema descriptions
+  // This is a simple pattern-based approach - production would use AI extraction
+  for (const schemaField of config.extractionSchema) {
+    const fieldName = schemaField.field;
+    const fieldDesc = schemaField.description?.toLowerCase() || '';
+    
+    // Skip if already extracted
+    if (data[fieldName]) continue;
+    
+    // Extract based on field type and description
+    if (schemaField.type === 'enum' && schemaField.options) {
+      // For enum fields, look for keywords in the options
+      for (const option of schemaField.options) {
+        const optionLower = option.toLowerCase().replace(/_/g, ' ');
+        if (userMessagesText.toLowerCase().includes(optionLower)) {
+          data[fieldName] = option;
+          confidence[fieldName] = 0.7;
+          break;
+        }
+      }
+    } else if (fieldDesc.includes('lane') || fieldDesc.includes('area of interest')) {
+      // Extract collaboration lane
+      if (userMessagesText.match(/product|design|ux|ui/i)) {
+        data[fieldName] = 'product_design';
+        confidence[fieldName] = 0.7;
+      } else if (userMessagesText.match(/engineer|code|develop|full.?stack/i)) {
+        data[fieldName] = 'engineering';
+        confidence[fieldName] = 0.7;
+      } else if (userMessagesText.match(/integrat|ecosystem|api|webhook/i)) {
+        data[fieldName] = 'integrations';
+        confidence[fieldName] = 0.7;
+      }
+    } else if (fieldDesc.includes('shipped') || fieldDesc.includes('built') || fieldDesc.includes('project')) {
+      // Extract what they've built - look for longer responses
+      const sentences = userMessagesText.split(/[.!?]\s+/).filter(s => s.length > 50);
+      if (sentences.length > 0) {
+        data[fieldName] = sentences.join(' ');
+        confidence[fieldName] = 0.6;
+      }
+    } else if (fieldDesc.includes('why') || fieldDesc.includes('interest') || fieldDesc.includes('drawn')) {
+      // Extract why they're interested
+      const sentences = userMessagesText.split(/[.!?]\s+/).filter(s => 
+        s.length > 30 && (s.toLowerCase().includes('because') || 
+        s.toLowerCase().includes('interested') || 
+        s.toLowerCase().includes('want'))
+      );
+      if (sentences.length > 0) {
+        data[fieldName] = sentences.join(' ');
+        confidence[fieldName] = 0.6;
+      }
+    } else if (fieldDesc.includes('link') || fieldDesc.includes('github') || fieldDesc.includes('portfolio')) {
+      // Extract URLs
+      const urlMatch = userMessagesText.match(/https?:\/\/[^\s]+/i);
+      if (urlMatch) {
+        data[fieldName] = urlMatch[0];
+        confidence[fieldName] = 0.8;
+      }
+    } else if (fieldDesc.includes('location') || fieldDesc.includes('based') || fieldDesc.includes('where')) {
+      // Extract location
+      const locationMatch = userMessagesText.match(/(?:from|based in|live in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+      if (locationMatch) {
+        data[fieldName] = locationMatch[1];
+        confidence[fieldName] = 0.7;
+      }
+    } else if (fieldDesc.includes('availability') || fieldDesc.includes('time') || fieldDesc.includes('commit')) {
+      // Extract availability
+      if (userMessagesText.match(/5.?10|five.?ten|few hours/i)) {
+        data[fieldName] = '5-10_hours';
+        confidence[fieldName] = 0.7;
+      } else if (userMessagesText.match(/10\+|more than 10|ten plus/i)) {
+        data[fieldName] = '10+_hours';
+        confidence[fieldName] = 0.7;
+      } else if (userMessagesText.match(/few|couple|2.?4/i)) {
+        data[fieldName] = 'few_hours';
+        confidence[fieldName] = 0.7;
+      }
+    }
+  }
+
   // Calculate overall confidence
   const filledFields = Object.keys(data).length;
   const totalFields = config.extractionSchema.length;
-  confidence.overall = filledFields / totalFields;
+  confidence.overall = filledFields > 0 ? Math.min(0.95, filledFields / totalFields) : 0;
 
   return { data, confidence };
 }
