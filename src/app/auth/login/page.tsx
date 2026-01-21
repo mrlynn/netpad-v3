@@ -277,19 +277,21 @@ function LoginContent() {
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Box
               sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
+                display: 'flex',
                 justifyContent: 'center',
-                width: 64,
-                height: 64,
-                borderRadius: 2,
-                bgcolor: alpha('#00ED64', 0.15),
-                mb: 2,
+                mb: 0,
               }}
             >
-              <Key sx={{ fontSize: 32, color: '#00ED64' }} />
+              <Image
+                src="/netpad-tada.png"
+                alt="NetPad"
+                width={200}
+                height={200}
+                style={{ objectFit: 'contain' }}
+                priority
+              />
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: textColor, mb: 1 }}>
+            <Typography variant="h4" sx={{ fontWeight: 1100, color: textColor, mb: 1 }}>
               {step === 'magic-link-sent' ? 'Check Your Email' : isSignupMode ? 'Get Started' : 'Welcome Back'}
             </Typography>
             <Typography sx={{ color: textSecondary }}>

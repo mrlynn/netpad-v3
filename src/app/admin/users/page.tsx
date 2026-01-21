@@ -42,6 +42,8 @@ import {
   TablePagination,
   Breadcrumbs,
   Link as MuiLink,
+  Collapse,
+  alpha,
 } from '@mui/material';
 import Link from 'next/link';
 import {
@@ -62,6 +64,14 @@ import {
   Delete as DeleteIcon,
   MoreVert as MoreIcon,
   NavigateNext as NavigateNextIcon,
+  Storage as StorageIcon,
+  Apps as AppsIcon,
+  Description as FormIcon,
+  CloudDone as CloudDoneIcon,
+  CloudOff as CloudOffIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Visibility as ViewAsIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -95,6 +105,17 @@ interface UserStats {
   };
 }
 
+interface OrgSummary {
+  orgId: string;
+  name: string;
+  slug: string;
+  role: string;
+  hasCluster: boolean;
+  clusterStatus?: string;
+  applicationCount: number;
+  formCount: number;
+}
+
 interface UserEntry {
   userId: string;
   email: string;
@@ -110,6 +131,10 @@ interface UserEntry {
     notes?: string;
   };
   organizationCount: number;
+  organizations: OrgSummary[];
+  totalApplications: number;
+  totalForms: number;
+  hasCluster: boolean;
   oauthConnectionCount: number;
   passkeyCount: number;
   trustedDeviceCount: number;
@@ -133,8 +158,11 @@ export default function AdminUsersPage() {
 
   // Dialogs
   const [selectedUser, setSelectedUser] = useState<UserEntry | null>(null);
-  const [actionDialog, setActionDialog] = useState<'role' | 'waitlist' | 'delete' | null>(null);
+  const [actionDialog, setActionDialog] = useState<'role' | 'waitlist' | 'delete' | 'impersonate' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Expanded state for org details
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   // Action form state
   const [newRole, setNewRole] = useState<string>('none');
@@ -216,6 +244,11 @@ export default function AdminUsersPage() {
   const handleOpenDeleteDialog = (userEntry: UserEntry) => {
     setSelectedUser(userEntry);
     setActionDialog('delete');
+  };
+
+  const handleOpenImpersonateDialog = (userEntry: UserEntry) => {
+    setSelectedUser(userEntry);
+    setActionDialog('impersonate');
   };
 
   const handleCloseDialog = () => {
@@ -303,6 +336,30 @@ export default function AdminUsersPage() {
     } catch (error: any) {
       alert(error.message);
     } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleImpersonate = async () => {
+    if (!selectedUser) return;
+    setActionLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.userId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start impersonation');
+      }
+
+      // Reload the page to refresh session and show the impersonation banner
+      window.location.href = '/';
+    } catch (error: any) {
+      alert(error.message);
       setActionLoading(false);
     }
   };
@@ -509,98 +566,235 @@ export default function AdminUsersPage() {
           </Paper>
         ) : (
           <>
-            <Stack spacing={2}>
-              {users.map((userEntry) => (
-                <Card key={userEntry.userId} variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'start', flex: 1 }}>
+            <Stack spacing={1}>
+              {users.map((userEntry) => {
+                const isExpanded = expandedUsers.has(userEntry.userId);
+                const toggleExpanded = () => {
+                  const newSet = new Set(expandedUsers);
+                  if (isExpanded) {
+                    newSet.delete(userEntry.userId);
+                  } else {
+                    newSet.add(userEntry.userId);
+                  }
+                  setExpandedUsers(newSet);
+                };
+
+                return (
+                  <Card key={userEntry.userId} variant="outlined" sx={{ overflow: 'visible' }}>
+                    <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                      {/* Main user row */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {/* Avatar */}
                         <Avatar
                           src={userEntry.avatarUrl}
-                          sx={{ width: 48, height: 48 }}
+                          sx={{ width: 40, height: 40, flexShrink: 0 }}
                         >
                           {userEntry.displayName?.[0] || userEntry.email[0].toUpperCase()}
                         </Avatar>
-                        <Box sx={{ flex: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Typography variant="subtitle1" fontWeight={600}>
-                              {userEntry.displayName || userEntry.email}
+
+                        {/* User info - primary column */}
+                        <Box sx={{ minWidth: 200, flex: '0 0 auto' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body1" fontWeight={600} noWrap>
+                              {userEntry.displayName || userEntry.email.split('@')[0]}
                             </Typography>
                             {userEntry.emailVerified && (
                               <Tooltip title="Email verified">
-                                <VerifiedIcon fontSize="small" color="primary" />
+                                <VerifiedIcon sx={{ fontSize: 16 }} color="primary" />
                               </Tooltip>
                             )}
                             {getRoleChip(userEntry.platformRole)}
                             {getWaitlistChip(userEntry.waitlistStatus)}
                           </Box>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" noWrap>
                             {userEntry.email}
                           </Typography>
-                          {userEntry.waitlistMetadata?.company && (
-                            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                              <BusinessIcon fontSize="small" />
-                              {userEntry.waitlistMetadata.company}
+                        </Box>
+
+                        {/* Stats - compact chips */}
+                        <Box sx={{ display: 'flex', gap: 1, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {/* Orgs with expand */}
+                          {userEntry.organizationCount > 0 && (
+                            <Chip
+                              icon={<BusinessIcon sx={{ fontSize: '16px !important' }} />}
+                              label={`${userEntry.organizationCount} org${userEntry.organizationCount > 1 ? 's' : ''}`}
+                              size="small"
+                              variant="outlined"
+                              onClick={toggleExpanded}
+                              onDelete={toggleExpanded}
+                              deleteIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                              sx={{ cursor: 'pointer' }}
+                            />
+                          )}
+
+                          {/* Cluster status */}
+                          {userEntry.hasCluster ? (
+                            <Tooltip title="Has database cluster">
+                              <Chip
+                                icon={<CloudDoneIcon sx={{ fontSize: '16px !important' }} />}
+                                label="DB"
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                              />
+                            </Tooltip>
+                          ) : userEntry.organizationCount > 0 ? (
+                            <Tooltip title="No database cluster">
+                              <Chip
+                                icon={<CloudOffIcon sx={{ fontSize: '16px !important' }} />}
+                                label="No DB"
+                                size="small"
+                                color="default"
+                                variant="outlined"
+                                sx={{ opacity: 0.6 }}
+                              />
+                            </Tooltip>
+                          ) : null}
+
+                          {/* Apps */}
+                          {userEntry.totalApplications > 0 && (
+                            <Chip
+                              icon={<AppsIcon sx={{ fontSize: '16px !important' }} />}
+                              label={`${userEntry.totalApplications} app${userEntry.totalApplications > 1 ? 's' : ''}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+
+                          {/* Forms */}
+                          {userEntry.totalForms > 0 && (
+                            <Chip
+                              icon={<FormIcon sx={{ fontSize: '16px !important' }} />}
+                              label={`${userEntry.totalForms} form${userEntry.totalForms > 1 ? 's' : ''}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+
+                          {/* Passkeys */}
+                          {userEntry.passkeyCount > 0 && (
+                            <Chip
+                              icon={<KeyIcon sx={{ fontSize: '16px !important' }} />}
+                              label={userEntry.passkeyCount}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+
+                        {/* Dates */}
+                        <Box sx={{ minWidth: 140, textAlign: 'right', flexShrink: 0 }}>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Joined: {new Date(userEntry.createdAt).toLocaleDateString()}
+                          </Typography>
+                          {userEntry.lastLoginAt && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Last login: {new Date(userEntry.lastLoginAt).toLocaleDateString()}
                             </Typography>
                           )}
-                          <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-                            <Typography variant="caption" color="text.secondary">
-                              Joined: {new Date(userEntry.createdAt).toLocaleDateString()}
-                            </Typography>
-                            {userEntry.lastLoginAt && (
-                              <Typography variant="caption" color="text.secondary">
-                                Last login: {new Date(userEntry.lastLoginAt).toLocaleDateString()}
-                              </Typography>
-                            )}
-                            {userEntry.organizationCount > 0 && (
-                              <Chip
-                                icon={<BusinessIcon />}
-                                label={`${userEntry.organizationCount} org${userEntry.organizationCount > 1 ? 's' : ''}`}
-                                size="small"
-                                variant="outlined"
-                              />
-                            )}
-                            {userEntry.passkeyCount > 0 && (
-                              <Chip
-                                icon={<KeyIcon />}
-                                label={`${userEntry.passkeyCount} passkey${userEntry.passkeyCount > 1 ? 's' : ''}`}
-                                size="small"
-                                variant="outlined"
-                              />
-                            )}
-                          </Box>
+                        </Box>
+
+                        {/* Actions */}
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          <Tooltip title="View as this user">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleOpenImpersonateDialog(userEntry)}
+                              disabled={userEntry.userId === user?.userId}
+                            >
+                              <ViewAsIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Change role">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenRoleDialog(userEntry)}
+                            >
+                              <AdminIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Manage waitlist">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenWaitlistDialog(userEntry)}
+                            >
+                              <PendingIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete user">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleOpenDeleteDialog(userEntry)}
+                              disabled={userEntry.platformRole === 'admin'}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
-                    </Box>
-                  </CardContent>
-                  <Divider />
-                  <CardActions sx={{ justifyContent: 'flex-end', gap: 1 }}>
-                    <Button
-                      size="small"
-                      startIcon={<AdminIcon />}
-                      onClick={() => handleOpenRoleDialog(userEntry)}
-                    >
-                      Role
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<PendingIcon />}
-                      onClick={() => handleOpenWaitlistDialog(userEntry)}
-                    >
-                      Waitlist
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleOpenDeleteDialog(userEntry)}
-                      disabled={userEntry.platformRole === 'admin'}
-                    >
-                      Delete
-                    </Button>
-                  </CardActions>
-                </Card>
-              ))}
+
+                      {/* Expanded org details */}
+                      <Collapse in={isExpanded}>
+                        <Box sx={{ mt: 2, ml: 7 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>
+                            Organizations
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            {userEntry.organizations.map((org) => (
+                              <Box
+                                key={org.orgId}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 2,
+                                  py: 0.75,
+                                  px: 1.5,
+                                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                                  borderRadius: 1,
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight={500} sx={{ minWidth: 150 }}>
+                                  {org.name}
+                                </Typography>
+                                <Chip
+                                  label={org.role}
+                                  size="small"
+                                  color={org.role === 'owner' ? 'primary' : org.role === 'admin' ? 'secondary' : 'default'}
+                                  sx={{ fontSize: '0.7rem', height: 20 }}
+                                />
+                                {org.hasCluster ? (
+                                  <Chip
+                                    icon={<CloudDoneIcon sx={{ fontSize: '14px !important' }} />}
+                                    label={org.clusterStatus || 'ready'}
+                                    size="small"
+                                    color={org.clusterStatus === 'ready' ? 'success' : 'warning'}
+                                    variant="outlined"
+                                    sx={{ fontSize: '0.7rem', height: 20 }}
+                                  />
+                                ) : (
+                                  <Typography variant="caption" color="text.disabled">
+                                    No cluster
+                                  </Typography>
+                                )}
+                                <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {org.applicationCount} app{org.applicationCount !== 1 ? 's' : ''}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {org.formCount} form{org.formCount !== 1 ? 's' : ''}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Stack>
+                        </Box>
+                      </Collapse>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </Stack>
 
             {/* Pagination */}
@@ -735,6 +929,53 @@ export default function AdminUsersPage() {
               disabled={actionLoading}
             >
               {actionLoading ? <CircularProgress size={20} /> : 'Delete User'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Impersonate Dialog */}
+        <Dialog open={actionDialog === 'impersonate'} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>View as User</DialogTitle>
+          <DialogContent>
+            {selectedUser && (
+              <Box sx={{ mt: 1 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  You are about to view the platform as <strong>{selectedUser.displayName || selectedUser.email}</strong>.
+                  <br /><br />
+                  This will let you see exactly what this user sees, including their organizations, applications, and forms.
+                </Alert>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>User:</strong> {selectedUser.email}
+                </Typography>
+                {selectedUser.organizationCount > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Organizations:</strong> {selectedUser.organizationCount}
+                  </Typography>
+                )}
+                {selectedUser.totalApplications > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Applications:</strong> {selectedUser.totalApplications}
+                  </Typography>
+                )}
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  A banner will appear at the top of the screen while viewing as this user.
+                  Click "End Impersonation" to return to your admin account.
+                </Alert>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImpersonate}
+              variant="contained"
+              color="primary"
+              startIcon={actionLoading ? <CircularProgress size={16} color="inherit" /> : <ViewAsIcon />}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Starting...' : 'View as User'}
             </Button>
           </DialogActions>
         </Dialog>

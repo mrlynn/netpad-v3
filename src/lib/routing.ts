@@ -78,7 +78,7 @@ export function isOrgProjectPath(pathname: string): boolean {
  */
 export function getAppUrl(
   appSlug: string,
-  section: 'forms' | 'workflows' | 'data' | 'settings' = 'forms'
+  section: 'forms' | 'workflows' | 'data' | 'settings' | 'admin' = 'forms'
 ): string {
   return `/apps/${appSlug}/${section}`;
 }
@@ -88,12 +88,12 @@ export function getAppUrl(
  */
 export function parseAppFromPath(pathname: string): {
   appSlug: string | null;
-  section: 'forms' | 'workflows' | 'data' | 'settings' | null;
+  section: 'forms' | 'workflows' | 'data' | 'settings' | 'admin' | null;
 } {
   const match = pathname.match(/^\/apps\/([^/]+)(?:\/([^/]+))?/);
   if (match) {
     const appSlug = match[1];
-    const section = match[2] as 'forms' | 'workflows' | 'data' | 'settings' | null;
+    const section = match[2] as 'forms' | 'workflows' | 'data' | 'settings' | 'admin' | null;
     return { appSlug, section: section || 'forms' };
   }
   return { appSlug: null, section: null };

@@ -45,6 +45,7 @@ import { formNameToCollectionName } from '@/lib/utils/collectionNaming';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
 import { useProjectDefaultVault } from '@/lib/swr';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -117,6 +118,46 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
 
   // File input ref for importing forms
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Track unsaved changes - warns user before navigating away
+  const { isDirty, markDirty, markClean } = useUnsavedChanges({
+    message: 'You have unsaved changes to this form. Are you sure you want to leave?',
+  });
+
+  // Track initial state to compare for dirty detection
+  const initialStateRef = useRef<string | null>(null);
+
+  // Set initial state snapshot after form loads
+  useEffect(() => {
+    if (currentFormId && fieldConfigs.length > 0 && !initialStateRef.current) {
+      initialStateRef.current = JSON.stringify({
+        fieldConfigs,
+        formName: currentFormName,
+        formType,
+        themeConfig,
+        multiPageConfig,
+        variables,
+      });
+    }
+  }, [currentFormId, fieldConfigs, currentFormName, formType, themeConfig, multiPageConfig, variables]);
+
+  // Check for changes whenever form state updates
+  useEffect(() => {
+    if (!initialStateRef.current) return;
+
+    const currentState = JSON.stringify({
+      fieldConfigs,
+      formName: currentFormName,
+      formType,
+      themeConfig,
+      multiPageConfig,
+      variables,
+    });
+
+    if (currentState !== initialStateRef.current) {
+      markDirty();
+    }
+  }, [fieldConfigs, currentFormName, formType, themeConfig, multiPageConfig, variables, markDirty]);
 
   // Get selected field config
   const selectedFieldConfig = selectedFieldPath
@@ -960,6 +1001,18 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           </Typography>
 
           {/* Status badges - minimal */}
+          {isDirty && (
+            <Tooltip title="Unsaved changes">
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: 'warning.main',
+                }}
+              />
+            </Tooltip>
+          )}
           {currentFormIsPublished && (
             <Tooltip title="Published">
               <Public sx={{ fontSize: 16, color: 'success.main' }} />
@@ -1302,6 +1355,16 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           setCurrentFormIsPublished(info.isPublished);
           setShowLibrary(true);
           setNotification({ open: true, savedForm: info });
+          // Reset dirty state and update initial state snapshot
+          markClean();
+          initialStateRef.current = JSON.stringify({
+            fieldConfigs,
+            formName: info.name,
+            formType,
+            themeConfig,
+            multiPageConfig,
+            variables,
+          });
         }}
         formConfig={{
           id: currentFormId,

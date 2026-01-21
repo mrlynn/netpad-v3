@@ -14,7 +14,7 @@ import { UploadedFile } from '@/hooks/useFileUpload';
 /**
  * SSE event types from the streaming endpoint
  */
-type SSEEventType = 'chunk' | 'state_update' | 'extraction_update' | 'completion_check' | 'complete' | 'error';
+type SSEEventType = 'chunk' | 'state_update' | 'extraction_update' | 'completion_check' | 'stream_complete' | 'complete' | 'error';
 
 interface SSEChunkEvent {
   type: 'chunk';
@@ -55,6 +55,10 @@ interface SSECompletionCheckEvent {
   reason?: string;
 }
 
+interface SSEStreamCompleteEvent {
+  type: 'stream_complete';
+}
+
 interface SSECompleteEvent {
   type: 'complete';
 }
@@ -79,7 +83,7 @@ interface SSEFileExtractionEvent {
   error?: string;
 }
 
-type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSECompleteEvent | SSEErrorEvent | SSERAGSourcesEvent | SSEFileExtractionEvent;
+type SSEEvent = SSEChunkEvent | SSEStateUpdateEvent | SSEExtractionUpdateEvent | SSECompletionCheckEvent | SSEStreamCompleteEvent | SSECompleteEvent | SSEErrorEvent | SSERAGSourcesEvent | SSEFileExtractionEvent;
 
 /**
  * Message in the conversation
@@ -437,8 +441,21 @@ export function useConversationalForm(
         }
         break;
 
+      case 'stream_complete':
+        // Mark message as no longer streaming IMMEDIATELY when LLM finishes
+        // This stops the spinner right away, before extraction completes
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, isStreaming: false } : m
+          )
+        );
+        // Also stop the hook-level streaming state so the send button is re-enabled
+        setIsStreaming(false);
+        break;
+
       case 'complete':
-        // Mark message as no longer streaming
+        // Final completion event - ensure message is marked as not streaming
+        // (should already be done by stream_complete, but this is a fallback)
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId ? { ...m, isStreaming: false } : m

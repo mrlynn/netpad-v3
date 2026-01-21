@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplication } from '@/contexts/ApplicationContext';
-import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { AppNavBar, GLOBAL_BAR_HEIGHT } from '@/components/Navigation/AppNavBar';
+import { AppSidebar, SIDEBAR_WIDTH } from '@/components/Navigation/AppSidebar';
 import { PersistentApplicationBar } from '@/components/Navigation/ApplicationContextBar';
 import { Application } from '@/types/application';
 
@@ -129,7 +130,7 @@ export default function AppSlugLayout({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: 'calc(100vh - 48px)',
+            minHeight: `calc(100vh - ${GLOBAL_BAR_HEIGHT}px)`,
             gap: 2,
           }}
         >
@@ -153,7 +154,7 @@ export default function AppSlugLayout({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: 'calc(100vh - 48px)',
+            minHeight: `calc(100vh - ${GLOBAL_BAR_HEIGHT}px)`,
             gap: 2,
             p: 3,
           }}
@@ -174,14 +175,37 @@ export default function AppSlugLayout({
     );
   }
 
-  // App resolved - render children with persistent application context bar
+  // App resolved - render children with new navigation layout
   return (
     <Box sx={{ height: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Zone 1: Global Bar */}
       <AppNavBar />
-      {/* Persistent Application Bar - shows app context, never disappears */}
-      <PersistentApplicationBar />
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {children}
+
+      {/* Zone 2 + Zone 3: Sidebar + Main Content */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Zone 2: App Sidebar (desktop only) */}
+        <AppSidebar />
+
+        {/* Zone 3: Main Content Area */}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            // Account for sidebar width on desktop
+            width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+          }}
+        >
+          {/* Zone 3A: App Header with tabs */}
+          <PersistentApplicationBar />
+
+          {/* Zone 3B: Content Area */}
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            {children}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

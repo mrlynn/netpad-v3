@@ -32,10 +32,12 @@ import {
   Apps as AppsIcon,
   FilterList as FilterIcon,
   Person as PersonIcon,
+  HourglassTop as HourglassTopIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePathname } from 'next/navigation';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { usePathname, useRouter } from 'next/navigation';
 import { parseOrgProjectFromPath } from '@/lib/routing';
 import { ApplicationCard } from './ApplicationCard';
 import { ApplicationDetailDialog } from './ApplicationDetailDialog';
@@ -97,13 +99,18 @@ const SORT_OPTIONS = [
 
 export function MarketplaceView({ organizationId: propOrganizationId, onImportComplete }: MarketplaceViewProps) {
   const { currentOrgId } = useOrganization();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const applicationContext = useApplicationSafe();
+  const router = useRouter();
+
+  // Check if user is on the waitlist
+  const isWaitlistUser = isAuthenticated && user?.waitlistStatus === 'pending';
   const pathname = usePathname();
   // Use prop orgId if provided, otherwise use context (for imports)
   const organizationId = propOrganizationId || currentOrgId || undefined;
-  // Get projectId from URL if available
+  // Get projectId from URL if available, or from current application context
   const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
-  const projectId = urlProjectId || undefined;
+  const projectId = urlProjectId || applicationContext?.currentProjectId || undefined;
   
   const [activeTab, setActiveTab] = useState(0);
   const [applications, setApplications] = useState<MarketplaceApplication[]>([]);
@@ -193,13 +200,9 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   };
 
   const handleImport = async (id: string) => {
-    if (!organizationId) {
-      alert('Please select an organization to import the application.');
-      return;
-    }
-
-    if (!projectId) {
-      alert('Please navigate to a project to import the application. Go to your organization, select a project, then access the Marketplace from the navigation menu.');
+    if (!organizationId || !projectId) {
+      // More helpful error - suggest selecting an app first
+      alert('Please select an application from your workspace first. Click the app selector in the navigation bar to choose where to import this marketplace app.');
       return;
     }
 
@@ -224,13 +227,23 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       }
 
       const result = await response.json();
-      
+
       if (onImportComplete) {
         onImportComplete();
       }
 
-      // Show success (could use a snackbar)
-      alert(`Successfully imported ${result.application.name}!`);
+      // Refresh the application context so the new app appears in the switcher
+      if (applicationContext?.refreshApplications) {
+        await applicationContext.refreshApplications();
+      }
+
+      // Navigate to the newly imported application
+      if (result.application?.appSlug) {
+        router.push(`/apps/${result.application.appSlug}`);
+      } else {
+        // Fallback: show success message if we can't navigate
+        alert(`Successfully imported ${result.application.name}! Check your application switcher to find it.`);
+      }
     } catch (err) {
       console.error('Error importing application:', err);
       alert(err instanceof Error ? err.message : 'Failed to import application');
@@ -290,13 +303,23 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       }
 
       const result = await response.json();
-      
+
       if (onImportComplete) {
         onImportComplete();
       }
 
-      // Show success
-      alert(`Successfully installed ${packageName}@${result.version}!${result.applicationId ? `\nApplication ID: ${result.applicationId}` : ''}`);
+      // Refresh the application context so the new app appears in the switcher
+      if (applicationContext?.refreshApplications) {
+        await applicationContext.refreshApplications();
+      }
+
+      // Navigate to the newly installed application
+      if (result.appSlug) {
+        router.push(`/apps/${result.appSlug}`);
+      } else {
+        // Fallback: show success message if we can't navigate
+        alert(`Successfully installed ${packageName}@${result.version}! Check your application switcher to find it.`);
+      }
     } catch (err) {
       console.error('Error installing package:', err);
       alert(err instanceof Error ? err.message : 'Failed to install package');
@@ -305,6 +328,32 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Waitlist Banner */}
+      {isWaitlistUser && (
+        <Alert
+          severity="info"
+          icon={<HourglassTopIcon sx={{ color: '#ff9800' }} />}
+          sx={{
+            mb: 3,
+            bgcolor: alpha('#ff9800', 0.1),
+            border: '1px solid',
+            borderColor: alpha('#ff9800', 0.3),
+            '& .MuiAlert-message': { width: '100%' },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Box>
+              <Typography sx={{ fontWeight: 600, color: '#ff9800' }}>
+                You're on the Waitlist
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Browse the marketplace while you wait for access. You'll be able to import applications once your account is approved.
+              </Typography>
+            </Box>
+          </Box>
+        </Alert>
+      )}
+
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -341,8 +390,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         </Box>
       </Box>
 
-      {/* Tabs */}
-      {user && (
+      {/* Tabs - hide My Applications for waitlist users */}
+      {user && !isWaitlistUser && (
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
             <Tab label="Browse" icon={<AppsIcon />} iconPosition="start" />

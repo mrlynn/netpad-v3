@@ -38,6 +38,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -58,7 +59,9 @@ import {
   TableChart as CsvIcon,
   Visibility as ViewIcon,
   Close as CloseIcon,
+  HourglassTop as HourglassTopIcon,
 } from '@mui/icons-material';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
@@ -136,6 +139,10 @@ export default function TemplateDetailPage() {
   const [jsonViewerOpen, setJsonViewerOpen] = useState<'template' | 'sample' | null>(null);
   const [copied, setCopied] = useState(false);
   const [instantiateOpen, setInstantiateOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+
+  // Check if user is on the waitlist
+  const isWaitlistUser = isAuthenticated && user?.waitlistStatus === 'pending';
 
   // Load template
   const template = useMemo(() => loadGalleryTemplate(templateId), [templateId]);
@@ -244,6 +251,21 @@ export default function TemplateDetailPage() {
   return (
     <>
       <AppNavBar />
+
+      {/* Waitlist Banner */}
+      {isWaitlistUser && (
+        <Box sx={{ bgcolor: alpha('#ff9800', 0.1), borderBottom: '1px solid', borderColor: alpha('#ff9800', 0.3), py: 1.5 }}>
+          <Container maxWidth="lg">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <HourglassTopIcon sx={{ color: '#ff9800', fontSize: 20 }} />
+              <Typography variant="body2" sx={{ color: alpha('#fff', 0.9) }}>
+                <strong style={{ color: '#ff9800' }}>You're on the Waitlist</strong> — Browse and preview templates while you wait. You'll be able to create apps once approved.
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+      )}
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Breadcrumbs */}
         <Breadcrumbs sx={{ mb: 3 }}>
@@ -858,59 +880,111 @@ export default function TemplateDetailPage() {
                 p: 3,
                 mb: 3,
                 border: '1px solid',
-                borderColor: isDark ? 'rgba(0, 237, 100, 0.5)' : 'rgba(0, 237, 100, 0.3)',
+                borderColor: isWaitlistUser
+                  ? alpha('#ff9800', 0.5)
+                  : isDark ? 'rgba(0, 237, 100, 0.5)' : 'rgba(0, 237, 100, 0.3)',
                 borderRadius: 2,
                 bgcolor: isDark ? 'rgba(0, 30, 43, 0.8)' : 'background.paper',
                 backdropFilter: isDark ? 'blur(12px)' : 'none',
                 WebkitBackdropFilter: isDark ? 'blur(12px)' : 'none',
                 boxShadow: isDark
                   ? '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-                  : '0 4px 20px rgba(0, 237, 100, 0.15)',
+                  : isWaitlistUser
+                    ? '0 4px 20px rgba(255, 152, 0, 0.15)'
+                    : '0 4px 20px rgba(0, 237, 100, 0.15)',
                 position: 'sticky',
                 top: 100,
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Get Started
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Create a new app from this template. You can customize all fields, add your branding, and publish in minutes.
-              </Typography>
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleGetStarted}
-                endIcon={<ArrowForwardIcon />}
-                sx={{
-                  bgcolor: '#00ED64',
-                  color: 'white',
-                  fontWeight: 600,
-                  py: 1.5,
-                  '&:hover': { bgcolor: '#00CC55' },
-                }}
-              >
-                Get Started
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                onClick={() => setPreviewOpen(true)}
-                sx={{
-                  mt: 1.5,
-                  fontWeight: 600,
-                  py: 1.5,
-                  borderColor: isDark ? 'rgba(0, 237, 100, 0.5)' : 'rgba(0, 237, 100, 0.3)',
-                  color: '#00ED64',
-                  '&:hover': {
-                    borderColor: '#00ED64',
-                    bgcolor: 'rgba(0, 237, 100, 0.08)',
-                  },
-                }}
-              >
-                Try Template
-              </Button>
+              {isWaitlistUser ? (
+                // Waitlist user view
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                    <HourglassTopIcon sx={{ color: '#ff9800' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#ff9800' }}>
+                      You're on the Waitlist
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    You can browse and preview templates while waiting for approval. Once approved, you'll be able to create apps from any template.
+                  </Typography>
+                  <Alert
+                    severity="info"
+                    sx={{
+                      mb: 2,
+                      bgcolor: alpha('#ff9800', 0.1),
+                      border: '1px solid',
+                      borderColor: alpha('#ff9800', 0.3),
+                      '& .MuiAlert-icon': { color: '#ff9800' },
+                    }}
+                  >
+                    We'll notify you by email when your access is approved.
+                  </Alert>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="large"
+                    onClick={() => setPreviewOpen(true)}
+                    sx={{
+                      fontWeight: 600,
+                      py: 1.5,
+                      borderColor: alpha('#ff9800', 0.5),
+                      color: '#ff9800',
+                      '&:hover': {
+                        borderColor: '#ff9800',
+                        bgcolor: alpha('#ff9800', 0.08),
+                      },
+                    }}
+                  >
+                    Preview Template
+                  </Button>
+                </>
+              ) : (
+                // Regular user view
+                <>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Get Started
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Create a new app from this template. You can customize all fields, add your branding, and publish in minutes.
+                  </Typography>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleGetStarted}
+                    endIcon={<ArrowForwardIcon />}
+                    sx={{
+                      bgcolor: '#00ED64',
+                      color: 'white',
+                      fontWeight: 600,
+                      py: 1.5,
+                      '&:hover': { bgcolor: '#00CC55' },
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="large"
+                    onClick={() => setPreviewOpen(true)}
+                    sx={{
+                      mt: 1.5,
+                      fontWeight: 600,
+                      py: 1.5,
+                      borderColor: isDark ? 'rgba(0, 237, 100, 0.5)' : 'rgba(0, 237, 100, 0.3)',
+                      color: '#00ED64',
+                      '&:hover': {
+                        borderColor: '#00ED64',
+                        bgcolor: 'rgba(0, 237, 100, 0.08)',
+                      },
+                    }}
+                  >
+                    Try Template
+                  </Button>
+                </>
+              )}
 
               <Divider sx={{ my: 3 }} />
 

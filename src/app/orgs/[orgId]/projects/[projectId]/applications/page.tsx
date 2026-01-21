@@ -2,6 +2,7 @@
 
 import { useState, useEffect, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSWRConfig } from 'swr';
 import {
   Box,
   Container,
@@ -422,6 +423,7 @@ export default function ApplicationsPage() {
   const params = useParams();
   const router = useRouter();
   const theme = useMuiTheme();
+  const { mutate: globalMutate } = useSWRConfig();
   const orgId = params.orgId as string;
   const projectId = params.projectId as string;
 
@@ -516,8 +518,14 @@ export default function ApplicationsPage() {
   };
 
   const handleDelete = async (applicationId: string) => {
+    console.log('[ApplicationsPage] handleDelete called with:', applicationId);
+    
     const application = applications.find((app) => app.applicationId === applicationId);
-    if (!application) return;
+    if (!application) {
+      console.warn('[ApplicationsPage] Application not found:', applicationId);
+      handleMenuClose();
+      return;
+    }
 
     const formsCount = application.stats?.formsCount || 0;
     const workflowsCount = application.stats?.workflowsCount || 0;
@@ -529,28 +537,48 @@ export default function ApplicationsPage() {
     }
     confirmMessage += '\n\nThis action cannot be undone.';
 
-    if (!confirm(confirmMessage)) {
+    console.log('[ApplicationsPage] Showing confirm dialog');
+    const confirmed = window.confirm(confirmMessage);
+    console.log('[ApplicationsPage] Confirm result:', confirmed);
+    
+    if (!confirmed) {
+      console.log('[ApplicationsPage] Delete cancelled by user');
+      handleMenuClose();
       return;
     }
 
     try {
+      console.log('[ApplicationsPage] Sending delete request:', { applicationId, orgId });
       const response = await fetch(
         `/api/applications/${applicationId}?orgId=${orgId}&force=true`,
         { method: 'DELETE' }
       );
+      
+      console.log('[ApplicationsPage] Delete response status:', response.status);
       const data = await response.json();
+      console.log('[ApplicationsPage] Delete response data:', data);
 
-      if (data.success) {
+      if (!response.ok || !data.success) {
+        const errorMessage = data.error || `Failed to delete application (${response.status})`;
+        console.error('[ApplicationsPage] Delete failed:', errorMessage);
+        setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      } else {
+        console.log('[ApplicationsPage] Delete successful');
         setSnackbar({ open: true, message: 'Application deleted successfully', severity: 'success' });
         loadApplications();
-      } else {
-        setSnackbar({ open: true, message: data.error || 'Failed to delete application', severity: 'error' });
+        // Invalidate SWR cache so ApplicationContext detects the deletion
+        globalMutate((key) => typeof key === 'string' && key.startsWith('/api/applications'), undefined, { revalidate: true });
       }
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error deleting application', severity: 'error' });
+      console.error('[ApplicationsPage] Delete error:', error);
+      setSnackbar({ 
+        open: true, 
+        message: error instanceof Error ? error.message : 'Error deleting application', 
+        severity: 'error' 
+      });
+    } finally {
+      handleMenuClose();
     }
-
-    handleMenuClose();
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, applicationId: string) => {
@@ -1159,7 +1187,13 @@ export default function ApplicationsPage() {
         </MenuItem>
         <Divider />
         <MenuItem
-          onClick={() => menuAnchor.applicationId && handleDelete(menuAnchor.applicationId)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (menuAnchor.applicationId) {
+              handleDelete(menuAnchor.applicationId);
+            }
+          }}
           sx={{ color: 'error.main' }}
           disabled={
             (() => {

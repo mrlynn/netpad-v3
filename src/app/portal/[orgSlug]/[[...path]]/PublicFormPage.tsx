@@ -372,9 +372,9 @@ export default function PublicFormPage({ formId, organization }: PublicFormPageP
                   opacity: 0.5,
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
-                Powered by NetPad
-              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
+        </Typography>
             </Box>
           )}
         </Paper>
@@ -503,7 +503,7 @@ export default function PublicFormPage({ formId, organization }: PublicFormPageP
         {form.branding?.showPoweredBy !== false && (
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              Powered by NetPad
+               Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
             </Typography>
           </Box>
         )}
@@ -742,7 +742,7 @@ export default function PublicFormPage({ formId, organization }: PublicFormPageP
       {form.branding?.showPoweredBy !== false && !hideBranding && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
-            Powered by NetPad
+             Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
           </Typography>
         </Box>
       )}

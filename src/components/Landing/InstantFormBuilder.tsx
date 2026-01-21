@@ -32,9 +32,11 @@ import {
   CheckCircle,
   Close,
   GitHub,
+  Login,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { FieldConfig, FormConfiguration } from '@/types/form';
 import { ConversationalFormConfig } from '@/types/conversational';
@@ -70,8 +72,18 @@ interface GeneratedFormState {
   remaining?: number;
 }
 
+// User context for personalized chat experience
+export interface UserContext {
+  isAuthenticated: boolean;
+  isWaitlistUser: boolean;
+  userName?: string;
+  userEmail?: string;
+  waitlistStatus?: 'pending' | 'approved' | 'rejected';
+}
+
 export function InstantFormBuilder() {
   const router = useRouter();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [phase, setPhase] = useState<GenerationPhase>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +91,15 @@ export function InstantFormBuilder() {
     fields: [],
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Build user context for personalized chat
+  const userContext: UserContext = {
+    isAuthenticated,
+    isWaitlistUser: isAuthenticated && user?.waitlistStatus === 'pending',
+    userName: user?.displayName || user?.email?.split('@')[0],
+    userEmail: user?.email,
+    waitlistStatus: user?.waitlistStatus,
+  };
 
   const isGenerating = phase !== 'idle' && phase !== 'complete' && phase !== 'editing' && phase !== 'error';
   const hasStarted = phase !== 'idle';
@@ -299,44 +320,58 @@ export function InstantFormBuilder() {
       }}
     >
       <Container maxWidth="lg">
+        {/* Header with Sign In for unauthenticated users */}
+        {!isLoading && !isAuthenticated && (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 2,
+            }}
+          >
+            <Button
+              component={Link}
+              href="/auth/login"
+              startIcon={<Login sx={{ fontSize: 16 }} />}
+              size="small"
+              sx={{
+                px: 2,
+                py: 0.75,
+                color: alpha('#fff', 0.8),
+                bgcolor: alpha('#fff', 0.05),
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                border: '1px solid',
+                borderColor: alpha('#fff', 0.15),
+                '&:hover': {
+                  bgcolor: alpha('#00ED64', 0.1),
+                  borderColor: alpha('#00ED64', 0.3),
+                  color: '#00ED64',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Sign In
+            </Button>
+          </Box>
+        )}
+
         {/* Minimal branding */}
-        <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Box sx={{ textAlign: 'center', mb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Image
-              src="/logo-300px.png"
+              src="/netpad-superhero.png"
               alt="NetPad"
-              width={60}
-              height={60}
+              width={190}
+              height={190}
               priority
               style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 237, 100, 0.2))' }}
             />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              NetPad
-            </Typography>
-            <Chip
-              label="Open Source"
-              icon={<GitHub sx={{ fontSize: 12 }} />}
-              size="small"
-              sx={{
-                height: 20,
-                fontSize: '0.65rem',
-                bgcolor: alpha('#00ED64', 0.1),
-                color: '#00ED64',
-                fontWeight: 600,
-                '& .MuiChip-icon': { color: '#00ED64' },
-              }}
-            />
+            
           </Box>
         </Box>
 
@@ -344,7 +379,7 @@ export function InstantFormBuilder() {
         <Typography
           variant="h1"
           sx={{
-            fontSize: { xs: '1.75rem', md: '2.5rem', lg: '3rem' },
+            fontSize: { xs: '1.75rem', md: '3.5rem', lg: '6rem' },
             fontWeight: 700,
             color: '#fff',
             textAlign: 'center',
@@ -658,6 +693,7 @@ export function InstantFormBuilder() {
                 isGenerating={isGenerating}
                 isComplete={phase === 'complete'}
                 onSignUp={phase === 'complete' ? handleSignUp : undefined}
+                userContext={userContext}
               />
             </Box>
           )}

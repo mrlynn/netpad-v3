@@ -11,9 +11,65 @@ import {
   deleteGlobalDraft,
 } from '@/lib/draftStorage';
 import { getFormById, getPublishedFormById } from '@/lib/storage';
-import { FormDraft } from '@/types/form';
+import { FormDraft, FormConfiguration } from '@/types/form';
+import {
+  savePartialSubmission,
+  getPartialSubmission,
+  PartialSubmissionProgress,
+} from '@/lib/platform/submissions';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Calculate completion progress from form data and configuration
+ */
+function calculateFormProgress(
+  data: Record<string, unknown>,
+  form: FormConfiguration,
+  currentPage: number,
+  fieldInteractions?: Record<string, any>
+): PartialSubmissionProgress {
+  const completedFields: string[] = [];
+  const missingRequiredFields: string[] = [];
+
+  // Get all fields from the form (using fieldConfigs)
+  const allFields = form.fieldConfigs || [];
+  const requiredFields = allFields.filter((f) => f.required);
+
+  // Check which fields are completed
+  for (const field of allFields) {
+    const fieldId = field.path;
+    const value = data[fieldId];
+
+    if (value !== null && value !== undefined && value !== '') {
+      completedFields.push(fieldId);
+    }
+  }
+
+  // Check which required fields are missing
+  for (const field of requiredFields) {
+    const fieldId = field.path;
+    const value = data[fieldId];
+
+    if (value === null || value === undefined || value === '') {
+      missingRequiredFields.push(fieldId);
+    }
+  }
+
+  // Calculate completion percentage
+  const completionPercentage = requiredFields.length > 0
+    ? Math.round(((requiredFields.length - missingRequiredFields.length) / requiredFields.length) * 100)
+    : (allFields.length > 0 ? Math.round((completedFields.length / allFields.length) * 100) : 0);
+
+  return {
+    completionPercentage,
+    completedFields,
+    missingRequiredFields,
+    currentPage,
+    totalPages: 1, // Multi-page support can be added later
+    fieldInteractions,
+  };
+}
 
 /**
  * GET - Retrieve draft for a form
@@ -152,6 +208,33 @@ export async function POST(
       // For user's own forms, save to session drafts
       if (storageType === 'server' || storageType === 'both') {
         await saveDraft(sessionId, draft);
+      }
+    }
+
+    // Also persist to MongoDB for platform forms (for analytics)
+    // This runs in addition to file-based storage
+    if (form?.organizationId) {
+      try {
+        // Calculate progress for analytics
+        const progress = calculateFormProgress(
+          body.data,
+          form,
+          body.currentPage || 0,
+          body.fieldInteractions
+        );
+
+        await savePartialSubmission(form.organizationId, {
+          formId,
+          projectId: form.projectId,
+          data: body.data,
+          progress,
+          sessionId,
+          fingerprint: body.fingerprint,
+          draftTTLDays: draftTTL,
+        });
+      } catch (dbError) {
+        // Don't fail the request if DB save fails - file storage is primary
+        console.error('[Draft API] Failed to save partial to DB:', dbError);
       }
     }
 

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSWRConfig } from 'swr';
 import {
   Box,
   Container,
@@ -13,6 +15,11 @@ import {
   Divider,
   Alert,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { Settings, Save, Delete, Download as DownloadIcon } from '@mui/icons-material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
@@ -27,6 +34,8 @@ import { DownloadAppDialog } from '@/components/Download/DownloadAppDialog';
  */
 export default function AppSettingsPage() {
   const theme = useMuiTheme();
+  const router = useRouter();
+  const { mutate: globalMutate } = useSWRConfig();
 
   const { currentOrgId } = useOrganization();
   const { currentApplication, isLoading: isAppLoading, refreshApplications } = useApplication();
@@ -34,6 +43,8 @@ export default function AppSettingsPage() {
   const [name, setName] = useState(currentApplication?.name || '');
   const [description, setDescription] = useState(currentApplication?.description || '');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
@@ -54,11 +65,10 @@ export default function AppSettingsPage() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/applications/${currentApplication.applicationId}`, {
+      const response = await fetch(`/api/applications/${currentApplication.applicationId}?orgId=${currentOrgId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orgId: currentOrgId,
           name,
           description,
         }),
@@ -75,6 +85,38 @@ export default function AppSettingsPage() {
       setSnackbar({ open: true, message: 'Error saving settings', severity: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!currentApplication || !currentOrgId) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/applications/${currentApplication.applicationId}?orgId=${currentOrgId}&force=true`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Invalidate SWR cache so ApplicationContext detects the deletion
+        globalMutate(
+          (key) => typeof key === 'string' && key.startsWith('/api/applications'),
+          undefined,
+          { revalidate: true }
+        );
+        // Navigate to home page
+        router.push('/');
+      } else {
+        setSnackbar({ open: true, message: data.error || 'Failed to delete application', severity: 'error' });
+        setDeleteDialogOpen(false);
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error deleting application', severity: 'error' });
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -197,12 +239,58 @@ export default function AppSettingsPage() {
             variant="outlined"
             color="error"
             startIcon={<Delete />}
+            onClick={() => setDeleteDialogOpen(true)}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Delete Application
           </Button>
         </Paper>
       </Container>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !deleting && setDeleteDialogOpen(false)}
+      >
+        <DialogTitle sx={{ color: theme.palette.error.main }}>
+          Delete Application
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete <strong>{currentApplication?.name}</strong>?
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2 }}>
+            This will permanently delete:
+          </DialogContentText>
+          <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+            <li>All forms in this application</li>
+            <li>All workflows in this application</li>
+            <li>All form responses and data</li>
+          </Box>
+          <DialogContentText sx={{ mt: 2, fontWeight: 600, color: theme.palette.error.main }}>
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleting}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDelete}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? null : <Delete />}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {deleting ? 'Deleting...' : 'Delete Application'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

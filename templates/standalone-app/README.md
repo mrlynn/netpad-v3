@@ -20,6 +20,9 @@ MONGODB_DATABASE=netpad_app
 
 # Optional
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# For Conversational Forms (AI-powered)
+OPENAI_API_KEY=sk-your-api-key-here
 ```
 
 ### Installation
@@ -109,6 +112,77 @@ To update forms or workflows:
 2. Export a new bundle
 3. Replace `bundle.json`
 4. Redeploy or call `/api/init?force=true`
+
+## Conversational Forms (AI-Powered)
+
+This application supports AI-powered conversational forms. Instead of traditional form fields, users have a natural conversation with an AI assistant that guides them through information gathering.
+
+### Setup
+
+1. **Get an OpenAI API Key**: Sign up at [platform.openai.com](https://platform.openai.com) and create an API key.
+
+2. **Configure the Environment Variable**:
+   ```env
+   OPENAI_API_KEY=sk-your-api-key-here
+   ```
+
+3. **Optional Model Selection**: By default, the application uses `gpt-4o-mini` which is cost-effective (~$0.001 per conversation turn). You can override this:
+   ```env
+   OPENAI_MODEL=gpt-4o  # More capable, higher cost
+   ```
+
+### Pricing Estimates
+
+| Model | Cost per 1M tokens (input/output) | Typical conversation cost |
+|-------|-----------------------------------|--------------------------|
+| gpt-4o-mini | $0.15 / $0.60 | ~$0.001-0.01 |
+| gpt-4o | $2.50 / $10.00 | ~$0.01-0.10 |
+| gpt-3.5-turbo | $0.50 / $1.50 | ~$0.001-0.005 |
+
+### How It Works
+
+1. Forms configured with `conversationalConfig` in the bundle are rendered as chat interfaces
+2. The AI assistant guides users through topics defined in the configuration
+3. Data is extracted from the conversation and validated against the extraction schema
+4. When topics are covered and confidence is high, the user can submit
+
+### Form Configuration
+
+Conversational forms require a `conversationalConfig` in the form definition:
+
+```json
+{
+  "conversationalConfig": {
+    "formType": "conversational",
+    "objective": "Collect IT support ticket information",
+    "topics": [
+      {
+        "id": "issue",
+        "name": "Issue Description",
+        "description": "What problem is the user experiencing?",
+        "priority": "required",
+        "depth": "moderate"
+      }
+    ],
+    "persona": {
+      "style": "professional"
+    },
+    "extractionSchema": [
+      {
+        "field": "issueDescription",
+        "type": "string",
+        "required": true,
+        "description": "Description of the issue"
+      }
+    ],
+    "conversationLimits": {
+      "maxTurns": 15,
+      "maxDuration": 30,
+      "minConfidence": 0.8
+    }
+  }
+}
+```
 
 ## Support
 

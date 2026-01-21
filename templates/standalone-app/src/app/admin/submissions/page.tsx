@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import { COLLECTIONS, getCollection, FormSubmissionDocument } from '@/lib/database/schema';
 import { getAllForms } from '@/lib/bundle';
+import { SubmissionActions } from '@/components/admin/SubmissionActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,12 +97,10 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                       {new Date(sub.createdAt).toLocaleString()}
                     </td>
                     <td>
-                      <Link
-                        href={`/admin/submissions/${sub.submissionId}`}
-                        className="admin-btn admin-btn-secondary"
-                      >
-                        View Details
-                      </Link>
+                      <SubmissionActions
+                        submissionId={sub.submissionId}
+                        currentStatus={sub.status}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -178,12 +177,14 @@ async function getSubmissions(
 function getStatusColor(status: string): string {
   switch (status) {
     case 'submitted':
+    case 'approved':
       return 'success';
     case 'processed':
       return 'info';
     case 'pending':
       return 'warning';
     case 'failed':
+    case 'rejected':
       return 'error';
     default:
       return 'info';

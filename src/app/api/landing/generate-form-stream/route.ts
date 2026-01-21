@@ -51,78 +51,17 @@ function incrementRateLimit(ip: string): void {
   }
 }
 
-// System prompt for form generation
-const FORM_GENERATION_PROMPT = `You are an expert form builder assistant creating CONVERSATIONAL forms - forms designed for AI-powered chat collection.
+// Optimized system prompt - condensed for faster token processing
+const FORM_GENERATION_PROMPT = `Generate a conversational form JSON. Output ONLY valid JSON, no markdown.
 
-Generate a form configuration based on the user's description. The form should work both as a traditional form AND as a conversational AI interaction.
+Schema:
+{"name":"string","description":"string","collection":"form_submissions","fieldConfigs":[{"path":"snake_case","label":"string","type":"field_type","required":bool,"placeholder":"string","included":true,"source":"custom","includeInDocument":true,"validation":{}}],"conversational":{"objective":"string","persona":{"style":"friendly","tone":"warm and helpful"},"topics":[{"id":"string","name":"string","description":"string","priority":"required|important|optional","extractionField":"path"}]}}
 
-IMPORTANT: Output valid JSON only, no markdown, no explanation text.
+Field types: short_text, long_text, number, email, phone, multiple_choice, checkboxes, dropdown, yes_no, rating, scale, date, file_upload
 
-Output format:
-{
-  "name": "Form Name",
-  "description": "Brief form description",
-  "collection": "form_submissions",
-  "fieldConfigs": [
-    {
-      "path": "fieldPath",
-      "label": "Field Label",
-      "type": "field_type",
-      "required": true/false,
-      "placeholder": "Example placeholder",
-      "included": true,
-      "source": "custom",
-      "includeInDocument": true
-    }
-  ],
-  "conversational": {
-    "objective": "I'll help collect [what the form collects]",
-    "persona": {
-      "style": "friendly",
-      "tone": "warm and helpful"
-    },
-    "topics": [
-      {
-        "id": "topic_id",
-        "name": "Topic Name",
-        "description": "What to collect",
-        "priority": "required|important|optional",
-        "extractionField": "fieldPath"
-      }
-    ]
-  }
-}
+For choice fields add: "validation":{"options":[{"label":"Label","value":"value"}]}
 
-Available field types:
-- short_text: Single-line text
-- long_text: Multi-line text
-- number: Numeric input
-- email: Email with validation
-- phone: Phone number
-- multiple_choice: Radio buttons (include options in validation.options)
-- checkboxes: Multi-select (include options in validation.options)
-- dropdown: Select dropdown (include options in validation.options)
-- yes_no: Boolean toggle
-- rating: Star rating (1-5)
-- scale: Linear scale
-- date: Date picker
-- file_upload: File attachment
-
-For dropdown/multiple_choice/checkboxes, include:
-"validation": { "options": [{ "label": "Option", "value": "option" }] }
-
-Topic priorities:
-- required: Must collect (name, email typically)
-- important: Should collect if possible
-- optional: Nice to have
-
-Guidelines:
-1. Keep forms focused (5-10 fields max)
-2. Put contact fields first (name, email)
-3. Make only essential fields required
-4. Add helpful placeholders
-5. Create conversational topics that map to fields
-6. The objective should be friendly and explain what we're collecting`;
+Rules: 5-8 fields max, contact fields first, only essential fields required, friendly objective`;
 
 interface GeneratedForm {
   name: string;
@@ -213,18 +152,16 @@ export async function POST(request: NextRequest) {
             encoder.encode(`data: ${JSON.stringify({ type: 'status', phase: 'analyzing', message: 'Analyzing your request...' })}\n\n`)
           );
 
-          // Small delay for visual feedback
-          await new Promise((r) => setTimeout(r, 500));
-
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: 'status', phase: 'generating', message: 'Generating form fields...' })}\n\n`)
           );
 
           // Generate form with AI using aiService for analytics tracking
+          // Optimized settings: lower temperature for consistency, reduced tokens for speed
           let completion = '';
           const streamResult = await aiService.streamChat(aiContext, messages, {
-            temperature: 0.7,
-            maxTokens: 2000,
+            temperature: 0.5,
+            maxTokens: 1200,
           });
 
           // Store getUsage to call after streaming completes
@@ -241,11 +178,26 @@ export async function POST(request: NextRequest) {
           // Parse the generated form
           let generatedForm: GeneratedForm;
           try {
-            // Clean up response - remove markdown if present
+            // Clean up response - extract JSON from potential surrounding text
             let cleanJson = completion.trim();
-            if (cleanJson.startsWith('```')) {
-              cleanJson = cleanJson.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+
+            // Remove markdown code blocks if present
+            if (cleanJson.includes('```')) {
+              const codeBlockMatch = cleanJson.match(/```(?:json)?\s*([\s\S]*?)```/);
+              if (codeBlockMatch) {
+                cleanJson = codeBlockMatch[1].trim();
+              }
             }
+
+            // If response doesn't start with {, try to find the JSON object
+            if (!cleanJson.startsWith('{')) {
+              const jsonStart = cleanJson.indexOf('{');
+              const jsonEnd = cleanJson.lastIndexOf('}');
+              if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                cleanJson = cleanJson.slice(jsonStart, jsonEnd + 1);
+              }
+            }
+
             generatedForm = JSON.parse(cleanJson);
           } catch (parseError) {
             console.error('[Landing Form Gen] JSON parse error:', parseError, 'Response:', completion);
@@ -257,14 +209,12 @@ export async function POST(request: NextRequest) {
             throw new Error('Invalid form configuration');
           }
 
-          // Stream each field with a delay for visual effect
+          // Stream each field
           for (let i = 0; i < generatedForm.fieldConfigs.length; i++) {
             const field = normalizeField(generatedForm.fieldConfigs[i]);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: 'field', field, index: i })}\n\n`)
             );
-            // Delay between fields for dramatic effect
-            await new Promise((r) => setTimeout(r, 150));
           }
 
           // Send conversational config if present
@@ -272,7 +222,6 @@ export async function POST(request: NextRequest) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: 'status', phase: 'finalizing', message: 'Creating conversational config...' })}\n\n`)
             );
-            await new Promise((r) => setTimeout(r, 300));
 
             const conversationalConfig: ConversationalFormConfig = {
               formType: 'conversational',

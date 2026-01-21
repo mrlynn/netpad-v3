@@ -248,12 +248,12 @@ export function ProjectList({
                 )}
                 <Stack direction="row" spacing={2} flexWrap="wrap">
                   <Chip
-                    label={`${project.stats.formCount} form${project.stats.formCount !== 1 ? 's' : ''}`}
+                    label={`${project.stats?.formCount ?? 0} form${(project.stats?.formCount ?? 0) !== 1 ? 's' : ''}`}
                     size="small"
                     variant="outlined"
                   />
                   <Chip
-                    label={`${project.stats.workflowCount} workflow${project.stats.workflowCount !== 1 ? 's' : ''}`}
+                    label={`${project.stats?.workflowCount ?? 0} workflow${(project.stats?.workflowCount ?? 0) !== 1 ? 's' : ''}`}
                     size="small"
                     variant="outlined"
                   />

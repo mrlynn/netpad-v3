@@ -9,6 +9,7 @@ import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ApplicationProvider } from '@/contexts/ApplicationContext';
 import { IntentOnboardingProvider } from '@/contexts/IntentOnboardingContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
+import { ImpersonationBanner } from '@/components/Admin/ImpersonationBanner';
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ClientLayout>
           <AuthProvider>
+            <ImpersonationBanner />
             <HelpProvider>
               <TourProvider>
                 <OrganizationProvider>

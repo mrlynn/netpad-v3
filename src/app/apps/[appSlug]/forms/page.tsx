@@ -49,6 +49,9 @@ import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { getAppUrl } from '@/lib/routing';
 import { OrphanedFormsBanner } from '@/components/Migration/OrphanedFormsBanner';
+import { FeaturedTemplatesSection } from '@/components/Templates/FeaturedTemplatesSection';
+import { ClusterSetupBanner } from '@/components/Cluster/ClusterSetupBanner';
+import { useClusterStatus } from '@/hooks/useClusterStatus';
 
 interface SavedForm {
   id: string;
@@ -334,6 +337,10 @@ export default function AppFormsPage() {
   const applicationId = currentApplication?.applicationId;
   const projectId = currentApplication?.projectId;
 
+  // Check cluster status for this organization/project
+  const { clusterStatus } = useClusterStatus(currentOrgId, projectId);
+  const hasDatabase = clusterStatus?.hasCluster || clusterStatus?.isReady;
+
   useEffect(() => {
     if (currentOrgId && projectId && applicationId) {
       loadForms();
@@ -345,27 +352,15 @@ export default function AppFormsPage() {
 
     try {
       setLoading(true);
-      // Filter forms by applicationId
+      // Filter forms by applicationId - response counts are included by default
       const response = await fetch(`/api/forms/list?orgId=${currentOrgId}&projectId=${projectId}&applicationId=${applicationId}`);
       const data = await response.json();
 
       if (data.success && data.forms) {
-        // Enrich forms with response counts
-        const enrichedForms = await Promise.all(
-          data.forms.map(async (form: SavedForm) => {
-            try {
-              const statsRes = await fetch(`/api/forms/${form.id}/responses?statsOnly=true&pageSize=1`);
-              const statsData = await statsRes.json();
-              return {
-                ...form,
-                responseCount: statsData.success ? statsData.stats?.total || 0 : 0,
-              };
-            } catch {
-              return { ...form, responseCount: 0 };
-            }
-          })
-        );
-        setForms(enrichedForms);
+        // Forms now include responseCount directly from the API
+        setForms(data.forms as SavedForm[]);
+      } else {
+        setForms([]);
       }
     } catch (error) {
       console.error('Error loading forms:', error);
@@ -510,6 +505,15 @@ export default function AppFormsPage() {
           />
         )}
 
+        {/* Database Setup Banner - show if no cluster/connection exists */}
+        {currentOrgId && projectId && !hasDatabase && (
+          <ClusterSetupBanner
+            orgId={currentOrgId}
+            projectId={projectId}
+            compact
+          />
+        )}
+
         <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
           <TextField
             fullWidth
@@ -589,11 +593,27 @@ export default function AppFormsPage() {
                     fontWeight: 600,
                     px: 4,
                     py: 1.5,
+                    mb: 5,
                     '&:hover': { bgcolor: theme.palette.primary.dark },
                   }}
                 >
                   Create Your First Form
                 </Button>
+
+                {/* Featured Templates */}
+                <Divider sx={{ my: 4, width: '100%' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                    or
+                  </Typography>
+                </Divider>
+
+                <Box sx={{ width: '100%', textAlign: 'left' }}>
+                  <FeaturedTemplatesSection
+                    createFormBaseUrl={`${getAppUrl(appSlug, 'forms')}/new`}
+                    browseTemplatesUrl="/templates"
+                    limit={6}
+                  />
+                </Box>
               </>
             )}
           </Paper>

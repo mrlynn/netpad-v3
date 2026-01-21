@@ -347,6 +347,31 @@ export class AtlasApiClient {
   }
 
   /**
+   * Pause a cluster (M10+ only - M0/M2/M5 cannot be paused)
+   * Paused clusters do not incur compute charges but data is retained
+   */
+  async pauseCluster(
+    projectId: string,
+    clusterName: string
+  ): Promise<AtlasApiResponse<AtlasCluster>> {
+    return this.request<AtlasCluster>('PATCH', `/groups/${projectId}/clusters/${clusterName}`, {
+      paused: true,
+    });
+  }
+
+  /**
+   * Resume a paused cluster
+   */
+  async resumeCluster(
+    projectId: string,
+    clusterName: string
+  ): Promise<AtlasApiResponse<AtlasCluster>> {
+    return this.request<AtlasCluster>('PATCH', `/groups/${projectId}/clusters/${clusterName}`, {
+      paused: false,
+    });
+  }
+
+  /**
    * Wait for cluster to be ready
    */
   async waitForClusterReady(

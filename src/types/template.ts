@@ -358,18 +358,34 @@ export interface ConnectionConfigExport {
  * Bundle Import Request
  */
 export interface BundleImportRequest {
-  manifest: TemplateManifest;
+  manifest: TemplateManifest | ApplicationManifest;
   forms?: FormDefinition[];
   workflows?: WorkflowDefinition[];
   theme?: any;
-  
+
+  /**
+   * Bundle wrapper (alternative structure from import scripts)
+   */
+  bundle?: {
+    manifest: TemplateManifest | ApplicationManifest;
+    forms?: FormDefinition[];
+    workflows?: WorkflowDefinition[];
+  };
+
+  /**
+   * Target organization and project (required for application creation)
+   */
+  organizationId?: string;
+  projectId?: string;
+
   /**
    * Import options
    */
   options?: {
-    overwriteExisting?: boolean;  // Overwrite if form/workflow with same name exists
-    generateNewIds?: boolean;     // Generate new IDs (default: true)
-    preserveSlugs?: boolean;      // Keep original slugs if available (default: false)
+    overwriteExisting?: boolean; // Overwrite if form/workflow with same name exists
+    generateNewIds?: boolean; // Generate new IDs (default: true)
+    preserveSlugs?: boolean; // Keep original slugs if available (default: false)
+    createApplication?: boolean; // Create an Application to group imported assets (default: true)
   };
 }
 
@@ -379,6 +395,11 @@ export interface BundleImportRequest {
 export interface BundleImportResult {
   success: boolean;
   imported: {
+    application?: {
+      applicationId: string;
+      name: string;
+      slug: string;
+    };
     forms: Array<{
       originalId?: string;
       newId: string;
@@ -393,7 +414,7 @@ export interface BundleImportResult {
     }>;
   };
   errors?: Array<{
-    type: 'form' | 'workflow' | 'theme' | 'manifest';
+    type: 'form' | 'workflow' | 'theme' | 'manifest' | 'application';
     name: string;
     error: string;
   }>;

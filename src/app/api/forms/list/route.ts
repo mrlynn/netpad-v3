@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { getClient } from '@/lib/mongodb/clientCache';
+import { getGlobalSubmissionsForForm } from '@/lib/storage';
+
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'form_builder';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +57,10 @@ export async function GET(request: NextRequest) {
       .sort({ updatedAt: -1, createdAt: -1 })
       .toArray();
 
-    // Return list of forms (without full field configs for performance)
+    // Check if response counts are requested (default: true for backwards compatibility)
+    const includeStats = searchParams.get('includeStats') !== 'false';
+
+    // Build initial form list (without full field configs for performance)
     const formList = forms.map((form: any) => ({
       id: form.formId || form.id,
       name: form.name,
@@ -67,8 +75,61 @@ export async function GET(request: NextRequest) {
       fieldCount: form.fieldConfigs?.length || 0,
       thumbnailUrl: form.thumbnailUrl,
       projectId: form.projectId,
-      applicationId: form.applicationId, // Phase 2: Include applicationId
+      applicationId: form.applicationId,
+      responseCount: 0, // Will be populated below if includeStats=true
     }));
+
+    // Get response counts for all forms in batch (if requested)
+    if (includeStats && formList.length > 0) {
+      const formIds = formList.map((f) => f.id);
+      const responseCountMap: Record<string, number> = {};
+
+      // Initialize counts
+      for (const formId of formIds) {
+        responseCountMap[formId] = 0;
+      }
+
+      // Get counts from global_submissions in parallel
+      await Promise.all(
+        formIds.map(async (formId) => {
+          try {
+            const submissions = await getGlobalSubmissionsForForm(formId);
+            responseCountMap[formId] += submissions.length;
+          } catch {
+            // Silently continue
+          }
+        })
+      );
+
+      // Get counts from MongoDB form_responses using aggregation (pooled connection)
+      if (MONGODB_URI) {
+        try {
+          const client = await getClient(MONGODB_URI);
+          const db = client.db(MONGODB_DATABASE);
+          const collection = db.collection('form_responses');
+
+          const pipeline = [
+            { $match: { formId: { $in: formIds } } },
+            { $group: { _id: '$formId', count: { $sum: 1 } } },
+          ];
+
+          const results = await collection.aggregate(pipeline).toArray();
+          for (const result of results) {
+            if (responseCountMap[result._id] !== undefined) {
+              responseCountMap[result._id] += result.count;
+            }
+          }
+          // Note: Don't close the client - it's managed by the cache
+        } catch (err) {
+          console.error('Error aggregating response counts:', err);
+        }
+      }
+
+      // Apply counts to form list
+      for (const form of formList) {
+        form.responseCount = responseCountMap[form.id] || 0;
+      }
+    }
 
     return NextResponse.json({
       success: true,

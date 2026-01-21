@@ -500,6 +500,11 @@ export async function POST(request: NextRequest) {
             engine.addAssistantResponse(fullResponse);
             state = engine.getState();
 
+            // Send stream_complete event IMMEDIATELY so the UI can stop the spinner
+            // Extraction and other processing will happen after this
+            const streamCompleteEvent = `data: ${JSON.stringify({ type: 'stream_complete' })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(streamCompleteEvent));
+
             // Note: Topic coverage is already updated by the engine in processUserMessage
             // The engine analyzes the conversation and updates topics automatically
 
@@ -539,11 +544,13 @@ export async function POST(request: NextRequest) {
                 
                 // Update topic coverage based on extraction results
                 // This is more reliable than keyword-based analysis
+                // Pass topics config so we can enforce depth requirements
                 const { updateTopicCoverageFromExtractions } = await import('@/lib/conversational/state');
                 state = updateTopicCoverageFromExtractions(
                   state,
                   merged.data,
-                  extractionSchema
+                  extractionSchema,
+                  body.config.topics  // Pass topics config for depth requirements
                 );
                 
                 // Add validation warnings to state if needed
@@ -600,6 +607,10 @@ export async function POST(request: NextRequest) {
               controller.enqueue(new TextEncoder().encode(completionEvent));
             }
 
+            // Calculate and update progress metrics before saving
+            const { calculateProgress } = await import('@/lib/conversational/state');
+            state.progress = calculateProgress(state, body.config);
+
             // Save updated state to database
             try {
               await saveConversationState(guard.context.orgId, state);
@@ -608,7 +619,7 @@ export async function POST(request: NextRequest) {
               // Don't fail the request if state save fails
             }
 
-            // Send state update event with full state including messages
+            // Send state update event with full state including messages and progress
             const stateUpdate = `data: ${JSON.stringify({
               type: 'state_update',
               state: {
@@ -627,6 +638,7 @@ export async function POST(request: NextRequest) {
                   content: msg.content,
                   timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp,
                 })),
+                progress: state.progress,
               },
             })}\n\n`;
             controller.enqueue(new TextEncoder().encode(stateUpdate));
@@ -698,7 +710,21 @@ export async function POST(request: NextRequest) {
                 });
               }
             }
+
+            // Send extraction update event with current extracted data
+            const extractionUpdateEvent = `data: ${JSON.stringify({
+              type: 'extraction_update',
+              data: state.partialExtractions,
+              confidence: {},
+              overallConfidence: state.confidence,
+            })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(extractionUpdateEvent));
           }
+
+          // Send final complete event AFTER all other events
+          // This signals to the client that the stream is truly done
+          const finalCompleteEvent = `data: ${JSON.stringify({ type: 'complete' })}\n\n`;
+          controller.enqueue(new TextEncoder().encode(finalCompleteEvent));
 
           controller.close();
         } catch (error: any) {

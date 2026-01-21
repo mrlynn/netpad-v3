@@ -45,13 +45,42 @@ function getClientIP(request: NextRequest): string {
   );
 }
 
+// User context interface for personalized responses
+interface DemoUserContext {
+  isAuthenticated?: boolean;
+  isWaitlistUser?: boolean;
+  userName?: string;
+  waitlistStatus?: 'pending' | 'approved' | 'rejected';
+}
+
 /**
  * Build system prompt for the demo
  */
-function buildSystemPrompt(config: ConversationalFormConfig): string {
+function buildSystemPrompt(config: ConversationalFormConfig, userContext?: DemoUserContext): string {
   const fieldsToCollect = config.extractionSchema
     .map((f) => `- ${f.description}${f.required ? ' (required)' : ' (optional)'}`)
     .join('\n');
+
+  // Add user context awareness
+  let userContextInfo = '';
+  if (userContext) {
+    if (userContext.isWaitlistUser) {
+      userContextInfo = `
+IMPORTANT USER CONTEXT:
+- The user "${userContext.userName || 'this user'}" is currently on the NetPad waitlist (pending approval)
+- If they ask about their waitlist status, approval time, or when they can access the platform:
+  - Be encouraging and let them know they're on the waitlist and will be notified by email when approved
+  - Typical approval time is 1-2 business days
+  - They can browse templates and the marketplace while waiting
+  - They can contact support@netpad.io if they have questions
+- Continue with the form demo while being helpful about waitlist questions`;
+    } else if (userContext.isAuthenticated) {
+      userContextInfo = `
+USER CONTEXT:
+- The user "${userContext.userName || 'this user'}" is an approved NetPad user
+- If they ask about features, you can encourage them to explore templates and create their own forms`;
+    }
+  }
 
   return `You are a friendly assistant helping to collect contact information through natural conversation.
 
@@ -59,6 +88,7 @@ Your goal: ${config.objective}
 
 Information to collect:
 ${fieldsToCollect}
+${userContextInfo}
 
 Guidelines:
 - Be warm, friendly, and conversational
@@ -69,6 +99,7 @@ Guidelines:
 - Don't be robotic - have a natural conversation
 - When you have all required info, let them know you have what you need and thank them
 - IMPORTANT: If someone wants to correct or change information they previously gave (e.g., "Actually my email is...", "I meant to say...", "Can I change my..."), acknowledge the correction warmly and confirm the updated value
+- If someone asks about NetPad, the waitlist, or their account status, respond helpfully based on the user context above
 
 Example flow:
 User: "Hi"
@@ -131,10 +162,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { message, state, config } = body as {
+    const { message, state, config, userContext } = body as {
       message: string;
       state: ConversationState;
       config: ConversationalFormConfig;
+      userContext?: DemoUserContext;
     };
 
     // Validate required fields
@@ -166,8 +198,8 @@ export async function POST(request: NextRequest) {
       true                                // isGuest = true
     );
 
-    // Build conversation messages
-    const systemPrompt = buildSystemPrompt(config);
+    // Build conversation messages with user context
+    const systemPrompt = buildSystemPrompt(config, userContext);
     const conversationHistory: Message[] = state?.messages
       ?.filter((m) => m.role !== 'system')
       .map((m) => ({

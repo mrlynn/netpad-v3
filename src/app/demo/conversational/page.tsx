@@ -801,7 +801,7 @@ export default function ConversationalFormDemo() {
         )}
 
         <Box sx={{ textAlign: 'center', mt: 6 }}>
-          <Typography variant="body2" color="text.secondary">Powered by NetPad &bull; Built for MongoDB</Typography>
+          <Typography variant="body2" color="text.secondary"> Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad &bull; Built for MongoDB</Typography>
         </Box>
       </Container>
 

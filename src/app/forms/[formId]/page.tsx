@@ -380,7 +380,7 @@ export default function PublicFormPage() {
             </Typography>
           )}
 
-          {/* Powered by NetPad footer */}
+          {/*  Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad footer */}
           {form.branding?.showPoweredBy !== false && !hideBranding && (
             <Box
               sx={{
@@ -404,9 +404,9 @@ export default function PublicFormPage() {
                   opacity: 0.5,
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
-                Powered by NetPad
-              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
+        </Typography>
             </Box>
           )}
         </Paper>
@@ -541,7 +541,7 @@ export default function PublicFormPage() {
         {form.branding?.showPoweredBy !== false && (
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              Powered by NetPad
+               Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
             </Typography>
           </Box>
         )}
@@ -817,7 +817,7 @@ export default function PublicFormPage() {
       {form.branding?.showPoweredBy !== false && !hideBranding && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
-            Powered by NetPad
+             Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
           </Typography>
         </Box>
       )}

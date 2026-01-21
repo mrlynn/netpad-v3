@@ -323,7 +323,7 @@ export default function FormPreviewPage() {
         {form.branding?.showPoweredBy !== false && (
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              Powered by NetPad
+               Made with <span style={{ color: '#e91e63' }}>♥</span> using NetPad
             </Typography>
           </Box>
         )}

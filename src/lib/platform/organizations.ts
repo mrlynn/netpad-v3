@@ -297,6 +297,30 @@ export async function checkOrgPermission(
 }
 
 /**
+ * Check if user has admin access to an organization's dashboard
+ *
+ * Returns true if user is:
+ * 1. A platform admin (can access any org), OR
+ * 2. An organization owner or admin
+ */
+export async function checkOrgAdminAccess(
+  userId: string,
+  orgId: string
+): Promise<boolean> {
+  // Import isPlatformAdmin to avoid circular dependency
+  const { isPlatformAdmin } = await import('./users');
+
+  // Platform admins can access any org
+  if (await isPlatformAdmin(userId)) {
+    return true;
+  }
+
+  // Check if user has owner or admin role in the org
+  const role = await getUserOrgRole(userId, orgId);
+  return role === 'owner' || role === 'admin';
+}
+
+/**
  * Update a member's role
  */
 export async function updateMemberRole(
@@ -697,6 +721,245 @@ export async function autoScaffoldForUser(userId: string, userEmail: string, dis
   } catch (error) {
     console.error('[AutoScaffold] Failed to auto-scaffold for user:', error);
     return null;
+  }
+}
+
+// ============================================
+// Data Repair Utilities
+// ============================================
+
+// ============================================
+// Organization Reset (for Testing)
+// ============================================
+
+export interface ResetOrganizationOptions {
+  /** Delete provisioned clusters */
+  deleteClusters?: boolean;
+  /** Delete connection vaults */
+  deleteConnections?: boolean;
+  /** Delete all forms */
+  deleteForms?: boolean;
+  /** Delete all workflows */
+  deleteWorkflows?: boolean;
+  /** Delete all applications (except recreate default) */
+  deleteApplications?: boolean;
+  /** Delete all projects (except recreate default) */
+  deleteProjects?: boolean;
+}
+
+export interface ResetOrganizationResult {
+  success: boolean;
+  deleted: {
+    forms: number;
+    workflows: number;
+    applications: number;
+    projects: number;
+    clusters: number;
+    connections: number;
+  };
+  recreated: {
+    project: boolean;
+    application: boolean;
+  };
+  errors: string[];
+}
+
+/**
+ * Reset an organization to a fresh state
+ *
+ * This deletes all resources associated with the organization but keeps the org itself.
+ * Useful for testing and development purposes.
+ *
+ * WARNING: This is destructive and cannot be undone!
+ */
+export async function resetOrganization(
+  orgId: string,
+  resetBy: string,
+  options: ResetOrganizationOptions = {}
+): Promise<ResetOrganizationResult> {
+  const {
+    deleteClusters = true,
+    deleteConnections = true,
+    deleteForms = true,
+    deleteWorkflows = true,
+    deleteApplications = true,
+    deleteProjects = true,
+  } = options;
+
+  const result: ResetOrganizationResult = {
+    success: false,
+    deleted: {
+      forms: 0,
+      workflows: 0,
+      applications: 0,
+      projects: 0,
+      clusters: 0,
+      connections: 0,
+    },
+    recreated: {
+      project: false,
+      application: false,
+    },
+    errors: [],
+  };
+
+  try {
+    // Verify org exists
+    const org = await getOrganization(orgId);
+    if (!org) {
+      result.errors.push('Organization not found');
+      return result;
+    }
+
+    // Import required modules
+    const { getOrgDb, getPlatformDb, getProjectsCollection, getConnectionVaultCollection } = await import('./db');
+    const { getWorkflowsCollection } = await import('../workflow/db');
+
+    const orgDb = await getOrgDb(orgId);
+    const platformDb = await getPlatformDb();
+
+    // 1. Delete forms
+    if (deleteForms) {
+      try {
+        const formsCollection = orgDb.collection('forms');
+        const submissionsCollection = orgDb.collection('submissions');
+
+        // First delete all submissions
+        const submissionsResult = await submissionsCollection.deleteMany({});
+        console.log(`[Reset] Deleted ${submissionsResult.deletedCount} submissions for org ${orgId}`);
+
+        // Then delete all forms
+        const formsResult = await formsCollection.deleteMany({});
+        result.deleted.forms = formsResult.deletedCount;
+        console.log(`[Reset] Deleted ${formsResult.deletedCount} forms for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete forms: ${message}`);
+      }
+    }
+
+    // 2. Delete workflows
+    if (deleteWorkflows) {
+      try {
+        const workflowsCollection = await getWorkflowsCollection(orgId);
+        const workflowsResult = await workflowsCollection.deleteMany({});
+        result.deleted.workflows = workflowsResult.deletedCount;
+        console.log(`[Reset] Deleted ${workflowsResult.deletedCount} workflows for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete workflows: ${message}`);
+      }
+    }
+
+    // 3. Delete applications
+    if (deleteApplications) {
+      try {
+        const applicationsCollection = orgDb.collection('applications');
+        const appsResult = await applicationsCollection.deleteMany({});
+        result.deleted.applications = appsResult.deletedCount;
+        console.log(`[Reset] Deleted ${appsResult.deletedCount} applications for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete applications: ${message}`);
+      }
+    }
+
+    // 4. Delete connection vaults
+    if (deleteConnections) {
+      try {
+        const connectionVaultCollection = await getConnectionVaultCollection(orgId);
+        const connectionsResult = await connectionVaultCollection.deleteMany({});
+        result.deleted.connections = connectionsResult.deletedCount;
+        console.log(`[Reset] Deleted ${connectionsResult.deletedCount} connections for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete connections: ${message}`);
+      }
+    }
+
+    // 5. Delete provisioned clusters (from platform DB)
+    if (deleteClusters) {
+      try {
+        const clustersCollection = platformDb.collection('provisioned_clusters');
+
+        // Get clusters to delete them from Atlas
+        const clusters = await clustersCollection.find({
+          organizationId: orgId,
+          deletedAt: { $exists: false }
+        }).toArray();
+
+        // Delete Atlas resources
+        for (const cluster of clusters) {
+          try {
+            await deleteProvisionedCluster(orgId, resetBy);
+          } catch (clusterError) {
+            const msg = clusterError instanceof Error ? clusterError.message : 'Unknown error';
+            console.warn(`[Reset] Warning: Failed to delete Atlas cluster: ${msg}`);
+          }
+        }
+
+        // Mark all clusters as deleted in DB
+        const clustersResult = await clustersCollection.updateMany(
+          { organizationId: orgId, deletedAt: { $exists: false } },
+          { $set: { deletedAt: new Date(), deletedBy: resetBy } }
+        );
+        result.deleted.clusters = clustersResult.modifiedCount;
+        console.log(`[Reset] Deleted ${clustersResult.modifiedCount} clusters for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete clusters: ${message}`);
+      }
+    }
+
+    // 6. Delete projects (from platform DB)
+    if (deleteProjects) {
+      try {
+        const projectsCollection = await getProjectsCollection();
+        const projectsResult = await projectsCollection.deleteMany({ organizationId: orgId });
+        result.deleted.projects = projectsResult.deletedCount;
+        console.log(`[Reset] Deleted ${projectsResult.deletedCount} projects for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to delete projects: ${message}`);
+      }
+    }
+
+    // 7. Recreate default project and application
+    if (deleteProjects || deleteApplications) {
+      try {
+        const { ensureDefaultProject } = await import('./projects');
+        const project = await ensureDefaultProject(orgId, resetBy);
+        result.recreated.project = true;
+        result.recreated.application = true; // ensureDefaultProject also creates default app
+        console.log(`[Reset] Recreated default project ${project.projectId} for org ${orgId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Failed to recreate default project: ${message}`);
+      }
+    }
+
+    // Log audit event
+    await logOrgEvent({
+      eventType: 'org.reset',
+      userId: resetBy,
+      resourceType: 'organization',
+      resourceId: orgId,
+      organizationId: orgId,
+      action: 'reset',
+      details: {
+        deleted: result.deleted,
+        recreated: result.recreated,
+        options,
+      },
+      timestamp: new Date(),
+    });
+
+    result.success = result.errors.length === 0;
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    result.errors.push(`Reset failed: ${message}`);
+    return result;
   }
 }
 

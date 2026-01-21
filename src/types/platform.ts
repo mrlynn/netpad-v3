@@ -592,6 +592,39 @@ export interface FormSubmissionMetadata {
   os?: string;
 }
 
+/**
+ * Conversational form data captured during submission
+ */
+export interface ConversationalSubmissionData {
+  /** Conversation ID */
+  conversationId: string;
+  /** Full conversation transcript (if captureTranscript enabled) */
+  transcript?: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp?: Date;
+  }>;
+  /** Topic coverage at time of completion */
+  topicsCovered?: Array<{
+    topicId: string;
+    name: string;
+    covered: boolean;
+    depth: number;
+  }>;
+  /** Confidence scores per extracted field */
+  fieldConfidence?: Record<string, number>;
+  /** Overall extraction confidence (0-1) */
+  overallConfidence: number;
+  /** Number of conversation turns */
+  turnCount: number;
+  /** Conversation duration in seconds */
+  durationSeconds?: number;
+  /** When conversation started */
+  startedAt?: Date;
+  /** When conversation completed */
+  completedAt?: Date;
+}
+
 export interface PlatformFormSubmission {
   _id?: ObjectId;
   submissionId: string;               // "sub_abc123"
@@ -607,6 +640,9 @@ export interface PlatformFormSubmission {
 
   // Request metadata
   metadata: FormSubmissionMetadata;
+
+  // Conversational form data (if submitted via conversational mode)
+  conversationalData?: ConversationalSubmissionData;
 
   // Sync status to target MongoDB
   syncStatus: SubmissionSyncStatus;
@@ -645,6 +681,7 @@ export type AuditEventType =
   | 'org.created'
   | 'org.updated'
   | 'org.deleted'
+  | 'org.reset'
   | 'org.member_added'
   | 'org.member_removed'
   | 'connection.created'

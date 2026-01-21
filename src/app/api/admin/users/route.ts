@@ -2,12 +2,25 @@
  * Admin Users API
  *
  * GET: List all platform users with filtering, search, and pagination
+ * Includes detailed organization, cluster, and application information
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
-import { getUsersCollection } from '@/lib/platform/db';
+import { getUsersCollection, getOrganizationsCollection, getPlatformDb } from '@/lib/platform/db';
+import { ProvisionedCluster } from '@/lib/atlas/types';
+
+interface OrgSummary {
+  orgId: string;
+  name: string;
+  slug: string;
+  role: string;
+  hasCluster: boolean;
+  clusterStatus?: string;
+  applicationCount: number;
+  formCount: number;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -104,24 +117,93 @@ export async function GET(req: NextRequest) {
       })
       .toArray();
 
-    // Transform for response
-    const transformedUsers = users.map((user) => ({
-      userId: user.userId,
-      email: user.email,
-      emailVerified: user.emailVerified,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      platformRole: user.platformRole || null,
-      waitlistStatus: user.waitlistStatus || null,
-      waitlistMetadata: user.waitlistMetadata || null,
-      organizationCount: user.organizations?.length || 0,
-      oauthConnectionCount: typeof user.oauthConnections === 'number' ? user.oauthConnections : 0,
-      passkeyCount: typeof user.passkeys === 'number' ? user.passkeys : 0,
-      trustedDeviceCount: typeof user.trustedDevices === 'number' ? user.trustedDevices : 0,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      lastLoginAt: user.lastLoginAt || null,
-    }));
+    // Get additional collections for enrichment
+    const orgsCollection = await getOrganizationsCollection();
+    const platformDb = await getPlatformDb();
+    const clustersCollection = platformDb.collection<ProvisionedCluster>('provisioned_clusters');
+
+    // Get all org IDs from users for batch lookup
+    const allOrgIds = new Set<string>();
+    users.forEach((user) => {
+      user.organizations?.forEach((org: { orgId: string }) => {
+        allOrgIds.add(org.orgId);
+      });
+    });
+
+    // Batch fetch organizations
+    const orgs = await orgsCollection.find({ orgId: { $in: Array.from(allOrgIds) } }).toArray();
+    const orgMap = new Map(orgs.map((org) => [org.orgId, org]));
+
+    // Batch fetch clusters
+    const clusters = await clustersCollection.find({ organizationId: { $in: Array.from(allOrgIds) } }).toArray();
+    const clusterMap = new Map<string, ProvisionedCluster>();
+    clusters.forEach((cluster) => {
+      // Keep only the most recent/active cluster per org
+      const existing = clusterMap.get(cluster.organizationId);
+      if (!existing || (cluster.status === 'ready' && existing.status !== 'ready')) {
+        clusterMap.set(cluster.organizationId, cluster);
+      }
+    });
+
+    // Batch fetch application counts per org
+    const appCounts = await platformDb.collection('applications').aggregate([
+      { $match: { organizationId: { $in: Array.from(allOrgIds) } } },
+      { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+    ]).toArray();
+    const appCountMap = new Map(appCounts.map((a) => [a._id, a.count]));
+
+    // Batch fetch form counts per org
+    const formCounts = await platformDb.collection('forms').aggregate([
+      { $match: { organizationId: { $in: Array.from(allOrgIds) } } },
+      { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+    ]).toArray();
+    const formCountMap = new Map(formCounts.map((f) => [f._id, f.count]));
+
+    // Transform for response with enriched org data
+    const transformedUsers = users.map((user) => {
+      // Build org summaries
+      const orgSummaries: OrgSummary[] = (user.organizations || []).map((membership: { orgId: string; role: string }) => {
+        const org = orgMap.get(membership.orgId);
+        const cluster = clusterMap.get(membership.orgId);
+        return {
+          orgId: membership.orgId,
+          name: org?.name || 'Unknown',
+          slug: org?.slug || '',
+          role: membership.role,
+          hasCluster: !!cluster,
+          clusterStatus: cluster?.status,
+          applicationCount: appCountMap.get(membership.orgId) || 0,
+          formCount: formCountMap.get(membership.orgId) || 0,
+        };
+      });
+
+      // Calculate totals
+      const totalApps = orgSummaries.reduce((sum, org) => sum + org.applicationCount, 0);
+      const totalForms = orgSummaries.reduce((sum, org) => sum + org.formCount, 0);
+      const hasAnyCluster = orgSummaries.some((org) => org.hasCluster);
+
+      return {
+        userId: user.userId,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        platformRole: user.platformRole || null,
+        waitlistStatus: user.waitlistStatus || null,
+        waitlistMetadata: user.waitlistMetadata || null,
+        organizationCount: user.organizations?.length || 0,
+        organizations: orgSummaries,
+        totalApplications: totalApps,
+        totalForms: totalForms,
+        hasCluster: hasAnyCluster,
+        oauthConnectionCount: typeof user.oauthConnections === 'number' ? user.oauthConnections : 0,
+        passkeyCount: typeof user.passkeys === 'number' ? user.passkeys : 0,
+        trustedDeviceCount: typeof user.trustedDevices === 'number' ? user.trustedDevices : 0,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLoginAt: user.lastLoginAt || null,
+      };
+    });
 
     return NextResponse.json({
       users: transformedUsers,

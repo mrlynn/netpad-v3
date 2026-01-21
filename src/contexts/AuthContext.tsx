@@ -26,9 +26,19 @@ interface SessionInfo {
   waitlistStatus?: 'pending' | 'approved' | 'rejected';
 }
 
+interface ImpersonationInfo {
+  isImpersonating: boolean;
+  originalUserId: string;
+  originalEmail: string;
+  targetUserId: string;
+  targetEmail: string;
+  startedAt: number;
+}
+
 interface AuthState {
   user: User | null;
   session: SessionInfo | null;
+  impersonation: ImpersonationInfo | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -45,6 +55,9 @@ interface AuthContextValue extends AuthState {
   // Session methods
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+
+  // Impersonation methods
+  endImpersonation: () => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -53,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
+    impersonation: null,
     isLoading: true,
     isAuthenticated: false,
   });
@@ -66,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         user: data.user,
         session: data.session,
+        impersonation: data.impersonation || null,
         isLoading: false,
         isAuthenticated: data.authenticated,
       });
@@ -74,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         user: null,
         session: null,
+        impersonation: null,
         isLoading: false,
         isAuthenticated: false,
       });
@@ -217,6 +233,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshSession]);
 
+  // End impersonation
+  const endImpersonation = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/impersonate/end', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        await refreshSession();
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.error || 'Failed to end impersonation' };
+    } catch (error) {
+      console.error('End impersonation error:', error);
+      return { success: false, message: 'Network error. Please try again.' };
+    }
+  }, [refreshSession]);
+
   // Logout
   const logout = useCallback(async () => {
     try {
@@ -228,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         user: null,
         session: null,
+        impersonation: null,
         isLoading: false,
         isAuthenticated: false,
       });
@@ -258,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithPasskey,
     logout,
     refreshSession,
+    endImpersonation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -11,6 +11,14 @@ export interface SessionData {
   deviceTrustToken?: string;
   createdAt?: number;
   waitlistStatus?: 'pending' | 'approved' | 'rejected';
+  // Impersonation fields (admin only)
+  impersonating?: {
+    originalUserId: string;
+    originalEmail: string;
+    targetUserId: string;
+    targetEmail: string;
+    startedAt: number;
+  };
 }
 
 const SESSION_OPTIONS = {
@@ -133,4 +141,72 @@ export async function getDeviceTrustCookie(): Promise<string | null> {
 export async function clearDeviceTrustCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(DEVICE_TRUST_COOKIE);
+}
+
+// Impersonation helpers
+
+/**
+ * Start impersonating a user (admin only)
+ * Stores original admin credentials and switches session to target user
+ */
+export async function startImpersonation(
+  targetUserId: string,
+  targetEmail: string
+): Promise<void> {
+  const session = await getSession();
+
+  if (!session.userId || !session.email) {
+    throw new Error('No active session');
+  }
+
+  // Store original admin credentials and switch to target
+  session.impersonating = {
+    originalUserId: session.userId,
+    originalEmail: session.email,
+    targetUserId,
+    targetEmail,
+    startedAt: Date.now(),
+  };
+
+  // Switch the active user to the target
+  session.userId = targetUserId;
+  session.email = targetEmail;
+
+  await session.save();
+}
+
+/**
+ * End impersonation and restore original admin session
+ */
+export async function endImpersonation(): Promise<void> {
+  const session = await getSession();
+
+  if (!session.impersonating) {
+    throw new Error('Not currently impersonating');
+  }
+
+  // Restore original admin credentials
+  session.userId = session.impersonating.originalUserId;
+  session.email = session.impersonating.originalEmail;
+
+  // Clear impersonation data
+  delete session.impersonating;
+
+  await session.save();
+}
+
+/**
+ * Check if the current session is impersonating another user
+ */
+export async function isImpersonating(): Promise<boolean> {
+  const session = await getSession();
+  return !!session.impersonating;
+}
+
+/**
+ * Get the original admin user ID if currently impersonating
+ */
+export async function getOriginalUserId(): Promise<string | null> {
+  const session = await getSession();
+  return session.impersonating?.originalUserId || null;
 }

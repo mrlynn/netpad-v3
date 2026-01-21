@@ -1,0 +1,139 @@
+{
+  "name": "Collaborator Recruitment",
+  "version": "1.0.0",
+  "description": "A complete collaborator recruitment application with conversational AI and traditional form modes. Perfect for finding co-founders, partners, or team members for your startup or project.",
+  "summary": "Recruit collaborators with AI-powered conversations or traditional forms",
+  "category": "hiring",
+  "tags": ["recruitment", "hiring", "collaboration", "conversational", "ai", "cofounder", "startup", "team-building", "partnership"],
+  "icon": "🤝",
+  "author": {
+    "name": "NetPad",
+    "email": "templates@netpad.io"
+  },
+  "license": "MIT",
+  "netpadVersion": "3.1.0",
+  "assets": {
+    "forms": ["form.json"],
+    "workflows": ["workflow.json"]
+  },
+  "dependencies": {
+    "integrations": ["email", "mongodb"]
+  },
+  "contract": {
+    "version": "1.0.0",
+    "inputs": [
+      {
+        "key": "name",
+        "type": "string",
+        "required": true,
+        "description": "Candidate's full name",
+        "source": "form"
+      },
+      {
+        "key": "email",
+        "type": "string",
+        "required": true,
+        "description": "Candidate's email address",
+        "source": "form"
+      },
+      {
+        "key": "lane",
+        "type": "string",
+        "required": true,
+        "description": "Area of interest (product_design, engineering, integrations, undecided)",
+        "source": "form"
+      },
+      {
+        "key": "shipped",
+        "type": "string",
+        "required": true,
+        "description": "What the candidate has built that they're proud of",
+        "source": "form"
+      },
+      {
+        "key": "whyNetpad",
+        "type": "string",
+        "required": true,
+        "description": "Why the candidate is interested in this project",
+        "source": "form"
+      },
+      {
+        "key": "availability",
+        "type": "string",
+        "required": false,
+        "description": "Weekly time commitment",
+        "source": "form"
+      }
+    ],
+    "outputs": [
+      {
+        "key": "submissionId",
+        "type": "string",
+        "guaranteed": true,
+        "description": "MongoDB document ID of the saved submission"
+      },
+      {
+        "key": "notificationSent",
+        "type": "boolean",
+        "guaranteed": true,
+        "description": "Whether owner notification email was sent"
+      }
+    ],
+    "sideEffects": [
+      {
+        "type": "write",
+        "target": "collaborator_submissions",
+        "description": "Saves candidate submission to MongoDB collection"
+      },
+      {
+        "type": "api_call",
+        "target": "email-send",
+        "description": "Sends notification email to the project owner"
+      }
+    ],
+    "events": [
+      {
+        "name": "submission.created",
+        "description": "Emitted when a new collaborator application is submitted"
+      },
+      {
+        "name": "notification.sent",
+        "description": "Emitted when owner notification email is sent"
+      }
+    ]
+  },
+  "instructions": {
+    "import": "This template creates a complete collaborator recruitment page with both conversational AI mode and traditional form mode. Use it to find co-founders, partners, or team members for your project.",
+    "setup": [
+      "1. Import the template bundle using the NetPad import API or UI",
+      "2. Configure your MongoDB connection in Settings → Connections",
+      "3. Configure your email integration in Settings → Integrations",
+      "4. Update the notification email in the workflow to your email address",
+      "5. Customize the form fields to match your collaboration requirements",
+      "6. Update the conversational config context with your project details",
+      "7. Publish the form",
+      "8. Activate the workflow",
+      "9. Create a landing page similar to /collaborate or embed the form directly"
+    ],
+    "features": [
+      "Dual-mode intake: AI conversational chat OR traditional form",
+      "Deep-dive conversational AI that learns about candidates naturally",
+      "10 carefully designed fields covering background, interest, and availability",
+      "Validation for meaningful responses (min character requirements)",
+      "Automatic owner notification on new submissions",
+      "MongoDB storage for all submissions with conversation metadata",
+      "Dark theme optimized for marketing pages",
+      "Mobile-responsive design"
+    ],
+    "customization": [
+      "Update the 'lanes' (collaboration areas) to match your needs",
+      "Customize the conversational persona and topics",
+      "Adjust validation rules (min lengths, required fields)",
+      "Add additional fields for your specific requirements",
+      "Modify the email notification template"
+    ]
+  },
+  "screenshots": [],
+  "createdAt": "2026-01-20T00:00:00.000Z",
+  "updatedAt": "2026-01-20T00:00:00.000Z"
+}

@@ -33,16 +33,20 @@ import {
   Speed as SpeedIcon,
   Store,
   MenuBook,
+  HourglassTop,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { AppAutoNavigator } from '@/components/Navigation/AppAutoNavigator';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 import { SpotlightCard, hexToRgb } from '@/components/marketing';
 import { IntentOnboardingGate } from '@/components/Onboarding/IntentOnboardingGate';
 import { InstantFormBuilder, PillarsTabs } from '@/components/Landing';
+import { useAutoNavigateToApp } from '@/hooks/useAutoNavigateToApp';
 
 // The four pillars of NetPad
 const pillars = [
@@ -207,13 +211,126 @@ const mcpServerFeatures = [
 ];
 
 export default function LandingPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
-  // Wrap content in OnboardingGate for authenticated users
+  // Smart landing: auto-navigate authenticated users to their last app
+  const { isNavigating, isResolving, shouldShowAppSelection, navigateToLastApp } = useAutoNavigateToApp();
+
+  // Get application context to check if user has apps
+  const applicationContext = useApplicationSafe();
+  const applications = applicationContext?.applications ?? [];
+  const hasApps = applications.length > 0;
+
+  // Check if user is on the waitlist (pending status)
+  const isWaitlistUser = isAuthenticated && user?.waitlistStatus === 'pending';
+
+  // Show loading state while determining where to navigate
+  // Don't auto-navigate waitlist users - they should see the landing page
+  if (isAuthenticated && !isWaitlistUser && (isNavigating || isResolving || isLoading)) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B', display: 'flex', flexDirection: 'column' }}>
+        <AppNavBar />
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <AppAutoNavigator />
+        </Box>
+      </Box>
+    );
+  }
+
+  // Show app selection/navigation for authenticated users with apps
+  // Don't auto-navigate waitlist users - they should see the landing page
+  if (isAuthenticated && !isWaitlistUser && (shouldShowAppSelection || hasApps)) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B', display: 'flex', flexDirection: 'column' }}>
+        <AppNavBar />
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <AppAutoNavigator onNavigate={navigateToLastApp} />
+        </Box>
+      </Box>
+    );
+  }
+
+  // Waitlist banner for pending users
+  const WaitlistBanner = () => (
+    <Box
+      sx={{
+        bgcolor: alpha('#ff9800', 0.15),
+        borderBottom: '1px solid',
+        borderColor: alpha('#ff9800', 0.3),
+        py: 2,
+        px: 3,
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                bgcolor: alpha('#ff9800', 0.2),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <HourglassTop sx={{ fontSize: 20, color: '#ff9800' }} />
+            </Box>
+            <Box>
+              <Typography sx={{ color: '#ff9800', fontWeight: 600, fontSize: '0.95rem' }}>
+                You're on the Waitlist
+              </Typography>
+              <Typography sx={{ color: alpha('#fff', 0.7), fontSize: '0.85rem' }}>
+                While you wait, feel free to browse our templates and marketplace. We'll notify you when your access is approved.
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button
+              component={Link}
+              href="/templates"
+              size="small"
+              sx={{
+                color: '#fff',
+                bgcolor: alpha('#ff9800', 0.2),
+                textTransform: 'none',
+                '&:hover': {
+                  bgcolor: alpha('#ff9800', 0.3),
+                },
+              }}
+            >
+              Browse Templates
+            </Button>
+            <Button
+              component={Link}
+              href="/marketplace"
+              size="small"
+              sx={{
+                color: '#fff',
+                bgcolor: alpha('#ff9800', 0.2),
+                textTransform: 'none',
+                '&:hover': {
+                  bgcolor: alpha('#ff9800', 0.3),
+                },
+              }}
+            >
+              Explore Marketplace
+            </Button>
+          </Box>
+        </Box>
+      </Container>
+    </Box>
+  );
+
+  // Show marketing landing page for non-authenticated users or those without apps
   const content = (
     <Box sx={{ minHeight: '100vh', bgcolor: '#001E2B' }}>
       {/* Show AppNavBar for authenticated users */}
       {!isLoading && isAuthenticated && <AppNavBar />}
+
+      {/* Waitlist banner for pending users */}
+      {isWaitlistUser && <WaitlistBanner />}
 
       {/* Hero Section - Instant Form Builder */}
       <InstantFormBuilder />
@@ -2287,7 +2404,7 @@ $ netpad login --api-key np_live_xxx`}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Image
-                src="/logo-250x250-trans.png"
+                src="/netpad-avatar.png"
                 alt="NetPad"
                 width={24}
                 height={24}

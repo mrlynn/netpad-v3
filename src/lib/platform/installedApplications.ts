@@ -14,7 +14,8 @@ export interface InstalledApplication {
   installationId: string;              // "inst_abc123"
   organizationId: string;
   projectId: string;
-  
+  applicationId?: string;              // Local application ID created during import
+
   // Marketplace reference
   marketplaceApplicationId: string;   // ID from marketplace_applications
   marketplaceApplicationName: string;  // Snapshot of name at install time
@@ -58,6 +59,8 @@ export interface CreateInstallationInput {
   marketplaceApplicationId: string;
   marketplaceApplicationName: string;
   installedVersion: string;
+  /** Local application ID created during import */
+  applicationId?: string;
   installedForms: Array<{
     formId: string;
     originalFormId?: string;
@@ -86,6 +89,7 @@ export async function createInstallation(
     installationId: generateSecureId('inst'),
     organizationId: input.organizationId,
     projectId: input.projectId,
+    applicationId: input.applicationId,
     marketplaceApplicationId: input.marketplaceApplicationId,
     marketplaceApplicationName: input.marketplaceApplicationName,
     installedVersion: input.installedVersion,

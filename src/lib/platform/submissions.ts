@@ -69,6 +69,7 @@ export interface CreateSubmissionInput {
   respondent?: FormSubmissionRespondent;
   metadata: FormSubmissionMetadata;
   formConfig?: FormConfiguration; // Optional form config for encryption support
+  conversationalData?: PlatformFormSubmission['conversationalData']; // Conversational form data
 }
 
 export interface SubmissionResult {
@@ -154,6 +155,7 @@ export async function createSubmission(input: CreateSubmissionInput): Promise<Su
     data: input.data,
     respondent: input.respondent,
     metadata: input.metadata,
+    conversationalData: input.conversationalData, // Include conversational form data if provided
     syncStatus: 'pending',
     syncAttempts: 0,
     targetVaultId: dataSource.vaultId,
@@ -648,4 +650,314 @@ async function logSubmissionEvent(
   } catch (error) {
     console.error('[Submission Audit] Failed to log event:', error);
   }
+}
+
+// ============================================
+// Partial/Draft Submissions
+// ============================================
+
+/**
+ * Partial submission progress info
+ */
+export interface PartialSubmissionProgress {
+  /** Completion percentage (0-100) */
+  completionPercentage: number;
+  /** Fields that have been filled */
+  completedFields: string[];
+  /** Required fields that are still empty */
+  missingRequiredFields: string[];
+  /** Current page for multi-page forms */
+  currentPage: number;
+  /** Total pages in the form */
+  totalPages?: number;
+  /** Field interaction data for analytics */
+  fieldInteractions?: Record<string, {
+    firstViewedAt?: number;
+    totalFocusTime?: number;
+    changeCount?: number;
+  }>;
+}
+
+/**
+ * Partial submission record (draft stored in DB)
+ */
+export interface PartialSubmission {
+  submissionId: string;
+  formId: string;
+  organizationId: string;
+  projectId?: string;
+
+  /** The partial form data */
+  data: Record<string, unknown>;
+
+  /** Progress tracking */
+  progress: PartialSubmissionProgress;
+
+  /** Session/user identification */
+  sessionId?: string;
+  fingerprint?: string;
+  respondent?: FormSubmissionRespondent;
+
+  /** Timestamps */
+  startedAt: Date;
+  lastSavedAt: Date;
+  expiresAt: Date;
+
+  /** Status */
+  status: 'partial' | 'abandoned' | 'converted';
+  /** If converted, link to final submission */
+  convertedSubmissionId?: string;
+}
+
+/**
+ * Save a partial submission (auto-save draft to database)
+ *
+ * This persists form drafts to MongoDB for analytics and cross-device resume.
+ */
+export async function savePartialSubmission(
+  organizationId: string,
+  input: {
+    formId: string;
+    projectId?: string;
+    data: Record<string, unknown>;
+    progress: PartialSubmissionProgress;
+    sessionId?: string;
+    fingerprint?: string;
+    respondent?: FormSubmissionRespondent;
+    draftTTLDays?: number;
+  }
+): Promise<PartialSubmission> {
+  const collection = await getOrgSubmissionsCollection(organizationId);
+  const now = new Date();
+
+  // Calculate expiry (default 7 days)
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + (input.draftTTLDays || 7));
+
+  // Create identifier for upsert (sessionId or fingerprint + formId)
+  const identifier = input.sessionId || input.fingerprint || generateSecureId('partial');
+  const partialId = `partial_${input.formId}_${identifier}`;
+
+  const partial: PartialSubmission = {
+    submissionId: partialId,
+    formId: input.formId,
+    organizationId,
+    projectId: input.projectId,
+    data: input.data,
+    progress: input.progress,
+    sessionId: input.sessionId,
+    fingerprint: input.fingerprint,
+    respondent: input.respondent,
+    startedAt: now,
+    lastSavedAt: now,
+    expiresAt,
+    status: 'partial',
+  };
+
+  // Upsert based on partialId
+  await collection.updateOne(
+    { submissionId: partialId },
+    {
+      $set: {
+        ...partial,
+        lastSavedAt: now,
+      },
+      $setOnInsert: {
+        startedAt: now,
+      },
+    },
+    { upsert: true }
+  );
+
+  return partial;
+}
+
+/**
+ * Get a partial submission by session/fingerprint
+ */
+export async function getPartialSubmission(
+  organizationId: string,
+  formId: string,
+  sessionOrFingerprint: string
+): Promise<PartialSubmission | null> {
+  const collection = await getOrgSubmissionsCollection(organizationId);
+
+  const partialId = `partial_${formId}_${sessionOrFingerprint}`;
+  const doc = await collection.findOne({
+    submissionId: partialId,
+    status: 'partial',
+  });
+
+  if (!doc) return null;
+
+  // Cast to partial submission to access its fields
+  const partial = doc as unknown as PartialSubmission;
+
+  // Check if expired
+  if (partial.expiresAt && new Date(partial.expiresAt) < new Date()) {
+    // Mark as abandoned instead of deleting
+    await collection.updateOne(
+      { submissionId: partialId },
+      { $set: { status: 'abandoned' } }
+    );
+    return null;
+  }
+
+  return partial;
+}
+
+/**
+ * Convert a partial submission to a full submission
+ *
+ * Called when user completes and submits the form.
+ */
+export async function convertPartialToSubmission(
+  organizationId: string,
+  partialId: string,
+  fullSubmissionId: string
+): Promise<void> {
+  const collection = await getOrgSubmissionsCollection(organizationId);
+
+  await collection.updateOne(
+    { submissionId: partialId },
+    {
+      $set: {
+        status: 'converted',
+        convertedSubmissionId: fullSubmissionId,
+        convertedAt: new Date(),
+      },
+    }
+  );
+}
+
+/**
+ * Mark old partial submissions as abandoned
+ */
+export async function markAbandonedPartialSubmissions(
+  organizationId: string,
+  hoursOld: number = 24
+): Promise<number> {
+  const collection = await getOrgSubmissionsCollection(organizationId);
+
+  const cutoffDate = new Date();
+  cutoffDate.setHours(cutoffDate.getHours() - hoursOld);
+
+  const result = await collection.updateMany(
+    {
+      status: 'partial',
+      lastSavedAt: { $lt: cutoffDate },
+    },
+    {
+      $set: {
+        status: 'abandoned',
+        abandonedAt: new Date(),
+      },
+    }
+  );
+
+  return result.modifiedCount;
+}
+
+/**
+ * Get partial submission analytics for a form
+ */
+export async function getPartialSubmissionAnalytics(
+  organizationId: string,
+  formId: string,
+  days: number = 30
+): Promise<{
+  totalPartial: number;
+  totalAbandoned: number;
+  totalConverted: number;
+  conversionRate: number;
+  averageCompletionAtAbandonment: number;
+  dropOffByField: Array<{ field: string; dropOffCount: number }>;
+}> {
+  const collection = await getOrgSubmissionsCollection(organizationId);
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  // Get counts by status
+  const statusCounts = await collection.aggregate([
+    {
+      $match: {
+        formId,
+        submissionId: { $regex: /^partial_/ },
+        startedAt: { $gte: cutoffDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+      },
+    },
+  ]).toArray();
+
+  let totalPartial = 0;
+  let totalAbandoned = 0;
+  let totalConverted = 0;
+
+  for (const item of statusCounts) {
+    if (item._id === 'partial') totalPartial = item.count;
+    else if (item._id === 'abandoned') totalAbandoned = item.count;
+    else if (item._id === 'converted') totalConverted = item.count;
+  }
+
+  const total = totalPartial + totalAbandoned + totalConverted;
+  const conversionRate = total > 0 ? Math.round((totalConverted / total) * 100) : 0;
+
+  // Get average completion at abandonment
+  const abandonedDocs = await collection.aggregate([
+    {
+      $match: {
+        formId,
+        status: 'abandoned',
+        startedAt: { $gte: cutoffDate },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        avgCompletion: { $avg: '$progress.completionPercentage' },
+      },
+    },
+  ]).toArray();
+
+  const averageCompletionAtAbandonment = abandonedDocs[0]?.avgCompletion || 0;
+
+  // Get drop-off by field (which required fields are most often missing)
+  const fieldDropOff = await collection.aggregate([
+    {
+      $match: {
+        formId,
+        status: 'abandoned',
+        startedAt: { $gte: cutoffDate },
+      },
+    },
+    { $unwind: '$progress.missingRequiredFields' },
+    {
+      $group: {
+        _id: '$progress.missingRequiredFields',
+        dropOffCount: { $sum: 1 },
+      },
+    },
+    { $sort: { dropOffCount: -1 } },
+    { $limit: 10 },
+  ]).toArray();
+
+  const dropOffByField = fieldDropOff.map((item) => ({
+    field: item._id as string,
+    dropOffCount: item.dropOffCount,
+  }));
+
+  return {
+    totalPartial,
+    totalAbandoned,
+    totalConverted,
+    conversionRate,
+    averageCompletionAtAbandonment: Math.round(averageCompletionAtAbandonment),
+    dropOffByField,
+  };
 }

@@ -190,7 +190,20 @@ function TabPanel({ children, value, index, ...other }: TabPanelProps) {
       aria-labelledby={`pillar-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ pt: 4 }}>{children}</Box>}
+      {value === index && (
+        <Box
+          sx={{
+            pt: 3,
+            animation: 'fadeIn 0.3s ease-in',
+            '@keyframes fadeIn': {
+              from: { opacity: 0, transform: 'translateY(10px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
+          }}
+        >
+          {children}
+        </Box>
+      )}
     </Box>
   );
 }
@@ -201,12 +214,14 @@ export function PillarsTabs() {
 
   return (
     <Box>
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Redesigned as proper tabs */}
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'center',
-          mb: 2,
+          mb: 4,
+          borderBottom: '1px solid',
+          borderColor: alpha('#fff', 0.1),
         }}
       >
         <Tabs
@@ -216,19 +231,18 @@ export function PillarsTabs() {
           scrollButtons="auto"
           allowScrollButtonsMobile
           sx={{
-            minHeight: 56,
-            // Remove default bottom border on tabs scroller
+            minHeight: 64,
             '& .MuiTabs-scroller': {
               borderBottom: 'none',
             },
             '& .MuiTabs-indicator': {
               height: 3,
-              borderRadius: 1.5,
+              borderRadius: '3px 3px 0 0',
               backgroundColor: activePillar.color,
               transition: 'background-color 0.3s ease, left 0.3s ease, width 0.3s ease',
             },
             '& .MuiTabs-flexContainer': {
-              gap: { xs: 0.5, sm: 1 },
+              gap: { xs: 0, sm: 2 },
               borderBottom: 'none',
             },
           }}
@@ -236,24 +250,37 @@ export function PillarsTabs() {
           {pillarConfig.map((pillar, index) => (
             <Tab
               key={pillar.id}
-              icon={
+              label={
                 <Box
                   sx={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 1,
-                    color: activeTab === index ? pillar.color : alpha('#fff', 0.5),
-                    transition: 'color 0.2s ease',
+                    gap: 0.5,
+                    px: { xs: 1, sm: 2 },
                   }}
                 >
-                  {pillar.icon}
-                  <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                  <Box
+                    sx={{
+                      color: activeTab === index ? pillar.color : alpha('#fff', 0.4),
+                      transition: 'color 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {pillar.icon}
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
                     <Typography
                       variant="caption"
                       sx={{
-                        fontWeight: 600,
+                        display: 'block',
+                        fontWeight: activeTab === index ? 700 : 500,
                         textTransform: 'none',
                         fontSize: '0.75rem',
+                        color: activeTab === index ? pillar.color : alpha('#fff', 0.5),
+                        transition: 'all 0.2s ease',
                       }}
                     >
                       {pillar.title}
@@ -261,11 +288,12 @@ export function PillarsTabs() {
                     <Typography
                       variant="caption"
                       sx={{
-                        display: 'block',
+                        display: { xs: 'none', sm: 'block' },
                         fontWeight: 400,
                         textTransform: 'none',
                         fontSize: '0.65rem',
-                        opacity: 0.7,
+                        color: activeTab === index ? alpha(pillar.color, 0.8) : alpha('#fff', 0.3),
+                        transition: 'all 0.2s ease',
                       }}
                     >
                       {pillar.subtitle}
@@ -274,16 +302,15 @@ export function PillarsTabs() {
                 </Box>
               }
               sx={{
-                minHeight: 56,
-                px: { xs: 2, sm: 3 },
+                minHeight: 64,
                 py: 1.5,
-                borderRadius: 2,
-                mx: 0.5,
+                px: { xs: 1, sm: 2 },
+                textTransform: 'none',
                 '&:hover': {
-                  bgcolor: alpha(pillar.color, 0.08),
+                  bgcolor: alpha('#fff', 0.03),
                 },
                 '&.Mui-selected': {
-                  bgcolor: alpha(pillar.color, 0.12),
+                  bgcolor: 'transparent',
                 },
                 transition: 'background-color 0.2s ease',
               }}

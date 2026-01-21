@@ -13,6 +13,8 @@ import {
 } from '@mui/material';
 import { Close, Delete, Edit, ArrowBack, ArrowForward } from '@mui/icons-material';
 import { FormResponse } from '@/types/form';
+import { ConversationalSubmissionData } from '@/types/platform';
+import { ConversationTranscriptViewer } from '@/components/ConversationalForm';
 import { format } from 'date-fns';
 
 interface ResponseDetailProps {
@@ -20,6 +22,8 @@ interface ResponseDetailProps {
   onClose: () => void;
   onDelete: (responseId: string) => void;
   connectionString?: string;
+  /** Conversational form data if this was a conversational submission */
+  conversationalData?: ConversationalSubmissionData;
 }
 
 export function ResponseDetail({
@@ -27,6 +31,7 @@ export function ResponseDetail({
   onClose,
   onDelete,
   connectionString,
+  conversationalData,
 }: ResponseDetailProps) {
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this response?')) {
@@ -128,6 +133,16 @@ export function ResponseDetail({
           )}
         </Grid>
       </Paper>
+
+      {/* Conversational Data (if present) */}
+      {conversationalData && (
+        <Box sx={{ mb: 3 }}>
+          <ConversationTranscriptViewer
+            conversationalData={conversationalData}
+            defaultExpanded={false}
+          />
+        </Box>
+      )}
 
       {/* Response Data */}
       <Box>

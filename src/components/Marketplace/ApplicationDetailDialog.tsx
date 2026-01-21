@@ -47,7 +47,8 @@ import {
   InstallMobile as InstallIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { usePathname } from 'next/navigation';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { usePathname, useRouter } from 'next/navigation';
 import { parseOrgProjectFromPath } from '@/lib/routing';
 import { FormWorkflowConnection } from '@/types/template';
 import { ReviewForm } from './ReviewForm';
@@ -124,12 +125,14 @@ export function ApplicationDetailDialog({
 }: ApplicationDetailDialogProps) {
   const { currentOrgId } = useOrganization();
   const { user } = useAuth();
+  const applicationContext = useApplicationSafe();
+  const router = useRouter();
   const pathname = usePathname();
   // Use prop orgId if provided, otherwise use context (for imports)
   const organizationId = propOrganizationId || currentOrgId || undefined;
-  // Get projectId from URL if available
+  // Get projectId from URL if available, or from current application context
   const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
-  const projectId = urlProjectId || undefined;
+  const projectId = urlProjectId || applicationContext?.currentProjectId || undefined;
   
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -299,7 +302,7 @@ export function ApplicationDetailDialog({
     }
 
     if (!projectId) {
-      setError('Please navigate to a project to import the application. Go to your organization, select a project, then access the Marketplace from the navigation menu.');
+      setError('Please select an application from your workspace first. Click the app selector in the navigation bar to choose where to import this marketplace app.');
       return;
     }
 
@@ -332,7 +335,17 @@ export function ApplicationDetailDialog({
         onImportComplete();
       }
 
+      // Refresh the application context so the new app appears in the switcher
+      if (applicationContext?.refreshApplications) {
+        await applicationContext.refreshApplications();
+      }
+
       onClose();
+
+      // Navigate to the newly imported application
+      if (result.application?.appSlug) {
+        router.push(`/apps/${result.application.appSlug}`);
+      }
     } catch (err) {
       console.error('Error importing application:', err);
       setError(err instanceof Error ? err.message : 'Failed to import application');

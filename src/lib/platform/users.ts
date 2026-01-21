@@ -304,10 +304,83 @@ export async function setPlatformRole(
 
 /**
  * Check if user is a platform admin
+ *
+ * Checks both:
+ * 1. User's platformRole in the database
+ * 2. User's email in PLATFORM_ADMIN_EMAILS environment variable
  */
 export async function isPlatformAdmin(userId: string): Promise<boolean> {
   const user = await findUserById(userId);
-  return user?.platformRole === 'admin';
+  if (!user) return false;
+
+  // Check database role first
+  if (user.platformRole === 'admin') return true;
+
+  // Check environment variable for admin emails
+  const adminEmails = process.env.PLATFORM_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+  if (adminEmails.includes(user.email.toLowerCase())) {
+    // Auto-bootstrap: if user is in env var but not marked as admin in DB, update them
+    await bootstrapPlatformAdmin(user.email);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Bootstrap platform admin from environment variable
+ *
+ * If a user's email is in PLATFORM_ADMIN_EMAILS, ensure they have platform admin role.
+ * This is called automatically on login or when checking isPlatformAdmin.
+ */
+export async function bootstrapPlatformAdmin(email: string): Promise<boolean> {
+  const adminEmails = process.env.PLATFORM_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+
+  if (!adminEmails.includes(email.toLowerCase())) {
+    return false;
+  }
+
+  const user = await findUserByEmail(email);
+  if (!user) {
+    return false;
+  }
+
+  // Already an admin
+  if (user.platformRole === 'admin') {
+    return true;
+  }
+
+  // Update to admin role
+  const collection = await getUsersCollection();
+  const result = await collection.updateOne(
+    { userId: user.userId },
+    {
+      $set: {
+        platformRole: 'admin' as PlatformRole,
+        updatedAt: new Date()
+      }
+    }
+  );
+
+  if (result.modifiedCount > 0) {
+    console.log(`[Platform Admin] Bootstrapped ${email} as platform admin from environment variable`);
+
+    await logUserEvent({
+      eventType: 'user.updated',
+      userId: user.userId,
+      userEmail: user.email,
+      resourceType: 'user',
+      resourceId: user.userId,
+      action: 'bootstrap_admin',
+      details: {
+        source: 'environment_variable',
+        newRole: 'admin',
+      },
+      timestamp: new Date(),
+    });
+  }
+
+  return true;
 }
 
 // ============================================

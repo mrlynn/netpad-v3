@@ -13,11 +13,11 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  HourglassTop,
   Logout,
   Email,
   Support,
 } from '@mui/icons-material';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function WaitlistPendingPage() {
@@ -97,14 +97,17 @@ export default function WaitlistPendingPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: alpha('#ff9800', 0.15),
                 mb: 3,
               }}
             >
-              <HourglassTop sx={{ fontSize: 40, color: '#ff9800' }} />
+              <Image
+                src="/netpad-waitlist.png"
+                alt="NetPad Waitlist"
+                width={120}
+                height={120}
+                style={{ objectFit: 'contain' }}
+                priority
+              />
             </Box>
 
             <Typography variant="h4" sx={{ fontWeight: 700, color: textColor, mb: 1 }}>

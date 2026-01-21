@@ -23,12 +23,20 @@ import {
   Add,
   ArrowForward,
   TrendingUp,
+  Rocket,
+  Cloud,
+  Download,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { getAppUrl } from '@/lib/routing';
+import { DeploymentWizard } from '@/components/Deploy/DeploymentWizard';
+import { DownloadAppDialog } from '@/components/Download/DownloadAppDialog';
+import { ClusterSetupBanner } from '@/components/Cluster/ClusterSetupBanner';
+import { useClusterStatus } from '@/hooks/useClusterStatus';
+import { Project } from '@/types/platform';
 
 interface DashboardStats {
   forms: number;
@@ -50,21 +58,46 @@ export default function AppOverviewPage() {
   const [stats, setStats] = useState<DashboardStats>({ forms: 0, workflows: 0, responses: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
 
+  // Deploy dialog states
+  const [deployWizardOpen, setDeployWizardOpen] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [project, setProject] = useState<Project | null>(null);
+
   const appSlug = currentApplication?.slug || '';
   const projectId = currentApplication?.projectId;
   const applicationId = currentApplication?.applicationId;
 
+  // Check cluster status for this organization/project
+  const { clusterStatus } = useClusterStatus(currentOrgId, projectId);
+  const hasDatabase = clusterStatus?.hasCluster || clusterStatus?.isReady;
+
   useEffect(() => {
     if (currentOrgId && projectId && applicationId) {
       loadStats();
+      loadProject();
     }
   }, [currentOrgId, projectId, applicationId]);
+
+  const loadProject = async () => {
+    if (!currentOrgId || !projectId) return;
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}?orgId=${currentOrgId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProject(data.project);
+      }
+    } catch (error) {
+      console.error('Error loading project:', error);
+    }
+  };
 
   const loadStats = async () => {
     if (!currentOrgId || !projectId) return;
 
     setLoadingStats(true);
     try {
+      // Fetch forms and workflows in parallel - forms API now includes response counts
       const [formsRes, workflowsRes] = await Promise.all([
         fetch(`/api/forms/list?orgId=${currentOrgId}&projectId=${projectId}&applicationId=${applicationId}`),
         fetch(`/api/workflows?orgId=${currentOrgId}&projectId=${projectId}&applicationId=${applicationId}`),
@@ -76,17 +109,11 @@ export default function AppOverviewPage() {
       const forms = formsData.forms || [];
       const workflows = workflowsData.workflows || [];
 
-      // Calculate total responses across all forms
-      let totalResponses = 0;
-      for (const form of forms) {
-        try {
-          const statsRes = await fetch(`/api/forms/${form.id}/responses?statsOnly=true&pageSize=1`);
-          const statsData = await statsRes.json();
-          totalResponses += statsData.stats?.total || 0;
-        } catch {
-          // Ignore errors for individual form stats
-        }
-      }
+      // Sum response counts from forms (now included in the API response)
+      const totalResponses = forms.reduce(
+        (sum: number, form: { responseCount?: number }) => sum + (form.responseCount || 0),
+        0
+      );
 
       setStats({
         forms: forms.length,
@@ -158,6 +185,18 @@ export default function AppOverviewPage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
+        {/* Database Setup Banner - show if no cluster/connection exists */}
+        {currentOrgId && projectId && !hasDatabase && (
+          <ClusterSetupBanner
+            orgId={currentOrgId}
+            projectId={projectId}
+            onClusterReady={() => {
+              // Refresh stats when cluster becomes ready
+              loadStats();
+            }}
+          />
+        )}
+
         {/* Quick Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {quickActions.map((action) => (
@@ -278,6 +317,80 @@ export default function AppOverviewPage() {
           </Grid>
         </Paper>
 
+        {/* Deploy Section */}
+        <Paper sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Rocket sx={{ color: '#00ED64' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Deploy
+            </Typography>
+          </Box>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Deploy your application as a standalone Next.js app. Choose Vercel for instant cloud hosting, or download for Docker/self-hosted deployments.
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Cloud />}
+                onClick={() => setDeployWizardOpen(true)}
+                disabled={stats.forms === 0}
+                sx={{
+                  py: 2,
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha('#00ED64', 0.5),
+                  color: '#00ED64',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.05),
+                  },
+                  '&.Mui-disabled': {
+                    borderColor: alpha(theme.palette.text.disabled, 0.3),
+                  },
+                }}
+              >
+                Deploy to Vercel
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Download />}
+                onClick={() => setDownloadDialogOpen(true)}
+                disabled={stats.forms === 0}
+                sx={{
+                  py: 2,
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha(theme.palette.text.secondary, 0.3),
+                  '&:hover': {
+                    borderColor: theme.palette.text.secondary,
+                    bgcolor: alpha(theme.palette.text.secondary, 0.05),
+                  },
+                  '&.Mui-disabled': {
+                    borderColor: alpha(theme.palette.text.disabled, 0.3),
+                  },
+                }}
+              >
+                Download (Docker/Self-hosted)
+              </Button>
+            </Grid>
+          </Grid>
+
+          {stats.forms === 0 && !loadingStats && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+              Create at least one form before deploying your application.
+            </Typography>
+          )}
+        </Paper>
+
         {/* Getting Started (show if no forms yet) */}
         {!loadingStats && stats.forms === 0 && (
           <Paper sx={{ p: 6, textAlign: 'center', bgcolor: alpha(theme.palette.primary.main, 0.02), border: '1px dashed', borderColor: alpha(theme.palette.primary.main, 0.3), borderRadius: 2 }}>
@@ -310,6 +423,25 @@ export default function AppOverviewPage() {
           </Paper>
         )}
       </Container>
+
+      {/* Deploy to Vercel Wizard */}
+      <DeploymentWizard
+        open={deployWizardOpen}
+        onClose={() => setDeployWizardOpen(false)}
+        project={project}
+        organizationId={currentOrgId || ''}
+      />
+
+      {/* Download App Dialog */}
+      <DownloadAppDialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        applicationId={applicationId || ''}
+        applicationName={currentApplication.name}
+        orgId={currentOrgId || ''}
+        formCount={stats.forms}
+        workflowCount={stats.workflows}
+      />
     </Box>
   );
 }

@@ -17,11 +17,14 @@ import {
   Divider,
   Typography,
   alpha,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Business,
   Check,
   Add,
+  Settings,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useRouter } from 'next/navigation';
@@ -126,6 +129,26 @@ export function OrganizationSelector({ compact = false }: OrganizationSelectorPr
                 fontWeight: org.orgId === organization.orgId ? 600 : 400,
               }}
             />
+            <Tooltip title="Organization Settings">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClose();
+                  router.push('/settings?tab=organizations');
+                }}
+                sx={{
+                  ml: 1,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.1),
+                  },
+                }}
+              >
+                <Settings sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
           </MenuItem>
         ))}
         <Divider />

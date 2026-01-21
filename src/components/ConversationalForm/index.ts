@@ -6,4 +6,5 @@
 
 export { ConversationalFormChat } from './ConversationalFormChat';
 export { SourceCitation, type SourceCitationProps } from './SourceCitation';
+export { ConversationTranscriptViewer } from './ConversationTranscriptViewer';
 export { default } from './ConversationalFormChat';

@@ -22,7 +22,7 @@ export async function listCommand(options: ListOptions) {
   });
 
   try {
-    const response = await fetch(`${auth.apiUrl}/api/applications?orgId=${auth.orgId}`, {
+    const response = await fetch(`${auth.apiUrl}/api/v1/applications`, {
       headers: {
         'Authorization': getAuthHeader(auth),
       },
@@ -30,12 +30,15 @@ export async function listCommand(options: ListOptions) {
 
     const data = await response.json();
 
+    // Handle v1 API error format
     if (!response.ok) {
-      console.error(chalk.red(`Error: ${data.error || 'Failed to list applications'}`));
+      const errorMessage = data.error?.message || data.error || 'Failed to list applications';
+      console.error(chalk.red(`Error: ${errorMessage}`));
       process.exit(1);
     }
 
-    const applications = data.applications || [];
+    // v1 API returns data in a 'data' field
+    const applications = data.data || [];
 
     if (applications.length === 0) {
       console.log(chalk.gray('No applications found.'));

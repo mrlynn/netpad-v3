@@ -1,0 +1,129 @@
+{
+  "id": "collaborator-notification",
+  "slug": "collaborator-notification",
+  "name": "Collaborator Submission Notification",
+  "description": "Sends email notification to the project owner when a new collaborator application is submitted",
+  "version": "1.0.0",
+  "status": "draft",
+  "settings": {
+    "trigger": {
+      "type": "form_submission",
+      "formId": "collaborator-intake",
+      "formSlug": "collaborator-intake"
+    }
+  },
+  "variables": [
+    {
+      "name": "ownerEmail",
+      "type": "string",
+      "description": "Email address to receive notifications",
+      "defaultValue": "owner@example.com"
+    },
+    {
+      "name": "ownerName",
+      "type": "string",
+      "description": "Name of the project owner",
+      "defaultValue": "Project Owner"
+    },
+    {
+      "name": "projectName",
+      "type": "string",
+      "description": "Name of the project",
+      "defaultValue": "My Project"
+    }
+  ],
+  "canvas": {
+    "nodes": [
+    {
+      "id": "trigger",
+      "type": "trigger",
+      "name": "Form Submission",
+      "position": { "x": 100, "y": 100 },
+      "config": {
+        "triggerType": "form_submission",
+        "formId": "collaborator-intake"
+      }
+    },
+    {
+      "id": "save_to_mongodb",
+      "type": "mongodb-write",
+      "name": "Save Submission",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "connectionId": "{{CONNECTION_ID}}",
+        "collection": "collaborator_submissions",
+        "operation": "insertOne",
+        "document": {
+          "name": "{{trigger.data.name}}",
+          "email": "{{trigger.data.email}}",
+          "location": "{{trigger.data.location}}",
+          "lane": "{{trigger.data.lane}}",
+          "availability": "{{trigger.data.availability}}",
+          "workPreference": "{{trigger.data.workPreference}}",
+          "workLinks": "{{trigger.data.workLinks}}",
+          "shipped": "{{trigger.data.shipped}}",
+          "whyNetpad": "{{trigger.data.whyNetpad}}",
+          "anythingElse": "{{trigger.data.anythingElse}}",
+          "submittedAt": "{{trigger.timestamp}}",
+          "status": "new",
+          "_meta": "{{trigger.data._meta}}"
+        }
+      }
+    },
+    {
+      "id": "format_lane",
+      "type": "transform",
+      "name": "Format Lane Name",
+      "position": { "x": 500, "y": 100 },
+      "config": {
+        "transformations": [
+          {
+            "outputField": "laneName",
+            "expression": "trigger.data.lane === 'product_design' ? 'Product & Design' : trigger.data.lane === 'engineering' ? 'Full-Stack Engineering' : trigger.data.lane === 'integrations' ? 'Integrations & Ecosystem' : 'Not sure yet'"
+          },
+          {
+            "outputField": "availabilityText",
+            "expression": "trigger.data.availability === 'few_hours' ? 'A few hours/week' : trigger.data.availability === '5-10_hours' ? '5-10 hrs/week' : trigger.data.availability === '10+_hours' ? '10+ hrs/week' : 'Depends on the project'"
+          },
+          {
+            "outputField": "submissionType",
+            "expression": "trigger.data._meta?.submissionType === 'conversational' ? 'Conversational (AI Chat)' : 'Traditional Form'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "send_notification",
+      "type": "email-send",
+      "name": "Notify Owner",
+      "position": { "x": 700, "y": 100 },
+      "config": {
+        "credentialId": "{{EMAIL_CREDENTIAL_ID}}",
+        "to": "{{variables.ownerEmail}}",
+        "subject": "New Collaborator Application: {{trigger.data.name}} - {{format_lane.laneName}}",
+        "body": "Hi {{variables.ownerName}},\n\nYou have a new collaborator application for {{variables.projectName}}!\n\n---\n\n**Candidate Details**\n\n**Name:** {{trigger.data.name}}\n**Email:** {{trigger.data.email}}\n**Location:** {{trigger.data.location || 'Not provided'}}\n**Submitted via:** {{format_lane.submissionType}}\n\n---\n\n**Interest Area:** {{format_lane.laneName}}\n**Availability:** {{format_lane.availabilityText}}\n**Work Preference:** {{trigger.data.workPreference ? trigger.data.workPreference.join(', ') : 'Not specified'}}\n\n---\n\n**Links to Work:**\n{{trigger.data.workLinks || 'Not provided'}}\n\n---\n\n**What they've shipped:**\n{{trigger.data.shipped}}\n\n---\n\n**Why they're interested:**\n{{trigger.data.whyNetpad}}\n\n---\n\n**Additional comments:**\n{{trigger.data.anythingElse || 'None'}}\n\n---\n\nReply directly to {{trigger.data.email}} if you'd like to set up a call.\n\nBest,\nYour Collaborator Recruitment Workflow",
+        "replyTo": "{{trigger.data.email}}"
+      }
+    }
+  ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger",
+        "target": "save_to_mongodb"
+      },
+      {
+        "id": "e2",
+        "source": "save_to_mongodb",
+        "target": "format_lane"
+      },
+      {
+        "id": "e3",
+        "source": "format_lane",
+        "target": "send_notification"
+      }
+    ]
+  },
+  "applicationRole": "automation",
+  "displayOrder": 1
+}

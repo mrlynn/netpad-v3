@@ -58,7 +58,12 @@ export type APIKeyPermission =
   | 'submissions:write'
   | 'submissions:delete'
   | 'analytics:read'
-  | 'webhooks:manage';
+  | 'webhooks:manage'
+  | 'templates:read'
+  | 'templates:write'
+  | 'workflows:read'
+  | 'workflows:write'
+  | 'admin';
 
 export interface CreateAPIKeyRequest {
   name: string;

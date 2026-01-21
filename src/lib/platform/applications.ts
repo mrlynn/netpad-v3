@@ -57,6 +57,10 @@ export interface CreateApplicationInput {
   tags?: string[];
   isDefault?: boolean;
   createdBy: string;
+  /** Marketplace application ID if imported from marketplace */
+  marketplaceApplicationId?: string;
+  /** Version from marketplace at time of import */
+  marketplaceVersion?: string;
 }
 
 /**
@@ -109,6 +113,9 @@ export async function createApplication(input: CreateApplicationInput): Promise<
     isDefault: input.isDefault || false,
     // Phase 10: Default access - all org members can view (backward compatible)
     defaultAccess: 'org_members',
+    // Marketplace tracking
+    marketplaceApplicationId: input.marketplaceApplicationId,
+    marketplaceVersion: input.marketplaceVersion,
     createdBy: input.createdBy,
     createdAt: new Date(),
     updatedAt: new Date(),

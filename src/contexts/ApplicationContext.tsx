@@ -171,7 +171,23 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
   // ----------------------------------------
 
   useEffect(() => {
-    if (isSwrLoading || applications.length === 0) return;
+    // Don't run while loading, but DO run if applications is empty (to clear stale state)
+    if (isSwrLoading) return;
+
+    // If current app no longer exists in the applications list, clear it
+    // This handles the case where an application was deleted
+    if (currentApplication && applications.length >= 0) {
+      const stillExists = applications.some(a => a.applicationId === currentApplication.applicationId);
+      if (!stillExists) {
+        console.warn(`[ApplicationContext] Current app ${currentApplication.applicationId} no longer exists. Clearing.`);
+        removeFromStorage(STORAGE_KEYS.LAST_APP_ID);
+        setCurrentApplication(null);
+        return;
+      }
+    }
+
+    // Skip further processing if no applications
+    if (applications.length === 0) return;
 
     // Try to determine current application from URL
     const { appId: urlAppId, appSlug: urlAppSlug } = parseApplicationFromPath(pathname);

@@ -72,9 +72,12 @@ const PUBLIC_ROUTES = [
   '/wizard', // Public wizard pages
   '/waitlist', // Public waitlist signup
   '/waitlist/pending', // Waitlist pending page
+  '/templates', // Public templates browsing (read-only for waitlist users)
+  '/marketplace', // Public marketplace browsing (read-only for waitlist users)
 ];
 
 // API routes that can be accessed without auth (public endpoints)
+// These routes handle their own authentication (API keys, etc.)
 const PUBLIC_API_ROUTES = [
   '/api/auth/',
   '/api/forms/', // Form submission endpoints
@@ -82,6 +85,9 @@ const PUBLIC_API_ROUTES = [
   '/api/waitlist/signup', // Waitlist signup endpoint
   '/api/workflows/process', // Workflow cron processor (has separate CRON_SECRET auth)
   '/api/workflows/public/', // Public workflow execution endpoints
+  '/api/templates/import', // Template import (supports API key auth)
+  '/api/marketplace/applications', // Marketplace browsing (read-only for waitlist users)
+  '/api/landing/', // Landing page form generator (guest access with rate limiting)
 ];
 
 /**

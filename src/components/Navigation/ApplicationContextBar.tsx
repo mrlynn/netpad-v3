@@ -44,6 +44,7 @@ import {
   ArrowDropDown,
   Home,
   Settings,
+  Analytics,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useParams, useSearchParams, usePathname } from 'next/navigation';
@@ -52,7 +53,9 @@ import { Application } from '@/types/application';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ApplicationSwitcher } from './ApplicationSwitcher';
+import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 
 type ContextSection = 'forms' | 'workflows' | 'data' | 'releases' | 'contracts' | 'permissions' | 'overview';
 
@@ -512,9 +515,119 @@ export function PersistentApplicationBar() {
   const pathname = usePathname();
   const applicationContext = useApplicationSafe();
   const currentApplication = applicationContext?.currentApplication ?? null;
-  const { organization } = useOrganization();
+  const { organization, currentOrgId } = useOrganization();
+  const { user } = useAuth();
 
   const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [currentItemName, setCurrentItemName] = useState<string | null>(null);
+  const [currentItemType, setCurrentItemType] = useState<'form' | 'workflow' | null>(null);
+
+  // Check if user has admin access to this organization
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      if (!currentOrgId || !user) {
+        setHasAdminAccess(false);
+        return;
+      }
+
+      // Platform admins always have access
+      if (user.platformRole === 'admin') {
+        setHasAdminAccess(true);
+        return;
+      }
+
+      // Check org membership for owner/admin role
+      try {
+        const response = await fetch(`/api/orgs/${currentOrgId}/analytics?days=1`);
+        setHasAdminAccess(response.ok);
+      } catch {
+        setHasAdminAccess(false);
+      }
+    };
+
+    checkAdminAccess();
+  }, [currentOrgId, user]);
+
+  // Fetch project name for breadcrumb
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      if (!currentApplication?.projectId || !currentOrgId) {
+        setProjectName(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/projects/${currentApplication.projectId}?orgId=${currentOrgId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProjectName(data.project?.name || null);
+        }
+      } catch (error) {
+        console.error('[PersistentApplicationBar] Failed to fetch project:', error);
+      }
+    };
+
+    fetchProjectName();
+  }, [currentApplication?.projectId, currentOrgId]);
+
+  // Fetch current form/workflow name for breadcrumb when in edit mode
+  useEffect(() => {
+    const fetchItemName = async () => {
+      if (!pathname || !currentOrgId) {
+        setCurrentItemName(null);
+        setCurrentItemType(null);
+        return;
+      }
+
+      // Check for form edit: /apps/[slug]/forms/[formId]/edit
+      const formEditMatch = pathname.match(/\/apps\/[^/]+\/forms\/([^/]+)\/edit/);
+      if (formEditMatch) {
+        const formId = formEditMatch[1];
+        try {
+          const response = await fetch(`/api/forms/${formId}?orgId=${currentOrgId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentItemName(data.form?.name || `Form ${formId.slice(0, 8)}`);
+            setCurrentItemType('form');
+            return;
+          }
+        } catch (error) {
+          console.error('[PersistentApplicationBar] Failed to fetch form:', error);
+        }
+        setCurrentItemName(`Form ${formId.slice(0, 8)}`);
+        setCurrentItemType('form');
+        return;
+      }
+
+      // Check for workflow edit: /apps/[slug]/workflows/[workflowId]/edit
+      const workflowEditMatch = pathname.match(/\/apps\/[^/]+\/workflows\/([^/]+)\/edit/);
+      if (workflowEditMatch) {
+        const workflowId = workflowEditMatch[1];
+        try {
+          const response = await fetch(`/api/workflows/${workflowId}?orgId=${currentOrgId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentItemName(data.workflow?.name || `Workflow ${workflowId.slice(0, 8)}`);
+            setCurrentItemType('workflow');
+            return;
+          }
+        } catch (error) {
+          console.error('[PersistentApplicationBar] Failed to fetch workflow:', error);
+        }
+        setCurrentItemName(`Workflow ${workflowId.slice(0, 8)}`);
+        setCurrentItemType('workflow');
+        return;
+      }
+
+      // Not in edit mode
+      setCurrentItemName(null);
+      setCurrentItemType(null);
+    };
+
+    fetchItemName();
+  }, [pathname, currentOrgId]);
 
   // Don't render if no application is selected
   if (!currentApplication) {
@@ -555,6 +668,13 @@ export function PersistentApplicationBar() {
       icon: <Settings sx={{ fontSize: 16 }} />,
       href: getAppUrl(appSlug, 'settings'),
     },
+    // Admin tab - only shown for org admins
+    ...(hasAdminAccess ? [{
+      key: 'admin',
+      label: 'Analytics',
+      icon: <Analytics sx={{ fontSize: 16 }} />,
+      href: getAppUrl(appSlug, 'admin'),
+    }] : []),
   ];
 
   // Determine which tab is active based on pathname
@@ -565,6 +685,7 @@ export function PersistentApplicationBar() {
     if (pathname.includes('/workflows')) return 'workflows';
     if (pathname.includes('/data')) return 'data';
     if (pathname.includes('/settings')) return 'settings';
+    if (pathname.includes('/admin')) return 'admin';
     // If just /apps/[slug] with no sub-path, it's overview
     if (pathname.match(/^\/apps\/[^/]+\/?$/)) return 'overview';
     return 'overview'; // default to overview
@@ -576,9 +697,8 @@ export function PersistentApplicationBar() {
     <>
       <Box
         sx={{
-          position: 'sticky',
-          top: 48, // Below the main navbar (48px)
-          zIndex: 100,
+          // No longer sticky - handled by parent layout
+          flexShrink: 0,
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -628,7 +748,11 @@ export function PersistentApplicationBar() {
                 fontSize: '0.75rem',
               }}
             >
-              {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
+              {currentApplication.icon ? (
+                <TemplateIcon icon={currentApplication.icon} size={16} color={currentApplication.color ? '#fff' : '#00ED64'} />
+              ) : (
+                currentApplication.name.charAt(0).toUpperCase()
+              )}
             </Box>
             {/* App Name */}
             <Typography
@@ -688,7 +812,7 @@ export function PersistentApplicationBar() {
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Breadcrumb - shows org context */}
+        {/* Breadcrumb - shows full hierarchy: Org > Project > App > [Form/Workflow] */}
         {organization && (
           <Box
             sx={{
@@ -703,16 +827,48 @@ export function PersistentApplicationBar() {
             <Typography variant="caption" sx={{ opacity: 0.7 }}>
               {organization.name}
             </Typography>
+            {projectName && (
+              <>
+                <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                  {projectName}
+                </Typography>
+              </>
+            )}
             <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
             <Typography
               variant="caption"
               sx={{
-                fontWeight: 500,
-                color: currentApplication.color || '#00ED64',
+                fontWeight: currentItemName ? 400 : 500,
+                color: currentItemName ? 'text.secondary' : (currentApplication.color || '#00ED64'),
+                opacity: currentItemName ? 0.7 : 1,
               }}
             >
               {currentApplication.name}
             </Typography>
+            {/* Show current form/workflow when editing */}
+            {currentItemName && (
+              <>
+                <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {currentItemType === 'form' && <Description sx={{ fontSize: 12, color: '#00ED64' }} />}
+                  {currentItemType === 'workflow' && <AccountTree sx={{ fontSize: 12, color: '#9C27B0' }} />}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 500,
+                      color: currentItemType === 'form' ? '#00ED64' : '#9C27B0',
+                      maxWidth: 150,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {currentItemName}
+                  </Typography>
+                </Box>
+              </>
+            )}
           </Box>
         )}
       </Box>

@@ -39,7 +39,8 @@ describe('Project Export', () => {
 
       const cleaned = cleanFormForExport(form);
 
-      expect(cleaned).not.toHaveProperty('id');
+      // id is preserved for reference resolution during import
+      expect(cleaned).toHaveProperty('id', 'form_123');
       expect(cleaned).not.toHaveProperty('organizationId');
       expect(cleaned).not.toHaveProperty('createdBy');
       expect(cleaned).not.toHaveProperty('connectionString');
@@ -108,7 +109,8 @@ describe('Project Export', () => {
 
       const cleaned = cleanWorkflowForExport(workflow);
 
-      expect(cleaned).not.toHaveProperty('id');
+      // id is preserved for reference resolution during import
+      expect(cleaned).toHaveProperty('id', 'workflow_123');
       expect(cleaned).not.toHaveProperty('orgId');
       expect(cleaned).not.toHaveProperty('createdBy');
       expect(cleaned).not.toHaveProperty('lastModifiedBy');

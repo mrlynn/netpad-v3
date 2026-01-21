@@ -42,6 +42,7 @@ import { Application } from '@/types/application';
 import { getAppUrl } from '@/lib/routing';
 import { useKeyboardShortcuts, COMMON_SHORTCUTS } from '@/hooks/useKeyboardShortcuts';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 
 // ============================================
 // Types
@@ -67,24 +68,6 @@ interface ProjectGroup {
 function ApplicationIcon({ app, size = 24 }: { app: Application; size?: number }) {
   const theme = useTheme();
 
-  // Use app icon if available, otherwise first letter of name
-  if (app.icon) {
-    return (
-      <Box
-        sx={{
-          width: size,
-          height: size,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: size * 0.7,
-        }}
-      >
-        {app.icon}
-      </Box>
-    );
-  }
-
   return (
     <Box
       sx={{
@@ -100,7 +83,15 @@ function ApplicationIcon({ app, size = 24 }: { app: Application; size?: number }
         fontSize: size * 0.5,
       }}
     >
-      {app.name.charAt(0).toUpperCase()}
+      {app.icon ? (
+        <TemplateIcon
+          icon={app.icon}
+          size={Math.round(size * 0.6)}
+          color={app.color ? '#fff' : theme.palette.primary.main}
+        />
+      ) : (
+        app.name.charAt(0).toUpperCase()
+      )}
     </Box>
   );
 }
@@ -130,10 +121,36 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const announcerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch project names for display
+  useEffect(() => {
+    if (!open || !currentOrgId || projectGroups.length === 0) return;
+
+    const fetchProjectNames = async () => {
+      try {
+        const response = await fetch(`/api/projects?orgId=${currentOrgId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.projects) {
+            const names: Record<string, string> = {};
+            data.projects.forEach((p: { projectId: string; name: string }) => {
+              names[p.projectId] = p.name;
+            });
+            setProjectNames(names);
+          }
+        }
+      } catch (error) {
+        console.error('[ApplicationSwitcher] Failed to fetch project names:', error);
+      }
+    };
+
+    fetchProjectNames();
+  }, [open, currentOrgId, projectGroups.length]);
 
   // Announce search results to screen readers
   const announceResults = useCallback((count: number, query: string) => {
@@ -643,7 +660,7 @@ export function ApplicationSwitcher({ open, onClose, onCreateApp }: ApplicationS
                                 letterSpacing: 0.5,
                               }}
                             >
-                              {group.projectId} {/* Would need project name lookup */}
+                              {projectNames[group.projectId] || group.projectId}
                             </Typography>
                           }
                         />

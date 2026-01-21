@@ -453,6 +453,16 @@ export function generateEnvVarTemplate(
         generator: 'none',
       }, true);
     }
+
+    // Conversational forms (AI-powered)
+    if ((form as any).conversationalConfig) {
+      addEnvVar({
+        name: 'OPENAI_API_KEY',
+        description: 'OpenAI API key for AI-powered conversational forms',
+        required: true,
+        generator: 'none',
+      }, true);
+    }
   }
 
   // If there are connections, we need database connectivity

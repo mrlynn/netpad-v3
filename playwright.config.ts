@@ -31,7 +31,8 @@ export default defineConfig({
       name: 'unauthenticated',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: undefined, // No auth
+        // Use empty storage state to ensure no auth cookies
+        storageState: { cookies: [], origins: [] },
       },
       testMatch: /\.unauth\.spec\.ts/,
     },

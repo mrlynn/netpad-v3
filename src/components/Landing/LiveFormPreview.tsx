@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { FieldConfig } from '@/types/form';
 import { ConversationalFormConfig } from '@/types/conversational';
+import type { UserContext } from './InstantFormBuilder';
 
 interface LiveFormPreviewProps {
   fields: FieldConfig[];
@@ -46,6 +47,7 @@ interface LiveFormPreviewProps {
   isGenerating: boolean;
   isComplete: boolean;
   onSignUp?: () => void;
+  userContext?: UserContext;
 }
 
 /**
@@ -321,6 +323,7 @@ function ChatPreview({
   // Lifted state props
   conversationState,
   onConversationStateChange,
+  userContext,
 }: {
   conversationalConfig?: ConversationalFormConfig;
   isComplete: boolean;
@@ -331,12 +334,28 @@ function ChatPreview({
   // Lifted state
   conversationState: ConversationState;
   onConversationStateChange: (updates: Partial<ConversationState>) => void;
+  userContext?: UserContext;
 }) {
   const { messages, extractedData, isConversationComplete, showDataPanel, isLoading, input } = conversationState;
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const greeting = conversationalConfig?.objective || "Hi! I'll help collect your information.";
+  // Build personalized greeting based on user context
+  const getPersonalizedGreeting = () => {
+    const baseGreeting = conversationalConfig?.objective || "I'll help collect your information.";
+
+    if (userContext?.isWaitlistUser) {
+      const name = userContext.userName ? `, ${userContext.userName}` : '';
+      return `Hi${name}! 👋 Welcome to the NetPad demo. While you're on the waitlist, feel free to try out our conversational form experience. ${baseGreeting}`;
+    } else if (userContext?.isAuthenticated) {
+      const name = userContext.userName ? `, ${userContext.userName}` : '';
+      return `Hi${name}! Great to see you. ${baseGreeting}`;
+    } else {
+      return `Hi! 👋 ${baseGreeting} Try the demo and see how natural form conversations can be!`;
+    }
+  };
+
+  const greeting = getPersonalizedGreeting();
 
   // Focus input when expanded
   React.useEffect(() => {
@@ -431,6 +450,13 @@ function ChatPreview({
             partialExtractions: extractedData,
           },
           config: demoConfig,
+          // Pass user context for personalized responses
+          userContext: userContext ? {
+            isAuthenticated: userContext.isAuthenticated,
+            isWaitlistUser: userContext.isWaitlistUser,
+            userName: userContext.userName,
+            waitlistStatus: userContext.waitlistStatus,
+          } : undefined,
         }),
       });
 
@@ -729,6 +755,7 @@ export function LiveFormPreview({
   isGenerating,
   isComplete,
   onSignUp,
+  userContext,
 }: LiveFormPreviewProps) {
   const [viewMode, setViewMode] = useState<'chat' | 'form'>('chat');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -796,6 +823,7 @@ export function LiveFormPreview({
             onClose={handleCloseModal}
             conversationState={conversationState}
             onConversationStateChange={handleConversationStateChange}
+            userContext={userContext}
           />
         </Paper>
       </Modal>
@@ -879,6 +907,7 @@ export function LiveFormPreview({
             onExpand={handleExpand}
             conversationState={conversationState}
             onConversationStateChange={handleConversationStateChange}
+            userContext={userContext}
           />
         ) : (
           <Box>
@@ -943,30 +972,80 @@ export function LiveFormPreview({
         )}
       </Box>
 
-      {/* Footer with CTA */}
-      {isComplete && onSignUp && (
+      {/* Footer with contextual CTA */}
+      {isComplete && (
         <Box
           sx={{
             p: 2,
             borderTop: '1px solid',
             borderColor: alpha('#fff', 0.1),
-            bgcolor: alpha('#00ED64', 0.05),
+            bgcolor: userContext?.isWaitlistUser
+              ? alpha('#ff9800', 0.05)
+              : alpha('#00ED64', 0.05),
           }}
         >
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={onSignUp}
-            sx={{
-              bgcolor: '#00ED64',
-              color: '#001E2B',
-              fontWeight: 600,
-              textTransform: 'none',
-              '&:hover': { bgcolor: '#00CC55' },
-            }}
-          >
-            Sign up to save this form
-          </Button>
+          {userContext?.isWaitlistUser ? (
+            // Waitlist user CTA
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.7), display: 'block', mb: 1 }}>
+                You're on the waitlist! We'll notify you when your access is approved.
+              </Typography>
+              <Button
+                fullWidth
+                variant="outlined"
+                href="/waitlist/pending"
+                sx={{
+                  borderColor: alpha('#ff9800', 0.5),
+                  color: '#ff9800',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#ff9800',
+                    bgcolor: alpha('#ff9800', 0.1),
+                  },
+                }}
+              >
+                Check Waitlist Status
+              </Button>
+            </Box>
+          ) : userContext?.isAuthenticated ? (
+            // Authenticated (approved) user CTA
+            <Button
+              fullWidth
+              variant="contained"
+              href="/templates"
+              sx={{
+                bgcolor: '#00ED64',
+                color: '#001E2B',
+                fontWeight: 600,
+                textTransform: 'none',
+                '&:hover': { bgcolor: '#00CC55' },
+              }}
+            >
+              Create Your Own Form
+            </Button>
+          ) : onSignUp ? (
+            // Guest user CTA - signup prompt
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), display: 'block', mb: 1 }}>
+                Like what you see? Sign up to create your own forms!
+              </Typography>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={onSignUp}
+                sx={{
+                  bgcolor: '#00ED64',
+                  color: '#001E2B',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: '#00CC55' },
+                }}
+              >
+                Sign up for Free
+              </Button>
+            </Box>
+          ) : null}
         </Box>
       )}
 

@@ -24,6 +24,7 @@ import {
   Security,
   ArrowForward,
   Psychology,
+  Storage,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -58,6 +59,14 @@ const adminFeatures: AdminFeature[] = [
     statsKey: 'waitlist',
   },
   {
+    title: 'Cluster Management',
+    description: 'Monitor M0 clusters, track activity, and deactivate inactive resources',
+    href: '/admin/clusters',
+    icon: <Storage sx={{ fontSize: 32 }} />,
+    color: '#00BCD4',
+    statsKey: 'clusters',
+  },
+  {
     title: 'AI Analytics',
     description: 'Monitor AI usage, token consumption, and costs across all organizations',
     href: '/admin/ai-analytics',
@@ -86,6 +95,10 @@ export default function AdminDashboardPage() {
   );
   const { data: waitlistStats } = useSWR(
     user?.platformRole === 'admin' ? '/api/admin/waitlist/stats' : null,
+    fetcher
+  );
+  const { data: clusterStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/clusters?limit=1' : null,
     fetcher
   );
   const { data: aiStats } = useSWR(
@@ -133,6 +146,13 @@ export default function AdminDashboardPage() {
       const pending = waitlistStats.stats.pending || 0;
       return pending > 0 ? `${pending} pending` : 'No pending';
     }
+    if (feature.statsKey === 'clusters' && clusterStats?.stats) {
+      const inactive = clusterStats.stats.inactive30Days || 0;
+      if (inactive > 0) {
+        return `${inactive} inactive`;
+      }
+      return `${clusterStats.stats.ready || 0} active`;
+    }
     if (feature.statsKey === 'ai' && aiStats?.summary) {
       return `${formatTokens(aiStats.summary.totalTokens)} tokens`;
     }
@@ -142,6 +162,9 @@ export default function AdminDashboardPage() {
   const getStatColor = (feature: AdminFeature): 'warning' | 'info' | 'default' => {
     if (feature.statsKey === 'waitlist' && waitlistStats?.stats) {
       return waitlistStats.stats.pending > 0 ? 'warning' : 'default';
+    }
+    if (feature.statsKey === 'clusters' && clusterStats?.stats) {
+      return clusterStats.stats.inactive30Days > 0 ? 'warning' : 'info';
     }
     return 'info';
   };

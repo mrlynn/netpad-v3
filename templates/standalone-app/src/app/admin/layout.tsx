@@ -5,6 +5,7 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ReactNode } from 'react';
 import { AdminLogoutButton } from '@/components/AdminLogoutButton';
 
@@ -19,7 +20,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <header className="admin-header">
         <div className="admin-header-content">
           <Link href="/admin" className="admin-logo">
-            Admin Dashboard
+            <Image
+              src="/logo-250x250-trans.png"
+              alt="NetPad"
+              width={24}
+              height={24}
+              style={{ opacity: 0.9 }}
+            />
+            <span>Admin Dashboard</span>
           </Link>
           <nav className="admin-nav">
             <Link href="/admin" className="admin-nav-link">
@@ -73,6 +81,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }
 
         .admin-logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
           font-weight: 600;
           font-size: 1.125rem;
           color: white;

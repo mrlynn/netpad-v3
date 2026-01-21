@@ -29,6 +29,7 @@ import {
   Tabs,
   Tab,
   Badge,
+  Alert,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -36,7 +37,9 @@ import {
   ViewList as ListIcon,
   Lock as LockIcon,
   Star as StarIcon,
+  HourglassTop as HourglassTopIcon,
 } from '@mui/icons-material';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   loadGalleryTemplates,
   loadGalleryTemplatesByCategory,
@@ -82,6 +85,10 @@ const SORT_OPTIONS = [
 
 export function TemplatesView({ onUseTemplate }: TemplatesViewProps) {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+
+  // Check if user is on the waitlist
+  const isWaitlistUser = isAuthenticated && user?.waitlistStatus === 'pending';
 
   // State
   const [search, setSearch] = useState('');
@@ -159,6 +166,32 @@ export function TemplatesView({ onUseTemplate }: TemplatesViewProps) {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Waitlist Banner */}
+      {isWaitlistUser && (
+        <Alert
+          severity="info"
+          icon={<HourglassTopIcon sx={{ color: '#ff9800' }} />}
+          sx={{
+            mb: 3,
+            bgcolor: alpha('#ff9800', 0.1),
+            border: '1px solid',
+            borderColor: alpha('#ff9800', 0.3),
+            '& .MuiAlert-message': { width: '100%' },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Box>
+              <Typography sx={{ fontWeight: 600, color: '#ff9800' }}>
+                You're on the Waitlist
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Browse our templates while you wait for access. You'll be able to use these templates once your account is approved.
+              </Typography>
+            </Box>
+          </Box>
+        </Alert>
+      )}
+
       {/* Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography

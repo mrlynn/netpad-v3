@@ -7,6 +7,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { COLLECTIONS, getCollection, FormSubmissionDocument } from '@/lib/database/schema';
+import { SubmissionDetailActions } from '@/components/admin/SubmissionDetailActions';
+import { EditableFormData } from '@/components/admin/EditableFormData';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +38,16 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             Submission Details
           </h1>
         </div>
-        <span className={`admin-badge admin-badge-${getStatusColor(submission.status)}`}>
-          {submission.status}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span className={`admin-badge admin-badge-${getStatusColor(submission.status)}`}>
+            {submission.status}
+          </span>
+          <SubmissionDetailActions
+            submissionId={submission.submissionId}
+            currentStatus={submission.status}
+            notes={(submission as any).notes}
+          />
+        </div>
       </div>
 
       {/* Submission Info */}
@@ -103,33 +112,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         </table>
       </div>
 
-      {/* Submission Data */}
-      <div className="admin-card">
-        <h2 className="admin-card-title" style={{ marginBottom: '1rem' }}>
-          Form Data
-        </h2>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(submission.data || {}).map(([key, value]) => (
-              <tr key={key}>
-                <td style={{ fontWeight: 500 }}>{key}</td>
-                <td>
-                  {formatValue(value)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {Object.keys(submission.data || {}).length === 0 && (
-          <div className="admin-empty">No data submitted</div>
-        )}
-      </div>
+      {/* Submission Data (Editable) */}
+      <EditableFormData submissionId={submission.submissionId} data={submission.data || {}} />
 
       {/* Error (if any) */}
       {submission.error && (
@@ -168,53 +152,16 @@ async function getSubmission(submissionId: string): Promise<FormSubmissionDocume
 function getStatusColor(status: string): string {
   switch (status) {
     case 'submitted':
+    case 'approved':
       return 'success';
     case 'processed':
       return 'info';
     case 'pending':
       return 'warning';
     case 'failed':
+    case 'rejected':
       return 'error';
     default:
       return 'info';
   }
-}
-
-function formatValue(value: any): React.ReactNode {
-  if (value === null || value === undefined) {
-    return <span style={{ color: '#999' }}>—</span>;
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
-  }
-
-  if (Array.isArray(value)) {
-    return (
-      <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
-        {value.map((item, index) => (
-          <li key={index}>{formatValue(item)}</li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (typeof value === 'object') {
-    return (
-      <pre
-        style={{
-          margin: 0,
-          background: '#f5f5f5',
-          padding: '0.5rem',
-          borderRadius: '4px',
-          fontSize: '0.75rem',
-          overflow: 'auto',
-        }}
-      >
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    );
-  }
-
-  return String(value);
 }

@@ -22,6 +22,8 @@ export interface BundleManifest {
   updatedAt?: string;
 }
 
+import { ConversationalFormConfig } from './conversational';
+
 export interface FormDefinition {
   name: string;
   description?: string;
@@ -33,6 +35,8 @@ export interface FormDefinition {
   branding?: FormBranding;
   multiPage?: MultiPageConfig;
   botProtection?: BotProtectionConfig;
+  /** Conversational form configuration (for AI-powered forms) */
+  conversationalConfig?: ConversationalFormConfig;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -115,9 +115,12 @@ export function ProjectSelectorNav({ compact = false, currentProjectId }: Projec
 
         if (apps.length > 0) {
           const defaultApp = apps[0];
-          localStorage.setItem('selected_app_slug', defaultApp.slug);
-          router.push(getAppUrl(defaultApp.slug, 'forms'));
-          return;
+          // Only store and navigate if slug is valid
+          if (defaultApp.slug && defaultApp.slug !== 'null') {
+            localStorage.setItem('selected_app_slug', defaultApp.slug);
+            router.push(getAppUrl(defaultApp.slug, 'forms'));
+            return;
+          }
         }
       } catch (error) {
         console.error('Failed to fetch applications:', error);

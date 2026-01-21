@@ -23,6 +23,7 @@ import {
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { createWorkflow } from '@/lib/workflow/db';
 import { createInstallation } from '@/lib/platform/installedApplications';
+import { createApplication, calculateApplicationStats, getApplicationBySlug } from '@/lib/platform/applications';
 
 export const dynamic = 'force-dynamic';
 
@@ -251,6 +252,67 @@ export async function POST(
       errors: [],
     };
 
+    // Create application from manifest (required for proper form/workflow association)
+    let applicationId: string | undefined;
+    const manifest = application.manifest;
+
+    if (manifest && projectId) {
+      try {
+        // Use manifest data to create an application
+        const appSlug = generateSlug(manifest.name);
+
+        // Check if application with same slug already exists
+        const existingApp = await getApplicationBySlug(orgId, projectId, appSlug);
+
+        if (existingApp) {
+          // Use existing application
+          applicationId = existingApp.applicationId;
+          console.log(`[Marketplace Import] Using existing application: ${existingApp.name} (${applicationId})`);
+          result.errors?.push({
+            type: 'application',
+            name: manifest.name,
+            error: 'Application slug already exists in this project. Using existing application.',
+          });
+        } else {
+          // Create new application
+          const newApp = await createApplication({
+            organizationId: orgId,
+            projectId,
+            name: manifest.name,
+            description: manifest.description || manifest.summary || '',
+            slug: appSlug,
+            icon: manifest.icon,
+            color: manifest.color,
+            version: manifest.version || '1.0.0',
+            tags: manifest.tags || [],
+            createdBy: userId,
+            marketplaceApplicationId: application.id,
+            marketplaceVersion: manifest.version,
+          });
+          applicationId = newApp.applicationId;
+          console.log(`[Marketplace Import] Created application: ${manifest.name} (${applicationId})`);
+        }
+      } catch (error: any) {
+        // Check if it's a duplicate slug error
+        if (error.message?.includes('already exists')) {
+          // Try to find the existing app
+          const appSlug = generateSlug(manifest.name);
+          const existingApp = await getApplicationBySlug(orgId, projectId, appSlug);
+          if (existingApp) {
+            applicationId = existingApp.applicationId;
+            console.log(`[Marketplace Import] Using existing application after error: ${existingApp.name} (${applicationId})`);
+          }
+        } else {
+          result.errors?.push({
+            type: 'application',
+            name: manifest.name || 'unknown',
+            error: error.message || 'Failed to create application',
+          });
+          console.error('[Marketplace Import] Failed to create application:', error.message);
+        }
+      }
+    }
+
     // Build maps for reference resolution
     const formIdMap = new Map<string, string>(); // oldId/slug -> newId
     const workflowIdMap = new Map<string, string>(); // oldId/slug -> newId
@@ -306,12 +368,28 @@ export async function POST(
             }
           );
 
-          // Assign projectId if provided
+          // Assign projectId and applicationId
           if (projectId) {
             formConfig.projectId = projectId;
           }
+          if (applicationId) {
+            (formConfig as any).applicationId = applicationId;
+          }
 
-          await formsCollection.insertOne(formConfig as any);
+          // Generate unique formId if needed
+          if (!formConfig.id) {
+            const { nanoid } = await import('nanoid');
+            formConfig.id = `form_${nanoid(16)}`;
+          }
+          const formId = formConfig.id;
+
+          await formsCollection.insertOne({
+            ...formConfig,
+            formId,
+            id: formId,
+            applicationId,
+            projectId,
+          } as any);
 
           const newId = formConfig.id!;
           result.imported.forms.push({
@@ -382,6 +460,7 @@ export async function POST(
             description: workflowData.description,
             tags: workflowData.tags || [],
             projectId: projectId,
+            applicationId: applicationId,
           });
 
           // Update with canvas and settings (now with resolved form references)
@@ -392,6 +471,7 @@ export async function POST(
             variables: workflowData.variables,
             inputSchema: workflowData.inputSchema,
             outputSchema: workflowData.outputSchema,
+            applicationId: applicationId,
           });
 
           // Get updated workflow to return proper slug
@@ -420,10 +500,24 @@ export async function POST(
       }
     }
 
-    // Determine overall success
-    result.success = (result.errors?.length ?? 0) === 0;
+    // Determine overall success (only consider critical errors, not warnings)
+    const criticalErrors = result.errors?.filter(e =>
+      !e.error?.includes('already exists in this project')
+    ) || [];
+    result.success = criticalErrors.length === 0;
 
     const importResult = result;
+
+    // Update application stats if we created/used an application
+    if (applicationId && orgId) {
+      try {
+        await calculateApplicationStats(orgId, applicationId);
+        console.log(`[Marketplace Import] Updated stats for application ${applicationId}`);
+      } catch (statsError) {
+        console.error('[Marketplace Import] Failed to update application stats:', statsError);
+        // Don't fail the import if stats update fails
+      }
+    }
 
     // Increment download count
     await collection.updateOne(
@@ -441,6 +535,7 @@ export async function POST(
           marketplaceApplicationId: application.id,
           marketplaceApplicationName: application.manifest.name,
           installedVersion: application.manifest.version,
+          applicationId: applicationId, // Track the created/used application
           installedForms: result.imported.forms.map(f => ({
             formId: f.newId,
             originalFormId: f.originalId,
@@ -461,6 +556,18 @@ export async function POST(
       }
     }
 
+    // Get the app slug for navigation
+    let appSlug: string | undefined;
+    if (applicationId) {
+      try {
+        const { getApplication } = await import('@/lib/platform/applications');
+        const createdApp = await getApplication(orgId, applicationId);
+        appSlug = createdApp?.slug;
+      } catch (e) {
+        // Non-critical - slug is just for navigation convenience
+      }
+    }
+
     return NextResponse.json({
       success: true,
       import: importResult,
@@ -468,10 +575,13 @@ export async function POST(
         id: application.id,
         name: application.manifest.name,
         version: application.manifest.version,
+        applicationId: applicationId, // Return the local application ID
+        appSlug: appSlug, // Return slug for navigation
       },
       installation: installationId ? {
         installationId,
         installedVersion: application.manifest.version,
+        applicationId: applicationId,
       } : undefined,
     });
   } catch (error: any) {

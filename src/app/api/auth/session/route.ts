@@ -65,6 +65,15 @@ export async function GET(req: NextRequest) {
           createdAt: session.createdAt,
           waitlistStatus: session.waitlistStatus || undefined,
         },
+        // Include impersonation info if active
+        impersonation: session.impersonating ? {
+          isImpersonating: true,
+          originalUserId: session.impersonating.originalUserId,
+          originalEmail: session.impersonating.originalEmail,
+          targetUserId: session.impersonating.targetUserId,
+          targetEmail: session.impersonating.targetEmail,
+          startedAt: session.impersonating.startedAt,
+        } : null,
       });
     } catch (dbError) {
       console.error('Database error fetching user:', dbError);

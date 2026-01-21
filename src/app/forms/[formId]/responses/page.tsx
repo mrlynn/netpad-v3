@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { ResponseList } from '@/components/FormResponses/ResponseList';
+import { ConversationList } from '@/components/FormResponses/ConversationList';
 import { usePipeline } from '@/contexts/PipelineContext';
-import { Box, Breadcrumbs, Typography, alpha } from '@mui/material';
-import { NavigateNext, Folder, People } from '@mui/icons-material';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { Box, Breadcrumbs, Typography, alpha, Tabs, Tab } from '@mui/material';
+import { NavigateNext, Folder, People, Chat, ListAlt } from '@mui/icons-material';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
@@ -12,6 +15,8 @@ export default function FormResponsesPage() {
   const params = useParams();
   const formId = params.formId as string;
   const { connectionString } = usePipeline();
+  const { currentOrgId } = useOrganization();
+  const [activeTab, setActiveTab] = useState(0);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -60,8 +65,43 @@ export default function FormResponsesPage() {
         </Breadcrumbs>
       </Box>
 
-      <Box sx={{ height: 'calc(100vh - 96px)', overflow: 'auto', p: 3 }}>
-        <ResponseList formId={formId} connectionString={connectionString || undefined} />
+      {/* Tabs for Responses vs Conversations */}
+      <Box sx={{ px: 3, pt: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              minHeight: 48,
+            },
+          }}
+        >
+          <Tab
+            icon={<ListAlt sx={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Responses"
+          />
+          <Tab
+            icon={<Chat sx={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Conversations"
+          />
+        </Tabs>
+      </Box>
+
+      <Box sx={{ height: 'calc(100vh - 148px)', overflow: 'auto', p: 3 }}>
+        {activeTab === 0 ? (
+          <ResponseList formId={formId} connectionString={connectionString || undefined} />
+        ) : (
+          currentOrgId ? (
+            <ConversationList formId={formId} orgId={currentOrgId} />
+          ) : (
+            <Typography color="text.secondary">
+              Organization context required to view conversations.
+            </Typography>
+          )
+        )}
       </Box>
     </Box>
   );

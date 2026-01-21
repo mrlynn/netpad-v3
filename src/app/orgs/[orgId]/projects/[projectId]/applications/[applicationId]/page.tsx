@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
@@ -1102,6 +1102,7 @@ function ApplicationDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const theme = useTheme();
+  const { mutate: globalMutate } = useSWRConfig();
   const orgId = params.orgId as string;
   const projectId = params.projectId as string;
   const applicationId = params.applicationId as string;
@@ -1206,6 +1207,8 @@ function ApplicationDetailContent() {
       const data = await response.json();
 
       if (data.success) {
+        // Invalidate SWR cache so ApplicationContext detects the deletion
+        globalMutate((key) => typeof key === 'string' && key.startsWith('/api/applications'), undefined, { revalidate: true });
         router.push(getOrgProjectUrl(orgId, projectId, 'applications'));
       } else {
         alert(data.error || 'Failed to delete application');

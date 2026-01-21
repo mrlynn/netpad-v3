@@ -57,11 +57,13 @@ import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
-import { OrganizationSelector } from './OrganizationSelector';
-import { ProjectSelectorNav } from './ProjectSelectorNav';
-import { RecentItemsMenu } from './RecentItemsMenu';
+import { OrgProjectSelector } from './OrgProjectSelector';
 import { ApplicationSwitcher, useApplicationSwitcherShortcut } from './ApplicationSwitcher';
 import { getOrgProjectUrl, parseOrgProjectFromPath } from '@/lib/routing';
+import { TemplateIcon } from '@/components/Templates/TemplateIcon';
+
+// Height constant for global bar
+export const GLOBAL_BAR_HEIGHT = 56;
 
 interface NavItem {
   href: string;
@@ -138,15 +140,19 @@ export function AppNavBar() {
   // Get current org/project from URL or context
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
+
+  // Check if we're in an app-centric route (/apps/[appSlug]/*)
+  // When in app context, Forms/Workflows/Data are provided by PersistentApplicationBar
+  const isInAppContext = pathname.startsWith('/apps/');
   
   useEffect(() => {
     // Try to parse from URL first
     const { orgId: urlOrgId, projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
-    
+
     if (urlOrgId && urlProjectId) {
       // We're in the new URL structure
       setCurrentProjectId(urlProjectId);
-      
+
       // Generate nav items with new URLs
       const items = NAV_ITEM_CONFIGS.map(config => {
         // Projects and Marketplace links go to org-level, not project-specific
@@ -169,6 +175,16 @@ export function AppNavBar() {
             matchPaths: config.matchPaths,
           };
         }
+        // For Applications: use the selected app's project if available, otherwise current URL project
+        if (config.key === 'applications' && currentApplication?.projectId) {
+          return {
+            href: getOrgProjectUrl(urlOrgId, currentApplication.projectId, 'applications'),
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
         // Other items are project-specific
         return {
           href: getOrgProjectUrl(urlOrgId, urlProjectId, config.key as any),
@@ -181,10 +197,9 @@ export function AppNavBar() {
       setNavItems(items);
     } else {
       // Legacy routes - use old URLs (they'll redirect)
+      const orgId = organization?.orgId;
       const items = NAV_ITEM_CONFIGS.map(config => {
         if (config.key === 'projects') {
-          // Projects link needs orgId
-          const orgId = organization?.orgId;
           return {
             href: orgId ? `/orgs/${orgId}/projects` : '/projects',
             label: config.label,
@@ -195,9 +210,18 @@ export function AppNavBar() {
         }
         if (config.key === 'marketplace') {
           // Prefer org-scoped marketplace when org is known
-          const orgId = organization?.orgId;
           return {
             href: orgId ? `/orgs/${orgId}/marketplace` : '/marketplace',
+            label: config.label,
+            icon: config.icon,
+            color: config.color,
+            matchPaths: config.matchPaths,
+          };
+        }
+        // For Applications: use the selected app's project if available
+        if (config.key === 'applications' && currentApplication?.projectId && orgId) {
+          return {
+            href: getOrgProjectUrl(orgId, currentApplication.projectId, 'applications'),
             label: config.label,
             icon: config.icon,
             color: config.color,
@@ -226,18 +250,16 @@ export function AppNavBar() {
       }
 
       setNavItems(items);
-      
+
       // Get project from localStorage for legacy routes
       const stored = localStorage.getItem('selected_project_id');
       setCurrentProjectId(stored || undefined);
     }
-  }, [pathname, organization, user]);
+  }, [pathname, organization, user, currentApplication]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [newMenuAnchorEl, setNewMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const newMenuOpen = Boolean(newMenuAnchorEl);
 
   // Check if a nav item is active based on current path
   const isNavItemActive = (item: NavItem): boolean => {
@@ -323,14 +345,6 @@ export function AppNavBar() {
     await registerPasskey();
   };
 
-  const handleNewMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNewMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleNewMenuClose = () => {
-    setNewMenuAnchorEl(null);
-  };
-
   // Get user initials for avatar
   const getUserInitials = () => {
     if (!user) return '?';
@@ -371,7 +385,7 @@ export function AppNavBar() {
       <Toolbar
         variant="dense"
         sx={{
-          minHeight: 48,
+          minHeight: GLOBAL_BAR_HEIGHT,
           px: { xs: 1, sm: 2 },
           gap: 1
         }}
@@ -420,14 +434,11 @@ export function AppNavBar() {
             </Box>
           </Tooltip>
 
-          {/* Organization & Project Selectors - Hidden by default, shown only for multi-org/multi-project users */}
-          {/* These are secondary to the Application Switcher which is the primary entry point */}
-          {isAuthenticated && organization && !isMobile && isMultiOrg && (
+          {/* Combined Org/Project Selector */}
+          {isAuthenticated && organization && !isMobile && (
             <>
-              <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto', opacity: 0.3 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.7 }}>
-                <OrganizationSelector compact />
-              </Box>
+              <Divider orientation="vertical" flexItem sx={{ height: 24, my: 'auto' }} />
+              <OrgProjectSelector />
             </>
           )}
 
@@ -490,7 +501,11 @@ export function AppNavBar() {
                           fontSize: '0.65rem',
                         }}
                       >
-                        {currentApplication.icon || currentApplication.name.charAt(0).toUpperCase()}
+                        {currentApplication.icon ? (
+                          <TemplateIcon icon={currentApplication.icon} size={14} color={currentApplication.color ? '#fff' : '#00ED64'} />
+                        ) : (
+                          currentApplication.name.charAt(0).toUpperCase()
+                        )}
                       </Box>
                       {/* App Name + Org (for multi-org users) */}
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
@@ -554,87 +569,6 @@ export function AppNavBar() {
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* CENTER: Primary Navigation - Tabs, not pills */}
-        {!isMobile && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {navItems.map((item, index) => {
-              const isActive = isNavItemActive(item);
-              // Check if this is Forms, Workflows, or Data by checking the key or href
-              const itemKey = NAV_ITEM_CONFIGS.find(c => c.label === item.label)?.key || '';
-              const isDeEmphasized = ['forms', 'workflows', 'data'].includes(itemKey);
-              // Show divider before Forms (first de-emphasized item) and before Marketplace
-              const showDividerBefore = (itemKey === 'forms') || (itemKey === 'marketplace');
-              
-              return (
-                <React.Fragment key={item.href}>
-                  {showDividerBefore && (
-                    <Divider 
-                      orientation="vertical" 
-                      flexItem 
-                      sx={{ 
-                        height: 24, 
-                        mx: 0.5,
-                        borderColor: 'divider',
-                        opacity: 0.5,
-                      }} 
-                    />
-                  )}
-                  <Box
-                    component={Link}
-                    href={item.href}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      px: 2,
-                      py: 0.75,
-                      color: isActive ? item.color : 'text.secondary',
-                      textDecoration: 'none',
-                      borderRadius: 1,
-                      fontWeight: isActive ? 600 : (isDeEmphasized ? 400 : 500),
-                      fontSize: isDeEmphasized ? '0.8125rem' : '0.875rem',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      bgcolor: isActive ? alpha(item.color, 0.12) : 'transparent',
-                      opacity: isActive ? 1 : (isDeEmphasized ? 0.6 : 0.7),
-                      '& svg': {
-                        color: isActive ? item.color : 'text.secondary',
-                        fontSize: isDeEmphasized ? 16 : 18,
-                        opacity: isActive ? 1 : (isDeEmphasized ? 0.6 : 0.7),
-                      },
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -1,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: isActive ? '80%' : 0,
-                        height: 2,
-                        bgcolor: isActive ? item.color : 'transparent',
-                        borderRadius: 1,
-                        transition: 'width 0.2s ease',
-                      },
-                      '&:hover': {
-                        opacity: isDeEmphasized ? 0.8 : 1,
-                        bgcolor: isActive ? alpha(item.color, 0.15) : alpha(item.color, 0.08),
-                        color: isActive ? item.color : 'text.primary',
-                        '& svg': {
-                          color: isActive ? item.color : 'text.primary',
-                          opacity: isDeEmphasized ? 0.8 : 1,
-                        },
-                      },
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Box>
-                </React.Fragment>
-              );
-            })}
-          </Box>
-        )}
-
         {/* Mobile Menu Button */}
         {isMobile && (
           <IconButton
@@ -655,100 +589,6 @@ export function AppNavBar() {
         {/* RIGHT: Actions + Status */}
         {!isMobile && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {/* + New Dropdown */}
-            {isAuthenticated && (
-              <>
-                <Button
-                  onClick={handleNewMenuOpen}
-                  startIcon={<Add sx={{ fontSize: 16 }} />}
-                  endIcon={<ArrowDropDown sx={{ fontSize: 16 }} />}
-                  size="small"
-                  sx={{
-                    minWidth: 'auto',
-                    px: 1.5,
-                    py: 0.5,
-                    color: 'text.primary',
-                    bgcolor: 'transparent',
-                    borderRadius: 1,
-                    textTransform: 'none',
-                    fontWeight: 500,
-                    fontSize: '0.8125rem',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    '&:hover': {
-                      bgcolor: alpha('#000', 0.05),
-                      borderColor: 'divider',
-                    },
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  New
-                </Button>
-                <Menu
-                  anchorEl={newMenuAnchorEl}
-                  open={newMenuOpen}
-                  onClose={handleNewMenuClose}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 180,
-                      bgcolor: 'background.paper',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }
-                  }}
-                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                >
-                  <MenuItem
-                    component={Link}
-                    href={
-                      organization?.orgId && currentProjectId
-                        ? getOrgProjectUrl(organization.orgId, currentProjectId, 'builder')
-                        : '/builder'
-                    }
-                    onClick={handleNewMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Description sx={{ fontSize: 18 }} />
-                    </ListItemIcon>
-                    <ListItemText primary="Form" secondary="Create a new form" />
-                  </MenuItem>
-                  <MenuItem
-                    component={Link}
-                    href={
-                      organization?.orgId && currentProjectId
-                        ? getOrgProjectUrl(organization.orgId, currentProjectId, 'workflows')
-                        : '/workflows'
-                    }
-                    onClick={handleNewMenuClose}
-                  >
-                    <ListItemIcon>
-                      <AccountTree sx={{ fontSize: 18 }} />
-                    </ListItemIcon>
-                    <ListItemText primary="Workflow" secondary="Create a new workflow" />
-                  </MenuItem>
-                  {organization?.orgId && (
-                    <MenuItem
-                      component={Link}
-                      href={`/orgs/${organization.orgId}/projects`}
-                      onClick={handleNewMenuClose}
-                    >
-                      <ListItemIcon>
-                        <FolderOpen sx={{ fontSize: 18 }} />
-                      </ListItemIcon>
-                      <ListItemText primary="Project" secondary="Create a new project" />
-                    </MenuItem>
-                  )}
-                </Menu>
-              </>
-            )}
-
-            {/* Recent Items */}
-            {isAuthenticated && (
-              <RecentItemsMenu />
-            )}
-
             {/* MongoDB Status - Icon with popover */}
             {isAuthenticated && (
               <ClusterStatusIndicator />
@@ -1022,17 +862,25 @@ export function AppNavBar() {
             Navigation
           </Typography>
           
-          {/* Organization & Project Selectors for Mobile */}
+          {/* Organization & Project Selector for Mobile */}
           {isAuthenticated && organization && (
-            <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <OrganizationSelector />
-              <ProjectSelectorNav currentProjectId={currentProjectId} />
+            <Box sx={{ mb: 2 }}>
+              <OrgProjectSelector />
             </Box>
           )}
           
           <List>
             {navItems.map((item) => {
               const isActive = isNavItemActive(item);
+              // Check if this is Forms, Workflows, or Data
+              const itemKey = NAV_ITEM_CONFIGS.find(c => c.label === item.label)?.key || '';
+              const isDeEmphasized = ['forms', 'workflows', 'data'].includes(itemKey);
+
+              // Hide Forms, Workflows, Data when in app context (PersistentApplicationBar provides these)
+              if (isInAppContext && isDeEmphasized) {
+                return null;
+              }
+
               return (
                 <ListItem key={item.href} disablePadding>
                   <ListItemButton
@@ -1051,9 +899,9 @@ export function AppNavBar() {
                       }
                     }}
                   >
-                    <ListItemIcon 
-                      sx={{ 
-                        color: isActive ? item.color : 'text.secondary', 
+                    <ListItemIcon
+                      sx={{
+                        color: isActive ? item.color : 'text.secondary',
                         minWidth: 40,
                         '& svg': {
                           opacity: isActive ? 1 : 0.3,
@@ -1062,7 +910,7 @@ export function AppNavBar() {
                     >
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary={item.label}
                       primaryTypographyProps={{
                         fontWeight: isActive ? 600 : 400,

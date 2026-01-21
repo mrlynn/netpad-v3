@@ -31,6 +31,9 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Collapse,
+  ListItemButton,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Add,
@@ -43,7 +46,15 @@ import {
   Edit,
   Check,
   ContentCopy,
+  ExpandMore,
+  ExpandLess,
+  Folder,
+  Apps,
+  Description,
+  AccountTree,
+  RestartAlt,
 } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
 
 interface Organization {
   orgId: string;
@@ -61,7 +72,30 @@ interface OrgMember {
   role: string;
 }
 
+interface Project {
+  projectId: string;
+  name: string;
+  slug?: string;
+}
+
+interface Application {
+  applicationId: string;
+  name: string;
+  slug?: string;
+  projectId: string;
+  stats?: {
+    formsCount?: number;
+    workflowsCount?: number;
+  };
+}
+
+interface OrgHierarchy {
+  projects: Project[];
+  applications: Application[];
+}
+
 export function OrganizationSettings() {
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +129,22 @@ export function OrganizationSettings() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Reset confirmation dialog
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [orgToReset, setOrgToReset] = useState<Organization | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<{
+    deleted: { forms: number; workflows: number; applications: number; projects: number; clusters: number; connections: number };
+    recreated: { project: boolean; application: boolean };
+  } | null>(null);
+
+  // Hierarchy view state
+  const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [orgHierarchies, setOrgHierarchies] = useState<Record<string, OrgHierarchy>>({});
+  const [loadingHierarchy, setLoadingHierarchy] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     fetchOrganizations();
   }, []);
@@ -115,6 +165,60 @@ export function OrganizationSettings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchOrgHierarchy = async (orgId: string) => {
+    if (orgHierarchies[orgId] || loadingHierarchy[orgId]) return;
+
+    setLoadingHierarchy(prev => ({ ...prev, [orgId]: true }));
+    try {
+      // Fetch projects and applications for this org
+      const [projectsRes, appsRes] = await Promise.all([
+        fetch(`/api/projects?orgId=${orgId}`),
+        fetch(`/api/applications?orgId=${orgId}&includeStats=true`),
+      ]);
+
+      const projectsData = await projectsRes.json();
+      const appsData = await appsRes.json();
+
+      setOrgHierarchies(prev => ({
+        ...prev,
+        [orgId]: {
+          projects: projectsData.projects || [],
+          applications: appsData.applications || [],
+        },
+      }));
+    } catch (err) {
+      console.error('Failed to load org hierarchy:', err);
+    } finally {
+      setLoadingHierarchy(prev => ({ ...prev, [orgId]: false }));
+    }
+  };
+
+  const toggleOrgExpanded = (orgId: string) => {
+    setExpandedOrgs(prev => {
+      const next = new Set(prev);
+      if (next.has(orgId)) {
+        next.delete(orgId);
+      } else {
+        next.add(orgId);
+        // Fetch hierarchy data when expanding
+        fetchOrgHierarchy(orgId);
+      }
+      return next;
+    });
+  };
+
+  const toggleProjectExpanded = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
   };
 
   const handleCreateOrg = async () => {
@@ -229,6 +333,64 @@ export function OrganizationSettings() {
       setDeleteDialogOpen(true);
     }
     setMenuAnchor(null);
+  };
+
+  const handleResetClick = () => {
+    if (menuOrg) {
+      setOrgToReset(menuOrg);
+      setResetDialogOpen(true);
+      setResetResult(null);
+      setResetError(null);
+    }
+    setMenuAnchor(null);
+  };
+
+  const handleResetOrg = async () => {
+    if (!orgToReset) return;
+
+    try {
+      setResetting(true);
+      setResetError(null);
+      setResetResult(null);
+
+      const response = await fetch(`/api/organizations/${orgToReset.orgId}/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deleteClusters: true,
+          deleteConnections: true,
+          deleteForms: true,
+          deleteWorkflows: true,
+          deleteApplications: true,
+          deleteProjects: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setResetResult({
+          deleted: data.deleted,
+          recreated: data.recreated,
+        });
+        // Refresh hierarchy data for this org
+        setOrgHierarchies(prev => {
+          const next = { ...prev };
+          delete next[orgToReset.orgId];
+          return next;
+        });
+        // Re-fetch if expanded
+        if (expandedOrgs.has(orgToReset.orgId)) {
+          fetchOrgHierarchy(orgToReset.orgId);
+        }
+      } else {
+        setResetError(data.error || data.errors?.join(', ') || 'Failed to reset organization');
+      }
+    } catch (err) {
+      setResetError('Failed to connect to server');
+    } finally {
+      setResetting(false);
+    }
   };
 
   const generateSlug = (name: string) => {
@@ -390,7 +552,7 @@ export function OrganizationSettings() {
                     </Box>
                   </CardContent>
 
-                  <CardActions sx={{ px: 2, pb: 2 }}>
+                  <CardActions sx={{ px: 2, pb: 2, flexWrap: 'wrap', gap: 1 }}>
                     <Button
                       size="small"
                       startIcon={<People />}
@@ -407,7 +569,100 @@ export function OrganizationSettings() {
                     >
                       Settings
                     </Button>
+                    <Button
+                      size="small"
+                      startIcon={expandedOrgs.has(org.orgId) ? <ExpandLess /> : <AccountTree />}
+                      onClick={() => toggleOrgExpanded(org.orgId)}
+                      sx={{ color: expandedOrgs.has(org.orgId) ? '#00ED64' : 'text.secondary' }}
+                    >
+                      {expandedOrgs.has(org.orgId) ? 'Hide' : 'View'} Hierarchy
+                    </Button>
                   </CardActions>
+
+                  {/* Hierarchy View */}
+                  <Collapse in={expandedOrgs.has(org.orgId)}>
+                    <Box sx={{ px: 2, pb: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                      {loadingHierarchy[org.orgId] ? (
+                        <Box sx={{ py: 2, textAlign: 'center' }}>
+                          <CircularProgress size={20} sx={{ color: '#00ED64' }} />
+                        </Box>
+                      ) : orgHierarchies[org.orgId] ? (
+                        <List dense sx={{ py: 1 }}>
+                          {orgHierarchies[org.orgId].projects.length === 0 ? (
+                            <ListItem>
+                              <ListItemText
+                                primary="No projects yet"
+                                primaryTypographyProps={{ color: 'text.secondary', fontSize: '0.875rem' }}
+                              />
+                            </ListItem>
+                          ) : (
+                            orgHierarchies[org.orgId].projects.map((project) => {
+                              const projectApps = orgHierarchies[org.orgId].applications.filter(
+                                app => app.projectId === project.projectId
+                              );
+                              const isProjectExpanded = expandedProjects.has(project.projectId);
+
+                              return (
+                                <Box key={project.projectId}>
+                                  <ListItemButton
+                                    onClick={() => toggleProjectExpanded(project.projectId)}
+                                    sx={{ py: 0.5, borderRadius: 1 }}
+                                  >
+                                    <ListItemIcon sx={{ minWidth: 32 }}>
+                                      <Folder sx={{ fontSize: 18, color: '#00ED64' }} />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                      primary={project.name}
+                                      secondary={`${projectApps.length} app${projectApps.length !== 1 ? 's' : ''}`}
+                                      primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+                                      secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    />
+                                    {projectApps.length > 0 && (
+                                      isProjectExpanded ? <ExpandLess sx={{ fontSize: 18 }} /> : <ExpandMore sx={{ fontSize: 18 }} />
+                                    )}
+                                  </ListItemButton>
+
+                                  <Collapse in={isProjectExpanded}>
+                                    <List dense sx={{ pl: 3 }}>
+                                      {projectApps.map((app) => (
+                                        <ListItemButton
+                                          key={app.applicationId}
+                                          onClick={() => router.push(`/apps/${app.slug || app.applicationId}`)}
+                                          sx={{ py: 0.5, borderRadius: 1 }}
+                                        >
+                                          <ListItemIcon sx={{ minWidth: 32 }}>
+                                            <Apps sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                          </ListItemIcon>
+                                          <ListItemText
+                                            primary={app.name}
+                                            secondary={
+                                              app.stats
+                                                ? `${app.stats.formsCount || 0} forms, ${app.stats.workflowsCount || 0} workflows`
+                                                : undefined
+                                            }
+                                            primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                                            secondaryTypographyProps={{ fontSize: '0.7rem' }}
+                                          />
+                                        </ListItemButton>
+                                      ))}
+                                      {projectApps.length === 0 && (
+                                        <ListItem sx={{ py: 0.5 }}>
+                                          <ListItemText
+                                            primary="No applications"
+                                            primaryTypographyProps={{ color: 'text.secondary', fontSize: '0.8125rem' }}
+                                          />
+                                        </ListItem>
+                                      )}
+                                    </List>
+                                  </Collapse>
+                                </Box>
+                              );
+                            })
+                          )}
+                        </List>
+                      ) : null}
+                    </Box>
+                  </Collapse>
                 </Card>
               </Grid>
             );
@@ -427,6 +682,14 @@ export function OrganizationSettings() {
         }}>
           <Settings sx={{ mr: 1, fontSize: 18 }} />
           Settings
+        </MenuItem>
+        <MenuItem
+          onClick={handleResetClick}
+          sx={{ color: 'warning.main' }}
+          disabled={menuOrg?.role !== 'owner'}
+        >
+          <RestartAlt sx={{ mr: 1, fontSize: 18 }} />
+          Reset (Dev)
         </MenuItem>
         <MenuItem
           onClick={handleDeleteClick}
@@ -653,6 +916,115 @@ export function OrganizationSettings() {
           >
             {deleting ? 'Deleting...' : 'Delete Organization'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog
+        open={resetDialogOpen}
+        onClose={() => {
+          if (!resetting) {
+            setResetDialogOpen(false);
+            setOrgToReset(null);
+            setResetError(null);
+            setResetResult(null);
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RestartAlt />
+          Reset Organization
+        </DialogTitle>
+        <DialogContent>
+          {resetError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {resetError}
+            </Alert>
+          )}
+          {resetResult ? (
+            <Box>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Organization reset successfully!
+              </Alert>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Deleted:
+              </Typography>
+              <Box sx={{ pl: 2, mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Forms: {resetResult.deleted.forms}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Workflows: {resetResult.deleted.workflows}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Applications: {resetResult.deleted.applications}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Projects: {resetResult.deleted.projects}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Clusters: {resetResult.deleted.clusters}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Connections: {resetResult.deleted.connections}
+                </Typography>
+              </Box>
+              {resetResult.recreated.project && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  A default project and application have been recreated.
+                </Alert>
+              )}
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Are you sure you want to reset <strong>{orgToReset?.name}</strong>?
+              </Typography>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                This will delete ALL data associated with this organization:
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  <li>All forms and submissions</li>
+                  <li>All workflows</li>
+                  <li>All applications</li>
+                  <li>All projects</li>
+                  <li>All provisioned clusters</li>
+                  <li>All database connections</li>
+                </Box>
+              </Alert>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                The organization itself will be kept, and a default project and application will be recreated.
+              </Alert>
+              <Typography variant="body2" color="text.secondary">
+                This action is intended for development and testing purposes.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setResetDialogOpen(false);
+              setOrgToReset(null);
+              setResetError(null);
+              setResetResult(null);
+            }}
+            disabled={resetting}
+          >
+            {resetResult ? 'Close' : 'Cancel'}
+          </Button>
+          {!resetResult && (
+            <Button
+              onClick={handleResetOrg}
+              variant="contained"
+              color="warning"
+              disabled={resetting}
+              startIcon={resetting ? <CircularProgress size={20} /> : <RestartAlt />}
+            >
+              {resetting ? 'Resetting...' : 'Reset Organization'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

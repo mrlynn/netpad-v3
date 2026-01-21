@@ -86,6 +86,30 @@ export interface ConversationState {
   error?: string;
   /** RAG telemetry (if RAG is enabled) */
   ragTelemetry?: RAGTelemetry;
+  /** Completion progress metrics (calculated on each update) */
+  progress?: ConversationProgress;
+}
+
+/**
+ * Completion progress metrics for analytics and dashboards
+ */
+export interface ConversationProgress {
+  /** Percentage of required topics covered (0-100) */
+  completionPercentage: number;
+  /** Number of required topics covered */
+  requiredTopicsCovered: number;
+  /** Total number of required topics */
+  totalRequiredTopics: number;
+  /** Number of all topics covered (including optional) */
+  allTopicsCovered: number;
+  /** Total number of all topics */
+  totalTopics: number;
+  /** Average depth across covered topics (0-1) */
+  averageDepth: number;
+  /** Number of fields extracted so far */
+  fieldsExtracted: number;
+  /** List of missing required fields */
+  missingRequiredFields: string[];
 }
 
 /**
@@ -120,6 +144,8 @@ export interface ConversationalFormConfig {
   useITHelpdeskTemplate?: boolean;
   /** RAG configuration for knowledge-guided conversations */
   rag?: RAGConfig;
+  /** Options for capturing conversation data in submissions */
+  captureOptions?: ConversationCaptureOptions;
 }
 
 /**
@@ -195,6 +221,20 @@ export interface ConversationLimits {
 }
 
 /**
+ * Conversation capture options
+ */
+export interface ConversationCaptureOptions {
+  /** Whether to capture and store the full conversation transcript */
+  captureTranscript?: boolean;
+  /** Whether to include timestamps for each message */
+  includeTimestamps?: boolean;
+  /** Whether to include topic coverage data */
+  includeTopicCoverage?: boolean;
+  /** Whether to include confidence scores per field */
+  includeFieldConfidence?: boolean;
+}
+
+/**
  * Conversation submission (stored in database)
  */
 export interface ConversationSubmission {
@@ -231,11 +271,15 @@ export interface ConversationSubmission {
   /** Standard submission fields */
   submittedAt: Date;
   /** Submission status */
-  status: 'draft' | 'submitted';
+  status: 'draft' | 'submitted' | 'abandoned';
+  /** When conversation was marked as abandoned */
+  abandonedAt?: Date;
   /** Organization ID */
   organizationId?: string;
   /** Project ID */
   projectId?: string;
+  /** Progress metrics at time of save */
+  progress?: ConversationProgress;
 }
 
 // ============================================

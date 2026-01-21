@@ -143,7 +143,7 @@ export async function POST(
   try {
     const { formId } = await params;
     const body = await request.json();
-    const { data } = body;
+    const { data, conversationalData } = body;
 
     if (!data || typeof data !== 'object') {
       return NextResponse.json(
@@ -344,6 +344,8 @@ export async function POST(
         },
         // Pass form config for encryption support
         formConfig: form,
+        // Pass conversational data for transcript storage
+        conversationalData: conversationalData,
       });
 
       if (!result.success) {

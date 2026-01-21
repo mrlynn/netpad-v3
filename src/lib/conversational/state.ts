@@ -9,6 +9,7 @@ import {
   TopicCoverage,
   ConversationalFormConfig,
   ConversationTopic,
+  ConversationProgress,
 } from '@/types/conversational';
 import { Message } from '@/lib/ai/providers/base';
 import { buildSystemPrompt } from './prompts';
@@ -185,19 +186,34 @@ export function updatePartialExtractions(
 }
 
 /**
+ * Minimum depth thresholds for topic depth requirements
+ * Topics with 'deep' requirement need substantial content to be marked covered
+ */
+const DEPTH_THRESHOLDS: Record<'surface' | 'moderate' | 'deep', number> = {
+  surface: 0.2,   // Simple values like name, email
+  moderate: 0.5,  // Needs some explanation
+  deep: 0.7,      // Needs substantial content
+};
+
+/**
  * Update topic coverage based on extraction results
- * 
- * When data is extracted for a field, mark the corresponding topic as covered.
- * This is more reliable than keyword-based analysis.
- * 
+ *
+ * When data is extracted for a field, mark the corresponding topic as covered
+ * ONLY if the extracted value meets the topic's depth requirement.
+ *
+ * For topics requiring 'deep' exploration (like "What They've Shipped"),
+ * we require substantial content before marking them as covered.
+ *
  * @param state - Current conversation state
  * @param extractions - Extracted data (field -> value)
  * @param extractionSchema - Extraction schema with topicId mappings
+ * @param topicsConfig - Optional topic configuration with depth requirements
  */
 export function updateTopicCoverageFromExtractions(
   state: ConversationState,
   extractions: Record<string, any>,
-  extractionSchema: Array<{ field: string; topicId?: string }>
+  extractionSchema: Array<{ field: string; topicId?: string }>,
+  topicsConfig?: ConversationTopic[]
 ): ConversationState {
   let updatedState = state;
 
@@ -206,6 +222,14 @@ export function updateTopicCoverageFromExtractions(
   for (const schema of extractionSchema) {
     if (schema.topicId) {
       fieldToTopicMap.set(schema.field, schema.topicId);
+    }
+  }
+
+  // Create a map of topicId -> required depth from config
+  const topicDepthRequirements = new Map<string, 'surface' | 'moderate' | 'deep'>();
+  if (topicsConfig) {
+    for (const topic of topicsConfig) {
+      topicDepthRequirements.set(topic.id, topic.depth);
     }
   }
 
@@ -228,35 +252,60 @@ export function updateTopicCoverageFromExtractions(
       continue; // Topic not found in state
     }
 
-    // Determine depth based on value type and content
-    let depth = 0.5; // Default moderate depth
-    
+    // Determine achieved depth based on value type and content
+    let achievedDepth = 0.5; // Default moderate depth
+
     if (typeof value === 'string') {
       // For strings, depth increases with length and detail
-      if (value.length > 100) {
-        depth = 1.0; // Deep coverage
-      } else if (value.length > 50) {
-        depth = 0.7; // Moderate-deep coverage
-      } else if (value.length > 20) {
-        depth = 0.5; // Moderate coverage
+      if (value.length > 150) {
+        achievedDepth = 1.0; // Deep coverage - substantial content
+      } else if (value.length > 80) {
+        achievedDepth = 0.7; // Moderate-deep coverage
+      } else if (value.length > 30) {
+        achievedDepth = 0.5; // Moderate coverage
       } else {
-        depth = 0.3; // Surface coverage
+        achievedDepth = 0.3; // Surface coverage - short answer
       }
     } else if (typeof value === 'number') {
       // Numbers are usually surface-level (like urgency level)
-      depth = 0.3;
+      achievedDepth = 0.3;
     } else if (typeof value === 'boolean') {
-      depth = 0.3;
+      achievedDepth = 0.3;
     } else if (Array.isArray(value) && value.length > 0) {
-      depth = 0.6;
+      achievedDepth = 0.6;
     } else if (typeof value === 'object' && value !== null) {
-      depth = 0.7;
+      achievedDepth = 0.7;
     }
 
-    // Update topic coverage
-    updatedState = updateTopicCoverage(updatedState, topicId, depth);
-    
-    console.log(`[Topic Coverage] Updated ${topicId} (field: ${field}) to depth ${depth.toFixed(2)}, covered: true`);
+    // Get the required depth for this topic
+    const requiredDepthLevel = topicDepthRequirements.get(topicId) || 'surface';
+    const requiredDepthThreshold = DEPTH_THRESHOLDS[requiredDepthLevel];
+
+    // Only mark as covered if achieved depth meets the requirement
+    const meetsCoverageRequirement = achievedDepth >= requiredDepthThreshold;
+
+    // Update topic depth (always track progress), but only mark covered if threshold met
+    const topics = updatedState.topics.map((topic) => {
+      if (topic.topicId === topicId) {
+        return {
+          ...topic,
+          // Only mark covered if we meet the depth threshold for this topic type
+          covered: meetsCoverageRequirement ? true : topic.covered,
+          depth: Math.max(topic.depth, achievedDepth),
+          turnCount: topic.turnCount + 1,
+          lastMentionedTurn: updatedState.turnCount,
+        };
+      }
+      return topic;
+    });
+
+    updatedState = {
+      ...updatedState,
+      topics,
+      updatedAt: new Date(),
+    };
+
+    console.log(`[Topic Coverage] Updated ${topicId} (field: ${field}): achieved=${achievedDepth.toFixed(2)}, required=${requiredDepthLevel}(${requiredDepthThreshold}), covered=${meetsCoverageRequirement}`);
   }
 
   return updatedState;
@@ -371,6 +420,78 @@ export function getCoverageSummary(state: ConversationState): {
     requiredTopics: requiredTopics.length,
     coveredRequiredTopics,
     averageDepth,
+  };
+}
+
+/**
+ * Calculate conversation progress metrics
+ *
+ * This provides detailed progress information for dashboards and analytics,
+ * including completion percentage based on required topics.
+ */
+export function calculateProgress(
+  state: ConversationState,
+  config?: ConversationalFormConfig
+): ConversationProgress {
+  const requiredTopics = state.topics.filter((t) => t.priority === 'required');
+  const coveredRequiredTopics = requiredTopics.filter((t) => t.covered);
+  const allCoveredTopics = state.topics.filter((t) => t.covered);
+
+  // Calculate completion percentage based on required topics
+  const completionPercentage = requiredTopics.length > 0
+    ? Math.round((coveredRequiredTopics.length / requiredTopics.length) * 100)
+    : 100; // If no required topics, consider 100% complete
+
+  // Calculate average depth across all topics (not just covered)
+  const averageDepth = state.topics.length > 0
+    ? state.topics.reduce((sum, t) => sum + t.depth, 0) / state.topics.length
+    : 0;
+
+  // Count extracted fields
+  const fieldsExtracted = Object.keys(state.partialExtractions).filter(
+    key => state.partialExtractions[key] !== null &&
+           state.partialExtractions[key] !== undefined &&
+           state.partialExtractions[key] !== ''
+  ).length;
+
+  // Find missing required fields from extraction schema
+  const missingRequiredFields: string[] = [];
+  if (config?.extractionSchema) {
+    for (const schema of config.extractionSchema) {
+      if (schema.required) {
+        const value = state.partialExtractions[schema.field];
+        if (value === null || value === undefined || value === '') {
+          missingRequiredFields.push(schema.field);
+        }
+      }
+    }
+  }
+
+  return {
+    completionPercentage,
+    requiredTopicsCovered: coveredRequiredTopics.length,
+    totalRequiredTopics: requiredTopics.length,
+    allTopicsCovered: allCoveredTopics.length,
+    totalTopics: state.topics.length,
+    averageDepth,
+    fieldsExtracted,
+    missingRequiredFields,
+  };
+}
+
+/**
+ * Update state with calculated progress
+ *
+ * Call this after any state change to keep progress metrics current.
+ */
+export function updateStateWithProgress(
+  state: ConversationState,
+  config?: ConversationalFormConfig
+): ConversationState {
+  return {
+    ...state,
+    progress: calculateProgress(state, config),
+    updatedAt: new Date(),
   };
 }
 
