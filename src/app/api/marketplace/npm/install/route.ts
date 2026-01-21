@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!packageName || !orgId || !projectId) {
+    if (!packageName || !orgId) {
       return NextResponse.json(
-        { error: 'Missing required fields: packageName, orgId, projectId' },
+        { error: 'Missing required fields: packageName, orgId' },
         { status: 400 }
       );
     }
@@ -63,12 +63,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If no projectId provided, use the default project for this org
+    let effectiveProjectId = projectId;
+    if (!effectiveProjectId) {
+      try {
+        const { ensureDefaultProject } = await import('@/lib/platform/projects');
+        const defaultProject = await ensureDefaultProject(orgId, session.userId);
+        effectiveProjectId = defaultProject.projectId;
+        console.log(`[npm Install API] Using default project: ${effectiveProjectId}`);
+      } catch (e) {
+        console.error('[npm Install API] Failed to get default project:', e);
+        return NextResponse.json(
+          { error: 'Failed to get or create default project' },
+          { status: 500 }
+        );
+      }
+    }
+
     // Import package
     const result = await importFromNpm(
       packageName,
       version,
       orgId,
-      projectId,
+      effectiveProjectId,
       {
         userId: session.userId,
         overwriteExisting,

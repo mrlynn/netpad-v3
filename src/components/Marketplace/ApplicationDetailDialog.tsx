@@ -45,6 +45,7 @@ import {
   Star as StarIcon,
   CloudDownload as NpmIcon,
   InstallMobile as InstallIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
@@ -56,6 +57,7 @@ import { ReviewsList } from './ReviewsList';
 import { RatingSummary } from './RatingSummary';
 import { useAuth } from '@/contexts/AuthContext';
 import { NetPadLoader, NetPadSpinner } from '@/components/common/NetPadLoader';
+import { useInstalledApplications } from '@/hooks/useInstalledApplications';
 
 interface ApplicationDetailDialogProps {
   open: boolean;
@@ -124,8 +126,11 @@ export function ApplicationDetailDialog({
   onImportComplete,
 }: ApplicationDetailDialogProps) {
   const { currentOrgId } = useOrganization();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const applicationContext = useApplicationSafe();
+
+  // Check if user is on the waitlist
+  const isWaitlistUser = isAuthenticated && user?.waitlistStatus === 'pending';
   const router = useRouter();
   const pathname = usePathname();
   // Use prop orgId if provided, otherwise use context (for imports)
@@ -146,6 +151,13 @@ export function ApplicationDetailDialog({
   const [generateNewIds, setGenerateNewIds] = useState(true);
   const [preserveSlugs, setPreserveSlugs] = useState(false);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
+
+  // Check if this application has already been imported
+  const { installations, mutate: mutateInstallations } = useInstalledApplications({
+    orgId: organizationId || '',
+    projectId: projectId,
+  });
+  const isImported = installations.some(inst => inst.marketplaceApplicationId === applicationId);
 
   useEffect(() => {
     if (open && applicationId) {
@@ -246,12 +258,7 @@ export function ApplicationDetailDialog({
 
   const handleInstallFromNpm = async (packageName: string) => {
     if (!organizationId) {
-      setError('Please select an organization to install the package.');
-      return;
-    }
-
-    if (!projectId) {
-      setError('Please select a project to install the package.');
+      setError('Please sign in to install packages from npm.');
       return;
     }
 
@@ -265,7 +272,8 @@ export function ApplicationDetailDialog({
         body: JSON.stringify({
           packageName,
           orgId: organizationId,
-          projectId,
+          // projectId is optional - API will use default project if not provided
+          projectId: projectId || undefined,
           overwriteExisting,
           installDependencies: true,
         }),
@@ -296,13 +304,18 @@ export function ApplicationDetailDialog({
   const handleImport = async () => {
     if (!detail) return;
 
-    if (!organizationId) {
-      setError('Please select an organization to import the application.');
+    if (!isAuthenticated) {
+      setError('Please sign in to import applications from the marketplace.');
       return;
     }
 
-    if (!projectId) {
-      setError('Please select an application from your workspace first. Click the app selector in the navigation bar to choose where to import this marketplace app.');
+    if (isWaitlistUser) {
+      setError('Your account is pending approval. You\'ll be able to import applications once your access is approved.');
+      return;
+    }
+
+    if (!organizationId) {
+      setError('Unable to import: No organization found. Please contact support if this persists.');
       return;
     }
 
@@ -315,7 +328,8 @@ export function ApplicationDetailDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orgId: organizationId,
-          projectId: projectId,
+          // projectId is optional - API will use default project if not provided
+          projectId: projectId || undefined,
           options: {
             generateNewIds,
             preserveSlugs,
@@ -339,6 +353,9 @@ export function ApplicationDetailDialog({
       if (applicationContext?.refreshApplications) {
         await applicationContext.refreshApplications();
       }
+
+      // Refresh installed applications to update the "Imported" status
+      mutateInstallations();
 
       onClose();
 
@@ -791,33 +808,43 @@ export function ApplicationDetailDialog({
         )}
         {detail?.source === 'npm' && detail?.sourcePackageName ? (
           <Button
-            onClick={() => handleInstallFromNpm(detail.sourcePackageName!)}
+            onClick={() => !isImported && handleInstallFromNpm(detail.sourcePackageName!)}
             variant="contained"
-            disabled={!detail || importing}
-            startIcon={importing ? <NetPadSpinner size={16} /> : <InstallIcon />}
+            disabled={!detail || importing || isImported}
+            startIcon={isImported ? <CheckCircleIcon /> : importing ? <NetPadSpinner size={16} /> : <InstallIcon />}
             sx={{
-              bgcolor: '#CB3837',
+              bgcolor: isImported ? alpha('#00ED64', 0.1) : '#CB3837',
+              color: isImported ? '#00ED64' : 'white',
               '&:hover': {
-                bgcolor: '#A32A2A',
+                bgcolor: isImported ? alpha('#00ED64', 0.15) : '#A32A2A',
+              },
+              '&.Mui-disabled': {
+                bgcolor: isImported ? alpha('#00ED64', 0.1) : undefined,
+                color: isImported ? '#00ED64' : undefined,
               },
             }}
           >
-            {importing ? 'Installing...' : 'Install from npm'}
+            {isImported ? 'Already Imported' : importing ? 'Installing...' : 'Install from npm'}
           </Button>
         ) : (
           <Button
             onClick={handleImport}
             variant="contained"
-            disabled={!detail || importing}
-            startIcon={importing ? <NetPadSpinner size={16} /> : <UploadIcon />}
+            disabled={!detail || importing || isImported}
+            startIcon={isImported ? <CheckCircleIcon /> : importing ? <NetPadSpinner size={16} /> : <UploadIcon />}
             sx={{
-              bgcolor: '#00ED64',
+              bgcolor: isImported ? alpha('#00ED64', 0.1) : '#00ED64',
+              color: isImported ? '#00ED64' : 'white',
               '&:hover': {
-                bgcolor: '#00CC55',
+                bgcolor: isImported ? alpha('#00ED64', 0.15) : '#00CC55',
+              },
+              '&.Mui-disabled': {
+                bgcolor: isImported ? alpha('#00ED64', 0.1) : undefined,
+                color: isImported ? '#00ED64' : undefined,
               },
             }}
           >
-            {importing ? 'Importing...' : 'Import Application'}
+            {isImported ? 'Already Imported' : importing ? 'Importing...' : 'Import Application'}
           </Button>
         )}
       </DialogActions>

@@ -33,7 +33,7 @@ interface ApplicationContextValue extends ApplicationState {
   currentProjectId: string | null;
 
   // Application management
-  selectApplication: (appId: string, options?: { navigate?: boolean }) => Promise<void>;
+  selectApplication: (appId: string, options?: { navigate?: boolean; application?: Application }) => Promise<void>;
   selectApplicationBySlug: (slug: string, options?: { navigate?: boolean }) => Promise<void>;
   refreshApplications: () => Promise<void>;
   clearApplicationContext: () => void;
@@ -244,13 +244,14 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
 
   const selectApplication = useCallback(async (
     appId: string,
-    options: { navigate?: boolean } = {}
+    options: { navigate?: boolean; application?: Application } = {}
   ) => {
-    const { navigate = false } = options;
-    const app = applications.find(a => a.applicationId === appId);
+    const { navigate = false, application: providedApp } = options;
+    // Use provided application if available, otherwise look up from cache
+    const app = providedApp || applications.find(a => a.applicationId === appId);
 
     if (!app) {
-      console.warn(`[ApplicationContext] Application ${appId} not found`);
+      console.warn(`[ApplicationContext] Application ${appId} not found in cache. Try providing the application object directly.`);
       return;
     }
 

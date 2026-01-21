@@ -1,19 +1,23 @@
 'use client';
 
 /**
- * Client-side wrapper for the IntentOnboardingGate
+ * Client-side wrapper for the Combined Onboarding Gates
  *
  * This is needed because the project layout is a server component,
- * and IntentOnboardingGate needs to be a client component.
+ * and the onboarding gates need to be client components.
+ *
+ * Applies both:
+ * 1. SignupOnboardingGate - for new users (workspace setup)
+ * 2. IntentOnboardingGate - for first app creation
  */
 
 import { ReactNode } from 'react';
-import { IntentOnboardingGate } from '@/components/Onboarding/IntentOnboardingGate';
+import { CombinedOnboardingGate } from '@/components/Onboarding/CombinedOnboardingGate';
 
 interface OnboardingGateWrapperProps {
   children: ReactNode;
 }
 
 export function OnboardingGateWrapper({ children }: OnboardingGateWrapperProps) {
-  return <IntentOnboardingGate>{children}</IntentOnboardingGate>;
+  return <CombinedOnboardingGate>{children}</CombinedOnboardingGate>;
 }

@@ -1,6 +1,9 @@
 {
+  "id": "it-support-request",
+  "slug": "it-support-request",
   "name": "IT Support Request",
   "description": "Submit a request for IT support",
+  "formType": "both",
   "fieldConfigs": [
     {
       "path": "_section_reporter",
@@ -249,5 +252,223 @@
     "inputStyle": "outlined",
     "borderRadius": 8,
     "mode": "light"
-  }
+  },
+  "conversationalConfig": {
+    "formType": "conversational",
+    "templateId": "it-support-request",
+    "objective": "Have a natural, helpful conversation with someone experiencing an IT issue. Understand their problem clearly, assess urgency, and gather all the information the IT team needs to help them quickly.",
+    "context": "You are a friendly IT support assistant helping employees submit IT support tickets. Your goal is to understand their technical issue, determine how urgent it is, and collect all relevant details. Common issues include: hardware problems (laptop/monitor/printer), software issues (applications crashing, errors), network connectivity, and access/permissions requests. Be empathetic - tech problems are frustrating. Be efficient - they want their issue solved, not a long chat.",
+    "persona": {
+      "style": "helpful",
+      "tone": "friendly, professional, and solution-focused - like a helpful IT support teammate",
+      "behaviors": [
+        "Acknowledge their frustration when appropriate",
+        "Ask clarifying questions to understand the exact issue",
+        "Confirm you understand the problem before moving on",
+        "Assess urgency naturally (e.g., 'Is this blocking your work right now?')",
+        "Gather category-specific details (asset IDs for hardware, app names for software)",
+        "Be concise - get the info needed without unnecessary chat"
+      ],
+      "restrictions": [
+        "Never promise specific resolution times",
+        "Do not attempt to troubleshoot - just gather information",
+        "Do not ask multiple questions at once",
+        "Avoid overly technical jargon",
+        "Don't make the conversation longer than necessary"
+      ]
+    },
+    "topics": [
+      {
+        "id": "greeting",
+        "name": "Greeting and Name",
+        "description": "Greet them warmly and get their full name",
+        "priority": "required",
+        "depth": "surface",
+        "extractionField": "fullName"
+      },
+      {
+        "id": "email",
+        "name": "Email",
+        "description": "Get their email address for follow-up",
+        "priority": "required",
+        "depth": "surface",
+        "extractionField": "email"
+      },
+      {
+        "id": "department",
+        "name": "Department",
+        "description": "Which department they're in",
+        "priority": "required",
+        "depth": "surface",
+        "extractionField": "department"
+      },
+      {
+        "id": "issue_overview",
+        "name": "Issue Overview",
+        "description": "What's the problem? Get a clear subject line and description",
+        "priority": "required",
+        "depth": "deep",
+        "extractionField": "subject"
+      },
+      {
+        "id": "issue_details",
+        "name": "Issue Details",
+        "description": "Get more details about the problem - when it started, error messages, what they've tried",
+        "priority": "required",
+        "depth": "deep",
+        "extractionField": "description"
+      },
+      {
+        "id": "issue_category",
+        "name": "Issue Category",
+        "description": "Determine if this is hardware, software, network, access/permissions, or other",
+        "priority": "required",
+        "depth": "moderate",
+        "extractionField": "issueCategory"
+      },
+      {
+        "id": "urgency",
+        "name": "Urgency Assessment",
+        "description": "How urgent is this? Is it blocking their work? Is it a security issue?",
+        "priority": "required",
+        "depth": "moderate",
+        "extractionField": "urgencyLevel"
+      },
+      {
+        "id": "category_details",
+        "name": "Category-Specific Details",
+        "description": "Based on issue category, get specific info: asset ID for hardware, app name for software, location for network, system name for access",
+        "priority": "important",
+        "depth": "moderate",
+        "extractionField": "assetId"
+      },
+      {
+        "id": "contact_preferences",
+        "name": "Contact Preferences",
+        "description": "How do they prefer to be contacted? When is the best time?",
+        "priority": "optional",
+        "depth": "surface",
+        "extractionField": "preferredContactMethod"
+      }
+    ],
+    "extractionSchema": [
+      {
+        "field": "fullName",
+        "type": "string",
+        "required": true,
+        "description": "Reporter's full name",
+        "topicId": "greeting"
+      },
+      {
+        "field": "email",
+        "type": "string",
+        "required": true,
+        "description": "Email address for follow-up",
+        "topicId": "email"
+      },
+      {
+        "field": "department",
+        "type": "enum",
+        "required": true,
+        "options": ["engineering", "sales", "marketing", "finance", "hr", "operations", "executive"],
+        "description": "Department",
+        "topicId": "department"
+      },
+      {
+        "field": "subject",
+        "type": "string",
+        "required": true,
+        "description": "Brief summary of the issue",
+        "topicId": "issue_overview"
+      },
+      {
+        "field": "description",
+        "type": "string",
+        "required": true,
+        "description": "Detailed description including when it started, error messages, what was tried",
+        "topicId": "issue_details"
+      },
+      {
+        "field": "issueCategory",
+        "type": "enum",
+        "required": true,
+        "options": ["hardware", "software", "network", "access", "other"],
+        "description": "Type of IT issue",
+        "topicId": "issue_category"
+      },
+      {
+        "field": "urgencyLevel",
+        "type": "enum",
+        "required": true,
+        "options": ["low", "medium", "high", "critical"],
+        "description": "How urgent is this issue?",
+        "topicId": "urgency"
+      },
+      {
+        "field": "assetId",
+        "type": "string",
+        "required": false,
+        "description": "Asset ID or serial number (for hardware issues)",
+        "topicId": "category_details"
+      },
+      {
+        "field": "applicationName",
+        "type": "string",
+        "required": false,
+        "description": "Name of the application (for software issues)",
+        "topicId": "category_details"
+      },
+      {
+        "field": "networkLocation",
+        "type": "enum",
+        "required": false,
+        "options": ["floor1", "floor2", "floor3", "remote", "other"],
+        "description": "Network location (for network issues)",
+        "topicId": "category_details"
+      },
+      {
+        "field": "systemAccess",
+        "type": "string",
+        "required": false,
+        "description": "System or resource needing access (for access issues)",
+        "topicId": "category_details"
+      },
+      {
+        "field": "preferredContactMethod",
+        "type": "enum",
+        "required": false,
+        "options": ["email", "phone", "chat"],
+        "description": "Preferred way to be contacted",
+        "topicId": "contact_preferences"
+      },
+      {
+        "field": "phoneExtension",
+        "type": "string",
+        "required": false,
+        "description": "Phone extension",
+        "topicId": "email"
+      }
+    ],
+    "conversationLimits": {
+      "maxTurns": 15,
+      "maxDuration": 15,
+      "minConfidence": 0.7
+    },
+    "captureOptions": {
+      "captureTranscript": true,
+      "includeTimestamps": true,
+      "includeTopicCoverage": true,
+      "includeFieldConfidence": true
+    }
+  },
+  "hooks": {
+    "onSuccess": {
+      "message": "Your ticket has been submitted! You'll receive a confirmation email shortly with your ticket number. Our IT team will review it and get back to you based on the urgency level."
+    }
+  },
+  "branding": {
+    "showPoweredBy": true
+  },
+  "applicationRole": "primary",
+  "displayOrder": 1
 }

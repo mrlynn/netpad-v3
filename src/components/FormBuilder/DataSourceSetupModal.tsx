@@ -38,6 +38,7 @@ import {
   Business,
   Lock,
   Folder,
+  Lightbulb,
 } from '@mui/icons-material';
 import { FormDataSource } from '@/types/form';
 import NextLink from 'next/link';
@@ -57,6 +58,13 @@ interface Organization {
   name: string;
 }
 
+interface SiblingFormDataSource {
+  formId: string;
+  formName: string;
+  vaultId: string;
+  collection: string;
+}
+
 interface DataSourceSetupModalProps {
   open: boolean;
   onClose: () => void;
@@ -64,6 +72,10 @@ interface DataSourceSetupModalProps {
   currentDataSource?: FormDataSource;
   currentOrganizationId?: string;
   formName?: string;
+  /** Application ID to fetch sibling forms' data source settings */
+  applicationId?: string;
+  /** Current form ID (to exclude from sibling lookup) */
+  currentFormId?: string;
 }
 
 // Steps are dynamic based on context
@@ -88,6 +100,8 @@ export function DataSourceSetupModal({
   currentDataSource,
   currentOrganizationId,
   formName,
+  applicationId,
+  currentFormId,
 }: DataSourceSetupModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -98,6 +112,8 @@ export function DataSourceSetupModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addConnectionDialogOpen, setAddConnectionDialogOpen] = useState(false);
+  const [siblingDataSource, setSiblingDataSource] = useState<SiblingFormDataSource | null>(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   // Determine if we should use simplified flow (single org = skip org selection)
   const isSingleOrg = organizations.length === 1;
@@ -137,6 +153,13 @@ export function DataSourceSetupModal({
     }
   }, [selectedOrgId]);
 
+  // Fetch sibling forms' data source when modal opens (for suggesting defaults)
+  useEffect(() => {
+    if (open && applicationId && selectedOrgId && !currentDataSource?.vaultId) {
+      fetchSiblingDataSource(selectedOrgId, applicationId);
+    }
+  }, [open, applicationId, selectedOrgId, currentDataSource?.vaultId]);
+
   // Reset step when modal opens - always start at step 0 to allow editing
   useEffect(() => {
     if (open) {
@@ -146,6 +169,8 @@ export function DataSourceSetupModal({
       setSelectedOrgId(currentOrganizationId || '');
       setSelectedVaultId(currentDataSource?.vaultId || '');
       setCollection(currentDataSource?.collection || '');
+      setSuggestionDismissed(false);
+      setSiblingDataSource(null);
     }
   }, [open, currentOrganizationId, currentDataSource]);
 
@@ -214,6 +239,43 @@ export function DataSourceSetupModal({
       setError('Failed to connect to server');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch sibling forms in the same application to suggest their data source settings
+  const fetchSiblingDataSource = async (orgId: string, appId: string) => {
+    try {
+      const response = await fetch(`/api/forms/list?orgId=${orgId}&applicationId=${appId}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const forms = data.forms || [];
+
+      // Find a sibling form that has a data source configured (exclude current form)
+      const siblingWithDataSource = forms.find(
+        (f: any) => f.formId !== currentFormId && f.dataSource?.vaultId
+      );
+
+      if (siblingWithDataSource) {
+        setSiblingDataSource({
+          formId: siblingWithDataSource.formId,
+          formName: siblingWithDataSource.name,
+          vaultId: siblingWithDataSource.dataSource.vaultId,
+          collection: siblingWithDataSource.dataSource.collection,
+        });
+      }
+    } catch (err) {
+      // Non-critical - just won't show suggestion
+      console.warn('[DataSourceSetupModal] Failed to fetch sibling forms:', err);
+    }
+  };
+
+  // Apply sibling form's data source settings as defaults
+  const applySiblingDefaults = () => {
+    if (siblingDataSource) {
+      setSelectedVaultId(siblingDataSource.vaultId);
+      // Don't auto-apply collection - user should choose their own collection name
+      setSuggestionDismissed(true);
     }
   };
 
@@ -464,6 +526,55 @@ export function DataSourceSetupModal({
                     label={organizations[0].name}
                     sx={{ mb: 2, bgcolor: alpha('#2196f3', 0.1) }}
                   />
+                )}
+
+                {/* Suggestion from sibling form */}
+                {siblingDataSource && !suggestionDismissed && !selectedVaultId && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      bgcolor: alpha('#ff9800', 0.08),
+                      border: '1px solid',
+                      borderColor: alpha('#ff9800', 0.3),
+                      borderRadius: 2,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                      <Lightbulb sx={{ color: '#ff9800', fontSize: 20, mt: 0.25 }} />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          Use same connection as "{siblingDataSource.formName}"?
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                          Another form in this application is already configured with a connection.
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={applySiblingDefaults}
+                            sx={{
+                              bgcolor: '#ff9800',
+                              color: '#fff',
+                              textTransform: 'none',
+                              '&:hover': { bgcolor: '#f57c00' },
+                            }}
+                          >
+                            Use Same Connection
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() => setSuggestionDismissed(true)}
+                            sx={{ textTransform: 'none', color: 'text.secondary' }}
+                          >
+                            Choose Different
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Paper>
                 )}
 
                 {loading ? (

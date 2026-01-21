@@ -5,7 +5,8 @@
  * Always visible (240px width) when inside an application context.
  *
  * Features:
- * - Application list with active app highlighting
+ * - Application tree view with expandable sections
+ * - Forms, Workflows, Settings, Data under each app
  * - "+ New Application" button
  * - Recent items section
  * - Scrollable when content exceeds viewport
@@ -27,6 +28,7 @@ import {
   alpha,
   Skeleton,
   Collapse,
+  CircularProgress,
 } from '@mui/material';
 import {
   Apps,
@@ -36,10 +38,15 @@ import {
   ExpandLess,
   Description,
   AccountTree,
+  Settings,
+  Storage,
+  ChevronRight,
+  FolderOpen,
+  Folder,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useApplication, useRecentApplications, useApplicationsByProject } from '@/contexts/ApplicationContext';
+import { useApplication, useRecentApplications } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { getAppUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
@@ -55,7 +62,6 @@ export const SIDEBAR_WIDTH = 240;
 // Types
 // ============================================
 
-// Match the RecentItem interface from RecentItemsMenu.tsx
 interface RecentItem {
   id: string;
   name: string;
@@ -66,49 +72,103 @@ interface RecentItem {
   projectId?: string;
 }
 
+interface FormItem {
+  id: string;
+  formId: string;
+  name: string;
+  slug?: string;
+  isPublished?: boolean;
+}
+
+interface WorkflowItem {
+  id: string;
+  name: string;
+  slug?: string;
+  status?: string;
+}
+
+interface AppContentCache {
+  forms: FormItem[];
+  workflows: WorkflowItem[];
+  loading: boolean;
+  loaded: boolean;
+}
+
 const STORAGE_KEY = 'netpad_recent_items';
 
 // ============================================
 // Helper Components
 // ============================================
 
-interface AppListItemProps {
+interface AppTreeItemProps {
   app: Application;
   isActive: boolean;
-  isFocused?: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  content: AppContentCache;
+  onLoadContent: () => void;
+  currentPath: string;
 }
 
-function AppListItem({ app, isActive, isFocused = false }: AppListItemProps) {
+function AppTreeItem({
+  app,
+  isActive,
+  isExpanded,
+  onToggle,
+  content,
+  onLoadContent,
+  currentPath,
+}: AppTreeItemProps) {
+  const handleClick = () => {
+    onToggle();
+    if (!content.loaded && !content.loading) {
+      onLoadContent();
+    }
+  };
+
+  // Check if current path matches any child
+  const formsPath = getAppUrl(app.slug, 'forms');
+  const workflowsPath = getAppUrl(app.slug, 'workflows');
+  const settingsPath = getAppUrl(app.slug, 'settings');
+  const dataPath = getAppUrl(app.slug, 'data');
+
+  const isFormsActive = currentPath.startsWith(formsPath);
+  const isWorkflowsActive = currentPath.startsWith(workflowsPath);
+  const isSettingsActive = currentPath === settingsPath;
+  const isDataActive = currentPath.startsWith(dataPath);
+
   return (
-    <ListItem disablePadding sx={{ mb: 0.5 }}>
+    <Box sx={{ mb: 0.5 }}>
+      {/* Application Header */}
       <ListItemButton
-        component={Link}
-        href={getAppUrl(app.slug, 'forms')}
+        onClick={handleClick}
         sx={{
           borderRadius: 1.5,
-          py: 1,
-          px: 1.5,
+          py: 0.75,
+          px: 1,
           bgcolor: isActive
             ? (theme) => alpha(app.color || theme.palette.primary.main, 0.12)
-            : isFocused
-            ? (theme) => alpha(theme.palette.primary.main, 0.06)
             : 'transparent',
           borderLeft: isActive ? '3px solid' : '3px solid transparent',
           borderLeftColor: isActive ? (app.color || 'primary.main') : 'transparent',
-          outline: isFocused ? '2px solid' : 'none',
-          outlineColor: isFocused ? 'primary.main' : 'transparent',
-          outlineOffset: -2,
           '&:hover': {
             bgcolor: (theme) => alpha(app.color || theme.palette.primary.main, 0.08),
           },
           transition: 'all 0.15s ease',
         }}
       >
-        <ListItemIcon sx={{ minWidth: 36 }}>
+        <ListItemIcon sx={{ minWidth: 24 }}>
+          {isExpanded ? (
+            <ExpandMore sx={{ fontSize: 18, color: 'text.secondary' }} />
+          ) : (
+            <ChevronRight sx={{ fontSize: 18, color: 'text.secondary' }} />
+          )}
+        </ListItemIcon>
+        <ListItemIcon sx={{ minWidth: 28 }}>
           <Box
             sx={{
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               borderRadius: 0.75,
               display: 'flex',
               alignItems: 'center',
@@ -116,11 +176,11 @@ function AppListItem({ app, isActive, isFocused = false }: AppListItemProps) {
               bgcolor: app.color || ((theme) => alpha(theme.palette.primary.main, 0.15)),
               color: app.color ? '#fff' : 'primary.main',
               fontWeight: 600,
-              fontSize: 12,
+              fontSize: 11,
             }}
           >
             {app.icon ? (
-              <TemplateIcon icon={app.icon} size={14} color={app.color ? '#fff' : undefined} />
+              <TemplateIcon icon={app.icon} size={12} color={app.color ? '#fff' : undefined} />
             ) : (
               app.name.charAt(0).toUpperCase()
             )}
@@ -129,14 +189,267 @@ function AppListItem({ app, isActive, isFocused = false }: AppListItemProps) {
         <ListItemText
           primary={app.name}
           primaryTypographyProps={{
-            fontSize: '0.875rem',
+            fontSize: '0.8125rem',
             fontWeight: isActive ? 600 : 500,
             noWrap: true,
             color: isActive ? 'text.primary' : 'text.secondary',
           }}
         />
       </ListItemButton>
-    </ListItem>
+
+      {/* Expanded Content */}
+      <Collapse in={isExpanded}>
+        <List disablePadding sx={{ pl: 2.5 }}>
+          {/* Forms Section */}
+          <TreeSection
+            label="Forms"
+            icon={<Description sx={{ fontSize: 16, color: '#00ED64' }} />}
+            items={content.forms}
+            loading={content.loading}
+            basePath={formsPath}
+            currentPath={currentPath}
+            isActive={isFormsActive}
+            itemPath={(item) => `${formsPath}/${item.formId || item.id}/edit`}
+            count={app.stats?.formsCount}
+            emptyText="No forms"
+            newItemPath={`${formsPath}/new`}
+            newItemLabel="New Form"
+          />
+
+          {/* Workflows Section */}
+          <TreeSection
+            label="Workflows"
+            icon={<AccountTree sx={{ fontSize: 16, color: '#9C27B0' }} />}
+            items={content.workflows}
+            loading={content.loading}
+            basePath={workflowsPath}
+            currentPath={currentPath}
+            isActive={isWorkflowsActive}
+            itemPath={(item) => `${workflowsPath}/${item.id}`}
+            count={app.stats?.workflowsCount}
+            emptyText="No workflows"
+            newItemPath={workflowsPath}
+            newItemLabel="New Workflow"
+          />
+
+          {/* Settings Link */}
+          <ListItem disablePadding sx={{ mb: 0.25 }}>
+            <ListItemButton
+              component={Link}
+              href={settingsPath}
+              sx={{
+                borderRadius: 1,
+                py: 0.5,
+                px: 1,
+                bgcolor: isSettingsActive ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                '&:hover': { bgcolor: 'action.hover' },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <Settings sx={{ fontSize: 16, color: isSettingsActive ? 'primary.main' : 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Settings"
+                primaryTypographyProps={{
+                  fontSize: '0.75rem',
+                  fontWeight: isSettingsActive ? 600 : 400,
+                  color: isSettingsActive ? 'text.primary' : 'text.secondary',
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
+
+          {/* Data Link */}
+          <ListItem disablePadding sx={{ mb: 0.25 }}>
+            <ListItemButton
+              component={Link}
+              href={dataPath}
+              sx={{
+                borderRadius: 1,
+                py: 0.5,
+                px: 1,
+                bgcolor: isDataActive ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                '&:hover': { bgcolor: 'action.hover' },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <Storage sx={{ fontSize: 16, color: isDataActive ? 'primary.main' : 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Data"
+                primaryTypographyProps={{
+                  fontSize: '0.75rem',
+                  fontWeight: isDataActive ? 600 : 400,
+                  color: isDataActive ? 'text.primary' : 'text.secondary',
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      </Collapse>
+    </Box>
+  );
+}
+
+interface TreeSectionProps {
+  label: string;
+  icon: React.ReactNode;
+  items: Array<{ id: string; formId?: string; name: string; slug?: string }>;
+  loading: boolean;
+  basePath: string;
+  currentPath: string;
+  isActive: boolean;
+  itemPath: (item: { id: string; formId?: string; name: string; slug?: string }) => string;
+  count?: number;
+  emptyText: string;
+  newItemPath: string;
+  newItemLabel: string;
+}
+
+function TreeSection({
+  label,
+  icon,
+  items,
+  loading,
+  basePath,
+  currentPath,
+  isActive,
+  itemPath,
+  count,
+  emptyText,
+  newItemPath,
+  newItemLabel,
+}: TreeSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Auto-expand if active
+  useEffect(() => {
+    if (isActive) {
+      setExpanded(true);
+    }
+  }, [isActive]);
+
+  return (
+    <Box sx={{ mb: 0.5 }}>
+      {/* Section Header */}
+      <ListItemButton
+        onClick={() => setExpanded(!expanded)}
+        sx={{
+          borderRadius: 1,
+          py: 0.5,
+          px: 1,
+          bgcolor: isActive && !expanded ? (theme) => alpha(theme.palette.primary.main, 0.08) : 'transparent',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        <ListItemIcon sx={{ minWidth: 20 }}>
+          {expanded ? (
+            <ExpandMore sx={{ fontSize: 14, color: 'text.secondary' }} />
+          ) : (
+            <ChevronRight sx={{ fontSize: 14, color: 'text.secondary' }} />
+          )}
+        </ListItemIcon>
+        <ListItemIcon sx={{ minWidth: 24 }}>
+          {icon}
+        </ListItemIcon>
+        <ListItemText
+          primary={label}
+          primaryTypographyProps={{
+            fontSize: '0.75rem',
+            fontWeight: isActive ? 600 : 500,
+            color: isActive ? 'text.primary' : 'text.secondary',
+          }}
+        />
+        {count !== undefined && count > 0 && (
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+            {count}
+          </Typography>
+        )}
+      </ListItemButton>
+
+      {/* Section Items */}
+      <Collapse in={expanded}>
+        <List disablePadding sx={{ pl: 2 }}>
+          {loading ? (
+            <ListItem sx={{ py: 0.5, px: 1 }}>
+              <CircularProgress size={12} sx={{ mr: 1 }} />
+              <Typography variant="caption" color="text.secondary">Loading...</Typography>
+            </ListItem>
+          ) : items.length === 0 ? (
+            <ListItem sx={{ py: 0.5, px: 1 }}>
+              <Typography variant="caption" color="text.disabled">{emptyText}</Typography>
+            </ListItem>
+          ) : (
+            items.slice(0, 10).map((item) => {
+              const path = itemPath(item);
+              const isItemActive = currentPath.includes(item.formId || item.id);
+              return (
+                <ListItem key={item.id} disablePadding sx={{ mb: 0.25 }}>
+                  <ListItemButton
+                    component={Link}
+                    href={path}
+                    sx={{
+                      borderRadius: 1,
+                      py: 0.25,
+                      px: 1,
+                      bgcolor: isItemActive ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <ListItemText
+                      primary={item.name}
+                      primaryTypographyProps={{
+                        fontSize: '0.7rem',
+                        fontWeight: isItemActive ? 600 : 400,
+                        noWrap: true,
+                        color: isItemActive ? 'text.primary' : 'text.secondary',
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          )}
+          {items.length > 10 && (
+            <ListItem sx={{ py: 0.25, px: 1 }}>
+              <ListItemButton
+                component={Link}
+                href={basePath}
+                sx={{ borderRadius: 1, py: 0.25, px: 0.5 }}
+              >
+                <Typography variant="caption" color="primary">
+                  +{items.length - 10} more...
+                </Typography>
+              </ListItemButton>
+            </ListItem>
+          )}
+          {/* Add New Item */}
+          <ListItem disablePadding sx={{ mt: 0.5 }}>
+            <ListItemButton
+              component={Link}
+              href={newItemPath}
+              sx={{
+                borderRadius: 1,
+                py: 0.25,
+                px: 1,
+                '&:hover': { bgcolor: 'action.hover' },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 20 }}>
+                <Add sx={{ fontSize: 12, color: 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary={newItemLabel}
+                primaryTypographyProps={{
+                  fontSize: '0.7rem',
+                  color: 'text.secondary',
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      </Collapse>
+    </Box>
   );
 }
 
@@ -153,10 +466,11 @@ export function AppSidebar() {
 
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [showRecent, setShowRecent] = useState(true);
-  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+  const [appContents, setAppContents] = useState<Record<string, AppContentCache>>({});
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Load recent items from localStorage (shared with RecentItemsMenu)
+  // Load recent items from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -165,7 +479,6 @@ export function AppSidebar() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const items = JSON.parse(stored) as RecentItem[];
-          // Sort by timestamp (most recent first) and limit to 5
           const sorted = items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
           setRecentItems(sorted);
         }
@@ -174,10 +487,8 @@ export function AppSidebar() {
       }
     };
 
-    // Load initially
     loadRecentItems();
 
-    // Listen for storage changes (in case another tab updates)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) {
         loadRecentItems();
@@ -188,49 +499,92 @@ export function AppSidebar() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [pathname]);
 
-  // Get current app slug from URL or context
+  // Auto-expand the current application
+  useEffect(() => {
+    if (currentApplication) {
+      setExpandedApps((prev) => {
+        const next = new Set(prev);
+        next.add(currentApplication.applicationId);
+        return next;
+      });
+      // Also load content if not already loaded
+      if (!appContents[currentApplication.applicationId]?.loaded) {
+        loadAppContent(currentApplication.applicationId);
+      }
+    }
+  }, [currentApplication?.applicationId]);
+
   const currentAppSlug = currentApplication?.slug || pathname?.match(/^\/apps\/([^/]+)/)?.[1];
 
   const handleNewApp = () => {
-    // Navigate to create new application
     if (currentOrgId) {
       router.push(`/orgs/${currentOrgId}/projects`);
     }
   };
 
-  // Keyboard navigation for app list
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (applications.length === 0) return;
+  const toggleAppExpanded = (appId: string) => {
+    setExpandedApps((prev) => {
+      const next = new Set(prev);
+      if (next.has(appId)) {
+        next.delete(appId);
+      } else {
+        next.add(appId);
+      }
+      return next;
+    });
+  };
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev < applications.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev > 0 ? prev - 1 : applications.length - 1
-        );
-        break;
-      case 'Enter':
-        if (focusedIndex >= 0 && focusedIndex < applications.length) {
-          const app = applications[focusedIndex];
-          router.push(getAppUrl(app.slug, 'forms'));
-        }
-        break;
-      case 'Escape':
-        setFocusedIndex(-1);
-        break;
+  const loadAppContent = async (appId: string) => {
+    if (!currentOrgId) return;
+
+    // Mark as loading
+    setAppContents((prev) => ({
+      ...prev,
+      [appId]: { forms: [], workflows: [], loading: true, loaded: false },
+    }));
+
+    try {
+      // Fetch forms and workflows in parallel
+      const [formsRes, workflowsRes] = await Promise.all([
+        fetch(`/api/forms/list?orgId=${currentOrgId}&applicationId=${appId}`),
+        fetch(`/api/workflows?orgId=${currentOrgId}&applicationId=${appId}`),
+      ]);
+
+      const formsData = formsRes.ok ? await formsRes.json() : { forms: [] };
+      const workflowsData = workflowsRes.ok ? await workflowsRes.json() : { workflows: [] };
+
+      setAppContents((prev) => ({
+        ...prev,
+        [appId]: {
+          forms: (formsData.forms || []).map((f: any) => ({
+            id: f.id || f.formId,
+            formId: f.formId || f.id,
+            name: f.name,
+            slug: f.slug,
+            isPublished: f.isPublished,
+          })),
+          workflows: (workflowsData.workflows || []).map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            slug: w.slug,
+            status: w.status,
+          })),
+          loading: false,
+          loaded: true,
+        },
+      }));
+    } catch (err) {
+      console.error('Failed to load app content:', err);
+      setAppContents((prev) => ({
+        ...prev,
+        [appId]: { forms: [], workflows: [], loading: false, loaded: true },
+      }));
     }
-  }, [applications, focusedIndex, router]);
+  };
 
-  // Reset focus when applications change
-  useEffect(() => {
-    setFocusedIndex(-1);
-  }, [applications]);
+  const getAppContent = (appId: string): AppContentCache => {
+    return appContents[appId] || { forms: [], workflows: [], loading: false, loaded: false };
+  };
 
   const drawerContent = (
     <Box
@@ -256,10 +610,9 @@ export function AppSidebar() {
         </Typography>
       </Box>
 
-      {/* Application List */}
+      {/* Application Tree */}
       <Box sx={{ flex: 1, overflow: 'auto', px: 1 }}>
         {isLoading ? (
-          // Loading skeletons
           <List disablePadding>
             {[1, 2, 3].map((i) => (
               <ListItem key={i} disablePadding sx={{ mb: 0.5 }}>
@@ -275,7 +628,6 @@ export function AppSidebar() {
             ))}
           </List>
         ) : applications.length === 0 ? (
-          // Empty state with call to action
           <Box sx={{ p: 2, textAlign: 'center' }}>
             <Apps sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -286,25 +638,17 @@ export function AppSidebar() {
             </Typography>
           </Box>
         ) : (
-          // Application list with keyboard navigation
-          <List
-            ref={listRef}
-            disablePadding
-            onKeyDown={handleKeyDown}
-            tabIndex={0}
-            sx={{
-              outline: 'none',
-              '&:focus-visible': {
-                // Show subtle focus indicator on list
-              },
-            }}
-          >
-            {applications.map((app, index) => (
-              <AppListItem
+          <List ref={listRef} disablePadding>
+            {applications.map((app) => (
+              <AppTreeItem
                 key={app.applicationId}
                 app={app}
                 isActive={app.slug === currentAppSlug}
-                isFocused={focusedIndex === index}
+                isExpanded={expandedApps.has(app.applicationId)}
+                onToggle={() => toggleAppExpanded(app.applicationId)}
+                content={getAppContent(app.applicationId)}
+                onLoadContent={() => loadAppContent(app.applicationId)}
+                currentPath={pathname || ''}
               />
             ))}
           </List>
@@ -387,9 +731,7 @@ export function AppSidebar() {
                       borderRadius: 1,
                       py: 0.75,
                       px: 1.5,
-                      '&:hover': {
-                        bgcolor: 'action.hover',
-                      },
+                      '&:hover': { bgcolor: 'action.hover' },
                     }}
                   >
                     <ListItemIcon sx={{ minWidth: 28 }}>

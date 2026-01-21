@@ -1,24 +1,61 @@
 # IT Help Desk Application
 
-A complete internal IT support ticketing system built as a **NetPad Application**. This example demonstrates how to build a production-ready Application that groups ticket intake forms, search interfaces, automated workflows, and integrations into a single, versioned, shareable solution.
+**Version 2.1.0** | 🤖 **Now with Conversational AI**
+
+A complete internal IT support ticketing system built as a **NetPad Application**. This example showcases a production-ready Application that combines conversational AI, traditional forms, smart search, and automated workflows into a single, versioned, shareable solution.
+
+## ✨ What's New in v2.1.0
+
+- 🤖 **Conversational AI Mode** - Users can describe IT issues naturally through an AI-powered chat interface
+- 📋 **Traditional Form Mode** - Classic form fields for users who prefer structured input
+- 🔀 **Mode Toggle** - Users can switch between conversational and form modes seamlessly
+- 📜 **Full Transcript Capture** - Every conversation is saved with timestamps and confidence scores
+- 📝 **Application Contract** - Public API surface defining inputs, outputs, side effects, and events
+- 🔍 **Enhanced Search** - Smart dropdowns with real-time data counts
+- 🎯 **Better Urgency Assessment** - AI naturally determines priority through conversation
 
 **This is a complete NetPad Application**, not just standalone forms and workflows. The Application includes:
-- Ticket submission forms (traditional and conversational AI-powered)
-- Ticket search form with smart dropdowns
-- Automated routing workflows
-- Application versioning and releases
-- Marketplace-ready structure
-- npm package integration
+- 🎫 Ticket submission forms (conversational AI + traditional)
+- 🔍 Smart ticket search with dynamic filters
+- ⚡ Automated routing workflows (email + Slack)
+- 📊 Application Contract (inputs, outputs, side effects)
+- 🔄 Versioned releases with semantic versioning
+- 🏪 Marketplace-ready structure
+- 📦 npm package integration
 
-Based on the article: [Build Your Own IT Help Desk Application in 30 Minutes](../../docs/internal/it-helpdesk-article.md)
+**Based on the article:** [Build Your Own IT Help Desk with AI in Minutes](../../docs/internal/it-helpdesk-article-v2.md)
 
 ## Features
 
-### Form Capabilities
+### 🤖 Conversational AI Capabilities (NEW in v2.1.0)
+
+- **Natural Language Intake** — Users describe IT issues conversationally instead of filling out forms
+- **Intelligent Extraction** — AI automatically extracts structured data (name, email, urgency, category, etc.)
+- **Context-Aware Questioning** — AI asks follow-up questions based on issue type (e.g., "What's the asset ID?" for hardware issues)
+- **Urgency Assessment** — AI naturally determines priority by asking "Is this blocking your work?"
+- **Full Transcript Capture** — Every conversation saved with timestamps, topic coverage, and field confidence scores
+- **Fallback to Traditional Form** — Users can toggle to classic form mode at any time
+- **9 Conversation Topics** — Greeting, email, department, issue overview, details, category, urgency, specifics, contact preferences
+- **13 Extracted Fields** — Maps conversation to structured ticket data automatically
+
+**Example Conversation:**
+```
+AI: Hi! I'm here to help with your IT issue. What's your name?
+User: Sarah Johnson
+AI: Thanks Sarah! What's going on with your tech setup?
+User: My laptop won't connect to WiFi
+AI: That's frustrating! Is this blocking your work right now?
+User: Yes, completely! I can't do anything
+AI: Got it. This sounds urgent. When did this start?
+User: This morning when I came in
+AI: [Submits ticket as HIGH urgency, Network category, with full context]
+```
+
+### 📋 Traditional Form Capabilities
 
 - **Reporter Information** — Capture name, email, department, and phone extension
 - **Issue Categorization** — Hardware, Software, Network, Access & Permissions, or Other
-- **Priority Levels** — Visual urgency indicators from Low to Critical
+- **Priority Levels** — Visual urgency indicators from Low 🟢 to Critical 🚨
 - **Conditional Fields** — Dynamic fields based on issue category:
   - Hardware → Asset ID / Serial Number
   - Software → Application Name
@@ -26,6 +63,7 @@ Based on the article: [Build Your Own IT Help Desk Application in 30 Minutes](..
   - Access → System/Resource Name
 - **Contact Preferences** — Preferred contact method and availability
 - **Validation** — Required fields and minimum character requirements
+- **Section Headers** — Organized layout with visual separators
 
 ### Search Capabilities
 
@@ -35,13 +73,50 @@ Based on the article: [Build Your Own IT Help Desk Application in 30 Minutes](..
 - **Date Range Filtering** — Filter tickets by submission date
 - **Results Display** — View search results in a card layout with ticket details
 
-### Application Features
+### 📊 Application Contract (NEW in v2.1.0)
+
+The IT Helpdesk Application includes a formal **Application Contract** that defines its public API surface:
+
+**Inputs (9 fields):**
+- `fullName`, `email`, `department`, `phoneExtension`
+- `issueCategory`, `urgencyLevel`, `subject`, `description`
+- `preferredContactMethod`
+
+**Outputs (4 guaranteed):**
+- `ticketId` - MongoDB document ID of saved ticket
+- `confirmationSent` - Boolean indicating confirmation email sent
+- `teamNotified` - Boolean indicating IT team notified
+- `escalated` - Boolean indicating Slack escalation (critical only)
+
+**Side Effects:**
+- Writes to `it_support_tickets` MongoDB collection
+- Sends confirmation email to reporter
+- Sends notification email to IT team
+- Sends Slack webhook for critical tickets
+
+**Events:**
+- `ticket.created` - Emitted when ticket is submitted
+- `ticket.confirmed` - Emitted when confirmation email sent
+- `ticket.notified` - Emitted when IT team notified
+- `ticket.escalated` - Emitted when critical ticket escalated
+
+**Why Contracts Matter:**
+- Clear API documentation for users
+- Breaking change detection for versioning
+- Semantic versioning enforcement
+- Integration confidence for developers
+
+See the full contract in `templates/manifest.json`.
+
+### 🏗️ Application Features
 
 - **Complete Application Structure** - Forms, workflows, and connections grouped together
-- **Versioned Releases** - Semantic versioning (2.0.0) with changelogs
-- **Marketplace Ready** - Can be published to NetPad marketplace
+- **Versioned Releases** - Semantic versioning (v2.1.0) with changelogs
+- **Application Contract** - Formal API surface definition (NEW in v2.1.0)
+- **Marketplace Ready** - Published to NetPad marketplace
 - **npm Package** - Can be published to npm for programmatic installation
 - **Application Permissions** - Fine-grained RBAC at the Application level
+- **Portable Bundle** - Export as JSON for version control
 
 ### Technical Highlights
 
@@ -405,18 +480,20 @@ templates/
 
 ### What's Included
 
-**Form (`form.json`):**
-- IT Support Request form with conditional fields
+**Form (`form.json` - v2.1.0):**
+- IT Support Request form with **conversational AI** and traditional modes
+- **Conversational config** with 9 topics and 13 extraction fields
 - Reporter information, issue categorization, priority levels
-- Category-specific fields (Asset ID, Application Name, Network Location, etc.)
+- Category-specific conditional fields (Asset ID, Application Name, Network Location, etc.)
 - Contact preferences and validation rules
+- Full transcript capture with timestamps and confidence scores
 
 **Workflow (`workflow.json`):**
 - Automated ticket routing workflow
-- Requester confirmation email
-- IT team notification email
-- Critical ticket escalation to Slack
-- Parallel execution for simultaneous notifications
+- Requester confirmation email (parallel execution)
+- IT team notification email (parallel execution)
+- Critical ticket escalation to Slack (conditional)
+- Mustache template variables for dynamic content
 
 ### Importing the Application
 
@@ -478,13 +555,92 @@ After importing the workflow, you'll need to configure:
 - **Breaking Change Detection**: Application Contracts detect and enforce version bumps
 - **Disaster Recovery**: Backup and restore complete Application configurations
 
+## Testing
+
+This Application includes a comprehensive testing guide with 32 test scenarios:
+
+📋 **[Complete Testing Guide](./TESTING.md)**
+
+**Test Coverage:**
+- ✅ Marketplace and bundle import testing
+- ✅ Conversational AI mode testing
+- ✅ Traditional form validation
+- ✅ Conditional field logic
+- ✅ Workflow triggers and email notifications
+- ✅ Critical ticket Slack escalation
+- ✅ Smart search with dynamic dropdowns
+- ✅ MongoDB data persistence
+- ✅ Edge cases and error handling
+- ✅ Performance testing
+- ✅ Accessibility testing
+- ✅ Mobile responsiveness
+
+**Quick Test:**
+```bash
+# Test the application locally
+cd examples/it-helpdesk
+npm install
+npm run dev
+
+# Open http://localhost:3003
+# 1. Test conversational mode
+# 2. Test traditional form
+# 3. Test conditional fields
+# 4. Test workflow (check emails)
+```
+
 ## Related Resources
 
-- [IT Help Desk Article](../../docs/internal/it-helpdesk-article.md) - Full tutorial
-- [Employee Onboarding Demo](../employee-onboarding-demo/) - Multi-page form example
-- [Workflow Integration Demo](../workflow-integration-demo/) - Workflow automation example
-- [@netpad/forms Documentation](../../packages/forms/README.md) - Forms package reference
-- [Template Export/Import Strategy](../../docs/TEMPLATE_EXPORT_STRATEGY.md) - Template system architecture
+### Documentation
+- 📖 [IT Help Desk Article v2](../../docs/internal/it-helpdesk-article-v2.md) - **NEW** Step-by-step tutorial with AI
+- 📖 [IT Help Desk Article v1](../../docs/internal/it-helpdesk-article.md) - Original tutorial
+- 📋 [Complete Testing Guide](./TESTING.md) - **NEW** 32 comprehensive test scenarios
+- 📝 [Rebuild Summary](./REBUILD_SUMMARY.md) - **NEW** v2.1.0 changes and roadmap
+
+### Example Applications
+- 🤝 [Collaborator Recruitment](../collaborator-recruitment/) - Conversational AI recruitment form
+- 👋 [Employee Onboarding Demo](../employee-onboarding-demo/) - Multi-page form example
+- ⚡ [Workflow Integration Demo](../workflow-integration-demo/) - Workflow automation example
+
+### Technical References
+- 📦 [@netpad/forms Documentation](../../packages/forms/README.md) - Forms package reference
+- 📄 [Bundle Format Docs](../../docs/bundle-format.md) - Application bundle specification
+- 🔗 [Template Export/Import Strategy](../../docs/TEMPLATE_EXPORT_STRATEGY.md) - Template system architecture
+- 🔒 [Application Contract Spec](../../docs/APPLICATION_PORTABILITY_SPEC.md) - Contract architecture
+
+## Version History
+
+### v2.1.0 (Current - 2026-01-21)
+- ✨ Added conversational AI mode with intelligent extraction
+- 📋 Added Application Contract defining public API
+- 🔍 Enhanced smart search with better aggregations
+- 📜 Added full conversation transcript capture
+- 🎯 Improved urgency assessment through natural conversation
+- 📚 Comprehensive testing guide with 32 scenarios
+- 📖 Rewritten tutorial article with step-by-step guide
+
+### v2.0.0 (2026-01-15)
+- 🎫 Complete Application structure
+- 🔍 Smart ticket search form
+- ⚡ Automated workflow routing
+- 📊 Semantic versioning with releases
+
+### v1.0.0 (2026-01-01)
+- 📝 Initial IT support request form
+- 📧 Basic email notifications
+- 🗂️ MongoDB storage
+
+## Contributing
+
+We welcome contributions! Areas for improvement:
+- 🌍 Internationalization (i18n) for multi-language support
+- 📱 Mobile app version (React Native)
+- 🔌 Additional integrations (ServiceNow, Jira, etc.)
+- 📊 Analytics dashboard for ticket metrics
+- 🤖 Advanced AI features (sentiment analysis, auto-categorization)
+- 🎨 Custom themes and branding options
+
+See [REBUILD_SUMMARY.md](./REBUILD_SUMMARY.md) for the development roadmap.
 
 ## License
 

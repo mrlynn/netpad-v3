@@ -24,7 +24,8 @@
     "migrate:default-applications": "tsx scripts/migrate-default-applications.ts",
     "migrate:backfill-application-ids": "tsx scripts/migrate-backfill-application-ids.ts",
     "seed:workflow-templates": "tsx scripts/seed-workflow-templates.ts",
-    "seed:collaborator-form": "tsx scripts/seed-collaborator-form.ts"
+    "seed:collaborator-form": "tsx scripts/seed-collaborator-form.ts",
+    "publish:it-helpdesk": "tsx scripts/publish-it-helpdesk-marketplace.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",

@@ -43,6 +43,7 @@ import { ApplicationCard } from './ApplicationCard';
 import { ApplicationDetailDialog } from './ApplicationDetailDialog';
 import { MyApplicationsView } from './MyApplicationsView';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { useInstalledApplications } from '@/hooks/useInstalledApplications';
 
 interface MarketplaceApplication {
   id: string;
@@ -129,6 +130,17 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
   const limit = 12;
 
+  // Fetch installed applications to check import status
+  const { installations, mutate: mutateInstallations } = useInstalledApplications({
+    orgId: organizationId || '',
+    projectId: projectId,
+  });
+
+  // Create a Set of imported marketplace application IDs for quick lookup
+  const importedAppIds = new Set(
+    installations.map(inst => inst.marketplaceApplicationId)
+  );
+
   useEffect(() => {
     console.log('[MarketplaceView] useEffect triggered:', { search, category, type, source, sort, page });
     loadApplications();
@@ -200,9 +212,18 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   };
 
   const handleImport = async (id: string) => {
-    if (!organizationId || !projectId) {
-      // More helpful error - suggest selecting an app first
-      alert('Please select an application from your workspace first. Click the app selector in the navigation bar to choose where to import this marketplace app.');
+    if (!isAuthenticated) {
+      alert('Please sign in to import applications from the marketplace.');
+      return;
+    }
+
+    if (isWaitlistUser) {
+      alert('Your account is pending approval. You\'ll be able to import applications once your access is approved.');
+      return;
+    }
+
+    if (!organizationId) {
+      alert('Unable to import: No organization found. Please contact support if this persists.');
       return;
     }
 
@@ -212,7 +233,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orgId: organizationId,
-          projectId: projectId,
+          // projectId is optional - API will use default project if not provided
+          projectId: projectId || undefined,
           options: {
             generateNewIds: true,
             preserveSlugs: false,
@@ -236,6 +258,9 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       if (applicationContext?.refreshApplications) {
         await applicationContext.refreshApplications();
       }
+
+      // Refresh installed applications to update the "Imported" status
+      mutateInstallations();
 
       // Navigate to the newly imported application
       if (result.application?.appSlug) {
@@ -275,12 +300,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
   const handleInstallFromNpm = async (packageName: string) => {
     if (!organizationId) {
-      alert('Please select an organization to install the package.');
-      return;
-    }
-
-    if (!projectId) {
-      alert('Please select a project to install the package.');
+      alert('Please sign in to install packages from npm.');
       return;
     }
 
@@ -291,7 +311,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         body: JSON.stringify({
           packageName,
           orgId: organizationId,
-          projectId,
+          // projectId is optional - API will use default project if not provided
+          projectId: projectId || undefined,
           overwriteExisting: false,
           installDependencies: true,
         }),
@@ -591,6 +612,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
                   onImport={handleImport}
                   onDownload={handleDownload}
                   onInstallFromNpm={handleInstallFromNpm}
+                  isImported={importedAppIds.has(app.id)}
                 />
               </Grid>
             ))}

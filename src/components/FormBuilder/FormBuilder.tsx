@@ -1627,6 +1627,8 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         currentDataSource={dataSource}
         currentOrganizationId={organizationId}
         formName={currentFormName}
+        applicationId={propApplicationId}
+        currentFormId={currentFormId}
       />
 
       {/* Keyboard Shortcuts Help */}

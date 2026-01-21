@@ -190,6 +190,20 @@ export async function POST(
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
     }
 
+    // If no projectId provided, use the default project for this org
+    let effectiveProjectId = projectId;
+    if (!effectiveProjectId) {
+      try {
+        const { ensureDefaultProject } = await import('@/lib/platform/projects');
+        const defaultProject = await ensureDefaultProject(orgId, session.userId);
+        effectiveProjectId = defaultProject.projectId;
+        console.log(`[Marketplace Import] Using default project: ${effectiveProjectId}`);
+      } catch (e) {
+        console.error('[Marketplace Import] Failed to get default project:', e);
+        return NextResponse.json({ error: 'Failed to get or create default project' }, { status: 500 });
+      }
+    }
+
     // Get application bundle
     const db = await getPlatformDb();
     const collection = db.collection<MarketplaceApplication>('marketplace_applications');
@@ -256,13 +270,13 @@ export async function POST(
     let applicationId: string | undefined;
     const manifest = application.manifest;
 
-    if (manifest && projectId) {
+    if (manifest && effectiveProjectId) {
       try {
         // Use manifest data to create an application
         const appSlug = generateSlug(manifest.name);
 
         // Check if application with same slug already exists
-        const existingApp = await getApplicationBySlug(orgId, projectId, appSlug);
+        const existingApp = await getApplicationBySlug(orgId, effectiveProjectId, appSlug);
 
         if (existingApp) {
           // Use existing application
@@ -277,7 +291,7 @@ export async function POST(
           // Create new application
           const newApp = await createApplication({
             organizationId: orgId,
-            projectId,
+            projectId: effectiveProjectId,
             name: manifest.name,
             description: manifest.description || manifest.summary || '',
             slug: appSlug,
@@ -297,7 +311,7 @@ export async function POST(
         if (error.message?.includes('already exists')) {
           // Try to find the existing app
           const appSlug = generateSlug(manifest.name);
-          const existingApp = await getApplicationBySlug(orgId, projectId, appSlug);
+          const existingApp = await getApplicationBySlug(orgId, effectiveProjectId, appSlug);
           if (existingApp) {
             applicationId = existingApp.applicationId;
             console.log(`[Marketplace Import] Using existing application after error: ${existingApp.name} (${applicationId})`);
@@ -369,8 +383,8 @@ export async function POST(
           );
 
           // Assign projectId and applicationId
-          if (projectId) {
-            formConfig.projectId = projectId;
+          if (effectiveProjectId) {
+            formConfig.projectId = effectiveProjectId;
           }
           if (applicationId) {
             (formConfig as any).applicationId = applicationId;
@@ -388,7 +402,7 @@ export async function POST(
             formId,
             id: formId,
             applicationId,
-            projectId,
+            projectId: effectiveProjectId,
           } as any);
 
           const newId = formConfig.id!;
@@ -459,7 +473,7 @@ export async function POST(
             name: workflowData.name,
             description: workflowData.description,
             tags: workflowData.tags || [],
-            projectId: projectId,
+            projectId: effectiveProjectId,
             applicationId: applicationId,
           });
 
@@ -531,7 +545,7 @@ export async function POST(
       try {
         const installation = await createInstallation({
           organizationId: orgId,
-          projectId: projectId || '',
+          projectId: effectiveProjectId || '',
           marketplaceApplicationId: application.id,
           marketplaceApplicationName: application.manifest.name,
           installedVersion: application.manifest.version,

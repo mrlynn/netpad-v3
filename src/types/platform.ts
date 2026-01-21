@@ -201,6 +201,13 @@ export interface PlatformUser {
   waitlistStatus?: WaitlistStatus;
   waitlistMetadata?: WaitlistMetadata;
 
+  // Signup onboarding tracking
+  signupOnboarding?: {
+    completed: boolean;
+    completedAt?: Date;
+    skippedSteps?: ('database' | 'team-invites')[];
+  };
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

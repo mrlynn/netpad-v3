@@ -8,6 +8,7 @@ import { TourProvider } from '@/contexts/TourContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ApplicationProvider } from '@/contexts/ApplicationContext';
 import { IntentOnboardingProvider } from '@/contexts/IntentOnboardingContext';
+import { SignupOnboardingProvider } from '@/contexts/SignupOnboardingContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
 import { ImpersonationBanner } from '@/components/Admin/ImpersonationBanner';
 import { Analytics } from "@vercel/analytics/next"
@@ -40,19 +41,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ClientLayout>
           <AuthProvider>
             <ImpersonationBanner />
-            <HelpProvider>
-              <TourProvider>
-                <OrganizationProvider>
-                  <ApplicationProvider>
-                    <IntentOnboardingProvider>
-                      <PipelineProvider>{children}</PipelineProvider>
-                      <DevPanelWrapper />
-                      <Analytics />
-                    </IntentOnboardingProvider>
-                  </ApplicationProvider>
-                </OrganizationProvider>
-              </TourProvider>
-            </HelpProvider>
+            <SignupOnboardingProvider>
+              <HelpProvider>
+                <TourProvider>
+                  <OrganizationProvider>
+                    <ApplicationProvider>
+                      <IntentOnboardingProvider>
+                        <PipelineProvider>{children}</PipelineProvider>
+                        <DevPanelWrapper />
+                        <Analytics />
+                      </IntentOnboardingProvider>
+                    </ApplicationProvider>
+                  </OrganizationProvider>
+                </TourProvider>
+              </HelpProvider>
+            </SignupOnboardingProvider>
           </AuthProvider>
         </ClientLayout>
       </body>

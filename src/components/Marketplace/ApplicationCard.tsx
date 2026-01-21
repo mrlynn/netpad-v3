@@ -30,6 +30,7 @@ import {
   Verified as VerifiedIcon,
   CloudDownload as NpmIcon,
   InstallMobile as InstallIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { RatingStars } from './RatingStars';
 import { ApplicationManifest } from '@/types/template';
@@ -63,6 +64,8 @@ interface ApplicationCardProps {
   onImport?: (id: string) => void;
   onDownload?: (id: string) => void;
   onInstallFromNpm?: (packageName: string) => void;
+  /** Whether this application has already been imported to the current context */
+  isImported?: boolean;
 }
 
 export function ApplicationCard({
@@ -71,6 +74,7 @@ export function ApplicationCard({
   onImport,
   onDownload,
   onInstallFromNpm,
+  isImported = false,
 }: ApplicationCardProps) {
   return (
     <Card
@@ -258,32 +262,45 @@ export function ApplicationCard({
           <Button
             size="small"
             variant="contained"
-            startIcon={<InstallIcon />}
-            onClick={() => onInstallFromNpm(application.sourcePackageName!)}
+            startIcon={isImported ? <CheckCircleIcon /> : <InstallIcon />}
+            onClick={() => !isImported && onInstallFromNpm(application.sourcePackageName!)}
+            disabled={isImported}
             sx={{
               ml: 'auto',
-              bgcolor: '#CB3837',
+              bgcolor: isImported ? alpha('#00ED64', 0.1) : '#CB3837',
+              color: isImported ? '#00ED64' : 'white',
               '&:hover': {
-                bgcolor: '#A32A2A',
+                bgcolor: isImported ? alpha('#00ED64', 0.15) : '#A32A2A',
+              },
+              '&.Mui-disabled': {
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
               },
             }}
           >
-            Install from npm
+            {isImported ? 'Imported' : 'Install from npm'}
           </Button>
         ) : onImport ? (
           <Button
             size="small"
             variant="contained"
-            onClick={() => onImport(application.id)}
+            startIcon={isImported ? <CheckCircleIcon /> : undefined}
+            onClick={() => !isImported && onImport(application.id)}
+            disabled={isImported}
             sx={{
               ml: 'auto',
-              bgcolor: '#00ED64',
+              bgcolor: isImported ? alpha('#00ED64', 0.1) : '#00ED64',
+              color: isImported ? '#00ED64' : 'white',
               '&:hover': {
-                bgcolor: '#00CC55',
+                bgcolor: isImported ? alpha('#00ED64', 0.15) : '#00CC55',
+              },
+              '&.Mui-disabled': {
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
               },
             }}
           >
-            Import
+            {isImported ? 'Imported' : 'Import'}
           </Button>
         ) : null}
         {onDownload && (

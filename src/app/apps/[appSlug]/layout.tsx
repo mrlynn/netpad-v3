@@ -104,7 +104,12 @@ export default function AppSlugLayout({
         resolvedSlugRef.current = appSlug;
 
         // Select the application (without navigating)
-        await selectApplication(app.applicationId, { navigate: false });
+        // Pass the app object directly in case it's not in the cache yet (e.g., newly created)
+        await selectApplication(app.applicationId, { navigate: false, application: app });
+
+        // Refresh applications in the background so the new app appears in the switcher
+        refreshApplications();
+
         setError(null);
         setIsResolving(false);
       } catch (err) {

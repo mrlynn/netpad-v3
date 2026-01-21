@@ -1,67 +1,200 @@
 {
-  "application": {
-    "name": "IT Help Desk",
-    "version": "2.0.0",
-    "schemaVersion": "1.0.0",
-    "netpadVersion": "4.6.0",
-    "description": "A complete IT support ticketing system built as a NetPad Application. Includes ticket submission (traditional and conversational AI-powered), ticket search and management, automated routing workflows, priority-based escalation, and Slack notifications. This is a production-ready Application that solves the job-to-be-done: 'Manage internal IT support requests efficiently without enterprise ticketing software.'",
-    "author": {
-      "name": "NetPad Examples",
-      "email": "examples@netpad.io"
-    },
-    "license": "MIT",
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "updatedAt": "2026-01-15T00:00:00.000Z"
+  "name": "IT Help Desk",
+  "version": "2.1.0",
+  "description": "A complete IT support ticketing system built as a NetPad Application. Includes ticket submission (traditional and conversational AI-powered), ticket search and management, automated routing workflows, priority-based escalation, and Slack notifications. This is a production-ready Application that solves the job-to-be-done: 'Manage internal IT support requests efficiently without enterprise ticketing software.'",
+  "summary": "Complete IT support ticketing with AI forms, smart search, and automated notifications",
+  "category": "helpdesk",
+  "tags": ["helpdesk", "it-support", "ticketing", "workflow-automation", "conditional-logic", "search", "slack-integration", "email-notifications", "conversational", "ai"],
+  "icon": "🎫",
+  "color": "#1976d2",
+  "author": {
+    "name": "NetPad",
+    "email": "templates@netpad.io"
   },
-  "manifest": {
-    "name": "IT Help Desk",
-    "version": "2.0.0",
-    "description": "Complete IT support ticketing system with ticket submission, search & management, conditional fields, priority-based routing, automated notifications, and Slack escalation for critical tickets",
-    "author": "NetPad Examples",
-    "license": "MIT",
-    "netpadVersion": "4.6.0",
-    "assets": {
-      "forms": ["form.json", "search-form.json"],
-      "workflows": ["workflow.json"]
-    },
-    "tags": ["helpdesk", "it-support", "ticketing", "application", "workflow-automation", "conditional-logic", "search", "data-management", "slack-integration", "email-notifications"],
-    "category": "helpdesk"
+  "license": "MIT",
+  "netpadVersion": "3.1.0",
+  "assets": {
+    "forms": ["form.json", "search-form.json"],
+    "workflows": ["workflow.json"]
   },
   "dependencies": {
-    "integrations": ["email", "slack"],
-    "netpadFeatures": ["conversational-forms", "search-forms", "smart-dropdowns", "conditional-logic", "workflow-automation"]
+    "integrations": ["email", "mongodb", "slack"]
   },
-  "instructions": {
-    "import": "This is a NetPad Application that groups related forms, workflows, and connections into a complete solution. Import this Application into your NetPad project to get a fully-functional IT help desk system.",
-    "setup": [
-      "1. Create a new Application in NetPad or import this bundle",
-      "2. Configure your MongoDB connection (the Application will store submissions in your specified collection)",
-      "3. Customize department options, issue categories, and contact preferences to match your organization",
-      "4. Configure the workflow email addresses (change 'it-support@yourcompany.com' to your IT team's email)",
-      "5. Set up Slack integration and update the '#it-critical-alerts' channel name",
-      "6. Create an Application Release to version your configuration",
-      "7. Publish the Application to your organization or the marketplace (optional)",
-      "8. The forms and workflows are already connected within the Application"
+  "contract": {
+    "version": "2.1.0",
+    "inputs": [
+      {
+        "key": "fullName",
+        "type": "string",
+        "required": true,
+        "description": "Reporter's full name",
+        "source": "form"
+      },
+      {
+        "key": "email",
+        "type": "string",
+        "required": true,
+        "description": "Reporter's email address",
+        "source": "form"
+      },
+      {
+        "key": "department",
+        "type": "string",
+        "required": true,
+        "description": "Department (engineering, sales, marketing, finance, hr, operations, executive)",
+        "source": "form"
+      },
+      {
+        "key": "phoneExtension",
+        "type": "string",
+        "required": false,
+        "description": "Phone extension for callback",
+        "source": "form"
+      },
+      {
+        "key": "issueCategory",
+        "type": "string",
+        "required": true,
+        "description": "Issue category (hardware, software, network, access, other)",
+        "source": "form"
+      },
+      {
+        "key": "urgencyLevel",
+        "type": "string",
+        "required": true,
+        "description": "Priority level (low, medium, high, critical)",
+        "source": "form"
+      },
+      {
+        "key": "subject",
+        "type": "string",
+        "required": true,
+        "description": "Brief subject line describing the issue",
+        "source": "form"
+      },
+      {
+        "key": "description",
+        "type": "string",
+        "required": true,
+        "description": "Detailed description of the issue",
+        "source": "form"
+      },
+      {
+        "key": "preferredContactMethod",
+        "type": "string",
+        "required": false,
+        "description": "How the reporter prefers to be contacted",
+        "source": "form"
+      }
     ],
-    "customization": [
-      "Modify the department dropdown options to match your organization structure",
-      "Add or remove issue categories and their corresponding conditional fields",
-      "Customize urgency levels and response time expectations",
-      "Edit email templates in the workflow to match your organization's tone",
-      "Add additional workflow actions (e.g., create tickets in Jira, log to spreadsheet)",
-      "Configure form theme and branding to match your brand",
-      "Customize search form filters and result columns for your IT team's needs",
-      "Use the Application Permissions feature to control who can edit forms/workflows",
-      "Create Application Releases to version your changes with semantic versioning"
+    "outputs": [
+      {
+        "key": "ticketId",
+        "type": "string",
+        "guaranteed": true,
+        "description": "MongoDB document ID of the saved ticket"
+      },
+      {
+        "key": "confirmationSent",
+        "type": "boolean",
+        "guaranteed": true,
+        "description": "Whether confirmation email was sent to reporter"
+      },
+      {
+        "key": "teamNotified",
+        "type": "boolean",
+        "guaranteed": true,
+        "description": "Whether IT team notification was sent"
+      },
+      {
+        "key": "escalated",
+        "type": "boolean",
+        "guaranteed": true,
+        "description": "Whether ticket was escalated to Slack (critical only)"
+      }
+    ],
+    "sideEffects": [
+      {
+        "type": "write",
+        "target": "it_support_tickets",
+        "description": "Saves ticket to MongoDB collection"
+      },
+      {
+        "type": "api_call",
+        "target": "email-send",
+        "description": "Sends confirmation email to reporter"
+      },
+      {
+        "type": "api_call",
+        "target": "email-send",
+        "description": "Sends notification email to IT team"
+      },
+      {
+        "type": "api_call",
+        "target": "slack-webhook",
+        "description": "Sends critical ticket alert to Slack channel (critical tickets only)"
+      }
+    ],
+    "events": [
+      {
+        "name": "ticket.created",
+        "description": "Emitted when a new IT support ticket is submitted"
+      },
+      {
+        "name": "ticket.confirmed",
+        "description": "Emitted when confirmation email is sent to reporter"
+      },
+      {
+        "name": "ticket.notified",
+        "description": "Emitted when IT team is notified of the ticket"
+      },
+      {
+        "name": "ticket.escalated",
+        "description": "Emitted when critical ticket is escalated to Slack"
+      }
     ]
   },
-  "connections": [
-    {
-      "id": "conn_ticket_submission",
-      "formRef": "it-support-request",
-      "workflowRef": "it-ticket-routing",
-      "type": "trigger",
-      "description": "Triggers ticket routing workflow when a ticket is submitted"
-    }
-  ]
+  "instructions": {
+    "import": "This template creates a complete IT help desk system with ticket submission forms (traditional and conversational AI), smart search interface, and automated workflow routing. Use it to manage internal IT support requests without expensive enterprise ticketing software.",
+    "setup": [
+      "1. Import the template bundle using the NetPad import API or UI",
+      "2. Configure your MongoDB connection in Settings → Connections",
+      "3. Configure your email integration in Settings → Integrations",
+      "4. (Optional) Configure Slack webhook for critical ticket escalation",
+      "5. Update the IT team email address in the workflow (default: it-support@yourcompany.com)",
+      "6. Update the Slack webhook URL for critical alerts (if using Slack)",
+      "7. Customize department options to match your organization",
+      "8. Customize issue categories and conditional fields as needed",
+      "9. Publish the ticket submission form",
+      "10. Activate the ticket routing workflow",
+      "11. (Optional) Publish the search form for IT team use"
+    ],
+    "features": [
+      "Ticket submission with conditional fields based on issue category",
+      "Smart search interface with dynamic filters and data-driven dropdowns",
+      "Automated email confirmation to ticket reporters",
+      "Instant IT team notification with full ticket details",
+      "Critical ticket escalation to Slack with alerts",
+      "Priority-based routing (low, medium, high, critical)",
+      "MongoDB storage for searchable ticket history",
+      "Conversational AI mode for natural language ticket submission",
+      "Section headers and half-width fields for organized forms",
+      "Mobile-responsive design"
+    ],
+    "customization": [
+      "Update the department list to match your org structure",
+      "Add or modify issue categories (hardware, software, network, etc.)",
+      "Customize urgency levels and SLA expectations",
+      "Add category-specific conditional fields (asset ID, app name, etc.)",
+      "Modify email notification templates",
+      "Configure Slack channel for critical alerts",
+      "Add workflow actions (create Jira ticket, log to spreadsheet, etc.)",
+      "Customize form theme colors and branding",
+      "Add additional search filters in the search form",
+      "Configure Application permissions for IT team access"
+    ]
+  },
+  "screenshots": [],
+  "createdAt": "2026-01-15T00:00:00.000Z",
+  "updatedAt": "2026-01-21T00:00:00.000Z"
 }
