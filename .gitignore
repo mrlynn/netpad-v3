@@ -74,7 +74,6 @@ ehthumbs.db
 playwright-report/
 test-results/
 playwright/.auth/
-screenshots/
 
 # Temporary files
 *.tmp
