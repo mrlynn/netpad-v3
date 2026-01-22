@@ -256,6 +256,7 @@ export interface ApplicationManifest extends TemplateManifest {
 
 /**
  * Bundle Export Response
+ * Complete application bundle with forms, workflows, and connections
  */
 export interface BundleExport {
   manifest: TemplateManifest | ApplicationManifest;
@@ -279,6 +280,81 @@ export interface BundleExport {
   };
   // NEW: Deployment configuration
   deployment?: DeploymentConfig;
+}
+
+/**
+ * Marketplace Item Types
+ * The marketplace supports three distinct item types:
+ * - application: Complete bundles with forms, workflows, and connections
+ * - form: Standalone form definitions
+ * - workflow: Standalone workflow definitions
+ */
+export type MarketplaceItemType = 'application' | 'form' | 'workflow';
+
+/**
+ * Standalone Form Bundle
+ * Simplified bundle for publishing individual forms to the marketplace
+ */
+export interface FormBundle {
+  /** The form definition */
+  form: FormDefinition;
+  /** Optional theme override */
+  theme?: any;
+  /** Form-specific marketplace metadata */
+  formMetadata?: {
+    /** Number of fields in the form */
+    fieldCount: number;
+    /** Form type: traditional, conversational, or search */
+    formType: 'traditional' | 'conversational' | 'search';
+    /** Whether the form has multiple pages */
+    isMultiPage: boolean;
+    /** Whether the form uses conditional logic */
+    hasConditionalLogic: boolean;
+  };
+}
+
+/**
+ * Standalone Workflow Bundle
+ * Simplified bundle for publishing individual workflows to the marketplace
+ */
+export interface WorkflowBundle {
+  /** The workflow definition */
+  workflow: WorkflowDefinition;
+  /** Workflow-specific marketplace metadata */
+  workflowMetadata?: {
+    /** Number of nodes in the workflow */
+    nodeCount: number;
+    /** Trigger type */
+    triggerType: 'form_submission' | 'webhook' | 'schedule' | 'manual' | 'api';
+    /** Node types used in the workflow */
+    nodeTypes: string[];
+  };
+}
+
+/**
+ * Union type for all marketplace bundle types
+ */
+export type MarketplaceBundle = BundleExport | FormBundle | WorkflowBundle;
+
+/**
+ * Type guard to check if bundle is a FormBundle
+ */
+export function isFormBundle(bundle: MarketplaceBundle): bundle is FormBundle {
+  return 'form' in bundle && !('forms' in bundle);
+}
+
+/**
+ * Type guard to check if bundle is a WorkflowBundle
+ */
+export function isWorkflowBundle(bundle: MarketplaceBundle): bundle is WorkflowBundle {
+  return 'workflow' in bundle && !('workflows' in bundle);
+}
+
+/**
+ * Type guard to check if bundle is a BundleExport (application)
+ */
+export function isApplicationBundle(bundle: MarketplaceBundle): bundle is BundleExport {
+  return 'manifest' in bundle && ('forms' in bundle || 'workflows' in bundle);
 }
 
 /**

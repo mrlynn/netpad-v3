@@ -32,6 +32,7 @@ interface SSEStateUpdateEvent {
       name: string;
       covered: boolean;
       depth: number;
+      turnCount?: number;
     }>;
     partialExtractions?: Record<string, any>;
     messages?: Array<{
@@ -196,6 +197,10 @@ export function useConversationalForm(
     const state = createConversationState(formId, config);
     stateRef.current = state;
     setConversationId(state.conversationId);
+    console.log('[useConversationalForm] Initializing topics:', {
+      topicCount: state.topics.length,
+      topics: state.topics.map(t => ({ topicId: t.topicId, name: t.name, covered: t.covered })),
+    });
     setTopics(state.topics);
     setTurnCount(0);
     setConfidence(0);
@@ -219,6 +224,20 @@ export function useConversationalForm(
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
+
+    // Also add to stateRef so server has complete conversation history
+    if (stateRef.current) {
+      stateRef.current = {
+        ...stateRef.current,
+        messages: [
+          {
+            role: 'assistant' as const,
+            content: getWelcomeMessage(config),
+            timestamp: new Date(),
+          },
+        ],
+      };
+    }
   }, [initializeState, config]);
 
   // Reset conversation
@@ -259,6 +278,22 @@ export function useConversationalForm(
       attachments: fileAttachments,
     };
     setMessages((prev) => [...prev, userMessage]);
+
+    // CRITICAL: Also add user message to stateRef BEFORE making the request
+    // This ensures the server has access to ALL previous messages for extraction
+    if (stateRef.current) {
+      stateRef.current = {
+        ...stateRef.current,
+        messages: [
+          ...stateRef.current.messages,
+          {
+            role: 'user' as const,
+            content: message.trim(),
+            timestamp: new Date(),
+          },
+        ],
+      };
+    }
 
     // Create placeholder for assistant response
     const assistantMessageId = generateId();
@@ -382,17 +417,73 @@ export function useConversationalForm(
         // Update state from server
         setTurnCount(event.state.turnCount);
         setConfidence(event.state.confidence);
-        setTopics((prev) =>
-          prev.map((t) => {
-            const updated = event.state.topics.find((ut) => ut.topicId === t.topicId);
-            return updated ? { 
-              ...t, 
-              covered: updated.covered, 
-              depth: updated.depth,
-              turnCount: updated.turnCount !== undefined ? updated.turnCount : t.turnCount,
-            } : t;
-          })
-        );
+        
+        // CRITICAL FIX: Use server topics directly if available, otherwise merge
+        if (event.state.topics && event.state.topics.length > 0) {
+          console.log('[useConversationalForm] Received state_update with topics:', {
+            topicCount: event.state.topics.length,
+            topics: event.state.topics.map((t: any) => ({
+              topicId: t.topicId,
+              name: t.name,
+              covered: t.covered,
+            })),
+            currentTopics: topics.map(t => ({
+              topicId: t.topicId,
+              name: t.name,
+              covered: t.covered,
+            })),
+          });
+          
+          // Server has topics - use them directly (most reliable)
+          setTopics((prev) => {
+            // If prev is empty, use server topics directly
+            if (prev.length === 0) {
+              const newTopics = event.state.topics.map((t: any) => ({
+                topicId: t.topicId,
+                name: t.name,
+                covered: t.covered || false,
+                depth: t.depth || 0,
+                priority: 'required' as const, // Default, will be overridden if prev has it
+                turnCount: t.turnCount || 0,
+              }));
+              console.log('[useConversationalForm] Initializing topics from server:', newTopics);
+              return newTopics;
+            }
+            
+            // Merge: update existing topics, add new ones from server
+            const merged = [...prev];
+            for (const serverTopic of event.state.topics) {
+              const existingIndex = merged.findIndex(t => t.topicId === serverTopic.topicId);
+              if (existingIndex >= 0) {
+                // Update existing topic with server data
+                const oldCovered = merged[existingIndex].covered;
+                merged[existingIndex] = {
+                  ...merged[existingIndex],
+                  covered: serverTopic.covered !== undefined ? serverTopic.covered : merged[existingIndex].covered,
+                  depth: serverTopic.depth !== undefined ? serverTopic.depth : merged[existingIndex].depth,
+                  turnCount: serverTopic.turnCount !== undefined ? serverTopic.turnCount : merged[existingIndex].turnCount,
+                };
+                if (oldCovered !== merged[existingIndex].covered) {
+                  console.log(`[useConversationalForm] Topic ${serverTopic.name} (${serverTopic.topicId}) changed: ${oldCovered} -> ${merged[existingIndex].covered}`);
+                }
+              } else {
+                // Add new topic from server
+                merged.push({
+                  topicId: serverTopic.topicId,
+                  name: serverTopic.name,
+                  covered: serverTopic.covered || false,
+                  depth: serverTopic.depth || 0,
+                  priority: 'required' as const,
+                  turnCount: serverTopic.turnCount || 0,
+                });
+              }
+            }
+            console.log('[useConversationalForm] Merged topics:', merged.map(t => ({ name: t.name, covered: t.covered })));
+            return merged;
+          });
+        } else {
+          console.warn('[useConversationalForm] state_update received without topics!', event.state);
+        }
         // Update ref state with full state including messages
         if (stateRef.current && event.state.messages) {
           stateRef.current = {

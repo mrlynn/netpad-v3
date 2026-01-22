@@ -342,12 +342,40 @@ submissions.forEach(sub => {
 - Verify `conversationalData` is being passed in the submit request
 - Check the submission service logs for errors
 
+## Publishing to Marketplace
+
+To publish this application to the NetPad marketplace:
+
+```bash
+# From the netpad-3 root directory
+npx tsx scripts/publish-collaborator-app-marketplace.ts
+```
+
+This will:
+1. Load all template files from `templates/`
+2. Create a marketplace bundle with the manifest, form, workflow, and connections
+3. Publish to the `marketplace_applications` collection
+4. Mark it as an official NetPad app (auto-approved)
+
+The app will be available at `/marketplace/applications/netpad-collaborator-recruitment`.
+
+### Bundle Structure
+
+```
+templates/
+├── manifest.json      # Application metadata, dependencies, instructions
+├── form.json          # Form definition with conversational config
+├── workflow.json      # Email notification workflow
+└── connections.json   # Form-workflow trigger connections
+```
+
 ## Related Documentation
 
 - [Conversational Forms Guide](/docs/conversational-forms.md)
 - [Workflow Automation](/docs/workflows.md)
 - [Form Builder](/docs/form-builder.md)
 - [Template System](/docs/templates.md)
+- [Bundle Format](/docs/bundle-format.md)
 
 ## License
 

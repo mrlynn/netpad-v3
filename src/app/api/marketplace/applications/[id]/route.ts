@@ -21,7 +21,7 @@ import {
   resolveFormWorkflowReferences,
 } from '@/lib/templates/import';
 import { getOrgFormsCollection } from '@/lib/platform/db';
-import { createWorkflow } from '@/lib/workflow/db';
+import { createWorkflow, updateWorkflow } from '@/lib/workflow/db';
 import { createInstallation } from '@/lib/platform/installedApplications';
 import { createApplication, calculateApplicationStats, getApplicationBySlug } from '@/lib/platform/applications';
 
@@ -126,11 +126,54 @@ export async function GET(
       );
     }
 
-    // Return preview (without full bundle data)
-    return NextResponse.json({
-      id: application.id,
-      manifest: application.manifest,
-      preview: {
+    // Determine item type
+    const itemType = (application as any).itemType || 'application';
+
+    // Build type-specific preview data
+    let preview: any = {};
+
+    if (itemType === 'form') {
+      // For standalone forms, show form-specific details
+      const formBundle = (application as any).bundle;
+      const form = formBundle?.form;
+      const formMetadata = formBundle?.formMetadata;
+
+      preview = {
+        // Form-specific fields
+        fieldCount: formMetadata?.fieldCount || form?.fieldConfigs?.length || 0,
+        formType: formMetadata?.formType || 'traditional',
+        isMultiPage: formMetadata?.isMultiPage || false,
+        hasConditionalLogic: formMetadata?.hasConditionalLogic || false,
+        // Field details
+        fields: form?.fieldConfigs?.map((f: any) => ({
+          path: f.path,
+          label: f.label,
+          type: f.type,
+          required: f.required,
+          options: f.options,
+        })) || [],
+      };
+    } else if (itemType === 'workflow') {
+      // For standalone workflows, show workflow-specific details
+      const workflowBundle = (application as any).bundle;
+      const workflow = workflowBundle?.workflow;
+      const workflowMetadata = workflowBundle?.workflowMetadata;
+
+      preview = {
+        // Workflow-specific fields
+        nodeCount: workflowMetadata?.nodeCount || workflow?.canvas?.nodes?.length || 0,
+        triggerType: workflowMetadata?.triggerType || 'manual',
+        nodeTypes: workflowMetadata?.nodeTypes || [],
+        // Node details
+        nodes: workflow?.canvas?.nodes?.map((n: any) => ({
+          id: n.id,
+          type: n.type,
+          label: n.data?.label || n.type,
+        })) || [],
+      };
+    } else {
+      // For applications (bundles), show the full preview
+      preview = {
         formsCount: application.bundle.forms?.length || 0,
         workflowsCount: application.bundle.workflows?.length || 0,
         connectionsCount: application.bundle.connections?.length || 0,
@@ -148,7 +191,15 @@ export async function GET(
           type: c.type,
           description: c.description,
         })),
-      },
+      };
+    }
+
+    // Return preview (without full bundle data)
+    return NextResponse.json({
+      id: application.id,
+      itemType,
+      manifest: application.manifest,
+      preview,
       stats: {
         ...application.stats,
         ratingDistribution: application.stats.ratingDistribution || undefined,
@@ -184,7 +235,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { orgId, projectId, options } = body;
+    const { orgId, projectId, targetApplicationId, options } = body;
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
@@ -266,11 +317,16 @@ export async function POST(
       errors: [],
     };
 
-    // Create application from manifest (required for proper form/workflow association)
+    // Determine application to import into
     let applicationId: string | undefined;
     const manifest = application.manifest;
 
-    if (manifest && effectiveProjectId) {
+    // If targetApplicationId is provided, use it (user chose to import into existing app)
+    if (targetApplicationId) {
+      applicationId = targetApplicationId;
+      console.log(`[Marketplace Import] Using user-specified target application: ${applicationId}`);
+    } else if (manifest && effectiveProjectId) {
+      // Otherwise, create or find application from manifest
       try {
         // Use manifest data to create an application
         const appSlug = generateSlug(manifest.name);
@@ -331,7 +387,180 @@ export async function POST(
     const formIdMap = new Map<string, string>(); // oldId/slug -> newId
     const workflowIdMap = new Map<string, string>(); // oldId/slug -> newId
 
-    // Import forms
+    // Determine item type for proper import handling
+    const itemType = (application as any).itemType || 'application';
+
+    // Import standalone form (itemType === 'form')
+    if (itemType === 'form' && (application as any).bundle?.form) {
+      const formsCollection = await getOrgFormsCollection(orgId);
+      const formDef = (application as any).bundle.form;
+
+      try {
+        // Store old references for mapping
+        const oldId = formDef.id || '';
+        const oldSlug = formDef.slug || '';
+
+        // Check if form with same name/slug exists
+        if (!importOptions.overwriteExisting) {
+          const existing = await formsCollection.findOne({
+            $or: [
+              { name: formDef.name },
+              { slug: formDef.slug || generateSlug(formDef.name) },
+            ],
+          });
+
+          if (existing) {
+            result.errors?.push({
+              type: 'form',
+              name: formDef.name,
+              error: `Form "${formDef.name}" already exists. Use overwriteExisting option to replace.`,
+            });
+          }
+        }
+
+        if (result.errors?.length === 0 || !result.errors?.some(e => e.name === formDef.name)) {
+          // Build a form definition compatible with convertFormDefinitionToConfig
+          const formDefinition = {
+            id: formDef.id,
+            name: formDef.name,
+            description: formDef.description || manifest.description || manifest.summary || '',
+            slug: formDef.slug || generateSlug(formDef.name),
+            fieldConfigs: formDef.fieldConfigs || [],
+            settings: formDef.settings || {},
+          };
+
+          // Convert and save
+          const formConfig = convertFormDefinitionToConfig(
+            formDefinition,
+            orgId,
+            userId,
+            {
+              generateNewId: importOptions.generateNewIds,
+              preserveSlug: importOptions.preserveSlugs,
+            }
+          );
+
+          // Assign projectId and applicationId
+          if (effectiveProjectId) {
+            formConfig.projectId = effectiveProjectId;
+          }
+          if (applicationId) {
+            (formConfig as any).applicationId = applicationId;
+          }
+
+          // Generate unique formId if needed
+          if (!formConfig.id) {
+            const { nanoid } = await import('nanoid');
+            formConfig.id = `form_${nanoid(16)}`;
+          }
+          const formId = formConfig.id;
+
+          await formsCollection.insertOne({
+            ...formConfig,
+            formId,
+            id: formId,
+            applicationId,
+            projectId: effectiveProjectId,
+          } as any);
+
+          const newId = formConfig.id!;
+          result.imported.forms.push({
+            originalId: oldId || undefined,
+            newId,
+            name: formConfig.name,
+            slug: formConfig.slug || '',
+          });
+
+          // Map old references to new ID
+          if (oldId) formIdMap.set(oldId, newId);
+          if (oldSlug) formIdMap.set(oldSlug, newId);
+          formIdMap.set(formDef.name, newId);
+
+          console.log(`[Marketplace Import] Imported standalone form: ${formConfig.name} (${newId})`);
+        }
+      } catch (error: any) {
+        result.errors?.push({
+          type: 'form',
+          name: formDef.name || 'unknown',
+          error: error.message || 'Import failed',
+        });
+        console.error('[Marketplace Import] Standalone form import error:', error);
+      }
+    }
+
+    // Import standalone workflow (itemType === 'workflow')
+    if (itemType === 'workflow' && (application as any).bundle?.workflow) {
+      const workflowDef = (application as any).bundle.workflow;
+
+      try {
+        // Store old references for mapping
+        const oldId = workflowDef.id || '';
+        const oldSlug = workflowDef.slug || '';
+
+        // Build a workflow definition compatible with convertWorkflowDefinitionToDocument
+        const workflowDefinition = {
+          id: workflowDef.id,
+          name: workflowDef.name || manifest.name,
+          description: workflowDef.description || manifest.description || manifest.summary || '',
+          slug: workflowDef.slug || generateSlug(workflowDef.name || manifest.name),
+          canvas: workflowDef.canvas || { nodes: [], edges: [] },
+          settings: workflowDef.settings || {},
+          tags: workflowDef.tags || manifest.tags || [],
+        };
+
+        // Convert and create
+        const workflowData = convertWorkflowDefinitionToDocument(
+          workflowDefinition,
+          orgId,
+          userId,
+          {
+            generateNewId: importOptions.generateNewIds,
+            preserveSlug: importOptions.preserveSlugs,
+          }
+        );
+
+        // createWorkflow only takes name, description, tags
+        const workflow = await createWorkflow(orgId, userId, {
+          name: workflowData.name,
+          description: workflowData.description,
+          tags: workflowData.tags || [],
+          projectId: effectiveProjectId,
+          applicationId: applicationId,
+        });
+
+        // Update with canvas/settings
+        if (workflowData.canvas) {
+          await updateWorkflow(orgId, workflow.id, userId, { canvas: workflowData.canvas });
+        }
+        if (workflowData.settings) {
+          await updateWorkflow(orgId, workflow.id, userId, { settings: workflowData.settings });
+        }
+
+        const newId = workflow.id;
+        result.imported.workflows.push({
+          originalId: oldId || undefined,
+          newId,
+          name: workflowData.name,
+          slug: workflow.slug || '',
+        });
+
+        // Map old references to new ID
+        if (oldId) workflowIdMap.set(oldId, newId);
+        if (oldSlug) workflowIdMap.set(oldSlug, newId);
+        workflowIdMap.set(workflowDef.name || manifest.name, newId);
+
+        console.log(`[Marketplace Import] Imported standalone workflow: ${workflowData.name} (${newId})`);
+      } catch (error: any) {
+        result.errors?.push({
+          type: 'workflow',
+          name: workflowDef.name || manifest.name || 'unknown',
+          error: error.message || 'Import failed',
+        });
+        console.error('[Marketplace Import] Standalone workflow import error:', error);
+      }
+    }
+
+    // Import forms from application bundle (itemType === 'application' or legacy)
     if (application.bundle.forms && application.bundle.forms.length > 0) {
       const formsCollection = await getOrgFormsCollection(orgId);
 

@@ -69,6 +69,7 @@ export type HelpTopicId =
   | 'knowledge-guided-forms'
   | 'rag-document-management'
   | 'projects-management'
+  | 'deployment-modes'
   | 'deployment-vercel'
   | 'self-hosted-rag'
   | 'organizations'

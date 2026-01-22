@@ -68,6 +68,10 @@ import {
   CleaningServices as CleanupIcon,
   Info as InfoIcon,
   Cancel as CancelIcon,
+  Link as LinkIcon,
+  ContentCopy as ContentCopyIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,8 +131,14 @@ export default function AdminClustersPage() {
 
   // Dialogs
   const [selectedCluster, setSelectedCluster] = useState<ClusterEntry | null>(null);
-  const [actionDialog, setActionDialog] = useState<'deactivate' | 'delete' | 'retry' | 'cleanup' | 'details' | 'purge' | 'purgeAll' | 'cancel' | null>(null);
+  const [actionDialog, setActionDialog] = useState<'deactivate' | 'delete' | 'retry' | 'cleanup' | 'details' | 'purge' | 'purgeAll' | 'cancel' | 'connectionString' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Connection string state
+  const [connectionString, setConnectionString] = useState<string | null>(null);
+  const [connectionStringLoading, setConnectionStringLoading] = useState(false);
+  const [connectionStringError, setConnectionStringError] = useState<string | null>(null);
+  const [showConnectionString, setShowConnectionString] = useState(false);
 
   // Check admin access
   const isAdmin = user?.platformRole === 'admin';
@@ -371,6 +381,44 @@ export default function AdminClustersPage() {
       alert(err instanceof Error ? err.message : 'Failed to cancel provisioning');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleViewConnectionString = async (cluster: ClusterEntry) => {
+    setSelectedCluster(cluster);
+    setActionDialog('connectionString');
+    setConnectionString(null);
+    setConnectionStringError(null);
+    setShowConnectionString(false);
+    setConnectionStringLoading(true);
+
+    try {
+      const response = await fetch(`/api/admin/clusters/${cluster.clusterId}/connection-string`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch connection string');
+      }
+
+      const data = await response.json();
+      setConnectionString(data.connectionString);
+    } catch (err) {
+      console.error('Connection string error:', err);
+      setConnectionStringError(err instanceof Error ? err.message : 'Failed to fetch connection string');
+    } finally {
+      setConnectionStringLoading(false);
+    }
+  };
+
+  const handleCopyConnectionString = async () => {
+    if (!connectionString) return;
+
+    try {
+      await navigator.clipboard.writeText(connectionString);
+      // You could add a toast notification here if you have one
+    } catch (err) {
+      console.error('Copy error:', err);
+      alert('Failed to copy to clipboard');
     }
   };
 
@@ -705,6 +753,17 @@ export default function AdminClustersPage() {
                       <TableCell align="right">
                         {cluster.status === 'ready' && (
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            {cluster.vaultId && (
+                              <Tooltip title="View connection string">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleViewConnectionString(cluster)}
+                                >
+                                  <LinkIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Deactivate cluster (revoke access)">
                               <IconButton
                                 size="small"
@@ -1170,6 +1229,96 @@ export default function AdminClustersPage() {
             startIcon={actionLoading ? <CircularProgress size={16} /> : <CancelIcon />}
           >
             Cancel Provisioning
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Connection String Dialog */}
+      <Dialog 
+        open={actionDialog === 'connectionString'} 
+        onClose={() => {
+          setActionDialog(null);
+          setConnectionString(null);
+          setConnectionStringError(null);
+          setShowConnectionString(false);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LinkIcon color="primary" />
+          Connection String
+        </DialogTitle>
+        <DialogContent>
+          {selectedCluster && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                <strong>Cluster:</strong> {selectedCluster.atlasClusterName}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                <strong>Organization:</strong> {selectedCluster.organizationName || selectedCluster.organizationId}
+              </Typography>
+            </Box>
+          )}
+
+          {connectionStringLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : connectionStringError ? (
+            <Alert severity="error">
+              {connectionStringError}
+            </Alert>
+          ) : connectionString ? (
+            <Box>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <strong>Security Warning:</strong> This connection string contains credentials. Keep it secure and never share it publicly.
+              </Alert>
+              
+              <Box sx={{ position: 'relative' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={showConnectionString ? connectionString : '••••••••••••••••••••••••••••••••'}
+                  InputProps={{
+                    readOnly: true,
+                    sx: {
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={showConnectionString ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    onClick={() => setShowConnectionString(!showConnectionString)}
+                  >
+                    {showConnectionString ? 'Hide' : 'Show'}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={handleCopyConnectionString}
+                    disabled={!showConnectionString}
+                  >
+                    Copy
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setActionDialog(null);
+            setConnectionString(null);
+            setConnectionStringError(null);
+            setShowConnectionString(false);
+          }}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>

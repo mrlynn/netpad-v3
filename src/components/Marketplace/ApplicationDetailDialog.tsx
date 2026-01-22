@@ -46,12 +46,14 @@ import {
   CloudDownload as NpmIcon,
   InstallMobile as InstallIcon,
   CheckCircle as CheckCircleIcon,
+  Inventory as BundleIcon,
+  ViewList as FieldIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { parseOrgProjectFromPath } from '@/lib/routing';
-import { FormWorkflowConnection } from '@/types/template';
+import { FormWorkflowConnection, MarketplaceItemType } from '@/types/template';
 import { ReviewForm } from './ReviewForm';
 import { ReviewsList } from './ReviewsList';
 import { RatingSummary } from './RatingSummary';
@@ -69,6 +71,7 @@ interface ApplicationDetailDialogProps {
 
 interface ApplicationDetail {
   id: string;
+  itemType?: MarketplaceItemType;
   manifest: {
     name: string;
     version: string;
@@ -81,9 +84,10 @@ interface ApplicationDetail {
     license?: string;
   };
   preview: {
-    formsCount: number;
-    workflowsCount: number;
-    connectionsCount: number;
+    // Application-specific fields
+    formsCount?: number;
+    workflowsCount?: number;
+    connectionsCount?: number;
     forms?: Array<{ name: string; description?: string }>;
     workflows?: Array<{ name: string; description?: string }>;
     connections?: Array<{
@@ -91,6 +95,27 @@ interface ApplicationDetail {
       workflowRef: string;
       type: string;
       description?: string;
+    }>;
+    // Form-specific fields
+    fieldCount?: number;
+    formType?: 'traditional' | 'conversational' | 'search';
+    isMultiPage?: boolean;
+    hasConditionalLogic?: boolean;
+    fields?: Array<{
+      path: string;
+      label: string;
+      type: string;
+      required?: boolean;
+      options?: string[];
+    }>;
+    // Workflow-specific fields
+    nodeCount?: number;
+    triggerType?: string;
+    nodeTypes?: string[];
+    nodes?: Array<{
+      id: string;
+      type: string;
+      label: string;
     }>;
   };
   stats: {
@@ -402,7 +427,53 @@ export function ApplicationDetailDialog({
             <Typography variant="h4">{detail.manifest.icon}</Typography>
           )}
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h6">{detail?.manifest.name || 'Application'}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+              <Typography variant="h6">
+                {detail?.manifest.name || (detail?.itemType === 'form' ? 'Form' : detail?.itemType === 'workflow' ? 'Workflow' : 'Application')}
+              </Typography>
+              {/* Item Type Badge */}
+              {detail && (
+                <Chip
+                  icon={
+                    detail.itemType === 'form' ? <FormIcon sx={{ fontSize: 14 }} /> :
+                    detail.itemType === 'workflow' ? <WorkflowIcon sx={{ fontSize: 14 }} /> :
+                    <BundleIcon sx={{ fontSize: 14 }} />
+                  }
+                  label={
+                    detail.itemType === 'form' ? 'Form' :
+                    detail.itemType === 'workflow' ? 'Workflow' :
+                    'Application'
+                  }
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    bgcolor: alpha(
+                      detail.itemType === 'form' ? '#58a6ff' :
+                      detail.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                      0.1
+                    ),
+                    color: detail.itemType === 'form' ? '#58a6ff' :
+                      detail.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                    border: `1px solid ${alpha(
+                      detail.itemType === 'form' ? '#58a6ff' :
+                      detail.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                      0.3
+                    )}`,
+                    '& .MuiChip-icon': {
+                      fontSize: 14,
+                      color: detail.itemType === 'form' ? '#58a6ff' :
+                        detail.itemType === 'workflow' ? '#d29922' :
+                        '#00ED64',
+                    },
+                  }}
+                />
+              )}
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="caption" color="text.secondary">
                 v{detail?.manifest.version} • {detail?.manifest.category}
@@ -444,8 +515,18 @@ export function ApplicationDetailDialog({
               variant="outlined"
               sx={{
                 p: 2,
-                bgcolor: alpha('#00ED64', 0.02),
-                borderColor: alpha('#00ED64', 0.2),
+                bgcolor: alpha(
+                  detail.itemType === 'form' ? '#58a6ff' :
+                  detail.itemType === 'workflow' ? '#d29922' :
+                  '#00ED64',
+                  0.02
+                ),
+                borderColor: alpha(
+                  detail.itemType === 'form' ? '#58a6ff' :
+                  detail.itemType === 'workflow' ? '#d29922' :
+                  '#00ED64',
+                  0.2
+                ),
               }}
             >
               <Typography variant="body2" sx={{ mb: 1.5 }}>
@@ -462,26 +543,92 @@ export function ApplicationDetailDialog({
                 </Box>
               )}
               <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <FormIcon fontSize="small" color="action" />
-                  <Typography variant="caption">
-                    {detail.preview.formsCount} Forms
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <WorkflowIcon fontSize="small" color="action" />
-                  <Typography variant="caption">
-                    {detail.preview.workflowsCount} Workflows
-                  </Typography>
-                </Box>
-                {detail.preview.connectionsCount > 0 && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LinkIcon fontSize="small" sx={{ color: '#00ED64' }} />
-                    <Typography variant="caption" sx={{ color: '#00ED64' }}>
-                      {detail.preview.connectionsCount} Connections
-                    </Typography>
-                  </Box>
+                {/* Type-specific stats */}
+                {detail.itemType === 'form' && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <FieldIcon fontSize="small" sx={{ color: '#58a6ff' }} />
+                      <Typography variant="caption">
+                        {detail.preview.fieldCount || 0} fields
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={detail.preview.formType || 'traditional'}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.65rem',
+                        bgcolor: alpha('#58a6ff', 0.1),
+                        color: '#58a6ff',
+                      }}
+                    />
+                    {detail.preview.isMultiPage && (
+                      <Chip
+                        label="Multi-page"
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.65rem',
+                          bgcolor: alpha('#FF9800', 0.1),
+                          color: '#FF9800',
+                        }}
+                      />
+                    )}
+                    {detail.preview.hasConditionalLogic && (
+                      <Chip
+                        label="Conditional logic"
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.65rem',
+                          bgcolor: alpha('#9C27B0', 0.1),
+                          color: '#9C27B0',
+                        }}
+                      />
+                    )}
+                  </>
                 )}
+                {detail.itemType === 'workflow' && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <WorkflowIcon fontSize="small" sx={{ color: '#d29922' }} />
+                      <Typography variant="caption">
+                        {detail.preview.nodeCount || 0} nodes
+                      </Typography>
+                    </Box>
+                    {detail.preview.triggerType && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <TriggerIcon fontSize="small" color="action" />
+                        <Typography variant="caption">{detail.preview.triggerType}</Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+                {(!detail.itemType || detail.itemType === 'application') && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <FormIcon fontSize="small" color="action" />
+                      <Typography variant="caption">
+                        {detail.preview.formsCount || 0} Forms
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <WorkflowIcon fontSize="small" color="action" />
+                      <Typography variant="caption">
+                        {detail.preview.workflowsCount || 0} Workflows
+                      </Typography>
+                    </Box>
+                    {(detail.preview.connectionsCount || 0) > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <LinkIcon fontSize="small" sx={{ color: '#00ED64' }} />
+                        <Typography variant="caption" sx={{ color: '#00ED64' }}>
+                          {detail.preview.connectionsCount} Connections
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+                {/* Common stats */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <DownloadIcon fontSize="small" color="action" />
                   <Typography variant="caption">{detail.stats.downloads} downloads</Typography>
@@ -495,8 +642,95 @@ export function ApplicationDetailDialog({
               </Stack>
             </Paper>
 
-            {/* Forms */}
-            {detail.preview.forms && detail.preview.forms.length > 0 && (
+            {/* Form Fields - for standalone forms */}
+            {detail.itemType === 'form' && detail.preview.fields && detail.preview.fields.length > 0 && (
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FieldIcon fontSize="small" sx={{ color: '#58a6ff' }} />
+                    <Typography variant="subtitle2">
+                      Fields ({detail.preview.fields.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <List dense disablePadding>
+                    {detail.preview.fields.map((field, index) => (
+                      <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckIcon fontSize="small" color="success" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2">{field.label}</Typography>
+                              {field.required && (
+                                <Chip
+                                  label="Required"
+                                  size="small"
+                                  sx={{
+                                    height: 16,
+                                    fontSize: '0.6rem',
+                                    bgcolor: alpha('#f44336', 0.1),
+                                    color: '#f44336',
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Type: {field.type}
+                              </Typography>
+                              {field.options && field.options.length > 0 && (
+                                <Typography variant="caption" color="text.secondary">
+                                  • {field.options.length} options
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* Workflow Nodes - for standalone workflows */}
+            {detail.itemType === 'workflow' && detail.preview.nodes && detail.preview.nodes.length > 0 && (
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WorkflowIcon fontSize="small" sx={{ color: '#d29922' }} />
+                    <Typography variant="subtitle2">
+                      Nodes ({detail.preview.nodes.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <List dense disablePadding>
+                    {detail.preview.nodes.map((node, index) => (
+                      <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckIcon fontSize="small" color="success" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={node.label || node.type}
+                          secondary={`Type: ${node.type}`}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                          secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* Forms - for applications */}
+            {(!detail.itemType || detail.itemType === 'application') && detail.preview.forms && detail.preview.forms.length > 0 && (
               <Accordion defaultExpanded>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -526,8 +760,8 @@ export function ApplicationDetailDialog({
               </Accordion>
             )}
 
-            {/* Workflows */}
-            {detail.preview.workflows && detail.preview.workflows.length > 0 && (
+            {/* Workflows - for applications */}
+            {(!detail.itemType || detail.itemType === 'application') && detail.preview.workflows && detail.preview.workflows.length > 0 && (
               <Accordion defaultExpanded>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -557,8 +791,8 @@ export function ApplicationDetailDialog({
               </Accordion>
             )}
 
-            {/* Connections */}
-            {detail.preview.connections && detail.preview.connections.length > 0 && (
+            {/* Connections - for applications */}
+            {(!detail.itemType || detail.itemType === 'application') && detail.preview.connections && detail.preview.connections.length > 0 && (
               <Accordion defaultExpanded>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -833,18 +1067,59 @@ export function ApplicationDetailDialog({
             disabled={!detail || importing || isImported}
             startIcon={isImported ? <CheckCircleIcon /> : importing ? <NetPadSpinner size={16} /> : <UploadIcon />}
             sx={{
-              bgcolor: isImported ? alpha('#00ED64', 0.1) : '#00ED64',
-              color: isImported ? '#00ED64' : 'white',
+              bgcolor: isImported
+                ? alpha(
+                    detail?.itemType === 'form' ? '#58a6ff' :
+                    detail?.itemType === 'workflow' ? '#d29922' :
+                    '#00ED64',
+                    0.1
+                  )
+                : detail?.itemType === 'form' ? '#58a6ff' :
+                  detail?.itemType === 'workflow' ? '#d29922' :
+                  '#00ED64',
+              color: isImported
+                ? (detail?.itemType === 'form' ? '#58a6ff' :
+                   detail?.itemType === 'workflow' ? '#d29922' :
+                   '#00ED64')
+                : 'white',
               '&:hover': {
-                bgcolor: isImported ? alpha('#00ED64', 0.15) : '#00CC55',
+                bgcolor: isImported
+                  ? alpha(
+                      detail?.itemType === 'form' ? '#58a6ff' :
+                      detail?.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                      0.15
+                    )
+                  : alpha(
+                      detail?.itemType === 'form' ? '#58a6ff' :
+                      detail?.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                      0.85
+                    ),
               },
               '&.Mui-disabled': {
-                bgcolor: isImported ? alpha('#00ED64', 0.1) : undefined,
-                color: isImported ? '#00ED64' : undefined,
+                bgcolor: isImported
+                  ? alpha(
+                      detail?.itemType === 'form' ? '#58a6ff' :
+                      detail?.itemType === 'workflow' ? '#d29922' :
+                      '#00ED64',
+                      0.1
+                    )
+                  : undefined,
+                color: isImported
+                  ? (detail?.itemType === 'form' ? '#58a6ff' :
+                     detail?.itemType === 'workflow' ? '#d29922' :
+                     '#00ED64')
+                  : undefined,
               },
             }}
           >
-            {isImported ? 'Already Imported' : importing ? 'Importing...' : 'Import Application'}
+            {isImported
+              ? 'Already Imported'
+              : importing
+                ? 'Importing...'
+                : `Import ${detail?.itemType === 'form' ? 'Form' : detail?.itemType === 'workflow' ? 'Workflow' : 'Application'}`
+            }
           </Button>
         )}
       </DialogActions>

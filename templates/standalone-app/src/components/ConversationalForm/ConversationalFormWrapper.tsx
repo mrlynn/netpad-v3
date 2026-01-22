@@ -30,8 +30,13 @@ export function ConversationalFormWrapper({ formSlug, config }: ConversationalFo
     setIsSubmitting(true);
     setSubmitError(null);
 
+    // Calculate conversation duration
+    const duration = conversationState.completedAt && conversationState.startedAt
+      ? Math.round((new Date(conversationState.completedAt).getTime() - new Date(conversationState.startedAt).getTime()) / 1000)
+      : Math.round((Date.now() - new Date(conversationState.startedAt).getTime()) / 1000);
+
     try {
-      // Submit the extracted data as a form submission
+      // Submit the extracted data as a form submission with full conversational data
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,11 +44,28 @@ export function ConversationalFormWrapper({ formSlug, config }: ConversationalFo
           formSlug,
           data: extractedData,
           metadata: {
-            conversationId: conversationState.conversationId,
-            turnCount: conversationState.turnCount,
-            confidence: conversationState.confidence,
             submittedAt: new Date().toISOString(),
             isConversational: true,
+          },
+          // Include full conversational data for transcript storage
+          conversationalData: {
+            conversationId: conversationState.conversationId,
+            transcript: conversationState.messages.map(m => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+            })),
+            topicsCovered: conversationState.topics.map(t => ({
+              topicId: t.topicId,
+              name: t.name,
+              covered: t.covered,
+              depth: t.depth,
+            })),
+            overallConfidence: conversationState.confidence,
+            turnCount: conversationState.turnCount,
+            durationSeconds: duration,
+            startedAt: conversationState.startedAt,
+            completedAt: conversationState.completedAt || new Date(),
           },
         }),
       });

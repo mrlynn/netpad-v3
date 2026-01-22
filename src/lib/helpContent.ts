@@ -3959,6 +3959,137 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     keywords: ['project', 'organize', 'group', 'export', 'management', 'folder', 'container'],
   },
 
+  'deployment-modes': {
+    id: 'deployment-modes',
+    title: 'Deployment Modes Overview',
+    description:
+      'Understanding NetPad\'s three deployment modes: Cloud (SaaS), Self-Hosted, and Standalone exported apps.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Understanding Deployment Modes',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad supports three distinct deployment modes, each designed for different use cases. Understanding the differences helps you choose the right approach for your needs.',
+      },
+      {
+        type: 'heading',
+        content: '1. Cloud Mode (netpad.io)',
+      },
+      {
+        type: 'text',
+        content:
+          'This is the fully managed SaaS option at netpad.io. We handle all infrastructure, updates, and scaling for you.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Zero infrastructure management - just sign up and start building',
+          'Automatic updates and security patches',
+          'Built-in team collaboration features',
+          'Premium features like advanced analytics',
+          'RAG/Vector Search features require Team tier subscription + M10+ Atlas cluster',
+          'Data stored on our managed infrastructure',
+          'Environment variable: NETPAD_DEPLOYMENT_MODE=cloud',
+        ],
+      },
+      {
+        type: 'heading',
+        content: '2. Self-Hosted Mode',
+      },
+      {
+        type: 'text',
+        content:
+          'Deploy the full NetPad platform on your own infrastructure using Vercel or similar hosting providers.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Complete control over your data and infrastructure',
+          'Use your own MongoDB Atlas cluster or Atlas Local (Docker)',
+          'Custom domain and branding options',
+          'RAG features available to ALL tiers when using Atlas Local',
+          'No usage limits imposed by NetPad',
+          'You manage updates, security, and backups',
+          'Environment variable: NETPAD_DEPLOYMENT_MODE=self-hosted',
+        ],
+      },
+      {
+        type: 'heading',
+        content: '3. Standalone Exported Apps',
+      },
+      {
+        type: 'text',
+        content:
+          'Export individual NetPad applications as standalone Next.js apps that run completely independently.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Full application ownership - runs without any NetPad infrastructure',
+          'Export includes all forms, workflows, and configurations',
+          'Direct MongoDB connection - no Platform DB needed',
+          'Deploy anywhere that supports Next.js (Vercel, Netlify, self-hosted)',
+          'User provides their own OpenAI API key for AI features',
+          'Conversational form transcripts stored at document root level',
+          'Environment variable: STANDALONE_MODE=true',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Key Differences',
+      },
+      {
+        type: 'list',
+        content: [
+          'Cloud & Self-Hosted: Full multi-tenant platform with organizations, projects, and team features',
+          'Standalone: Single application, no multi-tenancy, simplified architecture',
+          'Cloud & Self-Hosted: Conversation data stored in _formMetadata.conversational',
+          'Standalone: Conversation data stored at conversational (document root)',
+          'Cloud: NetPad manages your data; Self-Hosted/Standalone: You own all data',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Which Mode Should You Choose?',
+      },
+      {
+        type: 'list',
+        content: [
+          'Choose Cloud if you want zero maintenance and rapid deployment',
+          'Choose Self-Hosted if you need data control or compliance requirements',
+          'Choose Standalone when building a dedicated app that shouldn\'t depend on NetPad services',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'You can start with Cloud mode to prototype quickly, then export as Standalone when ready for production. This gives you the best of both worlds: rapid development and full ownership.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Standalone apps require you to manage your own AI API keys (OpenAI) and MongoDB connection. Make sure to secure these credentials in production.',
+      },
+    ],
+    relatedTopics: ['deployment-vercel', 'self-hosted-rag', 'organizations', 'applications'],
+    keywords: [
+      'deployment',
+      'hosting',
+      'cloud',
+      'self-hosted',
+      'standalone',
+      'export',
+      'vercel',
+      'infrastructure',
+      'data ownership',
+      'modes',
+      'comparison',
+    ],
+  },
+
   'deployment-vercel': {
     id: 'deployment-vercel',
     title: 'Deploying to Vercel',
@@ -4026,7 +4157,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Use Vercel\'s preview deployments to test changes before deploying to production. Each pull request automatically gets a preview URL.',
       },
     ],
-    relatedTopics: ['organizations', 'mongodb-connection', 'self-hosted-rag'],
+    relatedTopics: ['deployment-modes', 'organizations', 'mongodb-connection', 'self-hosted-rag'],
     keywords: ['vercel', 'deploy', 'self-host', 'hosting', 'infrastructure', 'custom domain'],
   },
 
@@ -4161,7 +4292,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
         ],
       },
     ],
-    relatedTopics: ['deployment-vercel', 'knowledge-guided-forms', 'rag-document-management', 'mongodb-connection'],
+    relatedTopics: ['deployment-modes', 'deployment-vercel', 'knowledge-guided-forms', 'rag-document-management', 'mongodb-connection'],
     keywords: [
       'self-hosted',
       'atlas local',

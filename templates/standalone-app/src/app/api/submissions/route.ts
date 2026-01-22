@@ -11,6 +11,29 @@ import { getSubmissionsCollection } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Conversational form data for transcript storage
+ */
+interface ConversationalData {
+  conversationId: string;
+  transcript?: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp?: Date;
+  }>;
+  topicsCovered?: Array<{
+    topicId: string;
+    name: string;
+    covered: boolean;
+    depth: number;
+  }>;
+  overallConfidence: number;
+  turnCount: number;
+  durationSeconds?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+}
+
 interface SubmissionPayload {
   formSlug: string;
   data: Record<string, any>;
@@ -19,12 +42,14 @@ interface SubmissionPayload {
     referrer?: string;
     submittedAt?: string;
   };
+  /** Conversational form data - transcript, topics, confidence metrics */
+  conversationalData?: ConversationalData;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as SubmissionPayload;
-    const { formSlug, data, metadata } = body;
+    const { formSlug, data, metadata, conversationalData } = body;
 
     if (!formSlug) {
       return NextResponse.json(
@@ -81,6 +106,20 @@ export async function POST(request: NextRequest) {
         referrer: metadata?.referrer || request.headers.get('referer') || undefined,
         ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || undefined,
       },
+      // Include conversational data if this was a conversational form submission
+      // This keeps the transcript, topics covered, and confidence metrics with the submission
+      ...(conversationalData && {
+        conversational: {
+          conversationId: conversationalData.conversationId,
+          transcript: conversationalData.transcript,
+          topicsCovered: conversationalData.topicsCovered,
+          overallConfidence: conversationalData.overallConfidence,
+          turnCount: conversationalData.turnCount,
+          durationSeconds: conversationalData.durationSeconds,
+          startedAt: conversationalData.startedAt,
+          completedAt: conversationalData.completedAt,
+        },
+      }),
       createdAt: new Date(),
       updatedAt: new Date(),
     };

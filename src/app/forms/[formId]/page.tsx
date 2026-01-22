@@ -136,12 +136,22 @@ export default function PublicFormPage() {
     fetchForm();
   }, [formId]);
 
-  const handleSubmit = async (formData: Record<string, any>) => {
+  const handleSubmit = async (formData: Record<string, any>, conversationalData?: {
+    conversationId: string;
+    transcript?: Array<{ role: 'user' | 'assistant' | 'system'; content: string; timestamp?: Date }>;
+    topicsCovered?: Array<{ topicId: string; name: string; covered: boolean; depth: number }>;
+    fieldConfidence?: Record<string, number>;
+    overallConfidence: number;
+    turnCount: number;
+    durationSeconds?: number;
+    startedAt?: Date;
+    completedAt?: Date;
+  }) => {
     try {
       const response = await fetch(`/api/forms/${formId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: formData }),
+        body: JSON.stringify({ data: formData, conversationalData }),
       });
 
       const result = await response.json();
@@ -750,8 +760,29 @@ export default function PublicFormPage() {
                   },
                 };
 
-                // Submit the mapped data
-                handleSubmit(submissionData);
+                // Build conversational data for transcript storage
+                const conversationalSubmissionData = {
+                  conversationId: conversationState.conversationId,
+                  transcript: conversationState.messages.map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    timestamp: m.timestamp,
+                  })),
+                  topicsCovered: conversationState.topics.map(t => ({
+                    topicId: t.topicId,
+                    name: t.name,
+                    covered: t.covered,
+                    depth: t.depth,
+                  })),
+                  overallConfidence: conversationState.confidence,
+                  turnCount: conversationState.turnCount,
+                  durationSeconds: duration,
+                  startedAt: conversationState.startedAt,
+                  completedAt: conversationState.completedAt || new Date(),
+                };
+
+                // Submit the mapped data with conversational metadata
+                handleSubmit(submissionData, conversationalSubmissionData);
               } catch (err: any) {
                 console.error('[PublicForm] Error mapping conversational data:', err);
                 setError('Failed to process conversation data. Please try again.');

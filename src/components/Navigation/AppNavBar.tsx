@@ -47,6 +47,8 @@ import {
   Description,
   Apps,
   AdminPanelSettings,
+  Cloud,
+  Storefront,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -59,6 +61,7 @@ import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { ClusterStatusIndicator } from './ClusterStatusIndicator';
 import { OrgProjectSelector } from './OrgProjectSelector';
 import { ApplicationSwitcher, useApplicationSwitcherShortcut } from './ApplicationSwitcher';
+import { DeploymentModeBadge } from './DeploymentModeBadge';
 import { getOrgProjectUrl, parseOrgProjectFromPath } from '@/lib/routing';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 
@@ -126,7 +129,7 @@ export function AppNavBar() {
   const applicationContext = useApplicationSafe();
   const currentApplication = applicationContext?.currentApplication ?? null;
   const isMultiOrg = organizations.length > 1;
-  const { openSearch } = useHelp();
+  const { openSearch, openHelp } = useHelp();
   const { mode, toggleTheme } = useAppTheme();
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
@@ -594,6 +597,43 @@ export function AppNavBar() {
               <ClusterStatusIndicator />
             )}
 
+            {/* Marketplace Link */}
+            <Tooltip title="Marketplace">
+              <IconButton
+                component={Link}
+                href="/marketplace"
+                size="small"
+                sx={{
+                  color: 'text.secondary',
+                  p: 0.75,
+                  '&:hover': {
+                    color: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.1)
+                  }
+                }}
+              >
+                <Storefront sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Help Button - Opens help search */}
+            <Tooltip title="Help (⌘/)">
+              <IconButton
+                size="small"
+                onClick={() => openSearch()}
+                sx={{
+                  color: 'text.secondary',
+                  p: 0.75,
+                  '&:hover': {
+                    color: '#00ED64',
+                    bgcolor: alpha('#00ED64', 0.1)
+                  }
+                }}
+              >
+                <HelpOutline sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
             {/* Theme Toggle */}
             <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
               <IconButton
@@ -666,21 +706,24 @@ export function AppNavBar() {
                     <Typography variant="caption" color="text.secondary">
                       {user.email}
                     </Typography>
-                    {user.hasPasskey && (
-                      <Chip
-                        icon={<Fingerprint sx={{ fontSize: 12 }} />}
-                        label="Passkey enabled"
-                        size="small"
-                        sx={{
-                          mt: 1,
-                          height: 20,
-                          fontSize: '0.65rem',
-                          bgcolor: alpha('#00ED64', 0.1),
-                          color: '#00ED64',
-                          '& .MuiChip-icon': { color: '#00ED64' }
-                        }}
-                      />
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                      {/* Deployment Mode Badge - Always visible */}
+                      <DeploymentModeBadge showHelp={false} />
+                      {user.hasPasskey && (
+                        <Chip
+                          icon={<Fingerprint sx={{ fontSize: 12 }} />}
+                          label="Passkey enabled"
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.65rem',
+                            bgcolor: alpha('#00ED64', 0.1),
+                            color: '#00ED64',
+                            '& .MuiChip-icon': { color: '#00ED64' }
+                          }}
+                        />
+                      )}
+                    </Box>
                   </Box>
                   <Divider />
 
@@ -770,6 +813,21 @@ export function AppNavBar() {
                       <MonitorHeart sx={{ fontSize: 18 }} />
                     </ListItemIcon>
                     <ListItemText primary="System Status" />
+                  </MenuItem>
+
+                  <MenuItem
+                    onClick={() => {
+                      openHelp('deployment-modes');
+                      handleMenuClose();
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Cloud sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Hosting & Deployment"
+                      secondary="Cloud vs Self-Hosted vs Standalone"
+                    />
                   </MenuItem>
 
                   {/* Admin Section - only visible to admins */}
@@ -1000,6 +1058,18 @@ export function AppNavBar() {
           <Divider sx={{ my: 2 }} />
 
           <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                href="/marketplace"
+                onClick={handleMobileMenuClose}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <Storefront />
+                </ListItemIcon>
+                <ListItemText primary="Marketplace" />
+              </ListItemButton>
+            </ListItem>
             <ListItem disablePadding>
               <ListItemButton
                 onClick={() => {

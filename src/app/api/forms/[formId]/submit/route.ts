@@ -7,6 +7,8 @@ import { randomBytes } from 'crypto';
 import { MongoClient } from 'mongodb';
 import { executeWebhookAsync } from '@/lib/hooks/executeWebhook';
 import { triggerFormWorkflowsAsync } from '@/lib/workflow/triggerWorkflow';
+import { getOrgFormsCollection, getPlatformDb } from '@/lib/platform/db';
+import { sendCollaboratorNotification } from '@/lib/auth/email';
 
 /**
  * Validate bot protection on server side
@@ -161,10 +163,85 @@ export async function POST(
     const authSession = await getSession();
     const userId = authSession.userId;
 
-    // Find published form by ID or slug
-    let form = await getPublishedFormBySlug(formId);
+    // Find form - try organization database first (has dataSource), then published forms
+    // Using 'any' here because the form object constructed from org database
+    // has additional properties not in the SavedForm type from @/lib/session
+    let form: any = null;
+    
+    // First, try to find form in organization databases (has dataSource)
+    // This is important for forms with MongoDB connections
+    const platformDb = await getPlatformDb();
+    const orgsCollection = platformDb.collection('organizations');
+    const orgs = await orgsCollection.find({}).toArray();
+    
+    for (const org of orgs) {
+      try {
+        const orgId = org.orgId;
+        const formsCollection = await getOrgFormsCollection(orgId);
+        const orgForm = await formsCollection.findOne({
+          $or: [
+            { formId },
+            { id: formId },
+            { slug: formId },
+          ],
+          isPublished: true, // Only get published forms
+        });
+        
+        if (orgForm) {
+          // Convert to SavedForm format
+          form = {
+            id: orgForm.formId || orgForm.id,
+            formId: orgForm.formId || orgForm.id,
+            name: orgForm.name,
+            description: orgForm.description,
+            slug: orgForm.slug,
+            fieldConfigs: orgForm.fieldConfigs || [],
+            variables: orgForm.variables || [],
+            multiPage: orgForm.multiPage,
+            lifecycle: orgForm.lifecycle,
+            theme: orgForm.theme,
+            formType: orgForm.formType || 'data-entry',
+            searchConfig: orgForm.searchConfig,
+            conversationalConfig: orgForm.conversationalConfig,
+            dataSource: orgForm.dataSource, // CRITICAL: This has the vaultId and collection
+            // Legacy connection fields (for backward compatibility)
+            connectionString: orgForm.connectionString,
+            database: orgForm.database,
+            collection: orgForm.collection,
+            accessControl: orgForm.accessControl,
+            isPublished: orgForm.isPublished || false,
+            publishedAt: orgForm.publishedAt,
+            organizationId: orgForm.organizationId, // CRITICAL: Required for dataSource
+            projectId: orgForm.projectId,
+            applicationId: orgForm.applicationId,
+            botProtection: orgForm.botProtection,
+            hooks: orgForm.hooks,
+            currentVersion: orgForm.currentVersion || 1,
+            createdAt: orgForm.createdAt,
+            updatedAt: orgForm.updatedAt,
+          };
+          
+          console.log('[Form Submit] Found form in org database:', {
+            formId: form.id,
+            orgId: form.organizationId,
+            hasDataSource: !!form.dataSource,
+            vaultId: form.dataSource?.vaultId,
+            collection: form.dataSource?.collection,
+          });
+          break;
+        }
+      } catch (err) {
+        // Continue to next org
+        continue;
+      }
+    }
+    
+    // Fall back to published forms if not found in org database
     if (!form) {
-      form = await getPublishedFormById(formId);
+      form = await getPublishedFormBySlug(formId);
+      if (!form) {
+        form = await getPublishedFormById(formId);
+      }
     }
 
     if (!form) {
@@ -180,6 +257,20 @@ export async function POST(
         { status: 403 }
       );
     }
+    
+    // Log form configuration for debugging
+    console.log('[Form Submit] Form configuration:', {
+      formId: form.id,
+      hasDataSource: !!form.dataSource,
+      hasOrganizationId: !!form.organizationId,
+      hasConnectionString: !!form.connectionString,
+      hasDatabase: !!form.database,
+      hasCollection: !!form.collection,
+      dataSource: form.dataSource ? {
+        vaultId: form.dataSource.vaultId,
+        collection: form.dataSource.collection,
+      } : null,
+    });
 
     // Get request metadata
     const headersList = await headers();
@@ -401,6 +492,39 @@ export async function POST(
         console.log(`[Form Submit] No organizationId on form ${form.id}, skipping workflow trigger`);
       }
 
+      // ============================================
+      // Collaborator Form Email Notification
+      // ============================================
+      const isCollaboratorForm = formId === 'collaborator-intake' ||
+                                  form.slug === 'collaborator-intake' ||
+                                  form.id === 'collaborator-intake';
+
+      if (isCollaboratorForm && cleanData.name && cleanData.email) {
+        console.log('[Form Submit] Sending collaborator notification email for:', {
+          name: cleanData.name,
+          email: cleanData.email,
+          formId,
+        });
+
+        // Fire and forget - don't block the response
+        sendCollaboratorNotification({
+          name: cleanData.name,
+          email: cleanData.email,
+          lane: cleanData.lane || 'undecided',
+          shipped: cleanData.shipped || '(Not provided)',
+          whyNetpad: cleanData.whyNetpad || '(Not provided)',
+          availability: cleanData.availability,
+          location: cleanData.location,
+          workLinks: cleanData.workLinks,
+          conversationId: cleanData._meta?.conversationId,
+          turnCount: cleanData._meta?.turnCount,
+        }).then(sent => {
+          console.log('[Form Submit] Collaborator notification sent:', sent);
+        }).catch(err => {
+          console.error('[Form Submit] Failed to send collaborator notification:', err);
+        });
+      }
+
       return NextResponse.json({
         success: true,
         submissionId: result.submissionId,
@@ -493,6 +617,39 @@ export async function POST(
 
       // Increment subscription submission usage
       await incrementSubmissionUsage(form.organizationId, form.id!);
+    }
+
+    // ============================================
+    // Collaborator Form Email Notification (Legacy Mode)
+    // ============================================
+    const isCollaboratorForm = formId === 'collaborator-intake' ||
+                                form.slug === 'collaborator-intake' ||
+                                form.id === 'collaborator-intake';
+
+    if (isCollaboratorForm && cleanData.name && cleanData.email) {
+      console.log('[Form Submit] Sending collaborator notification email (legacy) for:', {
+        name: cleanData.name,
+        email: cleanData.email,
+        formId,
+      });
+
+      // Fire and forget - don't block the response
+      sendCollaboratorNotification({
+        name: cleanData.name,
+        email: cleanData.email,
+        lane: cleanData.lane || 'undecided',
+        shipped: cleanData.shipped || '(Not provided)',
+        whyNetpad: cleanData.whyNetpad || '(Not provided)',
+        availability: cleanData.availability,
+        location: cleanData.location,
+        workLinks: cleanData.workLinks,
+        conversationId: cleanData._meta?.conversationId,
+        turnCount: cleanData._meta?.turnCount,
+      }).then(sent => {
+        console.log('[Form Submit] Collaborator notification sent (legacy):', sent);
+      }).catch(err => {
+        console.error('[Form Submit] Failed to send collaborator notification (legacy):', err);
+      });
     }
 
     return NextResponse.json({

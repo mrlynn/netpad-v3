@@ -8,7 +8,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
-import { BundleExport, ApplicationManifest } from '@/types/template';
+import {
+  BundleExport,
+  ApplicationManifest,
+  MarketplaceItemType,
+  MarketplaceBundle,
+  FormBundle,
+  WorkflowBundle,
+  isFormBundle,
+  isWorkflowBundle,
+  isApplicationBundle,
+} from '@/types/template';
 import { getApplicationReleasesCollection } from '@/lib/platform/db';
 import { buildBundleFromRelease } from '@/lib/marketplace/release-bundle';
 
@@ -18,8 +28,10 @@ export type MarketplaceApplicationStatus = 'pending' | 'approved' | 'rejected';
 
 interface MarketplaceApplication {
   id: string;
+  /** Item type: application (bundle), form (standalone), or workflow (standalone) */
+  itemType: MarketplaceItemType;
   manifest: ApplicationManifest;
-  bundle: BundleExport;
+  bundle: MarketplaceBundle;
   published: boolean;
   status: MarketplaceApplicationStatus;
   isOfficial: boolean; // NetPad/MongoDB official vs community package
@@ -56,7 +68,8 @@ interface MarketplaceApplication {
 
 /**
  * GET /api/marketplace/applications
- * List marketplace applications with filtering and search
+ * List marketplace items with filtering and search
+ * Supports three item types: application (bundles), form (standalone), workflow (standalone)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -69,6 +82,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const publishedBy = searchParams.get('publishedBy'); // Filter by publisher (for My Applications)
     const source = searchParams.get('source'); // Filter by source: 'web', 'npm', or undefined (all)
+    const itemType = searchParams.get('itemType'); // Filter by item type: 'all', 'application', 'form', 'workflow'
 
     const db = await getPlatformDb();
     const collection = db.collection<MarketplaceApplication>('marketplace_applications');
@@ -106,6 +120,23 @@ export async function GET(request: NextRequest) {
     // Filter by source (web or npm)
     if (source === 'web' || source === 'npm') {
       queryConditions.push({ source });
+    }
+
+    // Filter by item type (application, form, workflow)
+    // Default behavior: 'all' returns everything, with applications sorted first
+    // Handle legacy items that don't have itemType field (treat as 'application')
+    if (itemType && itemType !== 'all') {
+      if (itemType === 'application') {
+        // Include both explicit 'application' and legacy items without itemType
+        queryConditions.push({
+          $or: [
+            { itemType: 'application' },
+            { itemType: { $exists: false } },
+          ],
+        });
+      } else if (itemType === 'form' || itemType === 'workflow') {
+        queryConditions.push({ itemType });
+      }
     }
 
     // Filter by official vs community
@@ -180,26 +211,60 @@ export async function GET(request: NextRequest) {
     const total = await collection.countDocuments(query);
 
     // Format response (exclude full bundle for list view)
-    const formatted = applications.map((app) => ({
-      id: app.id,
-      name: app.manifest.name,
-      summary: app.manifest.summary || app.manifest.description,
-      description: app.manifest.description,
-      version: app.manifest.version,
-      category: app.manifest.category,
-      tags: app.manifest.tags || [],
-      icon: app.manifest.icon,
-      author: app.manifest.author,
-      license: app.manifest.license,
-      stats: app.stats,
-      publishedAt: app.publishedAt,
-      formsCount: app.bundle.forms?.length || 0,
-      workflowsCount: app.bundle.workflows?.length || 0,
-      connectionsCount: app.bundle.connections?.length || 0,
-      isOfficial: app.isOfficial,
-      source: app.source || 'web', // Default to 'web' for legacy apps
-      sourcePackageName: app.sourcePackageName,
-    }));
+    const formatted = applications.map((app) => {
+      // Determine the item type (default to 'application' for legacy items)
+      const resolvedItemType: MarketplaceItemType = app.itemType || 'application';
+
+      // Build type-specific metadata
+      let typeMetadata: Record<string, any> = {};
+
+      if (resolvedItemType === 'application') {
+        // Application bundle - show forms, workflows, connections counts
+        const bundle = app.bundle as BundleExport;
+        typeMetadata = {
+          formsCount: bundle.forms?.length || 0,
+          workflowsCount: bundle.workflows?.length || 0,
+          connectionsCount: bundle.connections?.length || 0,
+        };
+      } else if (resolvedItemType === 'form') {
+        // Standalone form - show form metadata
+        const bundle = app.bundle as FormBundle;
+        typeMetadata = {
+          fieldCount: bundle.formMetadata?.fieldCount || bundle.form?.fieldConfigs?.length || 0,
+          formType: bundle.formMetadata?.formType || 'traditional',
+          isMultiPage: bundle.formMetadata?.isMultiPage || false,
+          hasConditionalLogic: bundle.formMetadata?.hasConditionalLogic || false,
+        };
+      } else if (resolvedItemType === 'workflow') {
+        // Standalone workflow - show workflow metadata
+        const bundle = app.bundle as WorkflowBundle;
+        typeMetadata = {
+          nodeCount: bundle.workflowMetadata?.nodeCount || bundle.workflow?.canvas?.nodes?.length || 0,
+          triggerType: bundle.workflowMetadata?.triggerType || 'manual',
+          nodeTypes: bundle.workflowMetadata?.nodeTypes || [],
+        };
+      }
+
+      return {
+        id: app.id,
+        itemType: resolvedItemType,
+        name: app.manifest.name,
+        summary: app.manifest.summary || app.manifest.description,
+        description: app.manifest.description,
+        version: app.manifest.version,
+        category: app.manifest.category,
+        tags: app.manifest.tags || [],
+        icon: app.manifest.icon,
+        author: app.manifest.author,
+        license: app.manifest.license,
+        stats: app.stats,
+        publishedAt: app.publishedAt,
+        isOfficial: app.isOfficial,
+        source: app.source || 'web', // Default to 'web' for legacy apps
+        sourcePackageName: app.sourcePackageName,
+        ...typeMetadata,
+      };
+    });
 
     return NextResponse.json({
       applications: formatted,
@@ -218,7 +283,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/marketplace/applications
- * Publish an application to the marketplace
+ * Publish an item to the marketplace
+ * Supports three item types: application (bundles), form (standalone), workflow (standalone)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -228,12 +294,57 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bundle, publish, orgId, projectId, applicationId, releaseId } = body;
+    const { bundle, publish, orgId, projectId, applicationId, releaseId, itemType: requestedItemType } = body;
 
-    let publishableBundle: BundleExport | null = null;
+    // Determine the item type - default to 'application' for backward compatibility
+    let itemType: MarketplaceItemType = requestedItemType || 'application';
+    let publishableBundle: MarketplaceBundle | null = null;
 
-    // Preferred: publish from a release
-    if (releaseId) {
+    // Handle standalone form publishing
+    if (itemType === 'form') {
+      const { form, manifest, formMetadata } = body;
+      if (!form && !bundle?.form) {
+        return NextResponse.json({ error: 'Form definition is required for form type' }, { status: 400 });
+      }
+      if (!manifest && !bundle?.manifest) {
+        return NextResponse.json({ error: 'Manifest is required' }, { status: 400 });
+      }
+
+      const formBundle: FormBundle = {
+        form: form || bundle.form,
+        theme: body.theme || bundle?.theme,
+        formMetadata: formMetadata || bundle?.formMetadata || {
+          fieldCount: (form || bundle.form)?.fieldConfigs?.length || 0,
+          formType: 'traditional',
+          isMultiPage: !!(form || bundle.form)?.multiPage?.enabled,
+          hasConditionalLogic: (form || bundle.form)?.fieldConfigs?.some((f: any) => f.conditionalLogic?.enabled) || false,
+        },
+      };
+      publishableBundle = formBundle;
+    }
+    // Handle standalone workflow publishing
+    else if (itemType === 'workflow') {
+      const { workflow, manifest, workflowMetadata } = body;
+      if (!workflow && !bundle?.workflow) {
+        return NextResponse.json({ error: 'Workflow definition is required for workflow type' }, { status: 400 });
+      }
+      if (!manifest && !bundle?.manifest) {
+        return NextResponse.json({ error: 'Manifest is required' }, { status: 400 });
+      }
+
+      const workflowBundle: WorkflowBundle = {
+        workflow: workflow || bundle.workflow,
+        workflowMetadata: workflowMetadata || bundle?.workflowMetadata || {
+          nodeCount: (workflow || bundle.workflow)?.canvas?.nodes?.length || 0,
+          triggerType: 'manual',
+          nodeTypes: [...new Set((workflow || bundle.workflow)?.canvas?.nodes?.map((n: any) => n.type) || [])],
+        },
+      };
+      publishableBundle = workflowBundle;
+    }
+    // Handle application bundle publishing (existing behavior)
+    else if (releaseId) {
+      // Preferred: publish from a release
       if (!orgId || !projectId || !applicationId) {
         return NextResponse.json(
           { error: 'orgId, projectId, and applicationId are required when publishing from a release' },
@@ -266,29 +377,43 @@ export async function POST(request: NextRequest) {
           id: manifestOverrides.id || built.manifest.id,
         },
       };
+      itemType = 'application';
     } else {
       // Backward-compatible: publish raw bundle
       if (!bundle || !bundle.manifest) {
         return NextResponse.json({ error: 'Bundle with manifest is required' }, { status: 400 });
       }
       publishableBundle = bundle as BundleExport;
+      itemType = 'application';
     }
 
     const db = await getPlatformDb();
     const collection = db.collection<MarketplaceApplication>('marketplace_applications');
 
-    // Generate application ID from manifest
-    const appId =
-      (publishableBundle.manifest as any).id ||
-      `app_${publishableBundle.manifest.name.toLowerCase().replace(/\s+/g, '-')}_${publishableBundle.manifest.version}`;
+    // Get the manifest - for form/workflow types it comes from the request body
+    // For application bundles it's part of the bundle
+    let manifest: ApplicationManifest;
+    if (itemType === 'form' || itemType === 'workflow') {
+      // For standalone forms/workflows, manifest is passed separately in the body
+      manifest = body.manifest as ApplicationManifest;
+    } else {
+      // For application bundles, manifest is part of the bundle
+      manifest = (publishableBundle as BundleExport).manifest as ApplicationManifest;
+    }
 
-    // Check if application already exists
+    // Generate item ID from manifest with type prefix
+    const typePrefix = itemType === 'application' ? 'app' : itemType;
+    const appId =
+      manifest.id ||
+      `${typePrefix}_${manifest.name.toLowerCase().replace(/\s+/g, '-')}_${manifest.version}`;
+
+    // Check if item already exists
     const existing = await collection.findOne({ id: appId });
 
     const now = new Date().toISOString();
-    const version = (publishableBundle.manifest as ApplicationManifest).version;
-    
-    // If updating existing application, add to version history
+    const version = manifest.version;
+
+    // If updating existing item, add to version history
     let versions = existing?.versions || [];
     if (existing) {
       // Check if this is a new version
@@ -312,12 +437,11 @@ export async function POST(request: NextRequest) {
             publishedBy: existing.publishedBy || 'unknown',
           });
         }
-        
+
         // Add new version to history
-        const newManifest = publishableBundle.manifest as ApplicationManifest;
         let newChangelogStr: string | undefined;
-        if (newManifest.changelog && Array.isArray(newManifest.changelog)) {
-          newChangelogStr = newManifest.changelog
+        if (manifest.changelog && Array.isArray(manifest.changelog)) {
+          newChangelogStr = manifest.changelog
             .map(entry => `### ${entry.version} (${entry.date})\n${entry.changes.map(c => `- ${c}`).join('\n')}`)
             .join('\n\n');
         }
@@ -330,11 +454,10 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      // New application - initialize version history with first version
-      const initialManifest = publishableBundle.manifest as ApplicationManifest;
+      // New item - initialize version history with first version
       let initialChangelogStr: string | undefined;
-      if (initialManifest.changelog && Array.isArray(initialManifest.changelog)) {
-        initialChangelogStr = initialManifest.changelog
+      if (manifest.changelog && Array.isArray(manifest.changelog)) {
+        initialChangelogStr = manifest.changelog
           .map(entry => `### ${entry.version} (${entry.date})\n${entry.changes.map(c => `- ${c}`).join('\n')}`)
           .join('\n\n');
       }
@@ -348,12 +471,13 @@ export async function POST(request: NextRequest) {
     }
 
     // New submissions start as 'pending' - requires admin approval
-    // Existing applications keep their current status unless explicitly changed
+    // Existing items keep their current status unless explicitly changed
     // New submissions are community packages by default (isOfficial: false)
     const application: MarketplaceApplication = {
       id: appId,
-      manifest: publishableBundle.manifest as ApplicationManifest,
-      bundle: publishableBundle as BundleExport,
+      itemType, // Item type: 'application', 'form', or 'workflow'
+      manifest,
+      bundle: publishableBundle!,
       published: false, // Will be set to true when approved
       status: existing?.status || 'pending', // New = pending, existing = keep current status
       isOfficial: existing?.isOfficial || false, // New = community, existing = keep current
@@ -388,24 +512,38 @@ export async function POST(request: NextRequest) {
       await collection.insertOne(application);
     }
 
+    // Generate appropriate message based on item type
+    const itemTypeLabel = itemType === 'application' ? 'application' : itemType;
+    const pendingMessage = `Your ${itemTypeLabel} has been submitted for review. You will be notified once it has been reviewed by an administrator.`;
+    const approvedMessage = `Your ${itemTypeLabel} has been published to the marketplace.`;
+    const updatedMessage = `Your ${itemTypeLabel} submission has been updated.`;
+
     return NextResponse.json({
       success: true,
+      item: {
+        id: application.id,
+        itemType: application.itemType,
+        name: application.manifest.name,
+        status: application.status,
+        published: application.published,
+        message: application.status === 'pending'
+          ? pendingMessage
+          : application.status === 'approved'
+          ? approvedMessage
+          : updatedMessage,
+      },
+      // Backward compatibility
       application: {
         id: application.id,
         name: application.manifest.name,
         status: application.status,
         published: application.published,
-        message: application.status === 'pending'
-          ? 'Your application has been submitted for review. You will be notified once it has been reviewed by an administrator.'
-          : application.status === 'approved'
-          ? 'Your application has been published to the marketplace.'
-          : 'Your application submission has been updated.',
       },
     });
   } catch (error: any) {
     console.error('[Marketplace API] Publish error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to publish application' },
+      { error: error.message || 'Failed to publish item' },
       { status: 500 }
     );
   }

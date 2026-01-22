@@ -274,6 +274,13 @@ export async function syncSubmission(
   );
 
   if (!credentials) {
+    console.error(`[Submission Sync] Failed to get credentials for vault ${effectiveVaultId}:`, {
+      organizationId,
+      effectiveVaultId,
+      submissionId,
+      targetCollection: submission.targetCollection,
+    });
+    
     await updateSyncStatus(collection, submissionId, {
       syncStatus: 'failed',
       syncError: 'Connection vault not found or could not decrypt',
@@ -287,6 +294,12 @@ export async function syncSubmission(
       error: 'Connection vault not found',
     };
   }
+  
+  console.log(`[Submission Sync] Got credentials for vault ${effectiveVaultId}:`, {
+    database: credentials.database,
+    hasConnectionString: !!credentials.connectionString,
+    targetCollection: submission.targetCollection,
+  });
 
   // Determine if we need encryption
   const hasEncryptedFieldsConfig =
@@ -374,13 +387,26 @@ export async function syncSubmission(
             encryptedFields: encryptedFieldPaths,
           },
         }),
+        // Include conversational form data (transcript, topics, etc.) if present
+        ...(submission.conversationalData && {
+          conversational: {
+            conversationId: submission.conversationalData.conversationId,
+            transcript: submission.conversationalData.transcript,
+            topicsCovered: submission.conversationalData.topicsCovered,
+            overallConfidence: submission.conversationalData.overallConfidence,
+            turnCount: submission.conversationalData.turnCount,
+            durationSeconds: submission.conversationalData.durationSeconds,
+            startedAt: submission.conversationalData.startedAt,
+            completedAt: submission.conversationalData.completedAt,
+          },
+        }),
       },
     };
 
     const insertResult = await targetCollection.insertOne(document);
     console.log(
       `[Submission Sync] Successfully inserted document with _id: ${insertResult.insertedId} ` +
-        `for submission ${submissionId}`
+        `for submission ${submissionId} into collection ${submission.targetCollection} in database ${credentials.database}`
     );
 
     // Update sync status
@@ -412,7 +438,16 @@ export async function syncSubmission(
     const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
     console.error(
       `[Submission Sync] ERROR syncing submission ${submissionId}:`,
-      error instanceof Error ? error.stack : error
+      {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        submissionId,
+        targetCollection: submission.targetCollection,
+        targetVaultId: submission.targetVaultId,
+        organizationId,
+        hasCredentials: !!credentials,
+        database: credentials?.database,
+      }
     );
 
     await updateSyncStatus(collection, submissionId, {

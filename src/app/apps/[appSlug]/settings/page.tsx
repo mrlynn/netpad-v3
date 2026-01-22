@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import {
   Box,
   Container,
@@ -21,11 +22,13 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material';
-import { Settings, Save, Delete, Download as DownloadIcon } from '@mui/icons-material';
+import { Settings, Save, Delete, Download as DownloadIcon, Schema } from '@mui/icons-material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { DownloadAppDialog } from '@/components/Download/DownloadAppDialog';
+import { SchemaViewer } from '@/components/Applications/SchemaViewer';
+import { InferredApplicationSchema } from '@/lib/schema/inferSchema';
 
 /**
  * /apps/[appSlug]/settings
@@ -51,6 +54,21 @@ export default function AppSettingsPage() {
     message: '',
     severity: 'success',
   });
+
+  // Fetch inferred schema for the application
+  const { data: schemaData, error: schemaError, isLoading: schemaLoading } = useSWR<{
+    success: boolean;
+    schema: InferredApplicationSchema;
+    error?: string;
+  }>(
+    currentApplication && currentOrgId
+      ? `/api/applications/${currentApplication.applicationId}/schema?orgId=${currentOrgId}`
+      : null,
+    async (url: string) => {
+      const res = await fetch(url);
+      return res.json();
+    }
+  );
 
   // Update local state when application loads
   useEffect(() => {
@@ -221,9 +239,32 @@ export default function AppSettingsPage() {
           >
             Download as ZIP
           </Button>
+        </Paper>
 
-          <Divider sx={{ my: 4 }} />
+        {/* Data Schema Section */}
+        <Paper sx={{ p: 4, mt: 3, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Schema sx={{ color: theme.palette.info.main }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Data Schema
+            </Typography>
+          </Box>
 
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            View the data model inferred from your forms. This shows what document structure will be created
+            in MongoDB when forms are submitted. Use this to understand your data model and copy the schema
+            for MongoDB validation rules.
+          </Typography>
+
+          <SchemaViewer
+            schema={schemaData?.schema || null}
+            isLoading={schemaLoading}
+            error={schemaError?.message || schemaData?.error || null}
+          />
+        </Paper>
+
+        {/* Danger Zone Section */}
+        <Paper sx={{ p: 4, mt: 3, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Delete sx={{ color: theme.palette.error.main }} />
             <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.error.main }}>

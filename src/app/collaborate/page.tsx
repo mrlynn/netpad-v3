@@ -26,15 +26,22 @@ import {
   KeyboardArrowDown,
   AutoAwesome,
   ListAlt,
+  MenuBook,
+  Storefront,
+  GitHub,
+  Terminal,
+  Widgets,
+  AccountTree,
+  SmartToy,
+  OpenInNew,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FormRenderer } from '@/components/FormRenderer/FormRenderer';
 import { ConversationalFormChat } from '@/components/ConversationalForm';
 import { FormConfiguration } from '@/types/form';
-import { ConversationState } from '@/types/conversational';
-import { SpotlightCard, hexToRgb } from '@/components/marketing';
-import { collaboratorConversationalConfig } from '@/config/collaboratorConversational';
+import { ConversationState, ConversationalFormConfig } from '@/types/conversational';
+import { SpotlightCard, hexToRgb, NetPadAnnotation } from '@/components/marketing';
 
 type IntakeMode = 'conversational' | 'form';
 
@@ -100,7 +107,7 @@ function CollaborateContent() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const [mode, setMode] = useState<IntakeMode>('conversational');
+  const [mode, setMode] = useState<IntakeMode>('form');
   const [form, setForm] = useState<FormConfiguration | null>(null);
   const [formLoading, setFormLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
@@ -182,7 +189,7 @@ function CollaborateContent() {
     }
   };
 
-  // Handle conversational form completion
+  // Handle conversational form completion - uses the form's conversational config
   const handleConversationalComplete = useCallback(
     async (conversationState: ConversationState) => {
       setError(null);
@@ -190,8 +197,8 @@ function CollaborateContent() {
         // Extract data from the conversation
         const extractedData = conversationState.partialExtractions;
 
-        // Build conversational data based on capture options
-        const captureOptions = collaboratorConversationalConfig.captureOptions;
+        // Get capture options from the form's conversational config
+        const captureOptions = form?.conversationalConfig?.captureOptions;
         const conversationalData: Record<string, unknown> = {
           conversationId: conversationState.conversationId,
           turnCount: conversationState.turnCount,
@@ -256,6 +263,40 @@ function CollaborateContent() {
 
         if (result.success) {
           setSuccess(true);
+
+          // Send email notification (fire and forget - don't block on this)
+          console.log('[Collaborate] Sending notification with data:', {
+            name: extractedData?.name,
+            email: extractedData?.email,
+            lane: extractedData?.lane,
+            hasShipped: !!extractedData?.shipped,
+            hasWhyNetpad: !!extractedData?.whyNetpad,
+          });
+
+          fetch('/api/collaborator/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: extractedData?.name,
+              email: extractedData?.email,
+              lane: extractedData?.lane,
+              shipped: extractedData?.shipped,
+              whyNetpad: extractedData?.whyNetpad,
+              availability: extractedData?.availability,
+              location: extractedData?.location,
+              workLinks: extractedData?.workLinks,
+              conversationId: conversationState.conversationId,
+              turnCount: conversationState.turnCount,
+            }),
+          })
+            .then(async (res) => {
+              const data = await res.json();
+              console.log('[Collaborate] Notification response:', data);
+            })
+            .catch((err) => {
+              // Log but don't fail - notification is secondary
+              console.error('[Collaborate] Failed to send notification:', err);
+            });
         } else {
           throw new Error(
             result.error || 'Something went wrong. Please try again.'
@@ -269,7 +310,7 @@ function CollaborateContent() {
         setError(message);
       }
     },
-    []
+    [form]
   );
 
   // Scroll to form section
@@ -339,7 +380,7 @@ function CollaborateContent() {
           px: 2,
         }}
       >
-        <Container maxWidth="md" sx={{ textAlign: 'center' }}>
+        <Container maxWidth="xl" sx={{ textAlign: 'center' }}>
           {/* Collaborator logo */}
           <Box sx={{ mb: 2 }}>
             <Image
@@ -358,7 +399,7 @@ function CollaborateContent() {
           <Typography
             variant="h1"
             sx={{
-              fontSize: { xs: '2.5rem', md: '5.5rem' },
+              fontSize: { xs: '2.5rem', md: '12.5rem' },
               fontWeight: 800,
               color: textColor,
               mb: 3,
@@ -755,7 +796,7 @@ function CollaborateContent() {
           bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="md">
           <Typography
             variant="h3"
             sx={{
@@ -805,6 +846,14 @@ function CollaborateContent() {
                 },
               }}
             >
+              <ToggleButton value="form">
+                <Tooltip title="Traditional form - quick and straightforward">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ListAlt fontSize="small" />
+                    Form
+                  </Box>
+                </Tooltip>
+              </ToggleButton>
               <ToggleButton value="conversational">
                 <Tooltip title="Have a conversation with AI - more natural and interactive">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -813,28 +862,38 @@ function CollaborateContent() {
                   </Box>
                 </Tooltip>
               </ToggleButton>
-              <ToggleButton value="form">
-                <Tooltip title="Traditional form - faster if you prefer">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ListAlt fontSize="small" />
-                    Form
-                  </Box>
-                </Tooltip>
-              </ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
-          <Paper
-            elevation={isDark ? 0 : 2}
+          <Box
             sx={{
-              p: { xs: 3, sm: 4 },
-              bgcolor: paperBg,
-              border: '1px solid',
-              borderColor: borderColor,
-              borderRadius: 3,
-              minHeight: mode === 'conversational' ? 500 : 'auto',
+              position: 'relative',
             }}
           >
+            {/* NetPad Annotation - only show on desktop */}
+            <Box
+              sx={{
+                display: { xs: 'none', lg: 'block' }, // Show on large screens only
+              }}
+            >
+              <NetPadAnnotation
+                text="Built with NetPad"
+                position="right"
+                offset={{ x: -20, y: 0 }}
+              />
+            </Box>
+
+            <Paper
+              elevation={isDark ? 0 : 2}
+              sx={{
+                p: { xs: 3, sm: 4 },
+                bgcolor: paperBg,
+                border: '1px solid',
+                borderColor: borderColor,
+                borderRadius: 3,
+                minHeight: mode === 'conversational' ? 500 : 'auto',
+              }}
+            >
             {!success ? (
               <>
                 <Collapse in={!!error}>
@@ -851,35 +910,55 @@ function CollaborateContent() {
                   </Alert>
                 </Collapse>
 
-                {/* Conversational Mode */}
+                {/* Conversational Mode - uses the form's built-in conversational config */}
                 {mode === 'conversational' && (
                   <Box sx={{ minHeight: 400 }}>
-                    <Suspense
-                      fallback={
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            py: 8,
-                          }}
-                        >
-                          <CircularProgress sx={{ color: '#00ED64' }} />
-                        </Box>
-                      }
-                    >
-                      <ConversationalFormChat
-                        formId="collaborator-intake"
-                        config={collaboratorConversationalConfig}
-                        onComplete={handleConversationalComplete}
-                        endpoint="/api/demo/conversational-stream"
+                    {formLoading ? (
+                      <Box
                         sx={{
-                          bgcolor: 'transparent',
-                          '& .MuiPaper-root': {
-                            bgcolor: alpha('#fff', 0.02),
-                          },
+                          display: 'flex',
+                          justifyContent: 'center',
+                          py: 8,
                         }}
-                      />
-                    </Suspense>
+                      >
+                        <CircularProgress sx={{ color: '#00ED64' }} />
+                      </Box>
+                    ) : formError ? (
+                      <Alert severity="error" sx={{ mb: 2 }}>
+                        {formError}
+                      </Alert>
+                    ) : form?.conversationalConfig ? (
+                      <Suspense
+                        fallback={
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              py: 8,
+                            }}
+                          >
+                            <CircularProgress sx={{ color: '#00ED64' }} />
+                          </Box>
+                        }
+                      >
+                        <ConversationalFormChat
+                          formId={form.id || COLLABORATOR_FORM_SLUG}
+                          config={form.conversationalConfig as ConversationalFormConfig}
+                          onComplete={handleConversationalComplete}
+                          endpoint="/api/demo/conversational-stream"
+                          sx={{
+                            bgcolor: 'transparent',
+                            '& .MuiPaper-root': {
+                              bgcolor: alpha('#fff', 0.02),
+                            },
+                          }}
+                        />
+                      </Suspense>
+                    ) : (
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        Conversational mode is not configured for this form.
+                      </Alert>
+                    )}
                   </Box>
                 )}
 
@@ -973,6 +1052,249 @@ function CollaborateContent() {
               </Box>
             )}
           </Paper>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Section 6: Learn More Resources */}
+      <Box
+        sx={{
+          py: { xs: 8, md: 12 },
+          px: 2,
+          bgcolor: isDark ? 'transparent' : alpha('#000', 0.01),
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              color: textColor,
+              mb: 2,
+              textAlign: 'center',
+            }}
+          >
+            Want to Learn More?
+          </Typography>
+          <Typography
+            sx={{
+              color: textSecondary,
+              textAlign: 'center',
+              mb: 6,
+              maxWidth: 600,
+              mx: 'auto',
+            }}
+          >
+            Explore the NetPad ecosystem before you apply. Check out our packages,
+            documentation, and marketplace.
+          </Typography>
+
+          <Grid container spacing={3}>
+            {/* Documentation */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                component="a"
+                href="https://docs.netpad.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  bgcolor: paperBg,
+                  border: '1px solid',
+                  borderColor: borderColor,
+                  borderRadius: 2,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <MenuBook sx={{ color: '#00ED64', mr: 1.5, fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: textColor }}>
+                    Documentation
+                  </Typography>
+                  <OpenInNew sx={{ color: textMuted, ml: 'auto', fontSize: 16 }} />
+                </Box>
+                <Typography sx={{ color: textSecondary, fontSize: '0.9rem', flexGrow: 1 }}>
+                  Comprehensive guides, API references, and tutorials to understand
+                  how NetPad works under the hood.
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Marketplace */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                component={Link}
+                href="/marketplace"
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  bgcolor: paperBg,
+                  border: '1px solid',
+                  borderColor: borderColor,
+                  borderRadius: 2,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Storefront sx={{ color: '#00ED64', mr: 1.5, fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: textColor }}>
+                    Marketplace
+                  </Typography>
+                </Box>
+                <Typography sx={{ color: textSecondary, fontSize: '0.9rem', flexGrow: 1 }}>
+                  Browse templates, forms, and workflows built by the community.
+                  See what&apos;s possible with NetPad.
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* GitHub */}
+            <Grid item xs={12} md={4}>
+              <Paper
+                component="a"
+                href="https://github.com/mongodb-developer/netpad"
+                target="_blank"
+                rel="noopener noreferrer"
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  bgcolor: paperBg,
+                  border: '1px solid',
+                  borderColor: borderColor,
+                  borderRadius: 2,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: '#00ED64',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <GitHub sx={{ color: '#00ED64', mr: 1.5, fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: textColor }}>
+                    GitHub
+                  </Typography>
+                  <OpenInNew sx={{ color: textMuted, ml: 'auto', fontSize: 16 }} />
+                </Box>
+                <Typography sx={{ color: textSecondary, fontSize: '0.9rem', flexGrow: 1 }}>
+                  NetPad is open source (MIT). Star the repo, explore the code,
+                  and see how we build.
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* NPM Packages */}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              color: textColor,
+              mt: 6,
+              mb: 3,
+              textAlign: 'center',
+            }}
+          >
+            NPM Packages
+          </Typography>
+
+          <Grid container spacing={2} justifyContent="center">
+            {[
+              {
+                name: '@netpad/cli',
+                description: 'Command-line interface',
+                icon: Terminal,
+                url: 'https://www.npmjs.com/package/@netpad/cli',
+              },
+              {
+                name: '@netpad/forms',
+                description: 'Form components',
+                icon: Widgets,
+                url: 'https://www.npmjs.com/package/@netpad/forms',
+              },
+              {
+                name: '@netpad/workflows',
+                description: 'Workflow engine',
+                icon: AccountTree,
+                url: 'https://www.npmjs.com/package/@netpad/workflows',
+              },
+              {
+                name: '@netpad/mcp-server',
+                description: 'AI model context',
+                icon: SmartToy,
+                url: 'https://www.npmjs.com/package/@netpad/mcp-server',
+              },
+            ].map((pkg) => (
+              <Grid item xs={6} sm={3} key={pkg.name}>
+                <Paper
+                  component="a"
+                  href={pkg.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    bgcolor: paperBg,
+                    border: '1px solid',
+                    borderColor: borderColor,
+                    borderRadius: 2,
+                    textDecoration: 'none',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: '#00ED64',
+                      bgcolor: alpha('#00ED64', 0.05),
+                    },
+                  }}
+                >
+                  <pkg.icon sx={{ color: '#00ED64', mb: 1, fontSize: 24 }} />
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: textColor,
+                      fontSize: '0.85rem',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {pkg.name}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: textMuted,
+                      fontSize: '0.75rem',
+                      mt: 0.5,
+                    }}
+                  >
+                    {pkg.description}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
         </Container>
       </Box>
 

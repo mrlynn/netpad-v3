@@ -31,6 +31,8 @@ import {
 } from '@mui/icons-material';
 import { HelpTopic, HelpTopicId } from '@/types/help';
 import { helpTopics } from '@/lib/helpContent';
+import { detectHelpContext, getContextLabel } from '@/lib/help/context';
+import { usePathname } from 'next/navigation';
 
 interface HelpSearchModalProps {
   open: boolean;
@@ -66,19 +68,19 @@ function getTopicCategory(topicId: string): { icon: React.ReactNode; label: stri
   return { icon: <Help fontSize="small" />, label: 'General', color: '#9e9e9e' };
 }
 
-function searchTopics(query: string, showAdminTopics: boolean = false): HelpTopic[] {
+function searchTopics(
+  query: string, 
+  showAdminTopics: boolean = false,
+  context?: string | null
+): HelpTopic[] {
   // Get all topics, filtering out admin-only topics if user is not admin
   const availableTopics = Object.values(helpTopics).filter(
     (topic) => showAdminTopics || !topic.adminOnly
   );
 
-  if (!query.trim()) {
-    // Return all available topics when no search query
-    return availableTopics;
-  }
-
   const lowerQuery = query.toLowerCase().trim();
   const words = lowerQuery.split(/\s+/);
+  const hasQuery = lowerQuery.length > 0;
 
   const results = availableTopics.map((topic) => {
     let score = 0;
@@ -89,6 +91,33 @@ function searchTopics(query: string, showAdminTopics: boolean = false): HelpTopi
       topic.id.toLowerCase().replace(/-/g, ' '),
     ].join(' ');
 
+    // CONTEXT BOOSTING (applies even when no query)
+    if (context) {
+      const contextLower = context.toLowerCase();
+      const topicId = topic.id.toLowerCase();
+      
+      // Exact context match in topic ID
+      if (topicId === contextLower || topicId.includes(contextLower)) {
+        score += 50; // Strong boost for context-relevant topics
+      }
+      
+      // Context in keywords
+      if (topic.keywords?.some((k) => k.toLowerCase().includes(contextLower))) {
+        score += 30;
+      }
+      
+      // Related topics match context
+      if (topic.relatedTopics?.some((rt) => rt.toLowerCase().includes(contextLower))) {
+        score += 20;
+      }
+    }
+
+    // If no query, return all topics sorted by context relevance
+    if (!hasQuery) {
+      return { topic, score };
+    }
+
+    // SEARCH SCORING (only when query exists)
     // Exact title match (highest priority)
     if (topic.title.toLowerCase() === lowerQuery) {
       score += 100;
@@ -128,8 +157,12 @@ function searchTopics(query: string, showAdminTopics: boolean = false): HelpTopi
     return { topic, score };
   });
 
-  return results
-    .filter((r) => r.score > 0)
+  // Filter and sort
+  const filtered = hasQuery
+    ? results.filter((r) => r.score > 0)
+    : results; // Show all when no query, sorted by context relevance
+
+  return filtered
     .sort((a, b) => b.score - a.score)
     .map((r) => r.topic);
 }
@@ -162,12 +195,17 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 }
 
 export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, showAdminTopics = false }: HelpSearchModalProps) {
+  const pathname = usePathname();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const results = useMemo(() => searchTopics(query, showAdminTopics), [query, showAdminTopics]);
+  // Detect context from current route
+  const context = useMemo(() => detectHelpContext(pathname), [pathname]);
+  const contextLabel = context ? getContextLabel(context) : null;
+
+  const results = useMemo(() => searchTopics(query, showAdminTopics, context), [query, showAdminTopics, context]);
 
   // Reset selection when results change
   useEffect(() => {
@@ -246,10 +284,26 @@ export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, sho
       disableRestoreFocus={false}
     >
       <Box sx={{ p: 2, pb: 1 }}>
+        {/* Context indicator */}
+        {contextLabel && !query && (
+          <Box sx={{ mb: 1.5 }}>
+            <Chip
+              label={`Relevant to: ${contextLabel}`}
+              size="small"
+              sx={{
+                bgcolor: alpha('#00ED64', 0.1),
+                color: '#00ED64',
+                fontSize: '0.75rem',
+                height: 24,
+              }}
+            />
+          </Box>
+        )}
+        
         <TextField
           inputRef={inputRef}
           fullWidth
-          placeholder="Search help topics..."
+          placeholder={contextLabel ? `Search help topics... (showing ${contextLabel} help)` : "Search help topics..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -330,6 +384,13 @@ export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, sho
             {results.map((topic, index) => {
               const category = getTopicCategory(topic.id);
               const isSelected = index === selectedIndex;
+              
+              // Check if topic is context-relevant
+              const isContextRelevant = context && (
+                topic.id.toLowerCase().includes(context.toLowerCase()) ||
+                topic.keywords?.some((k) => k.toLowerCase().includes(context.toLowerCase())) ||
+                topic.relatedTopics?.some((rt) => rt.toLowerCase().includes(context.toLowerCase()))
+              );
 
               return (
                 <ListItem key={topic.id} disablePadding>
@@ -339,6 +400,10 @@ export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, sho
                     sx={{
                       py: 1.5,
                       px: 2,
+                      ...(isContextRelevant && {
+                        borderLeft: '3px solid #00ED64',
+                        bgcolor: alpha('#00ED64', 0.05),
+                      }),
                       '&.Mui-selected': {
                         bgcolor: alpha('#00ED64', 0.1),
                         '&:hover': {
@@ -346,7 +411,9 @@ export function HelpSearchModal({ open, onClose, onSelectTopic, onStartTour, sho
                         },
                       },
                       '&:hover': {
-                        bgcolor: alpha('#000', 0.04),
+                        bgcolor: isContextRelevant 
+                          ? alpha('#00ED64', 0.08)
+                          : alpha('#000', 0.04),
                       },
                     }}
                   >

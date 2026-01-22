@@ -47,6 +47,7 @@ import {
   FileUpload as FileUploadIcon,
   DeleteSweep as ClearCanvasIcon,
   Science as TestIcon,
+  CloudUpload as PublishToMarketplaceIcon,
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
@@ -68,6 +69,7 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
 import { WorkflowExportDialog } from './Dialogs/WorkflowExportDialog';
 import { WorkflowTestDialog } from './Dialogs/WorkflowTestDialog';
+import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -241,6 +243,9 @@ function WorkflowEditorInner({
 
   // Test dialog state
   const [testDialogOpen, setTestDialogOpen] = useState(false);
+
+  // Publish to marketplace dialog state
+  const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
 
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
@@ -870,6 +875,18 @@ function WorkflowEditorInner({
           </ListItemIcon>
           <ListItemText>Export Workflow</ListItemText>
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setMoreMenuAnchor(null);
+            setPublishToMarketplaceOpen(true);
+          }}
+          disabled={!workflow || !workflow.name}
+        >
+          <ListItemIcon>
+            <PublishToMarketplaceIcon fontSize="small" sx={{ color: '#9C27B0' }} />
+          </ListItemIcon>
+          <ListItemText>Publish to Marketplace</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => importInputRef.current?.click()}>
           <ListItemIcon>
             <FileUploadIcon fontSize="small" />
@@ -965,6 +982,38 @@ function WorkflowEditorInner({
         onSaveBeforeTest={async () => {
           const success = await saveWorkflow(orgId);
           return success;
+        }}
+      />
+
+      {/* Publish to Marketplace Dialog */}
+      <PublishItemDialog
+        open={publishToMarketplaceOpen}
+        onClose={() => setPublishToMarketplaceOpen(false)}
+        itemType="workflow"
+        workflow={workflow ? {
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          slug: workflow.slug,
+          canvas: workflow.canvas,
+          settings: workflow.settings,
+          variables: workflow.variables,
+          inputSchema: workflow.inputSchema,
+          outputSchema: workflow.outputSchema,
+          tags: workflow.tags,
+        } : undefined}
+        existingManifest={{
+          name: workflow?.name || '',
+          description: workflow?.description || '',
+          tags: workflow?.tags,
+        }}
+        onPublishSuccess={(result) => {
+          console.log('[WorkflowEditor] Published to marketplace:', result);
+          setSnackbar({
+            open: true,
+            message: 'Workflow submitted to marketplace for review',
+            severity: 'success',
+          });
         }}
       />
     </Box>

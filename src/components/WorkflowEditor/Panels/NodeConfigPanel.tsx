@@ -45,6 +45,8 @@ import {
 } from '@mui/icons-material';
 import { WorkflowNode, RetryPolicy, StickyNoteStyle } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { DataContextPanel } from './DataContextPanel';
 // ConditionBuilder types imported by LogicNodeEditor
 import { VariablePickerButton } from '../VariablePicker';
@@ -66,7 +68,18 @@ interface NodeConfigPanelProps {
 export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPanelProps) {
   const theme = useTheme();
   const params = useParams();
-  const orgId = params.orgId as string | undefined;
+
+  // Get org/project/app context from multiple sources:
+  // 1. URL params (for /orgs/[orgId]/projects/[projectId]/... routes)
+  // 2. ApplicationContext (for /apps/[appSlug]/... routes)
+  // 3. OrganizationContext (fallback for orgId)
+  const appContext = useApplicationSafe();
+  const { currentOrgId } = useOrganization();
+
+  const orgId = (params.orgId as string) || currentOrgId || undefined;
+  const projectId = (params.projectId as string) || appContext?.currentProjectId || undefined;
+  const applicationId = appContext?.currentAppId || undefined;
+
   const { selectedNode, nodes, edges } = useWorkflowEditor();
   const { updateNode, removeNode } = useWorkflowActions();
 
@@ -120,7 +133,15 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
       const fetchForms = async () => {
         setFormsLoading(true);
         try {
-          const response = await fetch(`/api/forms/list?orgId=${orgId}`);
+          // Include projectId and applicationId to filter forms to the current context
+          const queryParams = new URLSearchParams({ orgId });
+          if (projectId) {
+            queryParams.append('projectId', projectId);
+          }
+          if (applicationId) {
+            queryParams.append('applicationId', applicationId);
+          }
+          const response = await fetch(`/api/forms/list?${queryParams.toString()}`);
           const data = await response.json();
           if (data.success && data.forms) {
             setAvailableForms(data.forms.map((f: any) => ({
@@ -138,7 +159,7 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
       };
       fetchForms();
     }
-  }, [open, selectedNode?.type, orgId]);
+  }, [open, selectedNode?.type, orgId, projectId, applicationId]);
 
   // Fetch available connections when panel opens for nodes that need them
   useEffect(() => {

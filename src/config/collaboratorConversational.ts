@@ -81,7 +81,7 @@ The trial period is 2-4 weeks on a small project to see if there's a fit.`,
       name: 'Area of Interest',
       description: 'Which lane interests them most - Product & Design, Engineering, or Integrations?',
       priority: 'required',
-      depth: 'moderate',
+      depth: 'surface', // This is a simple selection, not a deep topic
       extractionField: 'lane',
     },
     {

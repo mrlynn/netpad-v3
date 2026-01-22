@@ -115,6 +115,122 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
       {/* Submission Data (Editable) */}
       <EditableFormData submissionId={submission.submissionId} data={submission.data || {}} />
 
+      {/* Conversational Data (if this was a conversational form submission) */}
+      {(submission as any).conversational && (
+        <div className="admin-card" style={{ marginTop: '1.5rem' }}>
+          <h2 className="admin-card-title" style={{ marginBottom: '1rem' }}>
+            🤖 Conversation Details
+          </h2>
+
+          {/* Conversation Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#00ED64' }}>
+                {(submission as any).conversational.turnCount || 0}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>Turns</div>
+            </div>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#00ED64' }}>
+                {Math.round(((submission as any).conversational.overallConfidence || 0) * 100)}%
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>Confidence</div>
+            </div>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#00ED64' }}>
+                {formatDuration((submission as any).conversational.durationSeconds)}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>Duration</div>
+            </div>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#00ED64' }}>
+                {((submission as any).conversational.topicsCovered || []).filter((t: any) => t.covered).length}/
+                {((submission as any).conversational.topicsCovered || []).length}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>Topics Covered</div>
+            </div>
+          </div>
+
+          {/* Topics */}
+          {(submission as any).conversational.topicsCovered && (submission as any).conversational.topicsCovered.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>Topics</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {(submission as any).conversational.topicsCovered.map((topic: any) => (
+                  <span
+                    key={topic.topicId}
+                    style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '16px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      background: topic.covered ? '#d4edda' : '#f8f9fa',
+                      color: topic.covered ? '#155724' : '#666',
+                      border: `1px solid ${topic.covered ? '#c3e6cb' : '#dee2e6'}`,
+                    }}
+                  >
+                    {topic.covered ? '✓ ' : ''}{topic.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Transcript */}
+          {(submission as any).conversational.transcript && (submission as any).conversational.transcript.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                Conversation Transcript ({(submission as any).conversational.transcript.length} messages)
+              </h3>
+              <div
+                style={{
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '8px',
+                }}
+              >
+                {(submission as any).conversational.transcript.map((message: any, index: number) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderBottom: index < (submission as any).conversational.transcript.length - 1 ? '1px solid #dee2e6' : 'none',
+                      background: message.role === 'assistant' ? '#f8f9fa' : 'white',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          color: message.role === 'assistant' ? '#9C27B0' : '#2196F3',
+                        }}
+                      >
+                        {message.role === 'assistant' ? '🤖 Assistant' : '👤 User'}
+                      </span>
+                      {message.timestamp && (
+                        <span style={{ fontSize: '0.7rem', color: '#999' }}>
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+                      {message.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Conversation ID */}
+          <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#999' }}>
+            Conversation ID: {(submission as any).conversational.conversationId}
+          </div>
+        </div>
+      )}
+
       {/* Error (if any) */}
       {submission.error && (
         <div
@@ -164,4 +280,12 @@ function getStatusColor(status: string): string {
     default:
       return 'info';
   }
+}
+
+function formatDuration(seconds?: number): string {
+  if (!seconds) return '0s';
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
 }

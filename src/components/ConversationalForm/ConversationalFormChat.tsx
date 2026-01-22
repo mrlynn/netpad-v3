@@ -700,7 +700,6 @@ export function ConversationalFormChat({
   const [input, setInput] = useState('');
   const [topicsExpanded, setTopicsExpanded] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<UploadedFile[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -752,9 +751,13 @@ export function ConversationalFormChat({
     startConversation();
   }, [startConversation]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages - use scrollTop instead of scrollIntoView
+  // to avoid scrolling the entire page
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   // Handle file selection
@@ -868,6 +871,7 @@ export function ConversationalFormChat({
 
       {/* Messages */}
       <Box
+        ref={messagesContainerRef}
         sx={{
           flex: 1,
           overflowY: 'auto',
@@ -897,8 +901,6 @@ export function ConversationalFormChat({
             {error}
           </Alert>
         )}
-
-        <div ref={messagesEndRef} />
       </Box>
 
       {/* Input */}

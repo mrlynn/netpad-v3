@@ -1,0 +1,14 @@
+[
+  {
+    "id": "conn_collaborator_intake_notification",
+    "formRef": "collaborator-intake",
+    "workflowRef": "collaborator-notification",
+    "type": "trigger",
+    "config": {
+      "triggerOn": "submit",
+      "conditions": []
+    },
+    "description": "Notification workflow triggers when the collaborator intake form is submitted",
+    "enabled": true
+  }
+]

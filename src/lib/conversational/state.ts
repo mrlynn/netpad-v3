@@ -224,6 +224,16 @@ export function updateTopicCoverageFromExtractions(
       fieldToTopicMap.set(schema.field, schema.topicId);
     }
   }
+  
+  console.log(`[Topic Coverage] updateTopicCoverageFromExtractions called:`, {
+    extractionFields: Object.keys(extractions),
+    extractionValues: Object.fromEntries(
+      Object.entries(extractions).map(([k, v]) => [k, String(v).substring(0, 50)])
+    ),
+    fieldToTopicMap: Array.from(fieldToTopicMap.entries()),
+    stateTopics: state.topics.map(t => ({ topicId: t.topicId, name: t.name, covered: t.covered })),
+    topicsConfig: topicsConfig?.map(t => ({ id: t.id, name: t.name, depth: t.depth })),
+  });
 
   // Create a map of topicId -> required depth from config
   const topicDepthRequirements = new Map<string, 'surface' | 'moderate' | 'deep'>();
@@ -233,17 +243,27 @@ export function updateTopicCoverageFromExtractions(
     }
   }
 
+  console.log(`[Topic Coverage] Processing extractions:`, {
+    extractionCount: Object.keys(extractions).length,
+    fields: Object.keys(extractions),
+    fieldToTopicMap: Array.from(fieldToTopicMap.entries()),
+  });
+
   for (const [field, value] of Object.entries(extractions)) {
     // Skip if value is empty/null/undefined
     if (value === undefined || value === null || value === '') {
+      console.log(`[Topic Coverage] Skipping empty field: ${field}`);
       continue;
     }
 
     // Get topic ID for this field from schema
     const topicId = fieldToTopicMap.get(field);
     if (!topicId) {
+      console.warn(`[Topic Coverage] No topicId mapping for field: ${field}`);
       continue; // No topic mapping for this field
     }
+    
+    console.log(`[Topic Coverage] Processing field ${field} -> topic ${topicId} with value: "${String(value).substring(0, 50)}"`);
 
     // Find the topic in state
     const topicIndex = updatedState.topics.findIndex(t => t.topicId === topicId);
@@ -281,8 +301,20 @@ export function updateTopicCoverageFromExtractions(
     const requiredDepthLevel = topicDepthRequirements.get(topicId) || 'surface';
     const requiredDepthThreshold = DEPTH_THRESHOLDS[requiredDepthLevel];
 
-    // Only mark as covered if achieved depth meets the requirement
-    const meetsCoverageRequirement = achievedDepth >= requiredDepthThreshold;
+    // Check if this field is an enum type in the extraction schema
+    const schemaField = extractionSchema.find(s => s.field === field);
+    const isEnumField = schemaField && (schemaField as any).type === 'enum';
+
+    // CRITICAL FIX: For surface-level topics (like email, name) or enum fields (like lane),
+    // ANY non-empty value should mark as covered
+    // This ensures:
+    // - Simple fields like email addresses are immediately marked as complete
+    // - Enum selections (like "Product & Design") don't need long text to be considered complete
+    const isSurfaceTopic = requiredDepthLevel === 'surface';
+    const isSimpleField = isSurfaceTopic || isEnumField;
+    const meetsCoverageRequirement = isSimpleField
+      ? true // Surface topics and enum fields: any value = covered
+      : achievedDepth >= requiredDepthThreshold; // Other topics: must meet depth threshold
 
     // Update topic depth (always track progress), but only mark covered if threshold met
     const topics = updatedState.topics.map((topic) => {
@@ -305,7 +337,7 @@ export function updateTopicCoverageFromExtractions(
       updatedAt: new Date(),
     };
 
-    console.log(`[Topic Coverage] Updated ${topicId} (field: ${field}): achieved=${achievedDepth.toFixed(2)}, required=${requiredDepthLevel}(${requiredDepthThreshold}), covered=${meetsCoverageRequirement}`);
+    console.log(`[Topic Coverage] Updated ${topicId} (field: ${field}): value="${String(value).substring(0, 50)}", achieved=${achievedDepth.toFixed(2)}, required=${requiredDepthLevel}(${requiredDepthThreshold}), isSimple=${isSimpleField} (surface=${isSurfaceTopic}, enum=${isEnumField}), covered=${meetsCoverageRequirement}`);
   }
 
   return updatedState;

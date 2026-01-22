@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -26,6 +26,9 @@ import {
   alpha,
   Tabs,
   Tab,
+  Collapse,
+  IconButton,
+  Divider,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -33,6 +36,11 @@ import {
   FilterList as FilterIcon,
   Person as PersonIcon,
   HourglassTop as HourglassTopIcon,
+  Description as FormIcon,
+  AccountTree as WorkflowIcon,
+  Inventory as BundleIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,11 +50,18 @@ import { parseOrgProjectFromPath } from '@/lib/routing';
 import { ApplicationCard } from './ApplicationCard';
 import { ApplicationDetailDialog } from './ApplicationDetailDialog';
 import { MyApplicationsView } from './MyApplicationsView';
+import { FeaturedMarketplaceSection } from './FeaturedMarketplaceSection';
+import { ImportDestinationDialog } from './ImportDestinationDialog';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useInstalledApplications } from '@/hooks/useInstalledApplications';
 
+/** Item type discriminator for marketplace items */
+export type MarketplaceItemType = 'application' | 'form' | 'workflow';
+
 interface MarketplaceApplication {
   id: string;
+  /** Item type: application (bundle), form (standalone), or workflow (standalone) */
+  itemType: MarketplaceItemType;
   name: string;
   summary?: string;
   description?: string;
@@ -61,9 +76,20 @@ interface MarketplaceApplication {
     rating?: number;
     reviews: number;
   };
-  formsCount: number;
-  workflowsCount: number;
-  connectionsCount: number;
+  // Application-specific fields
+  formsCount?: number;
+  workflowsCount?: number;
+  connectionsCount?: number;
+  // Form-specific fields
+  fieldCount?: number;
+  formType?: 'traditional' | 'conversational' | 'search';
+  isMultiPage?: boolean;
+  hasConditionalLogic?: boolean;
+  // Workflow-specific fields
+  nodeCount?: number;
+  triggerType?: string;
+  nodeTypes?: string[];
+  // Common fields
   publishedAt?: string;
   isOfficial?: boolean;
   source?: 'web' | 'npm'; // Package source
@@ -98,6 +124,34 @@ const SORT_OPTIONS = [
   { value: 'reviews', label: 'Most Reviewed' },
 ];
 
+// Section configuration for grouped display
+const SECTION_CONFIG = {
+  application: {
+    title: 'Applications',
+    subtitle: 'Complete solutions with forms, workflows, and connections',
+    icon: BundleIcon,
+    color: '#00ED64',
+    gradientStart: '#00ED64',
+    gradientEnd: '#00D4AA',
+  },
+  form: {
+    title: 'Forms',
+    subtitle: 'Standalone form templates ready to use',
+    icon: FormIcon,
+    color: '#58a6ff',
+    gradientStart: '#58a6ff',
+    gradientEnd: '#388bfd',
+  },
+  workflow: {
+    title: 'Workflows',
+    subtitle: 'Automation workflows and integrations',
+    icon: WorkflowIcon,
+    color: '#d29922',
+    gradientStart: '#d29922',
+    gradientEnd: '#f1a43c',
+  },
+} as const;
+
 export function MarketplaceView({ organizationId: propOrganizationId, onImportComplete }: MarketplaceViewProps) {
   const { currentOrgId } = useOrganization();
   const { user, isAuthenticated } = useAuth();
@@ -120,6 +174,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [type, setType] = useState<'all' | 'official' | 'community'>('all');
+  const [itemType, setItemType] = useState<'all' | MarketplaceItemType>('all'); // Item type filter
   const [source, setSource] = useState<'all' | 'web' | 'npm'>('all'); // Source filter
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sort, setSort] = useState('popular');
@@ -127,8 +182,57 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   const [total, setTotal] = useState(0);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  // Track collapsed sections (all expanded by default)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  // Import destination dialog state
+  const [importDestinationOpen, setImportDestinationOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{
+    id: string;
+    name: string;
+    itemType: MarketplaceItemType;
+  } | null>(null);
 
-  const limit = 12;
+  const limit = 50; // Increase limit when showing grouped view to get all types
+
+  // Toggle section collapse
+  const toggleSection = (sectionType: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionType]: !prev[sectionType],
+    }));
+  };
+
+  // Group applications by item type for grouped display
+  const groupedApplications = applications.reduce((acc, app) => {
+    const type = app.itemType || 'application';
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(app);
+    return acc;
+  }, {} as Record<MarketplaceItemType, MarketplaceApplication[]>);
+
+  // Extract featured (official) items for hero section - only show when viewing "All" with no search
+  const featuredItems = useMemo(() => {
+    if (itemType !== 'all' || search) return [];
+    return applications.filter(app => app.isOfficial).slice(0, 6);
+  }, [applications, itemType, search]);
+
+  // Get IDs of featured items to exclude from main grid
+  const featuredItemIds = useMemo(() => {
+    return new Set(featuredItems.map(item => item.id));
+  }, [featuredItems]);
+
+  // Filter out featured items from grouped applications
+  const groupedApplicationsWithoutFeatured = useMemo(() => {
+    if (featuredItems.length === 0) return groupedApplications;
+
+    const filtered: Record<MarketplaceItemType, MarketplaceApplication[]> = {} as any;
+    for (const [type, items] of Object.entries(groupedApplications)) {
+      filtered[type as MarketplaceItemType] = items.filter(app => !featuredItemIds.has(app.id));
+    }
+    return filtered;
+  }, [groupedApplications, featuredItemIds, featuredItems.length]);
 
   // Fetch installed applications to check import status
   const { installations, mutate: mutateInstallations } = useInstalledApplications({
@@ -142,10 +246,10 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   );
 
   useEffect(() => {
-    console.log('[MarketplaceView] useEffect triggered:', { search, category, type, source, sort, page });
+    console.log('[MarketplaceView] useEffect triggered:', { search, category, type, itemType, source, sort, page });
     loadApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, type, source, sort, page]);
+  }, [search, category, type, itemType, source, sort, page]);
 
   const loadApplications = async () => {
     setLoading(true);
@@ -172,6 +276,10 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
       if (source !== 'all') {
         params.append('source', source);
+      }
+
+      if (itemType !== 'all') {
+        params.append('itemType', itemType);
       }
 
       if (minRating !== null && minRating > 0) {
@@ -227,6 +335,27 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       return;
     }
 
+    // Find the item to check its type
+    const item = applications.find(app => app.id === id);
+    const itemType = item?.itemType || 'application';
+
+    // For standalone forms and workflows, show the destination dialog
+    if (itemType === 'form' || itemType === 'workflow') {
+      setPendingImport({
+        id,
+        name: item?.name || 'Item',
+        itemType,
+      });
+      setImportDestinationOpen(true);
+      return;
+    }
+
+    // For full applications, import directly (they create their own app)
+    await executeImport(id);
+  };
+
+  // Execute the actual import with optional target application
+  const executeImport = async (id: string, targetApplicationId?: string) => {
     try {
       const response = await fetch(`/api/marketplace/applications/${id}`, {
         method: 'POST',
@@ -235,6 +364,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
           orgId: organizationId,
           // projectId is optional - API will use default project if not provided
           projectId: projectId || undefined,
+          // Pass target application ID if importing into existing app
+          targetApplicationId,
           options: {
             generateNewIds: true,
             preserveSlugs: false,
@@ -267,12 +398,31 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         router.push(`/apps/${result.application.appSlug}`);
       } else {
         // Fallback: show success message if we can't navigate
-        alert(`Successfully imported ${result.application.name}! Check your application switcher to find it.`);
+        alert(`Successfully imported ${result.application?.name || 'item'}! Check your application switcher to find it.`);
       }
     } catch (err) {
       console.error('Error importing application:', err);
       alert(err instanceof Error ? err.message : 'Failed to import application');
     }
+  };
+
+  // Handle import destination selection
+  const handleImportDestinationConfirm = async (
+    destination: { type: 'new' } | { type: 'existing'; applicationId: string; applicationName: string }
+  ) => {
+    setImportDestinationOpen(false);
+
+    if (!pendingImport) return;
+
+    if (destination.type === 'new') {
+      // Create new application (existing behavior)
+      await executeImport(pendingImport.id);
+    } else {
+      // Import into existing application
+      await executeImport(pendingImport.id, destination.applicationId);
+    }
+
+    setPendingImport(null);
   };
 
   const handleDownload = async (id: string) => {
@@ -380,32 +530,83 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <AppsIcon sx={{ fontSize: 40, color: '#00ED64' }} />
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Application Marketplace
+            Marketplace
           </Typography>
         </Box>
         <Typography variant="body1" color="text.secondary">
-          Discover and import ready-to-use NetPad applications with forms, workflows, and connections
+          Discover and import ready-to-use applications, forms, and workflows
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+
+        {/* Item Type Filter - Primary Filter */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            Item Type:
+          </Typography>
+          <Chip
+            icon={<AppsIcon fontSize="small" />}
+            label="All"
+            size="small"
+            onClick={() => { setItemType('all'); setPage(1); }}
+            color={itemType === 'all' ? 'primary' : 'default'}
+            variant={itemType === 'all' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
+          <Chip
+            icon={<BundleIcon fontSize="small" />}
+            label="Applications"
+            size="small"
+            onClick={() => { setItemType('application'); setPage(1); }}
+            color={itemType === 'application' ? 'primary' : 'default'}
+            variant={itemType === 'application' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
+          <Chip
+            icon={<FormIcon fontSize="small" />}
+            label="Forms"
+            size="small"
+            onClick={() => { setItemType('form'); setPage(1); }}
+            color={itemType === 'form' ? 'primary' : 'default'}
+            variant={itemType === 'form' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
+          <Chip
+            icon={<WorkflowIcon fontSize="small" />}
+            label="Workflows"
+            size="small"
+            onClick={() => { setItemType('workflow'); setPage(1); }}
+            color={itemType === 'workflow' ? 'primary' : 'default'}
+            variant={itemType === 'workflow' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
+        </Box>
+
+        {/* Source Filter */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            Source:
+          </Typography>
+          <Chip
+            label="All Sources"
+            size="small"
+            onClick={() => { setSource('all'); setPage(1); }}
+            color={source === 'all' ? 'secondary' : 'default'}
+            variant={source === 'all' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
           <Chip
             label="Web Marketplace"
             size="small"
-            onClick={() => setSource('web')}
-            color={source === 'web' ? 'primary' : 'default'}
+            onClick={() => { setSource('web'); setPage(1); }}
+            color={source === 'web' ? 'secondary' : 'default'}
+            variant={source === 'web' ? 'filled' : 'outlined'}
             sx={{ cursor: 'pointer' }}
           />
           <Chip
             label="npm Packages"
             size="small"
-            onClick={() => setSource('npm')}
-            color={source === 'npm' ? 'primary' : 'default'}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="All Sources"
-            size="small"
-            onClick={() => setSource('all')}
-            color={source === 'all' ? 'primary' : 'default'}
+            onClick={() => { setSource('npm'); setPage(1); }}
+            color={source === 'npm' ? 'secondary' : 'default'}
+            variant={source === 'npm' ? 'filled' : 'outlined'}
             sx={{ cursor: 'pointer' }}
           />
         </Box>
@@ -602,24 +803,152 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
         </Box>
       ) : (
         <>
-          {/* Applications Grid */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            {applications.map((app) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={app.id}>
-                <ApplicationCard
-                  application={app}
-                  onView={handleView}
-                  onImport={handleImport}
-                  onDownload={handleDownload}
-                  onInstallFromNpm={handleInstallFromNpm}
-                  isImported={importedAppIds.has(app.id)}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {/* Featured Section - Show at top when viewing "All" with no search */}
+          {featuredItems.length > 0 && (
+            <FeaturedMarketplaceSection
+              items={featuredItems}
+              onView={handleView}
+              onImport={handleImport}
+              importedAppIds={importedAppIds}
+              onViewAllOfficial={() => {
+                setType('official');
+                setPage(1);
+              }}
+            />
+          )}
 
-          {/* Pagination */}
-          {total > limit && (
+          {/* Grouped Sections (when "All" is selected) or Flat Grid (when filtered) */}
+          {itemType === 'all' ? (
+            // Grouped display with section headers
+            <Box sx={{ mb: 4 }}>
+              {(['application', 'form', 'workflow'] as MarketplaceItemType[]).map((sectionType) => {
+                const items = groupedApplicationsWithoutFeatured[sectionType] || [];
+                if (items.length === 0) return null;
+
+                const config = SECTION_CONFIG[sectionType];
+                const SectionIcon = config.icon;
+                const isCollapsed = collapsedSections[sectionType];
+
+                return (
+                  <Box key={sectionType} sx={{ mb: 4 }}>
+                    {/* Section Header */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        mb: 2,
+                        pb: 1.5,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          '& .section-title': {
+                            color: config.color,
+                          },
+                        },
+                      }}
+                      onClick={() => toggleSection(sectionType)}
+                    >
+                      {/* Icon with gradient background */}
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: `linear-gradient(135deg, ${config.gradientStart} 0%, ${config.gradientEnd} 100%)`,
+                          boxShadow: `0 4px 12px ${alpha(config.color, 0.3)}`,
+                        }}
+                      >
+                        <SectionIcon sx={{ color: 'white', fontSize: 22 }} />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography
+                            variant="h6"
+                            className="section-title"
+                            sx={{
+                              fontWeight: 600,
+                              transition: 'color 0.2s ease',
+                            }}
+                          >
+                            {config.title}
+                          </Typography>
+                          <Chip
+                            label={items.length}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              bgcolor: alpha(config.color, 0.1),
+                              color: config.color,
+                              border: `1px solid ${alpha(config.color, 0.3)}`,
+                            }}
+                          />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {config.subtitle}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        sx={{
+                          color: 'text.secondary',
+                          '&:hover': {
+                            color: config.color,
+                            bgcolor: alpha(config.color, 0.08),
+                          },
+                        }}
+                      >
+                        {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+                      </IconButton>
+                    </Box>
+
+                    {/* Section Content */}
+                    <Collapse in={!isCollapsed}>
+                      <Grid container spacing={3}>
+                        {items.map((app) => (
+                          <Grid item xs={12} sm={6} md={4} lg={3} key={app.id}>
+                            <ApplicationCard
+                              application={app}
+                              onView={handleView}
+                              onImport={handleImport}
+                              onDownload={handleDownload}
+                              onInstallFromNpm={handleInstallFromNpm}
+                              isImported={importedAppIds.has(app.id)}
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Collapse>
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : (
+            // Flat grid display (when specific type is filtered)
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              {applications.map((app) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={app.id}>
+                  <ApplicationCard
+                    application={app}
+                    onView={handleView}
+                    onImport={handleImport}
+                    onDownload={handleDownload}
+                    onInstallFromNpm={handleInstallFromNpm}
+                    isImported={importedAppIds.has(app.id)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+
+          {/* Pagination - only show for filtered view */}
+          {itemType !== 'all' && total > limit && (
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Pagination
                 count={Math.ceil(total / limit)}
@@ -652,6 +981,22 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
           applicationId={selectedApp}
           organizationId={organizationId}
           onImportComplete={onImportComplete}
+        />
+      )}
+
+      {/* Import Destination Dialog - for standalone forms/workflows */}
+      {pendingImport && organizationId && (
+        <ImportDestinationDialog
+          open={importDestinationOpen}
+          onClose={() => {
+            setImportDestinationOpen(false);
+            setPendingImport(null);
+          }}
+          onConfirm={handleImportDestinationConfirm}
+          itemName={pendingImport.name}
+          itemType={pendingImport.itemType}
+          organizationId={organizationId}
+          projectId={projectId}
         />
       )}
         </>

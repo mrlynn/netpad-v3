@@ -17,7 +17,7 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
-import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility, FileDownload, FileUpload } from '@mui/icons-material';
+import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility, FileDownload, FileUpload, CloudUpload as PublishToMarketplaceIcon } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
@@ -33,6 +33,7 @@ import { WYSIWYGFormEditor } from './WYSIWYGFormEditor';
 import { FieldConfigDrawer } from './FieldConfigDrawer';
 import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { ConnectionStatusChip } from './ConnectionStatusChip';
+import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings, FormConfiguration } from '@/types/form';
 import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
@@ -46,6 +47,7 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ComponentProtectionIndicator } from '@/components/Applications/ComponentProtectionIndicator';
 import { useProjectDefaultVault } from '@/lib/swr';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { ContextHelpButton } from '@/components/Help/ContextHelpButton';
 
 interface FormBuilderProps {
   initialFormId?: string;
@@ -115,6 +117,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     searchConfig?: SearchConfig;
     conversationalConfig?: import('@/types/conversational').ConversationalFormConfig;
   } | null>(null);
+  const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
 
   // File input ref for importing forms
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -1191,6 +1194,13 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
               <ListItemIcon><FileDownload fontSize="small" /></ListItemIcon>
               <ListItemText>Export Form Definition</ListItemText>
             </MenuItem>
+            <MenuItem
+              onClick={() => { setPublishToMarketplaceOpen(true); setMoreMenuAnchor(null); }}
+              disabled={fieldConfigs.length === 0 || !currentFormName}
+            >
+              <ListItemIcon><PublishToMarketplaceIcon fontSize="small" sx={{ color: '#2196F3' }} /></ListItemIcon>
+              <ListItemText>Publish to Marketplace</ListItemText>
+            </MenuItem>
             <MenuItem onClick={() => { importInputRef.current?.click(); setMoreMenuAnchor(null); }}>
               <ListItemIcon><FileUpload fontSize="small" /></ListItemIcon>
               <ListItemText>Import Form Definition</ListItemText>
@@ -1503,6 +1513,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
               Form Library
             </Typography>
+            <ContextHelpButton topicId="form-library" placement="top-start" />
           </Box>
           <IconButton size="small" onClick={() => setShowLibrary(false)}>
             <Close sx={{ fontSize: 18 }} />
@@ -1644,6 +1655,32 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         accept=".json"
         style={{ display: 'none' }}
         onChange={handleImportForm}
+      />
+
+      {/* Publish to Marketplace Dialog */}
+      <PublishItemDialog
+        open={publishToMarketplaceOpen}
+        onClose={() => setPublishToMarketplaceOpen(false)}
+        itemType="form"
+        form={{
+          id: currentFormId,
+          name: currentFormName,
+          description: currentFormDescription,
+          slug: currentFormSlug,
+          fieldConfigs: fieldConfigs,
+          variables: variables,
+          theme: themeConfig,
+          multiPage: multiPageConfig,
+          botProtection: botProtection,
+          draftSettings: draftSettings,
+        }}
+        existingManifest={{
+          name: currentFormName,
+          description: currentFormDescription,
+        }}
+        onPublishSuccess={(result) => {
+          console.log('[FormBuilder] Published to marketplace:', result);
+        }}
       />
     </Box>
   );

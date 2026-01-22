@@ -329,6 +329,222 @@ NetPad Contact Form
   }
 }
 
+/**
+ * Parameters for collaborator intake notification
+ */
+export interface SendCollaboratorNotificationParams {
+  name: string;
+  email: string;
+  lane: string;
+  shipped: string;
+  whyNetpad: string;
+  availability?: string;
+  location?: string;
+  workLinks?: string;
+  conversationId?: string;
+  turnCount?: number;
+}
+
+const LANE_LABELS: Record<string, string> = {
+  product_design: '🎨 Product & Design',
+  engineering: '💻 Full-Stack Engineering',
+  integrations: '🔌 Integrations & Ecosystem',
+  undecided: '🤔 Not sure yet',
+};
+
+const AVAILABILITY_LABELS: Record<string, string> = {
+  few_hours: 'A few hours/week',
+  '5-10_hours': '5-10 hrs/week',
+  '10+_hours': '10+ hrs/week',
+  depends: 'Depends on the project',
+};
+
+/**
+ * Send notification when someone submits the collaborator intake form
+ */
+export async function sendCollaboratorNotification(params: SendCollaboratorNotificationParams): Promise<boolean> {
+  const notifyEmail = process.env.COLLABORATOR_NOTIFY_EMAIL || process.env.SMTP_USER || 'michael@netpad.io';
+  const laneLabel = LANE_LABELS[params.lane] || params.lane;
+  const availabilityLabel = params.availability ? (AVAILABILITY_LABELS[params.availability] || params.availability) : 'Not specified';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Collaborator Interest</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #001E2B;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #001E2B; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #0a2633; border-radius: 12px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid rgba(0, 237, 100, 0.2);">
+              <div style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 16px;">
+                <span style="color: #001E2B; font-size: 20px; font-weight: 700;">🤝 New Collaborator</span>
+              </div>
+              <h1 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">Someone wants to build NetPad with you!</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <!-- Quick Summary -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background: rgba(0, 237, 100, 0.08); border-radius: 8px; padding: 16px;">
+                <tr>
+                  <td>
+                    <span style="color: #00ED64; font-size: 18px; font-weight: 600;">${params.name}</span>
+                    <span style="color: rgba(255, 255, 255, 0.5);"> • </span>
+                    <span style="color: rgba(255, 255, 255, 0.7);">${laneLabel}</span>
+                    <br>
+                    <a href="mailto:${params.email}" style="color: #00ED64; font-size: 14px; text-decoration: none;">${params.email}</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Lane</span><br>
+                    <span style="color: #ffffff; font-size: 15px; font-weight: 500;">${laneLabel}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Availability</span><br>
+                    <span style="color: #ffffff; font-size: 15px;">${availabilityLabel}</span>
+                  </td>
+                </tr>
+                ${params.location ? `
+                <tr>
+                  <td style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Location</span><br>
+                    <span style="color: #ffffff; font-size: 15px;">${params.location}</span>
+                  </td>
+                </tr>
+                ` : ''}
+                ${params.workLinks ? `
+                <tr>
+                  <td style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: rgba(255, 255, 255, 0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Work Links</span><br>
+                    <span style="color: #00ED64; font-size: 14px; white-space: pre-wrap;">${params.workLinks}</span>
+                  </td>
+                </tr>
+                ` : ''}
+              </table>
+
+              <!-- What They've Shipped -->
+              <div style="background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <span style="color: #00ED64; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">What They've Shipped</span>
+                <p style="color: rgba(255, 255, 255, 0.85); font-size: 15px; line-height: 1.7; margin: 12px 0 0; white-space: pre-wrap;">${params.shipped}</p>
+              </div>
+
+              <!-- Why NetPad -->
+              <div style="background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <span style="color: #00ED64; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Why NetPad</span>
+                <p style="color: rgba(255, 255, 255, 0.85); font-size: 15px; line-height: 1.7; margin: 12px 0 0; white-space: pre-wrap;">${params.whyNetpad}</p>
+              </div>
+
+              <!-- Reply Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="mailto:${params.email}?subject=Re: Collaborating on NetPad" style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); color: #001E2B; text-decoration: none; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">
+                      Reply to ${params.name.split(' ')[0]}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background: rgba(0, 0, 0, 0.2); text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; line-height: 1.5; margin: 0;">
+                Submitted via NetPad Collaborator Form${params.conversationId ? ` • Conversation: ${params.conversationId}` : ''}${params.turnCount ? ` • ${params.turnCount} turns` : ''}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  const text = `
+🤝 New Collaborator Interest
+
+${params.name} wants to build NetPad with you!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTACT
+Name: ${params.name}
+Email: ${params.email}
+Lane: ${laneLabel}
+Availability: ${availabilityLabel}
+${params.location ? `Location: ${params.location}\n` : ''}${params.workLinks ? `Work Links: ${params.workLinks}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT THEY'VE SHIPPED
+${params.shipped}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHY NETPAD
+${params.whyNetpad}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${params.conversationId ? `Conversation ID: ${params.conversationId}\n` : ''}${params.turnCount ? `Turns: ${params.turnCount}\n` : ''}
+--
+NetPad Collaborator Form
+`;
+
+  try {
+    console.log('[Email] Preparing to send collaborator notification:', {
+      to: notifyEmail,
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      replyTo: params.email,
+      subject: `🤝 New Collaborator: ${params.name} (${laneLabel})`,
+      hasSmtpAuth: !!EMAIL_CONFIG.auth.user,
+      smtpHost: EMAIL_CONFIG.host,
+    });
+
+    const transport = getTransporter();
+    const result = await transport.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: notifyEmail,
+      replyTo: params.email,
+      subject: `🤝 New Collaborator: ${params.name} (${laneLabel})`,
+      text,
+      html,
+    });
+
+    console.log('[Email] Collaborator notification sent to:', notifyEmail, 'Result:', result);
+
+    // In development without SMTP, log the submission
+    if (process.env.NODE_ENV !== 'production' && !EMAIL_CONFIG.auth.user) {
+      console.log('\n📧 Collaborator Notification (Dev Mode)');
+      console.log('From:', params.name, `<${params.email}>`);
+      console.log('Lane:', laneLabel);
+      console.log('');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to send collaborator notification:', error);
+    return false;
+  }
+}
+
 export async function sendPasskeyRegisteredEmail(to: string, deviceName: string): Promise<boolean> {
   const html = `
 <!DOCTYPE html>
