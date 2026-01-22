@@ -14,11 +14,32 @@ import { ImpersonationBanner } from '@/components/Admin/ImpersonationBanner';
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://netpad.io'),
   title: 'NetPad - Build MongoDB Forms & Workflows',
   description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.',
+  openGraph: {
+    title: 'NetPad - Build MongoDB Forms & Workflows',
+    description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.',
+    url: 'https://netpad.io',
+    siteName: 'NetPad',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'NetPad - MongoDB-native forms and workflows',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NetPad - Build MongoDB Forms & Workflows',
+    description: 'Create beautiful, validated data entry forms and workflows connected directly to your MongoDB collections. No coding required.',
+    images: ['/og-image.png'],
+  },
   icons: {
-    // Icon files are served from the public folder
-    // Explicit metadata for better browser compatibility
     icon: [
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
