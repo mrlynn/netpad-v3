@@ -1254,7 +1254,7 @@ export default function AIAnalyticsPage() {
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
                       formatter={(value) => [formatNumber(value as number), 'Tokens']}
-                      labelFormatter={formatFeatureName}
+                      labelFormatter={(label) => formatFeatureName(String(label))}
                     />
                     <Bar dataKey="tokens" fill="#00ED64" radius={[0, 4, 4, 0]} />
                   </BarChart>
