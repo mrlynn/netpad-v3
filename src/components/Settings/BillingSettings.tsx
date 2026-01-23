@@ -2,6 +2,9 @@
  * BillingSettings Component
  *
  * Subscription management UI for viewing plan, usage, and upgrading.
+ *
+ * In cloud mode: Full billing UI with Stripe checkout and portal
+ * In self-hosted mode: Shows usage only (no Stripe integration)
  */
 
 'use client';
@@ -42,6 +45,7 @@ import {
   ExternalLink,
   AlertCircle,
   Sparkles,
+  Server,
 } from 'lucide-react';
 import {
   useSubscription,
@@ -56,6 +60,7 @@ import {
   SUBSCRIPTION_TIERS,
   TIER_PRICING,
 } from '@/types/platform';
+import { useDeploymentMode, useExtensionFeature } from '@/lib/extensions/hooks';
 
 // ============================================
 // Types
@@ -83,6 +88,8 @@ interface PlanCardProps {
 
 export function BillingSettings() {
   const theme = useTheme();
+  const { isSelfHosted } = useDeploymentMode();
+  const { available: hasBilling } = useExtensionFeature('billing');
 
   // Fetch user's organizations
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -130,12 +137,114 @@ export function BillingSettings() {
     );
   }
 
-  // Render the billing content with the selected org
+  // Self-hosted mode: Show limited billing view (usage only)
+  if (isSelfHosted || !hasBilling) {
+    return (
+      <SelfHostedBillingView
+        orgId={selectedOrg.orgId}
+        orgName={selectedOrg.name}
+      />
+    );
+  }
+
+  // Cloud mode: Full billing UI with Stripe
   return (
     <BillingSettingsContent
       orgId={selectedOrg.orgId}
       orgName={selectedOrg.name}
     />
+  );
+}
+
+// ============================================
+// Self-Hosted Billing View (Usage Only)
+// ============================================
+
+function SelfHostedBillingView({ orgId, orgName }: { orgId: string; orgName: string }) {
+  const theme = useTheme();
+  const { tier } = useSubscription(orgId);
+  const { loading: usageLoading } = useAllUsageLimits(orgId);
+
+  return (
+    <Box>
+      {/* Self-Hosted Banner */}
+      <Alert
+        severity="info"
+        icon={<Server size={20} />}
+        sx={{ mb: 3 }}
+      >
+        <Typography variant="subtitle2">Self-Hosted Deployment</Typography>
+        <Typography variant="body2">
+          You are running NetPad in self-hosted mode. Subscription management is handled
+          locally. Upgrade to NetPad Cloud for managed billing and additional features.
+        </Typography>
+      </Alert>
+
+      {/* Current Plan */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              bgcolor: alpha(getTierColor(tier), 0.1),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Crown size={24} color={getTierColor(tier)} />
+          </Box>
+          <Box>
+            <Typography variant="h6">
+              {getTierDisplayName(tier)} Plan
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {orgName}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+          <Chip
+            icon={<Check size={14} />}
+            label={`${SUBSCRIPTION_TIERS[tier].limits.maxForms === -1 ? 'Unlimited' : SUBSCRIPTION_TIERS[tier].limits.maxForms} forms`}
+            size="small"
+            variant="outlined"
+          />
+          <Chip
+            icon={<Sparkles size={14} />}
+            label={`${SUBSCRIPTION_TIERS[tier].limits.aiGenerationsPerMonth === -1 ? 'Unlimited' : SUBSCRIPTION_TIERS[tier].limits.aiGenerationsPerMonth} AI generations/mo`}
+            size="small"
+            variant="outlined"
+          />
+        </Box>
+      </Paper>
+
+      {/* Usage Overview */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Usage This Month
+        </Typography>
+
+        {usageLoading ? (
+          <LinearProgress />
+        ) : (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <UsageLimitIndicator limitKey="submissions" orgId={orgId} variant="bar" />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <UsageLimitIndicator limitKey="aiGenerations" orgId={orgId} variant="bar" />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <UsageLimitIndicator limitKey="forms" orgId={orgId} variant="bar" />
+            </Grid>
+          </Grid>
+        )}
+      </Paper>
+    </Box>
   );
 }
 

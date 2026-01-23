@@ -3,6 +3,10 @@
  *
  * Stripe webhook handler for subscription events.
  * Verifies webhook signature and processes events.
+ *
+ * This endpoint supports both:
+ * - Cloud mode: Can delegate to the cloud extension's billing service
+ * - Self-hosted mode: Uses the built-in billing module
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,6 +19,7 @@ import {
   isStripeTestMode,
 } from '@/lib/platform/billing';
 import { getOrganizationsCollection } from '@/lib/platform/db';
+import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 
 // Lazy-loaded Stripe client to avoid errors at build time
 let stripeClient: Stripe | null = null;
@@ -37,6 +42,11 @@ function getStripe(): Stripe | null {
 }
 
 export async function POST(req: NextRequest) {
+  // Ensure extensions are loaded
+  if (!extensionsLoaded()) {
+    await loadExtensions();
+  }
+
   const webhookSecret = getStripeWebhookSecret();
   const stripe = getStripe();
   const mode = isStripeTestMode() ? 'test' : 'live';

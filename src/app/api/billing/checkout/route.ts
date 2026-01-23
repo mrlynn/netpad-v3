@@ -2,16 +2,26 @@
  * POST /api/billing/checkout
  *
  * Create a Stripe checkout session for upgrading subscription.
+ *
+ * This endpoint supports both:
+ * - Cloud mode: Uses the cloud extension's billing service
+ * - Self-hosted mode: Uses the built-in billing module
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession } from '@/lib/platform/billing';
+import { createCheckoutSession, STRIPE_PRICES } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
 import { SubscriptionTier, BillingInterval } from '@/types/platform';
+import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -62,7 +72,30 @@ export async function POST(req: NextRequest) {
     const successUrl = `${origin}/settings/billing?success=true`;
     const cancelUrl = `${origin}/settings/billing?canceled=true`;
 
-    // Create checkout session
+    // Try to use cloud extension billing service if available
+    const cloudBilling = getBillingService();
+    if (cloudBilling) {
+      // Get price ID for the tier/interval
+      const prices = STRIPE_PRICES[tier];
+      if (!prices) {
+        return NextResponse.json(
+          { error: `No pricing configured for tier: ${tier}` },
+          { status: 400 }
+        );
+      }
+      const priceId = interval === 'year' ? prices.yearly : prices.monthly;
+
+      const result = await cloudBilling.createCheckoutSession({
+        organizationId: orgId,
+        priceId,
+        successUrl,
+        cancelUrl,
+      });
+
+      return NextResponse.json(result);
+    }
+
+    // Fall back to built-in billing module
     const result = await createCheckoutSession(
       orgId,
       tier,
