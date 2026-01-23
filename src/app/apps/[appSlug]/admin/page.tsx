@@ -29,7 +29,7 @@ export default function AppAdminPage() {
   if (isAppLoading || isAccessLoading) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <NetPadLoader fullPage variant="ascii" /> message="Loading admin dashboard..." />
+        <NetPadLoader fullPage variant="ascii" message="Loading admin dashboard..." />
       </Box>
     );
   }
