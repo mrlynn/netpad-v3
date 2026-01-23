@@ -1559,7 +1559,7 @@ function CollaborateContent() {
             <Grid item xs={12} md={4}>
               <Paper
                 component="a"
-                href="https://github.com/mongodb-developer/netpad"
+                href="https://github.com/mrlynn/netpad-v3"
                 target="_blank"
                 rel="noopener noreferrer"
                 elevation={0}
