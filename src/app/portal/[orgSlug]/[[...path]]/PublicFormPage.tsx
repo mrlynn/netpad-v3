@@ -195,7 +195,7 @@ export default function PublicFormPage({ formId, organization }: PublicFormPageP
           minHeight: '100vh',
         }}
       >
-        <NetPadLoader size="medium" message="Loading form..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading form..." />
       </Box>
     );
   }

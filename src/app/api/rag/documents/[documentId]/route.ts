@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
-import { hasAIFeature } from '@/lib/platform/billing';
+import { hasAIFeature } from '@/lib/platform/usageService';
 import { getDocumentById, deleteDocument } from '@/lib/rag/storage';
 
 interface RouteParams {

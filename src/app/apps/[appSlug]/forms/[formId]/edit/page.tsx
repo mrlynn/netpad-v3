@@ -25,7 +25,7 @@ export default function AppFormEditPage() {
   if (isAppLoading || !currentApplication || !currentOrgId || !projectId) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <NetPadLoader size="large" message="Loading application..." />
+        <NetPadLoader fullPage variant="ascii" />
       </Box>
     );
   }

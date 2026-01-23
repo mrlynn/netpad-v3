@@ -109,13 +109,21 @@ export default function WorkflowsPage() {
   const [templateId, setTemplateId] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  // Auto-open create dialog when coming from application context with applicationId in URL
+  // Check for createNew query param (redirected from /workflows/new)
+  const createNew = searchParams?.get('createNew') === 'true';
+
+  // Auto-open create dialog when:
+  // 1. Coming from /workflows/new redirect (createNew=true), OR
+  // 2. Coming from application context with applicationId and no workflows exist
   useEffect(() => {
-    if (urlApplicationId && !loading && workflows.length === 0) {
+    if (createNew && !loading) {
+      // Redirected from /workflows/new - always open dialog
+      setCreateDialogOpen(true);
+    } else if (urlApplicationId && !loading && workflows.length === 0) {
       // If coming from application context and no workflows exist, open create dialog
       setCreateDialogOpen(true);
     }
-  }, [urlApplicationId, loading, workflows.length]);
+  }, [createNew, urlApplicationId, loading, workflows.length]);
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement; workflow: WorkflowListItem } | null>(null);

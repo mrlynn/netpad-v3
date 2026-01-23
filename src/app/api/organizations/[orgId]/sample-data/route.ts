@@ -3,7 +3,7 @@ import { getSession } from '@/lib/auth/session';
 import { assertOrgPermission } from '@/lib/platform/permissions';
 import { getOrgDb } from '@/lib/platform/db';
 import { ObjectId } from 'mongodb';
-import { checkFormLimit } from '@/lib/platform/billing';
+import { checkFormLimit } from '@/lib/platform/usageService';
 
 // Helper functions for generating realistic analytics data
 function randomDevice(): 'mobile' | 'desktop' | 'tablet' {

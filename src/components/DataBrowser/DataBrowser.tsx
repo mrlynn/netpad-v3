@@ -1158,7 +1158,7 @@ export function DataBrowser({
                 justifyContent: 'center',
               }}
             >
-              <NetPadLoader size="medium" message="Connecting..." showPhrases={false} />
+              <NetPadLoader size="large" variant="ascii" message="Connecting..." showPhrases={false} />
             </Paper>
           </Box>
         );

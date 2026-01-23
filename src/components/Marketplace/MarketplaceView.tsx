@@ -736,7 +736,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
       {/* Loading */}
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <NetPadLoader size="medium" message="Loading marketplace..." />
+          <NetPadLoader size="large" variant="ascii" message="Loading marketplace..." />
         </Box>
       ) : applications.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>

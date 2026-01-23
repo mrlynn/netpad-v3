@@ -58,6 +58,7 @@ import { ActionNodeEditor } from '../NodeEditors/ActionNodeEditor';
 import { DataNodeEditor } from '../NodeEditors/DataNodeEditor';
 import { AINodeEditor } from '../NodeEditors/AINodeEditor';
 import { CustomNodeEditor } from '../NodeEditors/CustomNodeEditor';
+import { ExtensionNodeEditor } from '../NodeEditors/ExtensionNodeEditor';
 
 interface NodeConfigPanelProps {
   open: boolean;
@@ -336,9 +337,13 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
   const isDataNode = ['transform', 'filter'].includes(selectedNode.type);
   const isAINode = ['ai-prompt', 'ai-classify', 'ai-extract'].includes(selectedNode.type);
   const isCustomNode = ['code'].includes(selectedNode.type);
-  
+
+  // Extension nodes are identified by having a colon in the type (e.g., 'collaborate:notify-collaborators')
+  // or by having extension metadata in config
+  const isExtensionNode = selectedNode.type.includes(':') || Boolean(selectedNode.config?._providedBy);
+
   // Determine if node has config (all node types except conditional and sticky-note use editors)
-  const hasConfig = !isConditionalNode && !isStickyNote && (isTriggerNode || isLogicNode || isIntegrationNode || isActionNode || isDataNode || isAINode || isCustomNode);
+  const hasConfig = !isConditionalNode && !isStickyNote && (isTriggerNode || isLogicNode || isIntegrationNode || isActionNode || isDataNode || isAINode || isCustomNode || isExtensionNode);
 
   // Get current sticky note style
   const currentStickyStyle = getStyleFromConfig(config);
@@ -732,6 +737,13 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
                   formsLoading={formsLoading}
                   availableConnections={availableConnections}
                   connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isExtensionNode ? (
+                <ExtensionNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
                   nodeId={selectedNode.id}
                 />
               ) : null}

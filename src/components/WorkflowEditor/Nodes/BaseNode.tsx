@@ -28,6 +28,9 @@ interface BaseNodeData extends WorkflowNode {
   label?: string;
   status?: NodeStatus;
   onConfigure?: () => void;
+  // Extension node metadata (passed from node definition)
+  extensionColor?: string;
+  extensionIcon?: string;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -82,8 +85,9 @@ const NODE_ICONS: Record<string, string> = {
 
 function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNodeData>) {
   const theme = useTheme();
-  const nodeColor = NODE_COLORS[data.type] || theme.palette.grey[500];
-  const nodeIcon = NODE_ICONS[data.type] || '⚙️';
+  // Use extension-provided color/icon if available, otherwise fall back to hardcoded maps
+  const nodeColor = data.extensionColor || NODE_COLORS[data.type] || theme.palette.grey[500];
+  const nodeIcon = data.extensionIcon || NODE_ICONS[data.type] || '⚙️';
 
   // Status indicator
   const StatusIndicator = () => {

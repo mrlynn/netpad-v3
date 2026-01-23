@@ -34,6 +34,7 @@ import { EmptyWorkflowState } from './Panels/EmptyWorkflowState';
 import { WorkflowTemplate } from '@/lib/templates/loader';
 import { GeneratedWorkflow } from '@/lib/ai/types';
 import { NetPadBrandedBackground } from './NetPadBrandedBackground';
+import { useExtensionNodes } from '@/hooks/useExtensionNodes';
 
 // Node components
 import { BaseNode } from './Nodes/BaseNode';
@@ -41,8 +42,8 @@ import { TriggerNode } from './Nodes/TriggerNode';
 import { LogicNode, getNodeOutputs } from './Nodes/LogicNode';
 import { StickyNote, STICKY_COLORS, DEFAULT_WIDTH, DEFAULT_HEIGHT } from './Nodes/StickyNote';
 
-// Custom node types mapping
-const nodeTypes: NodeTypes = {
+// Base custom node types mapping (built-in nodes)
+const builtInNodeTypes: NodeTypes = {
   // Default node type
   default: BaseNode,
   // Trigger nodes
@@ -103,6 +104,26 @@ export function WorkflowEditorCanvas({
   const theme = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
+  // Fetch extension nodes to register their types
+  const { nodes: extensionNodeDefs } = useExtensionNodes();
+
+  // Use a ref to hold the stable nodeTypes object
+  // This prevents ReactFlow from re-initializing when the object reference changes
+  const nodeTypesRef = useRef<NodeTypes>({ ...builtInNodeTypes });
+  const registeredExtensionTypesRef = useRef<Set<string>>(new Set());
+
+  // Update nodeTypes ref when extension nodes are loaded (only add, never remove)
+  // This runs synchronously during render to ensure nodeTypes is ready
+  extensionNodeDefs.forEach((nodeDef) => {
+    if (!registeredExtensionTypesRef.current.has(nodeDef.type) && !builtInNodeTypes[nodeDef.type]) {
+      nodeTypesRef.current[nodeDef.type] = BaseNode;
+      registeredExtensionTypesRef.current.add(nodeDef.type);
+    }
+  });
+
+  // Use the stable ref value
+  const nodeTypes = nodeTypesRef.current;
+
   // Get workflow state
   const { workflow, nodes: workflowNodes, edges: workflowEdges, selectedNodeId } = useWorkflowEditor();
   const {
@@ -120,11 +141,16 @@ export function WorkflowEditorCanvas({
   // Track the workflow ID to detect when we switch workflows
   const currentWorkflowIdRef = useRef<string | null>(null);
 
+  // Keep a ref to workflowNodes for use in callbacks that shouldn't trigger re-renders
+  // This prevents infinite loops when callbacks depend on workflowNodes
+  const workflowNodesRef = useRef(workflowNodes);
+  workflowNodesRef.current = workflowNodes;
+
   // Handle sticky note color change events (legacy)
   useEffect(() => {
     const handleColorChange = (event: CustomEvent<{ nodeId: string; color: string }>) => {
       const { nodeId, color } = event.detail;
-      const node = workflowNodes.find(n => n.id === nodeId);
+      const node = workflowNodesRef.current.find(n => n.id === nodeId);
       if (node) {
         updateNode(nodeId, {
           config: { ...node.config, bgColor: color }
@@ -136,13 +162,13 @@ export function WorkflowEditorCanvas({
     return () => {
       window.removeEventListener('stickyNoteColorChange', handleColorChange as EventListener);
     };
-  }, [workflowNodes, updateNode]);
+  }, [updateNode]);
 
   // Handle sticky note style change events (new style system)
   useEffect(() => {
     const handleStyleChange = (event: CustomEvent<{ nodeId: string; style: Record<string, unknown> }>) => {
       const { nodeId, style } = event.detail;
-      const node = workflowNodes.find(n => n.id === nodeId);
+      const node = workflowNodesRef.current.find(n => n.id === nodeId);
       if (node) {
         // Store the full style object and also set bgColor for backward compatibility
         const newConfig: Record<string, unknown> = {
@@ -161,17 +187,18 @@ export function WorkflowEditorCanvas({
     return () => {
       window.removeEventListener('stickyNoteStyleChange', handleStyleChange as EventListener);
     };
-  }, [workflowNodes, updateNode]);
+  }, [updateNode]);
 
   // Callback for sticky note content changes
+  // Uses ref to avoid dependency on workflowNodes which would cause infinite loops
   const handleStickyNoteContentChange = useCallback((nodeId: string, content: string) => {
-    const node = workflowNodes.find(n => n.id === nodeId);
+    const node = workflowNodesRef.current.find(n => n.id === nodeId);
     if (node) {
       updateNode(nodeId, {
         config: { ...node.config, content }
       });
     }
-  }, [workflowNodes, updateNode]);
+  }, [updateNode]);
 
   // Track if the "Build Your Workflow" helper has been dismissed
   const [helperDismissed, setHelperDismissed] = useState(false);
@@ -204,9 +231,16 @@ export function WorkflowEditorCanvas({
   // Convert workflow nodes to React Flow format
   const convertToFlowNodes = useCallback((wfNodes: typeof workflowNodes): Node[] => {
     return wfNodes.map((node) => {
+      // Extract extension metadata from config (if present)
+      const extensionColor = node.config?._extensionColor as string | undefined;
+      const extensionIcon = node.config?._extensionIcon as string | undefined;
+
       const baseNodeData = {
         ...node,
         label: node.label || getNodeLabel(node.type),
+        // Pass extension metadata to BaseNode
+        extensionColor,
+        extensionIcon,
       };
 
       // For sticky notes, add the content change callback and place behind other nodes
@@ -285,9 +319,16 @@ export function WorkflowEditorCanvas({
         // Preserve local selection state - React Flow manages this
         const isSelected = localSelected.get(storeNode.id) ?? false;
 
+        // Extract extension metadata from config (if present)
+        const extensionColor = storeNode.config?._extensionColor as string | undefined;
+        const extensionIcon = storeNode.config?._extensionIcon as string | undefined;
+
         const baseNodeData = {
           ...storeNode,
           label: storeNode.label || getNodeLabel(storeNode.type),
+          // Pass extension metadata to BaseNode
+          extensionColor,
+          extensionIcon,
         };
 
         // For sticky notes, add the content change callback and style
@@ -338,11 +379,17 @@ export function WorkflowEditorCanvas({
   // Logic node types that have multiple outputs
   const LOGIC_NODE_TYPES = ['conditional', 'switch', 'loop'];
 
+  // Keep a ref to workflowNodes for convertToFlowEdges to avoid dependency issues
+  const workflowNodesForEdgesRef = useRef(workflowNodes);
+  workflowNodesForEdgesRef.current = workflowNodes;
+
   // Convert workflow edges to React Flow format
+  // Uses ref to avoid recreating this callback when workflowNodes changes
   const convertToFlowEdges = useCallback((wfEdges: typeof workflowEdges): Edge[] => {
+    const currentNodes = workflowNodesForEdgesRef.current;
     return wfEdges.map((edge) => {
       // Find source node to check if it's a logic node
-      const sourceNode = workflowNodes.find(n => n.id === edge.source);
+      const sourceNode = currentNodes.find(n => n.id === edge.source);
       const isLogicNode = sourceNode && LOGIC_NODE_TYPES.includes(sourceNode.type);
 
       // Use sourceHandle as label for logic nodes (unless condition label already exists)
@@ -369,7 +416,7 @@ export function WorkflowEditorCanvas({
         } : undefined,
       };
     });
-  }, [workflowNodes]);
+  }, []); // No dependencies - uses ref
 
   // Local state for edges - React Flow controls this directly
   const [edges, setEdges] = useEdgesState(convertToFlowEdges(workflowEdges));
@@ -379,14 +426,18 @@ export function WorkflowEditorCanvas({
 
   // Sync edges from store when workflowEdges changes (for style/property updates)
   useEffect(() => {
-    // Check if workflowEdges actually changed
+    // Check if workflowEdges actually changed (reference equality first)
+    if (prevWorkflowEdgesRef.current === workflowEdges) {
+      return;
+    }
+
     const prevEdges = prevWorkflowEdgesRef.current;
-    const edgesChanged = 
+    const edgesChanged =
       prevEdges.length !== workflowEdges.length ||
       prevEdges.some((prevEdge, index) => {
         const currentEdge = workflowEdges[index];
         if (!currentEdge || prevEdge.id !== currentEdge.id) return true;
-        
+
         // Check if edge properties changed
         return (
           prevEdge.type !== currentEdge.type ||
@@ -399,8 +450,8 @@ export function WorkflowEditorCanvas({
 
     if (edgesChanged) {
       setEdges(convertToFlowEdges(workflowEdges));
-      prevWorkflowEdgesRef.current = workflowEdges;
     }
+    prevWorkflowEdgesRef.current = workflowEdges;
   }, [workflowEdges, setEdges, convertToFlowEdges]);
 
   // Handle node changes (move, select, remove, resize)
@@ -660,7 +711,7 @@ export function WorkflowEditorCanvas({
     if (readOnly || !reactFlowInstance.current) return;
 
     const nodeType = event.dataTransfer.getData('application/reactflow-nodetype');
-    const nodeData = event.dataTransfer.getData('application/reactflow-nodedata');
+    const nodeDataStr = event.dataTransfer.getData('application/reactflow-nodedata');
 
     if (!nodeType) return;
 
@@ -670,12 +721,26 @@ export function WorkflowEditorCanvas({
       y: event.clientY,
     });
 
-    // Create new node
+    // Parse extension metadata if present
+    let extensionMeta: { extensionColor?: string; extensionIcon?: string; isExtension?: boolean; providedBy?: string } = {};
+    if (nodeDataStr) {
+      try {
+        extensionMeta = JSON.parse(nodeDataStr);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    // Create new node with extension metadata stored in config for persistence
     const newNode: WorkflowNode = {
       id: `${nodeType}_${nanoid(8)}`,
       type: nodeType,
       position,
-      config: nodeData ? JSON.parse(nodeData) : {},
+      config: extensionMeta.isExtension ? {
+        _extensionColor: extensionMeta.extensionColor,
+        _extensionIcon: extensionMeta.extensionIcon,
+        _providedBy: extensionMeta.providedBy,
+      } : {},
       enabled: true,
     };
 

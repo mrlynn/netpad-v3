@@ -18,7 +18,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from '@/lib/workflow/db';
-import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
+import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 
 interface RouteParams {
   params: Promise<{ workflowId: string; executionId: string }>;

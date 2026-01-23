@@ -3,23 +3,30 @@
  *
  * Create a Stripe checkout session for upgrading subscription.
  *
- * This endpoint supports both:
- * - Cloud mode: Uses the cloud extension's billing service
- * - Self-hosted mode: Uses the built-in billing module
+ * Note: This endpoint requires cloud billing features.
+ * Self-hosted deployments manage subscriptions externally.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, STRIPE_PRICES } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
 import { SubscriptionTier, BillingInterval } from '@/types/platform';
-import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
+import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
 
 export async function POST(req: NextRequest) {
   try {
     // Ensure extensions are loaded
     if (!extensionsLoaded()) {
       await loadExtensions();
+    }
+
+    // Check if billing feature is available (cloud mode)
+    const billingAvailable = isFeatureAvailable('billing');
+    if (!billingAvailable.available) {
+      return NextResponse.json(
+        { error: 'Checkout is not available in self-hosted mode. Manage your subscription through your billing provider.' },
+        { status: 400 }
+      );
     }
 
     // Get session
@@ -72,39 +79,34 @@ export async function POST(req: NextRequest) {
     const successUrl = `${origin}/settings/billing?success=true`;
     const cancelUrl = `${origin}/settings/billing?canceled=true`;
 
-    // Try to use cloud extension billing service if available
+    // Get the billing service from cloud extension
     const cloudBilling = getBillingService();
-    if (cloudBilling) {
-      // Get price ID for the tier/interval
-      const prices = STRIPE_PRICES[tier];
-      if (!prices) {
-        return NextResponse.json(
-          { error: `No pricing configured for tier: ${tier}` },
-          { status: 400 }
-        );
-      }
-      const priceId = interval === 'year' ? prices.yearly : prices.monthly;
-
-      const result = await cloudBilling.createCheckoutSession({
-        organizationId: orgId,
-        priceId,
-        successUrl,
-        cancelUrl,
-      });
-
-      return NextResponse.json(result);
+    if (!cloudBilling) {
+      return NextResponse.json(
+        { error: 'Billing service not available' },
+        { status: 503 }
+      );
     }
 
-    // Fall back to built-in billing module
-    const result = await createCheckoutSession(
-      orgId,
-      tier,
-      interval,
-      session.userId,
+    // Get price ID for the tier/interval from environment
+    const priceEnvKey = interval === 'year'
+      ? `STRIPE_PRICE_${tier.toUpperCase()}_YEARLY`
+      : `STRIPE_PRICE_${tier.toUpperCase()}_MONTHLY`;
+    const priceId = process.env[priceEnvKey];
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: `No pricing configured for tier: ${tier} (${interval})` },
+        { status: 400 }
+      );
+    }
+
+    const result = await cloudBilling.createCheckoutSession({
+      organizationId: orgId,
+      priceId,
       successUrl,
       cancelUrl,
-      tier === 'team' ? seatCount : undefined
-    );
+    });
 
     return NextResponse.json(result);
   } catch (error) {

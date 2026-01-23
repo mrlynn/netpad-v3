@@ -5717,16 +5717,134 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     id: 'extension-system',
     title: 'Extension System',
     description:
-      'Technical overview of NetPad\'s extension system for loading cloud-only features and customizing deployments.',
+      'Learn about NetPad\'s extension system for adding custom functionality through modular npm packages.',
     content: [
       {
         type: 'heading',
-        content: 'Overview',
+        content: 'What Are Extensions?',
       },
       {
         type: 'text',
         content:
-          'The extension system allows NetPad to dynamically load additional features at runtime. It\'s primarily used to separate cloud-only features from the open source core.',
+          'Extensions are npm packages that add custom functionality to NetPad. They can provide API routes, UI components, services, middleware, custom workflow nodes, and more. Extensions integrate seamlessly with NetPad\'s core while remaining isolated and independently maintainable.',
+      },
+      {
+        type: 'heading',
+        content: 'Extension Capabilities',
+      },
+      {
+        type: 'list',
+        content: [
+          'API Routes: Custom endpoints under /api/ext/{extension-name}/',
+          'Services: Shared business logic (billing, provisioning, analytics)',
+          'Middleware: Request/response processing with priority ordering',
+          'Components: React UI components for use in pages',
+          'Features: Feature flags that enable/disable functionality',
+          'Workflow Nodes: Custom workflow node types for automation',
+          'Lifecycle Hooks: Initialize and cleanup logic',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Built-in Extensions',
+      },
+      {
+        type: 'text',
+        content: 'NetPad includes several built-in extensions:',
+      },
+      {
+        type: 'list',
+        content: [
+          '@netpad/cloud-features: Billing & subscriptions (Stripe), Atlas provisioning, premium AI features, usage analytics (cloud deployments only)',
+          '@netpad/collaborate: Community gallery, contributors, collaboration features',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Enabling Extensions',
+      },
+      {
+        type: 'text',
+        content:
+          'Extensions are enabled via the NETPAD_EXTENSIONS environment variable. Add it to your .env.local file:',
+      },
+      {
+        type: 'code',
+        content: '# Enable single extension\nNETPAD_EXTENSIONS=@netpad/collaborate\n\n# Enable multiple extensions\nNETPAD_EXTENSIONS=@netpad/collaborate,@myorg/custom-extension',
+      },
+      {
+        type: 'text',
+        content: 'Then install the package and restart NetPad:',
+      },
+      {
+        type: 'code',
+        content: 'npm install @netpad/collaborate',
+      },
+      {
+        type: 'heading',
+        content: 'Extension Architecture',
+      },
+      {
+        type: 'text',
+        content:
+          'Extensions follow a clear pattern. Each extension exports a NetPadExtension object with:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Metadata: ID, name, version, description',
+          'Features: Array of feature flags provided',
+          'Routes: API route definitions',
+          'Middleware: Request/response middleware',
+          'Services: Service implementations (billing, provisioning, etc.)',
+          'Workflow Nodes: Custom workflow node types',
+          'Components: React component overrides',
+          'Lifecycle Hooks: initialize() and cleanup() functions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Extension Loading Order',
+      },
+      {
+        type: 'list',
+        content: [
+          'Cloud Extension: @netpad/cloud-features (if NETPAD_CLOUD=true)',
+          'Plugin Extensions: Packages listed in NETPAD_EXTENSIONS',
+          'Programmatic Extensions: Registered via registerExtensionManually()',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Feature Checking',
+      },
+      {
+        type: 'text',
+        content:
+          'Check if a feature is available in your code:',
+      },
+      {
+        type: 'code',
+        content: "import { isFeatureAvailable } from '@/lib/extensions/registry';\n\n// Check if a feature is available\nif (isFeatureAvailable('billing')) {\n  // Show billing UI\n}\n\n// Custom extension features use the custom: prefix\nif (isFeatureAvailable('custom:collaborate')) {\n  // Show collaborate features\n}",
+      },
+      {
+        type: 'heading',
+        content: 'Creating Custom Extensions',
+      },
+      {
+        type: 'text',
+        content:
+          'To create your own extension:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Create an npm package with your extension code',
+          'Export a NetPadExtension object as the default export',
+          'Implement required interfaces (metadata, routes, services, etc.)',
+          'Publish to npm or use locally',
+          'Enable via NETPAD_EXTENSIONS environment variable',
+        ],
       },
       {
         type: 'heading',
@@ -5743,27 +5861,6 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       },
       {
         type: 'heading',
-        content: 'Available Services',
-      },
-      {
-        type: 'list',
-        content: [
-          'BillingService: Stripe checkout, portal, and webhook handling',
-          'AtlasProvisioningService: MongoDB Atlas cluster management',
-          'MarketplaceService: Application marketplace operations',
-          'WaitlistService: Beta waitlist management',
-        ],
-      },
-      {
-        type: 'heading',
-        content: 'Using in Components',
-      },
-      {
-        type: 'code',
-        content: '// Check if a feature is available\nconst { available } = useExtensionFeature(\'billing\');\n\n// Get deployment mode\nconst { isCloud, isSelfHosted } = useDeploymentMode();\n\n// Conditional rendering\n<CloudOnly>\n  <StripeCheckout />\n</CloudOnly>',
-      },
-      {
-        type: 'heading',
         content: 'API Endpoints',
       },
       {
@@ -5774,9 +5871,9 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
         ],
       },
       {
-        type: 'warning',
+        type: 'tip',
         content:
-          'The extension system is designed for cloud features only. Custom extensions are not currently supported for security and stability reasons.',
+          'For detailed documentation on creating extensions, see https://docs.netpad.io/docs/extensions/overview',
       },
     ],
     relatedTopics: ['open-core-architecture', 'deployment-modes', 'admin-extension-management'],
@@ -5790,6 +5887,9 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'billing',
       'atlas',
       'cloud',
+      'custom',
+      'npm',
+      'package',
     ],
   },
 

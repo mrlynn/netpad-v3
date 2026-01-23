@@ -4,25 +4,34 @@
  * Stripe webhook handler for subscription events.
  * Verifies webhook signature and processes events.
  *
- * This endpoint supports both:
- * - Cloud mode: Can delegate to the cloud extension's billing service
- * - Self-hosted mode: Uses the built-in billing module
+ * Note: This endpoint requires cloud billing features.
+ * Self-hosted deployments manage subscriptions externally.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import {
-  syncSubscriptionFromStripe,
-  recordBillingEvent,
-  markEventProcessed,
-  getStripeWebhookSecret,
-  isStripeTestMode,
-} from '@/lib/platform/billing';
-import { getOrganizationsCollection } from '@/lib/platform/db';
-import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
+import { getOrganizationsCollection, getBillingEventsCollection } from '@/lib/platform/db';
+import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
+import { generateSecureId } from '@/lib/encryption';
+import { BillingEvent, BillingEventType, SubscriptionTier, SubscriptionStatus, BillingInterval, Subscription } from '@/types/platform';
 
 // Lazy-loaded Stripe client to avoid errors at build time
 let stripeClient: Stripe | null = null;
+
+function isStripeTestMode(): boolean {
+  const stripeMode = process.env.STRIPE_MODE;
+  if (stripeMode) {
+    return stripeMode === 'test';
+  }
+  return process.env.NODE_ENV !== 'production';
+}
+
+function getStripeWebhookSecret(): string | undefined {
+  if (isStripeTestMode()) {
+    return process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET;
+  }
+  return process.env.STRIPE_WEBHOOK_SECRET_LIVE || process.env.STRIPE_WEBHOOK_SECRET;
+}
 
 function getStripe(): Stripe | null {
   // Use test or live key based on mode
@@ -41,10 +50,123 @@ function getStripe(): Stripe | null {
   return stripeClient;
 }
 
+// Record billing event
+async function recordBillingEvent(
+  stripeEventId: string,
+  type: BillingEventType,
+  orgId: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  const collection = await getBillingEventsCollection();
+
+  // Check for duplicate
+  const existing = await collection.findOne({ stripeEventId });
+  if (existing) {
+    console.log('[Billing] Duplicate event ignored:', stripeEventId);
+    return;
+  }
+
+  const event: Omit<BillingEvent, '_id'> = {
+    eventId: generateSecureId('evt'),
+    stripeEventId,
+    type,
+    organizationId: orgId,
+    data,
+    createdAt: new Date(),
+  };
+
+  await collection.insertOne(event as BillingEvent);
+}
+
+// Mark event as processed
+async function markEventProcessed(stripeEventId: string): Promise<void> {
+  const collection = await getBillingEventsCollection();
+  await collection.updateOne(
+    { stripeEventId },
+    { $set: { processedAt: new Date() } }
+  );
+}
+
+// Sync subscription from Stripe (minimal implementation for webhook)
+async function syncSubscriptionFromStripe(subscription: Stripe.Subscription): Promise<void> {
+  const orgsCollection = await getOrganizationsCollection();
+
+  const orgId = subscription.metadata.orgId;
+  if (!orgId) {
+    console.error('[Billing] Subscription missing orgId in metadata:', subscription.id);
+    return;
+  }
+
+  const tier = (subscription.metadata.tier || 'free') as SubscriptionTier;
+  const seatCount = parseInt(subscription.metadata.seatCount || '1', 10);
+
+  // Map Stripe status to our status
+  const statusMap: Record<string, SubscriptionStatus> = {
+    active: 'active',
+    past_due: 'past_due',
+    canceled: 'canceled',
+    trialing: 'trialing',
+    incomplete: 'incomplete',
+    incomplete_expired: 'canceled',
+    unpaid: 'past_due',
+    paused: 'canceled',
+  };
+
+  const firstItem = subscription.items.data[0];
+
+  const subscriptionData: Subscription = {
+    tier,
+    status: statusMap[subscription.status] || 'incomplete',
+    stripeSubscriptionId: subscription.id,
+    stripePriceId: firstItem?.price.id,
+    stripeProductId: firstItem?.price.product as string,
+    billingInterval: (firstItem?.price.recurring?.interval === 'year' ? 'year' : 'month') as BillingInterval,
+    currentPeriodStart: firstItem?.current_period_start
+      ? new Date(firstItem.current_period_start * 1000)
+      : undefined,
+    currentPeriodEnd: firstItem?.current_period_end
+      ? new Date(firstItem.current_period_end * 1000)
+      : undefined,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    trialStart: subscription.trial_start
+      ? new Date(subscription.trial_start * 1000)
+      : undefined,
+    trialEnd: subscription.trial_end
+      ? new Date(subscription.trial_end * 1000)
+      : undefined,
+    seatCount: tier === 'team' ? seatCount : undefined,
+    subscribedAt: new Date(subscription.created * 1000),
+    canceledAt: subscription.canceled_at
+      ? new Date(subscription.canceled_at * 1000)
+      : undefined,
+    updatedAt: new Date(),
+  };
+
+  await orgsCollection.updateOne(
+    { orgId },
+    {
+      $set: {
+        subscription: subscriptionData,
+        plan: tier,
+        updatedAt: new Date(),
+      },
+    }
+  );
+}
+
 export async function POST(req: NextRequest) {
   // Ensure extensions are loaded
   if (!extensionsLoaded()) {
     await loadExtensions();
+  }
+
+  // Check if billing feature is available (cloud mode)
+  const billingAvailable = isFeatureAvailable('billing');
+  if (!billingAvailable.available) {
+    // In self-hosted mode, we shouldn't receive Stripe webhooks
+    // Return 200 to prevent Stripe from retrying
+    console.log('[Webhook] Received webhook in self-hosted mode - ignoring');
+    return NextResponse.json({ received: true, mode: 'self-hosted' });
   }
 
   const webhookSecret = getStripeWebhookSecret();
@@ -269,4 +391,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { findUserById } from '@/lib/platform/users';
-import { checkAILimit, incrementAIUsage, hasAIFeature } from '@/lib/platform/billing';
+import * as localUsageService from '@/lib/platform/usageService';
 import { AIFeature } from '@/types/platform';
 import { getOrganizationsCollection } from '@/lib/platform/db';
 
@@ -160,7 +160,7 @@ export async function validateAIRequest(
   }
 
   // Check if user has access to the feature
-  const featureAccess = await hasAIFeature(orgId, feature);
+  const featureAccess = await localUsageService.hasAIFeature(orgId, feature);
   if (!featureAccess.allowed) {
     // Determine the appropriate error code and message
     const isClusterIssue = featureAccess.requiredClusterTier !== undefined;
@@ -188,7 +188,7 @@ export async function validateAIRequest(
 
   // Check AI usage limits if requested
   if (checkUsageLimit) {
-    const limitCheck = await checkAILimit(orgId, 'generations');
+    const limitCheck = await localUsageService.checkAILimit(orgId, 'generations');
     if (!limitCheck.allowed) {
       return {
         success: false,
@@ -273,5 +273,5 @@ export function recordGuestUsage(request: NextRequest): void {
  * Call this after the AI operation completes successfully.
  */
 export async function recordAIUsage(orgId: string): Promise<void> {
-  await incrementAIUsage(orgId, 'generations', 1);
+  await localUsageService.incrementAIUsage(orgId, 'generations', 1);
 }

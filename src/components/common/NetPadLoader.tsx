@@ -3,9 +3,10 @@
 /**
  * NetPadLoader - Branded loading component
  *
- * A signature loading animation featuring the NetPad robot head logo with
- * animated elements and rotating friendly loading messages.
- * Theme-aware: adapts colors and effects for dark and light modes.
+ * Adds an ASCII loader variant:
+ *   [◉ ◉] NetPad
+ *
+ * Theme-aware: uses current theme colors.
  */
 
 import { useState, useEffect } from 'react';
@@ -65,38 +66,27 @@ const getLoaderColors = (isDark: boolean) => ({
 
 // Fade in/out for text
 const fadeInOut = keyframes`
-  0% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  15%, 85% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
+  0% { opacity: 0; transform: translateY(4px); }
+  15%, 85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
 `;
 
 // Antenna bob animation
 const antennaBob = keyframes`
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 `;
 
 // Eye blink animation
 const eyeBlink = keyframes`
-  0%, 45%, 55%, 100% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(0.1);
-  }
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.12); }
+`;
+
+// Subtle shimmer for ASCII line
+const asciiShimmer = keyframes`
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
 `;
 
 interface NetPadLoaderProps {
@@ -108,6 +98,8 @@ interface NetPadLoaderProps {
   fullPage?: boolean;
   /** Whether to show the rotating phrases (default: true when no message provided) */
   showPhrases?: boolean;
+  /** Visual style for the loader */
+  variant?: 'svg' | 'ascii';
 }
 
 const sizeMap = {
@@ -125,7 +117,6 @@ function getRandomPhrase(exclude?: string): string {
 
 /**
  * NetPad Logo - Animated SVG
- * Uses the netpad-logo.svg file with theme-aware effects
  */
 function NetPadLogoIcon({
   size,
@@ -138,7 +129,6 @@ function NetPadLogoIcon({
 }) {
   const colors = getLoaderColors(isDark);
 
-  // Theme-aware pulse glow animation
   const pulseGlow = keyframes`
     0%, 100% {
       filter: drop-shadow(0 0 8px ${colors.glowPrimary}) drop-shadow(0 0 20px ${colors.glowSecondary});
@@ -163,31 +153,154 @@ function NetPadLogoIcon({
   );
 }
 
+/**
+ * NetPad ASCII loader: [◉ ◉] NetPad
+ * - blinking eyes
+ * - bobbing antenna dot
+ * - theme-aware color
+ */
+function NetPadAsciiLoaderIcon({
+  isDark,
+  size,
+}: {
+  isDark: boolean;
+  size: 'small' | 'medium' | 'large';
+}) {
+  const colors = getLoaderColors(isDark);
+
+  const fontSize =
+    size === 'small' ? 18 : size === 'medium' ? 22 : 26;
+
+  const eyeSize =
+    size === 'small' ? 18 : size === 'medium' ? 20 : 22;
+
+  const brandWeight =
+    size === 'small' ? 600 : 700;
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0.75,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          lineHeight: 1,
+          animation: `${asciiShimmer} 1.6s ease-in-out infinite`,
+        }}
+      >
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            display: 'inline-block',
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            fontSize: 14,
+            color: colors.accent,
+            transformOrigin: '50% 100%',
+            animation: `${antennaBob} 1.2s ease-in-out infinite`,
+            marginRight: '6px',
+            marginBottom: '2px',
+          }}
+        >
+          ●
+        </Box>
+
+        <Typography
+          component="span"
+          sx={{
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            fontSize,
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            color: colors.primary,
+            userSelect: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          [
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-block',
+              fontSize: eyeSize,
+              transformOrigin: '50% 60%',
+              animation: `${eyeBlink} 2.2s ease-in-out infinite`,
+              marginLeft: '6px',
+              marginRight: '10px',
+            }}
+          >
+            ◉
+          </Box>
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-block',
+              fontSize: eyeSize,
+              transformOrigin: '50% 60%',
+              animation: `${eyeBlink} 2.2s ease-in-out infinite`,
+              animationDelay: '0.08s',
+              marginRight: '6px',
+            }}
+          >
+            ◉
+          </Box>
+          ]{' '}
+          <Box
+            component="span"
+            sx={{
+              fontWeight: brandWeight,
+              color: 'text.primary',
+            }}
+          >
+            NetPad
+          </Box>
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          width: size === 'small' ? 120 : size === 'medium' ? 160 : 200,
+          height: 2,
+          borderRadius: 999,
+          background: `linear-gradient(90deg, transparent, ${colors.accent}, transparent)`,
+          opacity: 0.6,
+        }}
+      />
+    </Box>
+  );
+}
+
 export function NetPadLoader({
   size = 'medium',
   message,
   fullPage = false,
   showPhrases = true,
+  variant = 'svg',
 }: NetPadLoaderProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dimension = sizeMap[size];
-  // Use deterministic initial phrase to avoid hydration mismatch
-  // Will switch to random phrases after mount (client-side only)
+
   const [currentPhrase, setCurrentPhrase] = useState(LOADING_PHRASES[0]);
   const [phraseKey, setPhraseKey] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Set mounted flag after hydration
   useEffect(() => {
     setIsMounted(true);
-    // Set initial random phrase after mount to avoid hydration mismatch
     if (!message && showPhrases) {
       setCurrentPhrase(getRandomPhrase());
     }
   }, [message, showPhrases]);
 
-  // Rotate phrases every 2.5 seconds if no custom message
   useEffect(() => {
     if (message || !showPhrases || !isMounted) return;
 
@@ -210,10 +323,12 @@ export function NetPadLoader({
         gap: size === 'small' ? 1.5 : 2,
       }}
     >
-      {/* Logo Icon */}
-      <NetPadLogoIcon size={dimension} animate isDark={isDark} />
+      {variant === 'ascii' ? (
+        <NetPadAsciiLoaderIcon isDark={isDark} size={size} />
+      ) : (
+        <NetPadLogoIcon size={dimension} animate isDark={isDark} />
+      )}
 
-      {/* Loading message */}
       {displayMessage && (
         <Typography
           key={message ? 'static' : phraseKey}
@@ -243,7 +358,6 @@ export function NetPadLoader({
           minHeight: '100vh',
           width: '100%',
           bgcolor: 'background.default',
-          // Subtle grid background - more visible in light mode
           backgroundImage: isDark
             ? netpadColors.gridPatternDark
             : `radial-gradient(circle at 1px 1px, rgba(0, 104, 74, 0.06) 1px, transparent 0)`,
@@ -272,7 +386,6 @@ export function NetPadSpinner({ size = 16 }: { size?: number }) {
     100% { transform: rotate(360deg); }
   `;
 
-  // Unique ID for gradient to avoid conflicts
   const gradientId = `spinner-gradient-${isDark ? 'dark' : 'light'}`;
 
   return (

@@ -10,9 +10,12 @@
  * - Feature flags
  * - Middleware
  * - Service implementations
+ * - Custom workflow nodes
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { WorkflowNodeDefinition } from './workflowNodes';
+import type { NodeHandler } from '@/lib/workflow/nodeHandlers/types';
 
 // ============================================
 // Extension Metadata
@@ -39,6 +42,9 @@ export interface ExtensionMetadata {
 
 /**
  * Features that can be provided by extensions
+ *
+ * Known features are listed explicitly for type safety.
+ * Custom features can use the `custom:` prefix (e.g., 'custom:collaborate').
  */
 export type ExtensionFeature =
   // Billing & Subscription
@@ -62,7 +68,10 @@ export type ExtensionFeature =
   // Team Features
   | 'team_management_premium'
   | 'sso_saml'
-  | 'audit_logs_extended';
+  | 'audit_logs_extended'
+  // Custom features (extension-defined)
+  // Use format: 'custom:{feature_name}'
+  | `custom:${string}`;
 
 /**
  * Feature availability check result
@@ -477,6 +486,20 @@ export interface ComponentOverride {
 }
 
 // ============================================
+// Workflow Node Definitions
+// ============================================
+
+/**
+ * Workflow node provided by an extension
+ */
+export interface ExtensionWorkflowNode {
+  /** Node definition for UI and configuration */
+  definition: Omit<WorkflowNodeDefinition, 'providedBy'>;
+  /** Node execution handler */
+  handler: NodeHandler;
+}
+
+// ============================================
 // Main Extension Interface
 // ============================================
 
@@ -495,6 +518,9 @@ export interface NetPadExtension {
 
   /** Component overrides */
   components?: ComponentOverride[];
+
+  /** Custom workflow nodes provided by this extension */
+  workflowNodes?: ExtensionWorkflowNode[];
 
   /** Service implementations */
   services?: {

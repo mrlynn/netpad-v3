@@ -39,7 +39,7 @@ import {
   buildSubstitutionContext,
   SubstitutionContext,
 } from './variableSubstitution';
-import { updateWorkflowExecutionResult } from '@/lib/platform/billing';
+import { updateWorkflowExecutionResult } from '@/lib/platform/usageService';
 
 /**
  * Execute a workflow job

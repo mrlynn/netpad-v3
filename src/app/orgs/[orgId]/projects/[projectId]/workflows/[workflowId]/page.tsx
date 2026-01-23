@@ -2,25 +2,38 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Alert } from '@mui/material';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import WorkflowEditor from '@/components/WorkflowEditor';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { ApplicationContextBar } from '@/components/Navigation/ApplicationContextBar';
+import { getOrgProjectUrl } from '@/lib/routing';
 
 export default function WorkflowEditorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const workflowId = params.workflowId as string;
   const orgId = params.orgId as string;
   const projectId = params.projectId as string;
   const urlApplicationId = searchParams?.get('applicationId') || undefined;
-  
+
   const [applicationId, setApplicationId] = useState<string | undefined>(urlApplicationId);
   const [applicationName, setApplicationName] = useState<string | undefined>(undefined);
 
+  // Handle "new" as workflowId - redirect to workflows list page which has the create dialog
+  useEffect(() => {
+    if (workflowId === 'new' && orgId && projectId) {
+      // Redirect to the workflows list page - the user should create via the dialog there
+      const workflowsListUrl = urlApplicationId
+        ? `${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${urlApplicationId}&createNew=true`
+        : `${getOrgProjectUrl(orgId, projectId, 'workflows')}?createNew=true`;
+      router.replace(workflowsListUrl);
+    }
+  }, [workflowId, orgId, projectId, urlApplicationId, router]);
+
   // Load workflow to get applicationId if not in URL
   useEffect(() => {
-    if (!urlApplicationId && orgId && workflowId) {
+    if (!urlApplicationId && orgId && workflowId && workflowId !== 'new') {
       const loadWorkflow = async () => {
         try {
           const response = await fetch(`/api/workflows/${workflowId}?orgId=${orgId}`);
@@ -37,6 +50,11 @@ export default function WorkflowEditorPage() {
       loadWorkflow();
     }
   }, [urlApplicationId, orgId, workflowId]);
+
+  // Show nothing while redirecting for "new"
+  if (workflowId === 'new') {
+    return null;
+  }
 
   if (!orgId || !projectId) {
     return (

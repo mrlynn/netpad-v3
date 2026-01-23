@@ -12,7 +12,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from './db';
-import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
+import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 
 interface TriggerPayload {
   type: TriggerType;

@@ -147,7 +147,7 @@ export function DataExplorerTab({ onNeedConnection }: DataExplorerTabProps) {
           justifyContent: 'center',
         }}
       >
-        <NetPadLoader size="large" message="Loading data connections..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading data connections..." />
       </Box>
     );
   }

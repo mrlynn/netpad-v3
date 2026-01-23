@@ -170,7 +170,27 @@ Use the available tools to:
 - \`create_form_from_template\` - Create a form from a template
 - \`list_workflow_templates\` - Browse workflow automation templates
 
-For more information, visit https://netpad.io
+## Extensions System
+
+NetPad supports extensions that add custom functionality:
+
+**Built-in Extensions:**
+- **@netpad/cloud-features**: Billing, Atlas provisioning, premium AI features (cloud only)
+- **@netpad/collaborate**: Community gallery and collaboration features
+
+**Extension Capabilities:**
+- Custom API routes under /api/ext/{extension-name}/
+- Custom workflow node types
+- Shared services (billing, provisioning, analytics)
+- Request/response middleware
+- React UI components
+- Feature flags
+
+**Enabling Extensions:**
+Set NETPAD_EXTENSIONS environment variable:
+\`NETPAD_EXTENSIONS=@netpad/collaborate,@myorg/custom-extension\`
+
+For more information, visit https://netpad.io and https://docs.netpad.io/docs/extensions/overview
 `,
         },
       ],

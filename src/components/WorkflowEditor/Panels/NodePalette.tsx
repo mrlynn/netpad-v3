@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -17,6 +17,8 @@ import {
   Tooltip,
   useTheme,
   alpha,
+  Chip,
+  CircularProgress,
 } from '@mui/material';
 import {
   ExpandMore as ExpandIcon,
@@ -41,8 +43,10 @@ import {
   Code as CodeIcon,
   TableChart as SheetsIcon,
   StickyNote2 as StickyNoteIcon,
+  Extension as ExtensionIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
+import { useExtensionNodes, ExtensionNodeDefinition } from '@/hooks/useExtensionNodes';
 
 // Node definition for palette
 interface PaletteNode {
@@ -52,6 +56,47 @@ interface PaletteNode {
   icon: React.ReactNode;
   color: string;
   category: NodeCategory;
+  isExtension?: boolean;
+  providedBy?: string;
+}
+
+// Map of icon names to icon components for extension nodes
+const ICON_MAP: Record<string, React.ReactNode> = {
+  'Extension': <ExtensionIcon />,
+  'Code': <CodeIcon />,
+  'Http': <HttpIcon />,
+  'Storage': <MongoIcon />,
+  'Email': <EmailIcon />,
+  'SmartToy': <AiIcon />,
+  'Transform': <TransformIcon />,
+  'Category': <CategoryIcon />,
+  'Description': <FormIcon />,
+  'Notifications': <NotificationIcon />,
+  'FilterList': <FilterIcon />,
+  'MergeType': <MergeIcon />,
+  'DataObject': <ExtractIcon />,
+  'TableChart': <SheetsIcon />,
+  'Schedule': <ScheduleIcon />,
+  'Loop': <LoopIcon />,
+  'Timer': <DelayIcon />,
+  'CallSplit': <ConditionalIcon />,
+  'Link': <WebhookIcon />,
+  'PlayArrow': <ManualIcon />,
+  'StickyNote2': <StickyNoteIcon />,
+};
+
+// Convert extension node definition to palette node
+function extensionToPaletteNode(ext: ExtensionNodeDefinition): PaletteNode {
+  return {
+    type: ext.type,
+    label: ext.label,
+    description: ext.description,
+    icon: ICON_MAP[ext.icon] || <ExtensionIcon />,
+    color: ext.color,
+    category: ext.category,
+    isExtension: true,
+    providedBy: ext.providedBy,
+  };
 }
 
 // Available nodes grouped by category
@@ -287,8 +332,17 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<NodeCategory[]>(['triggers', 'logic', 'actions']);
 
+  // Fetch extension nodes
+  const { nodes: extensionNodes, loading: extensionLoading } = useExtensionNodes();
+
+  // Combine built-in nodes with extension nodes
+  const allNodes = useMemo(() => {
+    const extensionPaletteNodes = extensionNodes.map(extensionToPaletteNode);
+    return [...PALETTE_NODES, ...extensionPaletteNodes];
+  }, [extensionNodes]);
+
   // Filter nodes by search query
-  const filteredNodes = PALETTE_NODES.filter(
+  const filteredNodes = allNodes.filter(
     (node) =>
       node.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       node.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -302,10 +356,42 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
   }, {} as Record<NodeCategory, PaletteNode[]>);
 
   // Handle drag start
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData('application/reactflow-nodetype', nodeType);
+  const onDragStart = (event: React.DragEvent, node: PaletteNode) => {
+    event.dataTransfer.setData('application/reactflow-nodetype', node.type);
+    // Pass extension metadata for proper rendering
+    if (node.isExtension) {
+      event.dataTransfer.setData('application/reactflow-nodedata', JSON.stringify({
+        extensionColor: node.color,
+        extensionIcon: getIconEmoji(node.type, extensionNodes),
+        isExtension: true,
+        providedBy: node.providedBy,
+      }));
+    }
     event.dataTransfer.effectAllowed = 'move';
   };
+
+  // Get emoji icon for extension nodes (for BaseNode display)
+  function getIconEmoji(nodeType: string, extNodes: ExtensionNodeDefinition[]): string {
+    const extNode = extNodes.find(n => n.type === nodeType);
+    if (!extNode) return '⚙️';
+    // Map icon names to emojis
+    const iconToEmoji: Record<string, string> = {
+      'Notifications': '🔔',
+      'Email': '📧',
+      'Http': '🌐',
+      'Storage': '💾',
+      'SmartToy': '🤖',
+      'Transform': '🔧',
+      'Code': '💻',
+      'Description': '📝',
+      'FilterList': '🔍',
+      'Schedule': '⏰',
+      'Loop': '🔄',
+      'Timer': '⏳',
+      'Extension': '🔌',
+    };
+    return iconToEmoji[extNode.icon] || '🔌';
+  }
 
   // Handle accordion expand
   const handleAccordionChange = (category: NodeCategory) => (
@@ -414,13 +500,22 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
                   {nodes.map((node) => (
                     <Tooltip
                       key={node.type}
-                      title={node.description}
+                      title={
+                        <Box>
+                          <Typography variant="body2">{node.description}</Typography>
+                          {node.isExtension && (
+                            <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block' }}>
+                              Extension: {node.providedBy}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
                       placement="right"
                       arrow
                     >
                       <ListItem
                         draggable
-                        onDragStart={(e) => onDragStart(e, node.type)}
+                        onDragStart={(e) => onDragStart(e, node)}
                         onClick={() => onNodeSelect?.(node.type)}
                         sx={{
                           cursor: 'grab',
@@ -444,13 +539,44 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
                               bgcolor: alpha(node.color, 0.1),
                               color: node.color,
                               fontSize: 18,
+                              position: 'relative',
                             }}
                           >
                             {node.icon}
+                            {node.isExtension && (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: -4,
+                                  right: -4,
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: '50%',
+                                  bgcolor: theme.palette.info.main,
+                                  border: `1.5px solid ${theme.palette.background.paper}`,
+                                }}
+                              />
+                            )}
                           </Box>
                         </ListItemIcon>
                         <ListItemText
-                          primary={node.label}
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              {node.label}
+                              {node.isExtension && (
+                                <Chip
+                                  label="Ext"
+                                  size="small"
+                                  sx={{
+                                    height: 16,
+                                    fontSize: '0.65rem',
+                                    bgcolor: alpha(theme.palette.info.main, 0.1),
+                                    color: theme.palette.info.main,
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          }
                           primaryTypographyProps={{
                             variant: 'body2',
                             fontWeight: 500,
@@ -474,8 +600,29 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
           bgcolor: alpha(theme.palette.primary.main, 0.04),
         }}
       >
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Drag nodes onto the canvas to add them to your workflow
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+          {extensionLoading ? (
+            <>
+              <CircularProgress size={12} />
+              Loading extension nodes...
+            </>
+          ) : (
+            <>
+              Drag nodes onto the canvas to add them to your workflow
+              {extensionNodes.length > 0 && (
+                <Chip
+                  label={`+${extensionNodes.length} ext`}
+                  size="small"
+                  sx={{
+                    height: 16,
+                    fontSize: '0.65rem',
+                    bgcolor: alpha(theme.palette.info.main, 0.1),
+                    color: theme.palette.info.main,
+                  }}
+                />
+              )}
+            </>
+          )}
         </Typography>
       </Box>
     </Paper>

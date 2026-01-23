@@ -20,7 +20,7 @@ import { Message, StreamConfig } from './providers/base';
 import { createDefaultProvider, getProviderConfigFromEnv } from './providers/factory';
 import { logAIRequest } from './aiAnalytics';
 import { calculateCost, estimateTokens } from './pricing';
-import { incrementAIUsage } from '../platform/billing';
+import { incrementAIUsage } from '../platform/usageService';
 
 /**
  * Extended stream config with JSON response format option

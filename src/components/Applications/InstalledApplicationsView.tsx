@@ -170,7 +170,7 @@ export function InstalledApplicationsView({
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <NetPadLoader size="medium" message="Loading installed applications..." />
+          <NetPadLoader size="large" variant="ascii" message="Loading installed applications..." />
         </Box>
       </Container>
     );

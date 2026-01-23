@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getWorkflowById, updateWorkflowStatus, listWorkflows } from '@/lib/workflow/db';
 import { WorkflowStatus } from '@/types/workflow';
-import { checkActiveWorkflowLimit } from '@/lib/platform/billing';
+import { checkActiveWorkflowLimit } from '@/lib/platform/usageService';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
 interface RouteParams {

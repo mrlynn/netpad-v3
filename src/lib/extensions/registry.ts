@@ -25,6 +25,7 @@ import {
   ExtensionMiddleware,
 } from './types';
 import { getDeploymentMode, isCloudMode } from '../runtime/deploymentMode';
+import { registerExtensionNode, unregisterExtensionNode, getNodesFromExtension } from './workflowNodes';
 
 // ============================================
 // Registry State
@@ -83,6 +84,18 @@ export function registerExtension(extension: NetPadExtension): void {
     });
   }
 
+  // Register workflow nodes provided by this extension
+  if (extension.workflowNodes) {
+    for (const node of extension.workflowNodes) {
+      registerExtensionNode(
+        { ...node.definition, providedBy: id },
+        node.handler,
+        id
+      );
+    }
+    console.log(`[Extensions] Registered ${extension.workflowNodes.length} workflow node(s) from ${id}`);
+  }
+
   emitEvent({
     type: 'extension:registered',
     extensionId: id,
@@ -108,6 +121,14 @@ export function unregisterExtension(extensionId: string): void {
         feature,
       });
     });
+  }
+
+  // Unregister workflow nodes
+  if (extension.workflowNodes) {
+    const extensionNodes = getNodesFromExtension(extensionId);
+    for (const node of extensionNodes) {
+      unregisterExtensionNode(node.type);
+    }
   }
 
   registeredExtensions.delete(extensionId);

@@ -951,6 +951,11 @@ export function useWorkflow(): WorkflowContextValue {
   return context;
 }
 
+// Stable empty arrays to avoid creating new array references when workflow is null
+// This prevents infinite re-renders in components that depend on nodes/edges
+const EMPTY_NODES: WorkflowNode[] = [];
+const EMPTY_EDGES: WorkflowEdge[] = [];
+
 /**
  * Hook for accessing workflow editor state
  */
@@ -963,9 +968,9 @@ export function useWorkflowEditor() {
   const isSaving = useWorkflowStore((state) => state.isSaving);
   const error = useWorkflowStore((state) => state.error);
 
-  // Derived state
-  const nodes = workflow?.canvas.nodes || [];
-  const edges = workflow?.canvas.edges || [];
+  // Derived state - use stable empty arrays to prevent infinite re-renders
+  const nodes = workflow?.canvas.nodes || EMPTY_NODES;
+  const edges = workflow?.canvas.edges || EMPTY_EDGES;
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) || null;
 

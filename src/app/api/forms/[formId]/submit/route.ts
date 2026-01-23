@@ -129,7 +129,7 @@ import {
   checkAuthSubmissionLimit,
   getRateLimitHeaders,
 } from '@/lib/platform';
-import { checkSubmissionLimit, incrementSubmissionUsage } from '@/lib/platform/billing';
+import * as localUsageService from '@/lib/platform/usageService';
 
 /**
  * Form Submission API
@@ -337,7 +337,7 @@ export async function POST(
     // Subscription Submission Limit Check
     // ============================================
     if (form.organizationId) {
-      const subscriptionLimit = await checkSubmissionLimit(form.organizationId);
+      const subscriptionLimit = await localUsageService.checkSubmissionLimit(form.organizationId);
       if (!subscriptionLimit.allowed) {
         return NextResponse.json(
           {
@@ -487,7 +487,7 @@ export async function POST(
         );
 
         // Increment subscription submission usage
-        await incrementSubmissionUsage(form.organizationId, form.id!);
+        await localUsageService.incrementSubmissionUsage(form.organizationId, form.id!);
       } else {
         console.log(`[Form Submit] No organizationId on form ${form.id}, skipping workflow trigger`);
       }
@@ -616,7 +616,7 @@ export async function POST(
       );
 
       // Increment subscription submission usage
-      await incrementSubmissionUsage(form.organizationId, form.id!);
+      await localUsageService.incrementSubmissionUsage(form.organizationId, form.id!);
     }
 
     // ============================================

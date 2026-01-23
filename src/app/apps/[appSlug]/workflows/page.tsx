@@ -16,6 +16,11 @@ import {
   TextField,
   InputAdornment,
   useTheme as useMuiTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from '@mui/material';
 import {
   Add,
@@ -26,10 +31,11 @@ import {
   Pause,
 } from '@mui/icons-material';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { getAppUrl, getOrgProjectUrl } from '@/lib/routing';
+import { getOrgProjectUrl } from '@/lib/routing';
 
 interface Workflow {
   id: string;
@@ -49,6 +55,8 @@ interface Workflow {
  */
 export default function AppWorkflowsPage() {
   const theme = useMuiTheme();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { currentOrgId } = useOrganization();
   const { currentApplication, isLoading: isAppLoading } = useApplication();
@@ -56,10 +64,27 @@ export default function AppWorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Create dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newWorkflowName, setNewWorkflowName] = useState('');
+  const [newWorkflowDescription, setNewWorkflowDescription] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const appSlug = currentApplication?.slug || '';
   const applicationId = currentApplication?.applicationId;
   const projectId = currentApplication?.projectId;
+
+  // Check for createNew query param (redirected from /workflows/new)
+  const createNew = searchParams?.get('createNew') === 'true';
+
+  // Auto-open create dialog when redirected from /workflows/new
+  useEffect(() => {
+    if (createNew && !loading) {
+      setCreateDialogOpen(true);
+    }
+  }, [createNew, loading]);
 
   useEffect(() => {
     if (currentOrgId && projectId && applicationId) {
@@ -90,10 +115,49 @@ export default function AppWorkflowsPage() {
     (wf.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Create workflow via API, then navigate to the editor
+  const handleCreateWorkflow = async () => {
+    if (!currentOrgId || !projectId || !newWorkflowName.trim()) {
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const response = await fetch('/api/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: currentOrgId,
+          projectId,
+          name: newWorkflowName.trim(),
+          description: newWorkflowDescription.trim() || undefined,
+          applicationId: applicationId || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create workflow');
+      }
+
+      // Navigate to the newly created workflow
+      const workflowUrl = `${getOrgProjectUrl(currentOrgId, projectId, 'workflows', data.workflow.id)}?applicationId=${applicationId}`;
+      router.push(workflowUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create workflow');
+    } finally {
+      setCreating(false);
+      setCreateDialogOpen(false);
+      setNewWorkflowName('');
+      setNewWorkflowDescription('');
+    }
+  };
+
   if (isAppLoading || !currentApplication) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <NetPadLoader size="large" message="Loading application..." />
+        <NetPadLoader fullPage variant="ascii" />
       </Box>
     );
   }
@@ -112,10 +176,9 @@ export default function AppWorkflowsPage() {
               </Typography>
             </Box>
             <Button
-              component={Link}
-              href={currentOrgId && projectId ? getOrgProjectUrl(currentOrgId, projectId, 'workflows') + '/new' : '#'}
               variant="contained"
               startIcon={<Add />}
+              onClick={() => setCreateDialogOpen(true)}
               sx={{ bgcolor: theme.palette.primary.main, color: theme.palette.primary.contrastText, textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: theme.palette.primary.dark } }}
             >
               Create Workflow
@@ -125,6 +188,12 @@ export default function AppWorkflowsPage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
         <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
           <TextField
             fullWidth
@@ -138,7 +207,7 @@ export default function AppWorkflowsPage() {
 
         {loading ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-            <NetPadLoader size="large" message="Loading workflows..." />
+            <NetPadLoader size="large" variant="ascii" message="Loading workflows..." />
           </Box>
         ) : filteredWorkflows.length === 0 ? (
           <Paper sx={{ p: 6, textAlign: 'center', bgcolor: alpha(theme.palette.background.paper, 0.5), border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
@@ -150,11 +219,10 @@ export default function AppWorkflowsPage() {
               Automate your processes with visual workflows. Connect forms, triggers, and actions.
             </Typography>
             <Button
-              component={Link}
-              href={currentOrgId && projectId ? getOrgProjectUrl(currentOrgId, projectId, 'workflows') + '/new' : '#'}
               variant="contained"
               size="large"
               startIcon={<Add />}
+              onClick={() => setCreateDialogOpen(true)}
               sx={{ bgcolor: theme.palette.primary.main, color: theme.palette.primary.contrastText, textTransform: 'none', fontWeight: 600, px: 4, py: 1.5, '&:hover': { bgcolor: theme.palette.primary.dark } }}
             >
               Create Your First Workflow
@@ -209,6 +277,43 @@ export default function AppWorkflowsPage() {
           </Grid>
         )}
       </Container>
+
+      {/* Create Workflow Dialog */}
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Workflow</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Workflow Name"
+            fullWidth
+            required
+            value={newWorkflowName}
+            onChange={(e) => setNewWorkflowName(e.target.value)}
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            rows={3}
+            value={newWorkflowDescription}
+            onChange={(e) => setNewWorkflowDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleCreateWorkflow}
+            variant="contained"
+            disabled={!newWorkflowName.trim() || creating}
+            sx={{ bgcolor: theme.palette.primary.main, '&:hover': { bgcolor: theme.palette.primary.dark } }}
+          >
+            {creating ? 'Creating...' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

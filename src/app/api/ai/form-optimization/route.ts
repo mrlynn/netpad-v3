@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createFormOptimizationAgent } from '@/lib/ai/formOptimizationAgent';
 import { FormOptimizationRequest } from '@/lib/ai/types';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
-import { incrementAIUsage } from '@/lib/platform/billing';
+import { incrementAIUsage } from '@/lib/platform/usageService';
 
 export async function POST(request: NextRequest) {
   try {

@@ -225,7 +225,7 @@ export default function PublicFormPage() {
           minHeight: '100vh',
         }}
       >
-        <NetPadLoader size="medium" message="Loading form..." />
+        <NetPadLoader variant="ascii" fullPage={false} size="medium" message="Loading form..." />
       </Box>
     );
   }

@@ -16,7 +16,7 @@ import {
   enqueueJob,
   canEnqueueJob,
 } from '@/lib/workflow/db';
-import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
+import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 import { WorkflowDocument } from '@/types/workflow';
 
 interface RouteParams {

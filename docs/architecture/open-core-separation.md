@@ -1,4 +1,4 @@
-# Open Core Architecture: Separating Cloud Features
+  # Open Core Architecture: Separating Cloud Features
 
 This document describes how NetPad separates cloud-only features from the open source core using an extension system.
 

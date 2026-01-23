@@ -16,11 +16,12 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import { useAuth } from './AuthContext';
+import { usePathname } from 'next/navigation';
 import { Application } from '@/types/application';
-import { FormConfiguration } from '@/types/form';
 
 // ============================================
 // Types
@@ -99,6 +100,18 @@ const IntentOnboardingContext = createContext<IntentOnboardingContextValue | und
 );
 
 // ============================================
+// Helper: Check if user is already in app context
+// ============================================
+
+function isInAppContext(pathname: string | null): boolean {
+  if (!pathname) return false;
+  // If URL contains /orgs/[orgId]/projects/[projectId] or /apps/, user is already working
+  const isInProjectContext = /\/orgs\/[^/]+\/projects\/[^/]+/.test(pathname);
+  const isInAppContext = /\/apps\//.test(pathname);
+  return isInProjectContext || isInAppContext;
+}
+
+// ============================================
 // Provider
 // ============================================
 
@@ -113,6 +126,12 @@ const PHASE_MESSAGES: Record<GenerationPhase, string> = {
 
 export function IntentOnboardingProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const pathname = usePathname();
+
+  // Use ref to track if we've completed onboarding to avoid re-triggering
+  const hasCompletedRef = useRef(false);
+  // Track if we've already fetched status to prevent duplicate fetches
+  const hasFetchedRef = useRef(false);
 
   const [state, setState] = useState<IntentOnboardingState>({
     isLoading: true,
@@ -130,6 +149,28 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
 
   // Fetch onboarding status from API
   const refreshStatus = useCallback(async () => {
+    // If already completed, don't re-fetch
+    if (hasCompletedRef.current) {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        isActive: false,
+      }));
+      return;
+    }
+
+    // If already in app context (via URL), skip onboarding entirely
+    if (isInAppContext(pathname)) {
+      hasCompletedRef.current = true;
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        isActive: false,
+        status: null,
+      }));
+      return;
+    }
+
     if (!isAuthenticated) {
       setState((prev) => ({
         ...prev,
@@ -163,14 +204,15 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
         isActive: false,
       }));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, pathname]);
 
-  // Fetch status when auth state changes
+  // Fetch status when auth state changes - but only once
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       refreshStatus();
     }
-  }, [authLoading, isAuthenticated, refreshStatus]);
+  }, [authLoading, refreshStatus]);
 
   // Update progress with a new phase
   const updateProgress = useCallback((phase: GenerationPhase) => {
@@ -252,6 +294,7 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
         }
 
         if (result) {
+          hasCompletedRef.current = true;
           setState((prev) => ({
             ...prev,
             step: 'complete',
@@ -269,6 +312,7 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
       const data = await response.json();
 
       if (data.result) {
+        hasCompletedRef.current = true;
         setState((prev) => ({
           ...prev,
           step: 'complete',
@@ -314,6 +358,7 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
 
       const data = await response.json();
 
+      hasCompletedRef.current = true;
       setState((prev) => ({
         ...prev,
         step: 'complete',
@@ -349,6 +394,7 @@ export function IntentOnboardingProvider({ children }: { children: ReactNode }) 
 
   // Complete onboarding manually
   const completeOnboarding = useCallback(() => {
+    hasCompletedRef.current = true;
     setState((prev) => ({
       ...prev,
       isActive: false,

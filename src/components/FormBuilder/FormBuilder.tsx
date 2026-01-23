@@ -1232,7 +1232,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             bgcolor: 'background.default'
           }}
         >
-          <NetPadLoader size="medium" message="Loading collection schema..." />
+          <NetPadLoader size="large" variant="ascii" message="Loading collection schema..." />
         </Box>
       ) : fieldConfigs.length === 0 ? (
         // New simplified empty state - no fields yet

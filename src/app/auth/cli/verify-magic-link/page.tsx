@@ -75,7 +75,7 @@ function VerifyMagicLinkContent() {
       >
         {status === 'verifying' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, py: 2 }}>
-            <NetPadLoader size="large" message="Verifying magic link..." />
+            <NetPadLoader size="large" variant="ascii" message="Verifying magic link..." />
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#ffffff' }}>
               Verifying Magic Link
             </Typography>
@@ -152,7 +152,7 @@ export default function VerifyMagicLinkPage() {
           backgroundColor: '#001E2B',
         }}
       >
-        <NetPadLoader size="large" message="Loading..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     }>
       <VerifyMagicLinkContent />

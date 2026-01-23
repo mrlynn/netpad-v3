@@ -219,6 +219,41 @@ ${getNpmPackagesCapability()}
 
 ${getApplicationContractsCapability()}
 
+## Extensions System
+
+NetPad supports a powerful extension system that allows adding custom functionality through modular npm packages:
+
+**What Extensions Can Do:**
+- Add custom API routes under /api/ext/{extension-name}/
+- Provide shared services (billing, provisioning, analytics)
+- Add custom workflow node types
+- Inject middleware for request/response processing
+- Provide React UI components
+- Declare feature flags for conditional functionality
+
+**Built-in Extensions:**
+- **@netpad/cloud-features**: Billing, Atlas provisioning, premium AI features, usage analytics (cloud deployments only)
+- **@netpad/collaborate**: Community gallery, contributors, collaboration features
+
+**Enabling Extensions:**
+Extensions are enabled via the NETPAD_EXTENSIONS environment variable:
+\`\`\`
+NETPAD_EXTENSIONS=@netpad/collaborate,@myorg/custom-extension
+\`\`\`
+
+**Extension Architecture:**
+- Extensions are npm packages that export a NetPadExtension object
+- They register during app startup
+- Can provide routes, services, middleware, components, and workflow nodes
+- Support lifecycle hooks (initialize/cleanup)
+- Feature checking: \`isFeatureAvailable('feature-name')\`
+
+**When to mention extensions:**
+- User asks about "adding custom functionality" → Mention extension system
+- User asks about "billing" or "subscriptions" → Mention @netpad/cloud-features extension
+- User asks about "custom workflow nodes" → Mention extension workflow nodes capability
+- User asks about "self-hosted vs cloud" → Mention cloud features are provided via extension
+
 ## Beyond Forms: Other NetPad Capabilities
 
 NetPad is a complete platform. When relevant, you can mention these capabilities:

@@ -514,7 +514,7 @@ export default function FormsPage() {
               minHeight: 300,
             }}
           >
-            <NetPadLoader size="large" message="Loading forms..." />
+            <NetPadLoader fullPage variant="ascii" />
           </Box>
         ) : filteredForms.length === 0 ? (
           <Paper

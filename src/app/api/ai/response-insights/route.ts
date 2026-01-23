@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createResponseInsightsAgent } from '@/lib/ai/responseInsightsAgent';
 import { ResponseInsightsRequest } from '@/lib/ai/types';
 import { validateAIRequest, recordAIUsage } from '@/lib/ai/aiRequestGuard';
-import { incrementAIUsage } from '@/lib/platform/billing';
+import { incrementAIUsage } from '@/lib/platform/usageService';
 
 export async function POST(request: NextRequest) {
   try {

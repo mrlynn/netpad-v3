@@ -76,7 +76,7 @@ function BuilderRedirectContent() {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <NetPadLoader size="large" message="Redirecting..." />
+      <NetPadLoader fullPage variant="ascii" />
     </Box>
   );
 }
@@ -85,7 +85,7 @@ export default function BuilderRedirect() {
   return (
     <Suspense fallback={
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <NetPadLoader size="large" message="Loading..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     }>
       <BuilderRedirectContent />

@@ -236,6 +236,20 @@ server.resource(
   })
 );
 
+server.resource(
+  'netpad-extensions',
+  'netpad://docs/extensions',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://docs/extensions',
+        mimeType: 'text/markdown',
+        text: DOCUMENTATION.extensions,
+      },
+    ],
+  })
+);
+
 // ============================================================================
 // TOOLS - Form building capabilities
 // ============================================================================

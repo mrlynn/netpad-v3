@@ -226,7 +226,7 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
   if (isLoading && !data && !error) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-        <NetPadLoader size="medium" message="Loading forms..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading forms..." />
       </Box>
     );
   }
@@ -568,7 +568,7 @@ function ApplicationWorkflowsTab({ applicationId, orgId, projectId }: Applicatio
   if (isLoading && !data && !error) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-        <NetPadLoader size="medium" message="Loading workflows..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading workflows..." />
       </Box>
     );
   }
@@ -864,7 +864,7 @@ function ApplicationReleasesTab({ applicationId, orgId, projectId, application }
   if (isLoading && !data && !error) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-        <NetPadLoader size="medium" message="Loading releases..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading releases..." />
       </Box>
     );
   }
@@ -1224,7 +1224,7 @@ function ApplicationDetailContent() {
         <AppNavBar />
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <NetPadLoader size="large" message="Loading application..." />
+            <NetPadLoader fullPage variant="ascii" />
           </Box>
         </Container>
       </Box>

@@ -1,0 +1,41 @@
+{
+  "name": "@netpad/demo-node",
+  "version": "1.0.0",
+  "description": "A simple demonstration of a NetPad workflow node extension",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "author": "NetPad Team",
+  "license": "MIT",
+  "keywords": [
+    "netpad",
+    "extension",
+    "workflow",
+    "demo"
+  ],
+  "peerDependencies": {
+    "next": ">=14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

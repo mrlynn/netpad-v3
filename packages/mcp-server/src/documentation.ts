@@ -254,6 +254,220 @@ try {
 }
 \`\`\`
 `,
+
+  extensions: `# NetPad Extensions
+
+NetPad's extension system allows you to add custom functionality to your NetPad installation through modular, independently deployable packages. Extensions can provide API routes, UI components, services, middleware, and more.
+
+## What Are Extensions?
+
+Extensions are npm packages that follow the \`NetPadExtension\` interface. They integrate seamlessly with NetPad's core functionality while remaining isolated and independently maintainable.
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────┐
+│                     NetPad Core                              │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │  Extension  │  │  Extension  │  │  Extension  │  ...     │
+│  │   (Cloud)   │  │(Collaborate)│  │  (Custom)   │          │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+└─────────────────────────────────────────────────────────────┘
+\`\`\`
+
+## Extension Capabilities
+
+Extensions can provide:
+
+| Capability          | Description                                               |
+| ------------------- | --------------------------------------------------------- |
+| **Routes**          | Custom API endpoints under /api/ext/{extension-name}/     |
+| **Services**        | Shared business logic accessible throughout the extension |
+| **Middleware**      | Request/response processing with priority ordering        |
+| **Components**      | React UI components for use in pages                      |
+| **Features**        | Feature flags that enable/disable functionality           |
+| **Lifecycle Hooks** | Initialize and cleanup logic                              |
+| **Workflow Nodes**  | Custom workflow node types for automation                 |
+
+## Built-in Extensions
+
+NetPad includes several built-in extensions:
+
+### @netpad/cloud-features
+
+The cloud features extension provides premium functionality for NetPad Cloud:
+
+* **Billing & Subscriptions** - Stripe integration for payments
+* **Atlas Provisioning** - Automatic MongoDB cluster creation
+* **Premium AI Features** - Advanced RAG and AI capabilities
+* **Usage Analytics** - Detailed usage tracking and reporting
+
+### @netpad/collaborate
+
+Community collaboration features:
+
+* **Gallery** - Community showcase of forms, workflows, and integrations
+* **Contributors** - Leaderboard and contributor profiles
+* **Submissions** - Collaboration application system
+* **UI Components** - Pre-built React components
+
+## Extension Architecture
+
+Extensions follow a clear architectural pattern:
+
+\`\`\`typescript
+// Extension structure
+const myExtension: NetPadExtension = {
+  metadata: {
+    id: 'my-extension',
+    name: 'My Extension',
+    version: '1.0.0',
+    description: 'Description of what this extension does',
+  },
+
+  // Features this extension provides
+  features: ['custom:my_feature'],
+
+  // API routes
+  routes: [
+    { path: '/api/ext/my-extension/data', method: 'GET', handler: handleGet },
+    { path: '/api/ext/my-extension/data', method: 'POST', handler: handlePost },
+  ],
+
+  // Request middleware
+  middleware: [
+    { path: '/api/ext/my-extension/*', handler: authMiddleware, priority: 10 },
+  ],
+
+  // Shared services
+  services: {
+    myService: myServiceInstance,
+  },
+
+  // Custom workflow nodes
+  workflowNodes: [
+    {
+      definition: {
+        type: 'my-custom-node',
+        name: 'My Custom Node',
+        category: 'custom',
+        description: 'Does something custom',
+        configSchema: { /* ... */ },
+      },
+      handler: async (config, context) => { /* ... */ },
+    },
+  ],
+
+  // Lifecycle hooks
+  initialize: async () => { /* Setup logic */ },
+  cleanup: async () => { /* Cleanup logic */ },
+};
+\`\`\`
+
+## Quick Start
+
+### 1. Enable an Extension
+
+Add the extension package name to your \`.env.local\`:
+
+\`\`\`
+# Enable single extension
+NETPAD_EXTENSIONS=@netpad/collaborate
+
+# Enable multiple extensions
+NETPAD_EXTENSIONS=@netpad/collaborate,@myorg/custom-extension
+\`\`\`
+
+### 2. Install the Package
+
+\`\`\`bash
+npm install @netpad/collaborate
+\`\`\`
+
+### 3. Restart NetPad
+
+Extensions are loaded during application startup.
+
+## Creating Custom Extensions
+
+To create your own extension:
+
+1. **Create an npm package** with the extension code
+2. **Export a NetPadExtension** object as the default export
+3. **Implement required interfaces** (metadata, routes, services, etc.)
+4. **Publish to npm** or use locally
+5. **Enable via NETPAD_EXTENSIONS** environment variable
+
+## Extension Loading
+
+Extensions are loaded in this order:
+
+1. **Cloud Extension** - \`@netpad/cloud-features\` (if \`NETPAD_CLOUD=true\`)
+2. **Plugin Extensions** - Packages listed in \`NETPAD_EXTENSIONS\`
+3. **Programmatic Extensions** - Registered via \`registerExtensionManually()\`
+
+Each extension goes through:
+
+1. Package resolution and import
+2. Registration in the extension registry
+3. Initialization via the \`initialize()\` hook
+
+## Feature Checking
+
+Extensions can declare features that other parts of the application can check:
+
+\`\`\`typescript
+import { isFeatureAvailable } from '@/lib/extensions/registry';
+
+// Check if a feature is available
+if (isFeatureAvailable('billing')) {
+  // Show billing UI
+}
+
+// Custom extension features use the custom: prefix
+if (isFeatureAvailable('custom:collaborate')) {
+  // Show collaborate features
+}
+\`\`\`
+
+## Best Practices
+
+1. **Use descriptive metadata** - Clear names and descriptions help users understand your extension
+2. **Namespace your routes** - Always use \`/api/ext/{your-extension}/\` for routes
+3. **Handle errors gracefully** - Extensions should not crash the main application
+4. **Clean up resources** - Implement the \`cleanup()\` hook for proper teardown
+5. **Document your extension** - Provide clear usage instructions and API documentation
+6. **Test thoroughly** - Extensions run in production, so ensure they're well-tested
+
+## Extension Types
+
+### Service Extensions
+
+Provide business logic services:
+- Billing service (Stripe integration)
+- Atlas provisioning service
+- Usage tracking service
+- Admin service
+
+### Feature Extensions
+
+Add new capabilities:
+- Custom workflow nodes
+- Additional form field types
+- UI components
+- Integration connectors
+
+### Middleware Extensions
+
+Intercept and modify requests:
+- Authentication middleware
+- Rate limiting
+- Request logging
+- Data transformation
+
+## API Reference
+
+See the full extension API documentation at: https://docs.netpad.io/docs/extensions/api-reference
+`,
 };
 
 export const QUICK_START_GUIDE = `# Quick Start Guide

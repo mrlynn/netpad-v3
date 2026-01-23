@@ -5,7 +5,7 @@ import { sessionOptions, ensureSessionId, SavedForm } from '@/lib/session';
 import { FormConfiguration, FormVersion } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { getForms, saveForm, publishForm, getVersionsForForm, addFormVersion } from '@/lib/storage';
-import { checkFieldLimit } from '@/lib/platform/billing';
+import { checkFieldLimit } from '@/lib/platform/usageService';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { ensureDefaultApplication } from '@/lib/platform/applications';
 

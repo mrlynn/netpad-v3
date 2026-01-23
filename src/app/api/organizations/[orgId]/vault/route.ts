@@ -16,7 +16,7 @@ import {
 } from '@/lib/platform/connectionVault';
 import { assertOrgPermission, checkConnectionPermission } from '@/lib/platform/permissions';
 import { repairOrgCreatorMembership } from '@/lib/platform/organizations';
-import { checkConnectionLimit } from '@/lib/platform/billing';
+import { checkConnectionLimit } from '@/lib/platform/usageService';
 import { getProvisionedClusterForOrg } from '@/lib/atlas/provisioning';
 
 export async function GET(

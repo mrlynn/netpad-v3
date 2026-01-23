@@ -903,7 +903,7 @@ export default function ApplicationsPage() {
               minHeight: 300,
             }}
           >
-            <NetPadLoader size="large" message="Loading applications..." />
+            <NetPadLoader size="large" variant="ascii" message="Loading applications..." />
           </Box>
         ) : tabFilteredApplications.length === 0 ? (
           <Paper

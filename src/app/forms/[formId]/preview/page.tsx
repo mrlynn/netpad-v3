@@ -88,7 +88,7 @@ export default function FormPreviewPage() {
           minHeight: '100vh',
         }}
       >
-        <NetPadLoader size="medium" message="Loading form preview..." />
+        <NetPadLoader size="large" variant="ascii" message="Loading form preview..." />
       </Box>
     );
   }

@@ -3,22 +3,29 @@
  *
  * Create a Stripe customer portal session for managing billing.
  *
- * This endpoint supports both:
- * - Cloud mode: Uses the cloud extension's billing service
- * - Self-hosted mode: Uses the built-in billing module
+ * Note: This endpoint requires cloud billing features.
+ * Self-hosted deployments manage subscriptions externally.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createPortalSession } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
-import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
+import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
 
 export async function POST(req: NextRequest) {
   try {
     // Ensure extensions are loaded
     if (!extensionsLoaded()) {
       await loadExtensions();
+    }
+
+    // Check if billing feature is available (cloud mode)
+    const billingAvailable = isFeatureAvailable('billing');
+    if (!billingAvailable.available) {
+      return NextResponse.json(
+        { error: 'Billing portal is not available in self-hosted mode. Manage your subscription through your billing provider.' },
+        { status: 400 }
+      );
     }
 
     // Get session
@@ -47,19 +54,19 @@ export async function POST(req: NextRequest) {
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
     const returnUrl = `${origin}/settings/billing`;
 
-    // Try to use cloud extension billing service if available
+    // Get the billing service from cloud extension
     const cloudBilling = getBillingService();
-    if (cloudBilling) {
-      const result = await cloudBilling.createPortalSession({
-        organizationId: orgId,
-        returnUrl,
-      });
-
-      return NextResponse.json(result);
+    if (!cloudBilling) {
+      return NextResponse.json(
+        { error: 'Billing service not available' },
+        { status: 503 }
+      );
     }
 
-    // Fall back to built-in billing module
-    const result = await createPortalSession(orgId, returnUrl);
+    const result = await cloudBilling.createPortalSession({
+      organizationId: orgId,
+      returnUrl,
+    });
 
     return NextResponse.json(result);
   } catch (error) {

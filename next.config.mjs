@@ -2,6 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Transpile local workspace packages (extensions)
+  transpilePackages: [
+    '@netpad/collaborate',
+    '@netpad/demo-node',
+    '@netpad/cloud-features',
+  ],
+
   // Enable subdomain routing for local development
   // For production, this is handled by Vercel's rewrites in vercel.json
   async rewrites() {

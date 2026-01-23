@@ -22,7 +22,7 @@ export default function MarketplaceRedirectPage() {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <NetPadLoader size="large" message="Redirecting to marketplace..." />
+      <NetPadLoader size="large" variant="ascii" message="Redirecting to marketplace..." />
     </Box>
   );
 }

@@ -3,6 +3,9 @@
   "version": "3.1.0",
   "description": "NetPad - Build and publish MongoDB-connected data forms and workflows",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -34,6 +37,8 @@
     "@mui/material": "^5.15.0",
     "@mui/x-date-pickers": "^8.22.1",
     "@netpad/cloud-features": "^1.0.0",
+    "@netpad/collaborate": "file:packages/collaborate",
+    "@netpad/demo-node": "file:packages/demo-node",
     "@netpad/forms": "file:packages/forms",
     "@netpad/templates": "file:packages/templates",
     "@simplewebauthn/browser": "^13.2.2",

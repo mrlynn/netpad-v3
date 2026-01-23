@@ -47,7 +47,7 @@ export default function WorkflowsRedirect() {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <NetPadLoader size="large" message="Redirecting..." />
+      <NetPadLoader fullPage variant="ascii" />
     </Box>
   );
 }

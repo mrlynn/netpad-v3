@@ -25,6 +25,8 @@ import {
   ArrowForward,
   Psychology,
   Storage,
+  Extension,
+  SettingsApplications,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -82,6 +84,22 @@ const adminFeatures: AdminFeature[] = [
     color: '#9C27B0',
     statsKey: 'marketplace',
   },
+  {
+    title: 'Extensions',
+    description: 'Manage platform extensions and features',
+    href: '/admin/extensions',
+    icon: <Extension sx={{ fontSize: 32 }} />,
+    color: '#E91E63',
+    statsKey: 'extensions',
+  },
+  {
+    title: 'Instance Control',
+    description: 'Monitor instance health, memory usage, and trigger restarts',
+    href: '/admin/instance',
+    icon: <SettingsApplications sx={{ fontSize: 32 }} />,
+    color: '#607D8B',
+    statsKey: 'instance',
+  },
 ];
 
 export default function AdminDashboardPage() {
@@ -103,6 +121,14 @@ export default function AdminDashboardPage() {
   );
   const { data: aiStats } = useSWR(
     user?.platformRole === 'admin' ? '/api/admin/ai-analytics?days=30' : null,
+    fetcher
+  );
+  const { data: extensionStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/extensions' : null,
+    fetcher
+  );
+  const { data: instanceStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/instance' : null,
     fetcher
   );
 
@@ -155,6 +181,12 @@ export default function AdminDashboardPage() {
     }
     if (feature.statsKey === 'ai' && aiStats?.summary) {
       return `${formatTokens(aiStats.summary.totalTokens)} tokens`;
+    }
+    if (feature.statsKey === 'extensions' && extensionStats?.stats) {
+      return `${extensionStats.stats.loaded} loaded`;
+    }
+    if (feature.statsKey === 'instance' && instanceStats?.instance) {
+      return instanceStats.instance.uptime;
     }
     return null;
   };

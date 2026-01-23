@@ -61,7 +61,7 @@ export default function AppNewFormPage() {
   if (isAppLoading || !currentApplication || !currentOrgId || !projectId || isLoadingTemplate) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <NetPadLoader size="large" message={isLoadingTemplate ? "Loading template..." : "Loading application..."} />
+        <NetPadLoader size="large" variant="ascii" message={isLoadingTemplate ? "Loading template..." : "Loading application..."} />
       </Box>
     );
   }

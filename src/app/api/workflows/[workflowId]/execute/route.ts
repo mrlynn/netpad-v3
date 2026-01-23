@@ -18,7 +18,7 @@ import {
   claimJobById,
 } from '@/lib/workflow/db';
 import { executeWorkflowJob } from '@/lib/workflow/executor';
-import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/billing';
+import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { nanoid } from 'nanoid';
 

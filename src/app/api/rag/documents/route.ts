@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
-import { hasAIFeature } from '@/lib/platform/billing';
+import { hasAIFeature } from '@/lib/platform/usageService';
 import { getFormDocuments } from '@/lib/rag/storage';
 import { RAGDocumentStatus } from '@/types/rag';
 

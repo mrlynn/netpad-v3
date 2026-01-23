@@ -14,7 +14,7 @@ import {
   createAPIErrorResponse,
 } from '@/lib/api/middleware';
 import { PublicFormSummary } from '@/types/api';
-import { checkFormLimit, checkFieldLimit } from '@/lib/platform/billing';
+import { checkFormLimit, checkFieldLimit } from '@/lib/platform/usageService';
 
 /**
  * GET /api/v1/forms

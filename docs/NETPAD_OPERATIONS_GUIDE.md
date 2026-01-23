@@ -148,7 +148,7 @@ Cloud mode is for running NetPad as a managed SaaS offering with full billing an
 
 ```bash
 # Clone the repository
-git clone https://github.com/mongodb/netpad.git
+git clone https://github.com/mrlynn/netpad.git
 cd netpad
 
 # Install dependencies
@@ -256,7 +256,7 @@ Self-hosted mode runs NetPad on your own infrastructure without Stripe billing. 
 
 ```bash
 # Clone the repository
-git clone https://github.com/mongodb/netpad.git
+git clone https://github.com/mrlynn/netpad-v3.git
 cd netpad
 
 # Install dependencies
@@ -962,7 +962,7 @@ POST /api/workflows/:id/execute
 ### Support Resources
 
 - **Documentation**: https://docs.netpad.io
-- **GitHub Issues**: https://github.com/mongodb/netpad/issues
+- **GitHub Issues**: https://github.com/mrlynn/netpad/issues
 - **Community Discord**: https://discord.gg/netpad
 - **Enterprise Support**: enterprise@netpad.io
 
