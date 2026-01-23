@@ -6,12 +6,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getRegistryStatus } from '@/lib/extensions';
+import { getRegistryStatus, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     const status = getRegistryStatus();
 
     return NextResponse.json(status);

@@ -6,12 +6,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getEnabledFeatures } from '@/lib/extensions';
+import { getEnabledFeatures, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     const features = getEnabledFeatures();
 
     return NextResponse.json({
