@@ -3,14 +3,24 @@
  *
  * Increment usage counters for AI features.
  * Returns whether the operation was allowed based on limits.
+ *
+ * This endpoint supports both:
+ * - Cloud mode: Uses the cloud extension's usage service
+ * - Self-hosted mode: Uses the built-in usage service
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { incrementAIUsage, checkAILimit } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
+import { getUsageService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
+import * as localUsageService from '@/lib/platform/usageService';
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -28,10 +38,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid metric' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this org
+    // Try to use cloud extension usage service if available
+    const cloudUsage = getUsageService();
+    if (cloudUsage) {
+      const result = await cloudUsage.incrementAIUsage(orgId, metric, amount, tokensUsed);
+      return NextResponse.json(result);
+    }
 
-    const result = await incrementAIUsage(orgId, metric, amount, tokensUsed);
-
+    // Fall back to local usage service
+    const result = await localUsageService.incrementAIUsage(orgId, metric, amount, tokensUsed);
     return NextResponse.json(result);
   } catch (error) {
     console.error('[API] /api/billing/usage POST error:', error);
@@ -49,6 +64,11 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -67,8 +87,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid metric' }, { status: 400 });
     }
 
-    const result = await checkAILimit(orgId, metric);
+    // Try to use cloud extension usage service if available
+    const cloudUsage = getUsageService();
+    if (cloudUsage) {
+      const result = await cloudUsage.checkAILimit(orgId, metric);
+      return NextResponse.json(result);
+    }
 
+    // Fall back to local usage service
+    const result = await localUsageService.checkAILimit(orgId, metric);
     return NextResponse.json(result);
   } catch (error) {
     console.error('[API] /api/billing/usage GET error:', error);

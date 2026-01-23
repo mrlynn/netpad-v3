@@ -19,6 +19,8 @@ import {
   AtlasProvisioningService,
   MarketplaceService,
   WaitlistService,
+  UsageService,
+  AdminService,
   RouteDefinition,
   ExtensionMiddleware,
 } from './types';
@@ -255,6 +257,30 @@ export function getWaitlistService(): WaitlistService | null {
   for (const extension of registeredExtensions.values()) {
     if (extension.services?.waitlist) {
       return extension.services.waitlist;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the usage service (if available)
+ */
+export function getUsageService(): UsageService | null {
+  for (const extension of registeredExtensions.values()) {
+    if (extension.services?.usage) {
+      return extension.services.usage;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the admin service (if available)
+ */
+export function getAdminService(): AdminService | null {
+  for (const extension of registeredExtensions.values()) {
+    if (extension.services?.admin) {
+      return extension.services.admin;
     }
   }
   return null;

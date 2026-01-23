@@ -8,10 +8,13 @@
  * Deployment Mode Support:
  * - 'cloud': Standard tier-based gating (RAG requires Team+ and M10+)
  * - 'self-hosted': RAG features available to all tiers (with Atlas Local)
+ *
+ * This endpoint supports both:
+ * - Cloud mode: Uses the cloud extension's usage service
+ * - Self-hosted mode: Uses the built-in usage service
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFeatureAccess } from '@/lib/platform/billing';
 import {
   getClusterTier,
   getDeploymentMode,
@@ -20,9 +23,16 @@ import {
 } from '@/lib/platform/clusterChecks';
 import { getSession } from '@/lib/auth/session';
 import { getTierFeaturesForDeployment } from '@/types/platform';
+import { getUsageService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
+import * as localUsageService from '@/lib/platform/usageService';
 
 export async function GET(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -37,14 +47,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing orgId parameter' }, { status: 400 });
     }
 
-    // TODO: Verify user has access to this org
-    // For now, we'll trust the session
-
     const deploymentMode = getDeploymentMode();
+
+    // Try to use cloud extension usage service if available
+    const cloudUsage = getUsageService();
 
     // Fetch subscription features and cluster tier in parallel
     const [access, clusterTier] = await Promise.all([
-      getFeatureAccess(orgId),
+      cloudUsage
+        ? cloudUsage.getFeatureAccess(orgId)
+        : localUsageService.getFeatureAccess(orgId),
       getClusterTier(orgId),
     ]);
 
@@ -52,7 +64,10 @@ export async function GET(req: NextRequest) {
     // RAG features become available to all tiers (user manages Atlas Local)
     let adjustedAccess = access;
     if (isSelfHosted() && access.tier) {
-      const adjustedFeatures = getTierFeaturesForDeployment(access.tier, deploymentMode);
+      const adjustedFeatures = getTierFeaturesForDeployment(
+        access.tier as 'free' | 'pro' | 'team' | 'enterprise',
+        deploymentMode
+      );
       adjustedAccess = {
         ...access,
         aiFeatures: adjustedFeatures.aiFeatures,

@@ -175,6 +175,254 @@ export interface WaitlistService {
 }
 
 // ============================================
+// Usage Service Types
+// ============================================
+
+/**
+ * Result of a usage limit check
+ */
+export interface UsageLimitResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  remaining: number;
+  reason?: string;
+}
+
+/**
+ * AI feature access result with tier information
+ */
+export interface AIFeatureAccessResult {
+  allowed: boolean;
+  reason?: string;
+  requiredTier?: string;
+  requiredClusterTier?: string;
+  currentClusterTier?: string | null;
+}
+
+/**
+ * Organization usage record for a billing period
+ */
+export interface OrganizationUsageRecord {
+  organizationId: string;
+  period: string; // YYYY-MM format
+  forms: { created: number; active: number };
+  submissions: { total: number; byForm: Record<string, number> };
+  storage: { filesBytes: number; responsesBytes: number };
+  ai: { generations: number; agentSessions: number; processingRuns: number; tokensUsed: number };
+  workflows: {
+    executions: number;
+    byWorkflow: Record<string, number>;
+    successfulExecutions: number;
+    failedExecutions: number;
+  };
+}
+
+/**
+ * Storage usage summary
+ */
+export interface StorageUsageSummary {
+  usedBytes: number;
+  limitBytes: number;
+  remainingBytes: number;
+  percentUsed: number;
+  isUnlimited: boolean;
+  usedFormatted: string;
+  limitFormatted: string;
+}
+
+/**
+ * Workflow usage summary
+ */
+export interface WorkflowUsageSummary {
+  executions: {
+    current: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+    isUnlimited: boolean;
+  };
+  activeWorkflows: {
+    limit: number;
+    isUnlimited: boolean;
+  };
+  successRate: number;
+  topWorkflows: Array<{ workflowId: string; executions: number }>;
+}
+
+/**
+ * Feature access summary for an organization
+ */
+export interface FeatureAccessSummary {
+  tier: string;
+  aiFeatures: string[];
+  platformFeatures: string[];
+  limits: Record<string, number>;
+  usage: OrganizationUsageRecord;
+}
+
+/**
+ * Usage service interface - handles all usage tracking and limit checking
+ * Implemented by cloud extension for cloud mode, or local implementation for self-hosted
+ */
+export interface UsageService {
+  // ---- Usage Record Management ----
+  /** Get or create usage record for current billing period */
+  getOrCreateUsage(orgId: string): Promise<OrganizationUsageRecord>;
+
+  // ---- AI Usage ----
+  /** Increment AI usage counter and check if allowed */
+  incrementAIUsage(
+    orgId: string,
+    metric: 'generations' | 'agentSessions' | 'processingRuns',
+    amount?: number,
+    tokensUsed?: number
+  ): Promise<UsageLimitResult>;
+
+  /** Check if an AI operation is allowed (without incrementing) */
+  checkAILimit(
+    orgId: string,
+    metric: 'generations' | 'agentSessions' | 'processingRuns'
+  ): Promise<UsageLimitResult>;
+
+  /** Check if organization has access to an AI feature */
+  hasAIFeature(orgId: string, feature: string): Promise<AIFeatureAccessResult>;
+
+  // ---- Submission Usage ----
+  /** Increment submission count for a form */
+  incrementSubmissionUsage(
+    orgId: string,
+    formId: string
+  ): Promise<UsageLimitResult>;
+
+  /** Check if a submission is allowed (without incrementing) */
+  checkSubmissionLimit(orgId: string): Promise<UsageLimitResult>;
+
+  // ---- Storage Usage ----
+  /** Check storage quota */
+  checkStorageQuota(
+    orgId: string,
+    additionalBytes?: number
+  ): Promise<UsageLimitResult & { percentUsed: number }>;
+
+  /** Increment storage usage */
+  incrementStorageUsage(orgId: string, bytes: number): Promise<void>;
+
+  /** Decrement storage usage */
+  decrementStorageUsage(orgId: string, bytes: number): Promise<void>;
+
+  /** Get storage usage summary */
+  getStorageUsageSummary(orgId: string): Promise<StorageUsageSummary>;
+
+  // ---- Workflow Usage ----
+  /** Check if a workflow execution is allowed */
+  checkWorkflowExecutionLimit(orgId: string): Promise<UsageLimitResult>;
+
+  /** Check if organization can have more active workflows */
+  checkActiveWorkflowLimit(
+    orgId: string,
+    currentActiveCount: number
+  ): Promise<UsageLimitResult>;
+
+  /** Increment workflow execution count at queue time */
+  incrementWorkflowExecutionAtQueue(
+    orgId: string,
+    workflowId: string
+  ): Promise<UsageLimitResult>;
+
+  /** Update workflow execution result (success/failure) */
+  updateWorkflowExecutionResult(
+    orgId: string,
+    workflowId: string,
+    success: boolean
+  ): Promise<void>;
+
+  /** Get workflow usage summary */
+  getWorkflowUsageSummary(orgId: string): Promise<WorkflowUsageSummary>;
+
+  // ---- Form/Connection/Field Limits ----
+  /** Check if organization can create more forms */
+  checkFormLimit(orgId: string, currentFormCount: number): Promise<UsageLimitResult>;
+
+  /** Check if organization can create more connections */
+  checkConnectionLimit(
+    orgId: string,
+    currentConnectionCount: number
+  ): Promise<UsageLimitResult>;
+
+  /** Check if a form can have more fields */
+  checkFieldLimit(
+    orgId: string,
+    currentFieldCount: number
+  ): Promise<UsageLimitResult>;
+
+  // ---- Feature Access ----
+  /** Check if organization has access to a platform feature */
+  hasPlatformFeature(orgId: string, feature: string): Promise<boolean>;
+
+  /** Get all feature access for an organization */
+  getFeatureAccess(orgId: string): Promise<FeatureAccessSummary>;
+
+  // ---- Subscription Management ----
+  /** Initialize a new organization with free tier */
+  initializeFreeSubscription(orgId: string): Promise<void>;
+
+  /** Get subscription tier for an organization */
+  getSubscriptionTier(orgId: string): Promise<string>;
+}
+
+/**
+ * Admin service interface - administrative operations
+ */
+export interface AdminService {
+  /** Get platform statistics */
+  getStats(): Promise<{
+    totalUsers: number;
+    totalOrganizations: number;
+    totalForms: number;
+    totalSubmissions: number;
+  }>;
+
+  /** Get user list with pagination */
+  getUsers(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    users: Array<{
+      id: string;
+      email: string;
+      name?: string;
+      createdAt: Date;
+      lastLogin?: Date;
+    }>;
+    total: number;
+  }>;
+
+  /** Suspend a user account */
+  suspendUser(userId: string, reason?: string): Promise<void>;
+
+  /** Reactivate a suspended user */
+  reactivateUser(userId: string): Promise<void>;
+
+  /** Get organization list with pagination */
+  getOrganizations(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    organizations: Array<{
+      orgId: string;
+      name: string;
+      tier: string;
+      memberCount: number;
+      createdAt: Date;
+    }>;
+    total: number;
+  }>;
+}
+
+// ============================================
 // Route Definitions
 // ============================================
 
@@ -254,6 +502,8 @@ export interface NetPadExtension {
     atlasProvisioning?: AtlasProvisioningService;
     marketplace?: MarketplaceService;
     waitlist?: WaitlistService;
+    usage?: UsageService;
+    admin?: AdminService;
   };
 
   /** Initialization function (called on app startup) */

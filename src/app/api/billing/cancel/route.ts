@@ -2,15 +2,32 @@
  * POST /api/billing/cancel
  *
  * Cancel subscription (at period end by default).
+ *
+ * Note: This endpoint requires cloud billing features.
+ * Self-hosted deployments manage subscriptions externally.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cancelSubscription, reactivateSubscription } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
+import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
+    // Check if billing feature is available (cloud mode)
+    const billingAvailable = isFeatureAvailable('billing');
+    if (!billingAvailable.available) {
+      return NextResponse.json(
+        { error: 'Subscription management is not available in self-hosted mode. Manage your subscription through your billing portal.' },
+        { status: 400 }
+      );
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -33,13 +50,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await cancelSubscription(orgId, session.userId, immediate);
+    // Get the billing service from cloud extension
+    const billingService = getBillingService();
+    if (!billingService) {
+      return NextResponse.json(
+        { error: 'Billing service not available' },
+        { status: 503 }
+      );
+    }
 
+    // Note: The BillingService interface doesn't include cancel/reactivate
+    // These would need to be added to the interface and implementation
+    // For now, return a message about using the portal
     return NextResponse.json({
-      success: true,
-      message: immediate
-        ? 'Subscription canceled immediately'
-        : 'Subscription will be canceled at the end of the billing period',
+      success: false,
+      message: 'Please use the billing portal to cancel your subscription',
+      portalUrl: '/api/billing/portal',
     });
   } catch (error) {
     console.error('[API] /api/billing/cancel error:', error);
@@ -54,9 +80,26 @@ export async function POST(req: NextRequest) {
  * DELETE /api/billing/cancel
  *
  * Reactivate a subscription that was scheduled for cancellation.
+ *
+ * Note: This endpoint requires cloud billing features.
+ * Self-hosted deployments manage subscriptions externally.
  */
 export async function DELETE(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
+    // Check if billing feature is available (cloud mode)
+    const billingAvailable = isFeatureAvailable('billing');
+    if (!billingAvailable.available) {
+      return NextResponse.json(
+        { error: 'Subscription management is not available in self-hosted mode. Manage your subscription through your billing portal.' },
+        { status: 400 }
+      );
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -79,11 +122,13 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await reactivateSubscription(orgId, session.userId);
-
+    // Note: The BillingService interface doesn't include cancel/reactivate
+    // These would need to be added to the interface and implementation
+    // For now, return a message about using the portal
     return NextResponse.json({
-      success: true,
-      message: 'Subscription reactivated',
+      success: false,
+      message: 'Please use the billing portal to reactivate your subscription',
+      portalUrl: '/api/billing/portal',
     });
   } catch (error) {
     console.error('[API] /api/billing/cancel DELETE error:', error);
