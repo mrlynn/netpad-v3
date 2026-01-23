@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:packages": "npm run build --prefix packages/templates && npm run build --prefix packages/forms",
+    "build:packages": "npm run build --prefix packages/templates && npm run build --prefix packages/forms && npm run build --prefix packages/collaborate && npm run build --prefix packages/demo-node",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
