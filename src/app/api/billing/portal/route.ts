@@ -2,15 +2,25 @@
  * POST /api/billing/portal
  *
  * Create a Stripe customer portal session for managing billing.
+ *
+ * This endpoint supports both:
+ * - Cloud mode: Uses the cloud extension's billing service
+ * - Self-hosted mode: Uses the built-in billing module
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPortalSession } from '@/lib/platform/billing';
 import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
+import { getBillingService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure extensions are loaded
+    if (!extensionsLoaded()) {
+      await loadExtensions();
+    }
+
     // Get session
     const session = await getSession();
     if (!session?.userId) {
@@ -37,7 +47,18 @@ export async function POST(req: NextRequest) {
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
     const returnUrl = `${origin}/settings/billing`;
 
-    // Create portal session
+    // Try to use cloud extension billing service if available
+    const cloudBilling = getBillingService();
+    if (cloudBilling) {
+      const result = await cloudBilling.createPortalSession({
+        organizationId: orgId,
+        returnUrl,
+      });
+
+      return NextResponse.json(result);
+    }
+
+    // Fall back to built-in billing module
     const result = await createPortalSession(orgId, returnUrl);
 
     return NextResponse.json(result);

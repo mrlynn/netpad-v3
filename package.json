@@ -33,6 +33,7 @@
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
     "@mui/x-date-pickers": "^8.22.1",
+    "@netpad/cloud-features": "^1.0.0",
     "@netpad/forms": "file:packages/forms",
     "@netpad/templates": "file:packages/templates",
     "@simplewebauthn/browser": "^13.2.2",
