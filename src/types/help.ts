@@ -85,4 +85,8 @@ export type HelpTopicId =
   | 'admin-user-management'
   | 'admin-waitlist'
   | 'admin-ai-analytics'
-  | 'admin-marketplace-review';
+  | 'admin-marketplace-review'
+  // Open Core / Operations topics
+  | 'open-core-architecture'
+  | 'extension-system'
+  | 'admin-extension-management';

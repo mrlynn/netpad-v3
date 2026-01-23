@@ -5641,4 +5641,232 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'moderation',
     ],
   },
+
+  // ============================================
+  // Open Core Architecture Topics
+  // ============================================
+
+  'open-core-architecture': {
+    id: 'open-core-architecture',
+    title: 'Open Core Architecture',
+    description:
+      'Learn about NetPad\'s open core model that separates cloud-only features from the open source core, enabling both SaaS and self-hosted deployments.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is Open Core?',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad uses an open core model similar to GitLab, Supabase, and Cal.com. The core platform is open source (MIT license), while cloud-specific features like Stripe billing and Atlas provisioning are in a private package.',
+      },
+      {
+        type: 'heading',
+        content: 'Architecture Overview',
+      },
+      {
+        type: 'list',
+        content: [
+          'Public Repository (netpad-3): Core features including Form Builder, Workflows, Data Browser, Conversational Forms, and the Extension System',
+          'Private Package (@netpad/cloud-features): Stripe billing, Atlas provisioning, marketplace services, admin features',
+          'Extension System: Dynamic loading mechanism that imports cloud features when running in cloud mode',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Deployment Modes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Cloud (NETPAD_DEPLOYMENT_MODE=cloud): Full features with Stripe billing and Atlas integration',
+          'Self-Hosted (NETPAD_DEPLOYMENT_MODE=self-hosted): Core features with usage tracking, no Stripe',
+          'Standalone (STANDALONE_MODE=true): Exported apps running independently',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Feature Availability',
+      },
+      {
+        type: 'text',
+        content:
+          'In cloud mode, all cloud-only features are automatically available. In self-hosted mode, the UI adapts to show only applicable features - for example, the billing page shows usage metrics instead of Stripe checkout.',
+      },
+      {
+        type: 'tip',
+        content:
+          'The extension system uses dynamic imports, so the private package is only loaded when actually needed in cloud mode. Self-hosted deployments work perfectly without it.',
+      },
+    ],
+    relatedTopics: ['deployment-modes', 'extension-system', 'admin-extension-management'],
+    keywords: [
+      'open core',
+      'architecture',
+      'cloud',
+      'self-hosted',
+      'extension',
+      'deployment',
+      'saas',
+      'enterprise',
+    ],
+  },
+
+  'extension-system': {
+    id: 'extension-system',
+    title: 'Extension System',
+    description:
+      'Technical overview of NetPad\'s extension system for loading cloud-only features and customizing deployments.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The extension system allows NetPad to dynamically load additional features at runtime. It\'s primarily used to separate cloud-only features from the open source core.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Components',
+      },
+      {
+        type: 'list',
+        content: [
+          'Registry (registry.ts): Central registry for managing extensions and their services',
+          'Loader (loader.ts): Dynamic import mechanism for loading extension packages',
+          'Hooks (hooks.ts): React hooks for feature detection (useExtensionFeature, useDeploymentMode)',
+          'Components (CloudFeature.tsx): Conditional rendering based on deployment mode',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Available Services',
+      },
+      {
+        type: 'list',
+        content: [
+          'BillingService: Stripe checkout, portal, and webhook handling',
+          'AtlasProvisioningService: MongoDB Atlas cluster management',
+          'MarketplaceService: Application marketplace operations',
+          'WaitlistService: Beta waitlist management',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Using in Components',
+      },
+      {
+        type: 'code',
+        content: '// Check if a feature is available\nconst { available } = useExtensionFeature(\'billing\');\n\n// Get deployment mode\nconst { isCloud, isSelfHosted } = useDeploymentMode();\n\n// Conditional rendering\n<CloudOnly>\n  <StripeCheckout />\n</CloudOnly>',
+      },
+      {
+        type: 'heading',
+        content: 'API Endpoints',
+      },
+      {
+        type: 'list',
+        content: [
+          'GET /api/extensions/status: Returns extension registry status and loaded features',
+          'GET /api/extensions/features: Lists all enabled features',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'The extension system is designed for cloud features only. Custom extensions are not currently supported for security and stability reasons.',
+      },
+    ],
+    relatedTopics: ['open-core-architecture', 'deployment-modes', 'admin-extension-management'],
+    keywords: [
+      'extension',
+      'system',
+      'registry',
+      'loader',
+      'hooks',
+      'services',
+      'billing',
+      'atlas',
+      'cloud',
+    ],
+  },
+
+  'admin-extension-management': {
+    id: 'admin-extension-management',
+    title: 'Extension Management (Admin)',
+    description:
+      'Administrative guide for managing the extension system, monitoring feature availability, and troubleshooting extension issues.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'Extension Status Monitoring',
+      },
+      {
+        type: 'text',
+        content:
+          'Platform administrators can monitor extension status via the /api/extensions/status endpoint. This returns information about loaded extensions, available features, and initialization state.',
+      },
+      {
+        type: 'code',
+        content: 'curl https://your-netpad-instance/api/extensions/status\n\n{\n  "extensionCount": 1,\n  "extensions": [\n    {\n      "id": "netpad-cloud",\n      "name": "NetPad Cloud",\n      "version": "1.1.0",\n      "features": ["billing", "stripe_integration", ...]\n    }\n  ],\n  "enabledFeatures": [...],\n  "initialized": true,\n  "deploymentMode": "cloud"\n}',
+      },
+      {
+        type: 'heading',
+        content: 'Environment Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'NETPAD_DEPLOYMENT_MODE: Set to "cloud" or "self-hosted"',
+          'NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE: Client-side deployment mode detection',
+          'For cloud mode, ensure @netpad/cloud-features is installed in node_modules',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Troubleshooting',
+      },
+      {
+        type: 'list',
+        content: [
+          'Extension not loading: Check NETPAD_DEPLOYMENT_MODE is set to "cloud"',
+          'Features unavailable: Verify @netpad/cloud-features package is installed',
+          'Service errors: Check that database operations are configured for billing service',
+          'UI not adapting: Ensure NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE matches server setting',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Cloud Package Installation',
+      },
+      {
+        type: 'text',
+        content:
+          'The @netpad/cloud-features package is a private npm package. To install it in a cloud deployment:',
+      },
+      {
+        type: 'code',
+        content: '# Authenticate with npm\nnpm login --scope=@netpad\n\n# Install the package\nnpm install @netpad/cloud-features\n\n# Set deployment mode\nNETPAD_DEPLOYMENT_MODE=cloud',
+      },
+      {
+        type: 'tip',
+        content:
+          'In production cloud deployments, the package should be pre-installed and the deployment mode should be set via environment variables in your hosting platform.',
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'open-core-architecture', 'extension-system'],
+    keywords: [
+      'admin',
+      'extension',
+      'management',
+      'status',
+      'troubleshooting',
+      'cloud',
+      'package',
+      'configuration',
+    ],
+  },
 };
