@@ -36,7 +36,6 @@
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
     "@mui/x-date-pickers": "^8.22.1",
-    "@netpad/cloud-features": "^1.0.0",
     "@netpad/collaborate": "file:packages/collaborate",
     "@netpad/demo-node": "file:packages/demo-node",
     "@netpad/forms": "file:packages/forms",
@@ -101,5 +100,8 @@
     "ts-jest": "^29.1.1",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0"
+  },
+  "optionalDependencies": {
+    "@netpad/cloud-features": "^1.0.0"
   }
 }

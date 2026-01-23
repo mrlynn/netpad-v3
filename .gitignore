@@ -80,3 +80,4 @@ playwright/.auth/
 *.temp
 .cache/
 .netpad/
+.npmrc
