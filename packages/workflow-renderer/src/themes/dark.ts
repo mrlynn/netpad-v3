@@ -29,6 +29,7 @@ export const darkTheme: RendererTheme = {
     action: '#8B5CF6',    // Purple
     ai: '#EC4899',        // Pink
     utility: '#64748B',   // Slate
+    output: '#06B6D4',    // Cyan
   },
 
   edge: {

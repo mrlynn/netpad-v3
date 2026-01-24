@@ -43,6 +43,7 @@ import {
   Lightbulb,
   AccountTree,
   Close as CloseIcon,
+  Output as OutputIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 import { useAIWorkflowGenerator } from '@/hooks/useAI';
@@ -222,6 +223,7 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   actions: { label: 'Actions', icon: <EmailIcon />, color: '#2196F3' },
   data: { label: 'Data', icon: <TransformIcon />, color: '#607D8B' },
   ai: { label: 'AI', icon: <AiIcon />, color: '#E91E63' },
+  output: { label: 'Output', icon: <OutputIcon />, color: '#0891B2' },
   forms: { label: 'Forms', icon: <FormIcon />, color: '#00BCD4' },
   custom: { label: 'Custom', icon: <CategoryIcon />, color: '#795548' },
   annotations: { label: 'Annotations', icon: <CategoryIcon />, color: '#9E9E9E' },

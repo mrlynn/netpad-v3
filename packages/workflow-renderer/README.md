@@ -96,6 +96,8 @@ function App() {
 | `pannable` | `boolean` | `true` | Allow panning |
 | `zoomable` | `boolean` | `true` | Allow zooming |
 | `fitView` | `boolean` | `true` | Fit view to show all nodes on load |
+| `showWatermark` | `boolean` | `true` | Show NetPad watermark |
+| `watermarkPosition` | `'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'` | `'bottom-right'` | Watermark position |
 | `onNodeClick` | `(node) => void` | - | Called when a node is clicked |
 | `onEdgeClick` | `(edge) => void` | - | Called when an edge is clicked |
 

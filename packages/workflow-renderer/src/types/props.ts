@@ -60,6 +60,12 @@ export interface WorkflowRendererProps {
   /** Background variant */
   backgroundVariant?: BackgroundVariant;
 
+  /** Show NetPad watermark */
+  showWatermark?: boolean;
+
+  /** Watermark position */
+  watermarkPosition?: WatermarkPosition;
+
   // === INTERACTION ===
 
   /** Allow panning */
@@ -123,6 +129,11 @@ export type MinimapPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom
  * Background variant
  */
 export type BackgroundVariant = 'dots' | 'lines' | 'none';
+
+/**
+ * Watermark position
+ */
+export type WatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 /**
  * WorkflowMinimap component props

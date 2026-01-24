@@ -48,3 +48,6 @@ import './atlasDataApi';
 
 // Custom code
 import './code';
+
+// Output/Rendering
+import './htmlOutput';

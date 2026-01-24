@@ -4,7 +4,6 @@
   "description": "React component library for rendering NetPad workflow definitions as interactive, read-only visualizations",
   "author": "MongoDB",
   "license": "Apache-2.0",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

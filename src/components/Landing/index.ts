@@ -8,3 +8,4 @@ export { InstantFormBuilder } from './InstantFormBuilder';
 export { LiveFormPreview } from './LiveFormPreview';
 export { GuestFormEditor } from './GuestFormEditor';
 export { PillarsTabs } from './PillarsTabs';
+export { WorkflowDemoRenderer } from './WorkflowDemoRenderer';

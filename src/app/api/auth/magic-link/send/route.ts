@@ -62,6 +62,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!emailSent) {
+      console.error('Failed to send magic link email:', {
+        to: email,
+        hasSmtpUser: !!process.env.SMTP_USER,
+        hasSmtpPass: !!process.env.SMTP_PASS,
+        smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+        nodeEnv: process.env.NODE_ENV,
+      });
+
       // In dev mode, still return success since we log the link
       if (process.env.NODE_ENV !== 'production') {
         return NextResponse.json({
@@ -82,6 +90,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error sending magic link:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { success: false, message: 'An error occurred. Please try again.' },
       { status: 500 }

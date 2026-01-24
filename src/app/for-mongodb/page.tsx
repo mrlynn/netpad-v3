@@ -28,10 +28,12 @@ import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import BuildIcon from '@mui/icons-material/Build';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 
+import { GlassSpotlightCard, hexToRgb, WatermarkPosition } from '@/components/marketing';
+
 /**
  * NetPad – MongoDB landing page
  * Purpose: A dedicated marketing page for MongoDB users that explains the “missing operational layer”
- * (intake → decision → action) with a subtle spotlight-card interaction.
+ * (intake → decision → action) with a premium glass spotlight card interaction.
  */
 
 function SpotlightCard({
@@ -47,117 +49,61 @@ function SpotlightCard({
   children: React.ReactNode;
   tone?: 'green' | 'blue' | 'purple' | 'orange';
 }) {
-  const toneMap: Record<string, { rgb: string; border: string }> = {
-    green: { rgb: '120, 255, 190', border: 'rgba(120, 255, 190, 0.22)' },
-    blue: { rgb: '110, 140, 255', border: 'rgba(110, 140, 255, 0.22)' },
-    purple: { rgb: '168, 85, 247', border: 'rgba(168, 85, 247, 0.22)' },
-    orange: { rgb: '255, 170, 90', border: 'rgba(255, 170, 90, 0.22)' },
+  const toneMap: Record<string, { hex: string; watermarkPos: WatermarkPosition }> = {
+    green: { hex: '#00ED64', watermarkPos: 'center' },
+    blue: { hex: '#00A35C', watermarkPos: 'center' },
+    purple: { hex: '#8884d8', watermarkPos: 'center' },
+    orange: { hex: '#ff7300', watermarkPos: 'center' },
   };
 
   const t = toneMap[tone];
 
-  const onMouseMove = React.useCallback((e: React.MouseEvent<HTMLElement>) => {
-    const el = e.currentTarget as HTMLElement;
-    const rect = el.getBoundingClientRect();
-    el.style.setProperty('--x', `${e.clientX - rect.left}px`);
-    el.style.setProperty('--y', `${e.clientY - rect.top}px`);
-  }, []);
-
   return (
-    <Card
-      onMouseMove={onMouseMove}
-      elevation={0}
-      sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: 3,
-
-        // Readability first: more solid surface
-        background: 'rgba(16, 18, 24, 0.86)',
-        border: '1px solid rgba(255,255,255,0.14)',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
-        backdropFilter: 'blur(4px)',
-
-        transition: 'transform 160ms ease, border-color 160ms ease',
-
-        // Spotlight (hover only)
-        '&:before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          background: `radial-gradient(650px circle at var(--x, 50%) var(--y, 50%),
-            rgba(${t.rgb}, 0.12),
-            rgba(${t.rgb}, 0.05) 42%,
-            transparent 72%)`,
-          opacity: 0,
-          transition: 'opacity 180ms ease',
-          pointerEvents: 'none',
-        },
-
-        // Subtle top sheen to separate content from background
-        '&:after': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00))',
-          pointerEvents: 'none',
-          opacity: 0.35,
-        },
-
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          borderColor: t.border,
-        },
-        '&:hover:before': {
-          opacity: 1,
-        },
-        '@media (hover: none)': {
-          '&:before': { display: 'none' },
-          '&:hover': { transform: 'none' },
-        },
-      }}
+    <GlassSpotlightCard
+      spotlightColor={hexToRgb(t.hex)}
+      watermarkPosition={t.watermarkPos}
+      watermarkOpacity={0.05}
+      sx={{ height: '100%' }}
     >
-      <CardContent sx={{ position: 'relative', p: { xs: 2.5, md: 3 } }}>
-        <Stack spacing={1.25}>
-          <Stack direction="row" spacing={1.25} alignItems="center">
-            {icon ? (
-              <Box
-                sx={{
-                  width: 36,
-                  height: 36,
-                  display: 'grid',
-                  placeItems: 'center',
-                  borderRadius: 2,
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  background: 'rgba(0,0,0,0.18)',
-                  color: 'rgba(255,255,255,0.90)',
-                }}
-              >
-                {icon}
-              </Box>
-            ) : null}
-
-            <Box>
-              {eyebrow ? (
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.62)', letterSpacing: 0.4 }}
-                >
-                  {eyebrow}
-                </Typography>
-              ) : null}
-              <Typography variant="h6" sx={{ lineHeight: 1.15, color: 'rgba(255,255,255,0.92)', fontWeight: 650 }}>
-                {title}
-              </Typography>
+      <Stack spacing={1.25}>
+        <Stack direction="row" spacing={1.25} alignItems="center">
+          {icon ? (
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: 2,
+                border: '1px solid rgba(255,255,255,0.10)',
+                background: 'rgba(0,0,0,0.18)',
+                color: 'rgba(255,255,255,0.90)',
+              }}
+            >
+              {icon}
             </Box>
-          </Stack>
+          ) : null}
 
-          <Box sx={{ height: 1, background: 'rgba(255,255,255,0.10)' }} />
-
-          <Box sx={{ color: 'rgba(255,255,255,0.82)' }}>{children}</Box>
+          <Box>
+            {eyebrow ? (
+              <Typography
+                variant="caption"
+                sx={{ color: 'rgba(255,255,255,0.62)', letterSpacing: 0.4 }}
+              >
+                {eyebrow}
+              </Typography>
+            ) : null}
+            <Typography variant="h6" sx={{ lineHeight: 1.15, color: 'rgba(255,255,255,0.92)', fontWeight: 650 }}>
+              {title}
+            </Typography>
+          </Box>
         </Stack>
-      </CardContent>
-    </Card>
+
+        <Box sx={{ height: 1, background: 'rgba(255,255,255,0.10)' }} />
+
+        <Box sx={{ color: 'rgba(255,255,255,0.82)' }}>{children}</Box>
+      </Stack>
+    </GlassSpotlightCard>
   );
 }
 
@@ -272,7 +218,7 @@ export default function Page() {
 
               <Button
                 component={Link}
-                href="/request-access"
+                href="/waitlist"
                 variant="outlined"
                 size="large"
                 sx={{
@@ -841,7 +787,7 @@ export default function Page() {
                 <Stack spacing={1.25}>
                   <Button
                     component={Link}
-                    href="/request-access"
+                    href="/waitlist"
                     variant="contained"
                     size="large"
                     sx={{

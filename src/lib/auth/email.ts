@@ -168,6 +168,17 @@ NetPad
     return true;
   } catch (error) {
     console.error('Failed to send magic link email:', error);
+    console.error('SMTP config check:', {
+      host: EMAIL_CONFIG.host,
+      port: EMAIL_CONFIG.port,
+      secure: EMAIL_CONFIG.secure,
+      hasUser: !!EMAIL_CONFIG.auth.user,
+      hasPass: !!EMAIL_CONFIG.auth.pass,
+      fromEmail: FROM_EMAIL,
+      appUrl: APP_URL,
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }

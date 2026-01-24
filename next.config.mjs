@@ -7,6 +7,7 @@ const nextConfig = {
     '@netpad/collaborate',
     '@netpad/demo-node',
     '@netpad/cloud-features',
+    '@netpad/workflow-renderer',
   ],
 
   // Enable subdomain routing for local development

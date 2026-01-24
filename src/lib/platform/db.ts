@@ -21,6 +21,17 @@ import {
 } from '@/types/platform';
 import { AIRequestLog, AIUsageAggregate } from '@/types/ai-analytics';
 import { Deployment } from '@/types/deployment';
+import {
+  SystemHealthCheck,
+  SystemHealthHistory,
+  PlatformError,
+  AlertRule,
+  AlertHistoryEntry,
+  APIMetricAggregation,
+  APIMetricSample,
+  AdminBroadcast,
+  BroadcastDismissal,
+} from '@/types/observability';
 import { Application, ApplicationContract, ApplicationRelease, ConfigSchema, WorkflowTemplate } from '@/types/application';
 
 // Connection pool
@@ -264,6 +275,70 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await aiUsageAggregates.createIndex({ period: 1 });
     await aiUsageAggregates.createIndex({ periodType: 1 });
     await aiUsageAggregates.createIndex({ totalTokens: -1 }); // For sorting by usage
+
+    // ============================================
+    // Observability Collections
+    // ============================================
+
+    // System health checks collection
+    const systemHealth = db.collection('system_health_checks');
+    await systemHealth.createIndex({ serviceName: 1 }, { unique: true });
+    await systemHealth.createIndex({ lastCheckedAt: -1 });
+    await systemHealth.createIndex({ status: 1 });
+
+    // System health history collection (TTL: 30 days)
+    const healthHistory = db.collection('system_health_history');
+    await healthHistory.createIndex({ serviceName: 1, recordedAt: -1 });
+    await healthHistory.createIndex({ recordedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+    await healthHistory.createIndex({ status: 1, recordedAt: -1 });
+
+    // Platform errors collection (TTL: 90 days)
+    const platformErrors = db.collection('platform_errors');
+    await platformErrors.createIndex({ errorId: 1 }, { unique: true });
+    await platformErrors.createIndex({ fingerprint: 1 });
+    await platformErrors.createIndex({ source: 1, severity: 1 });
+    await platformErrors.createIndex({ status: 1, lastSeenAt: -1 });
+    await platformErrors.createIndex({ organizationId: 1, lastSeenAt: -1 });
+    await platformErrors.createIndex({ userId: 1, lastSeenAt: -1 });
+    await platformErrors.createIndex({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
+    // Alert rules collection
+    const alertRules = db.collection('alert_rules');
+    await alertRules.createIndex({ ruleId: 1 }, { unique: true });
+    await alertRules.createIndex({ enabled: 1, status: 1 });
+    await alertRules.createIndex({ metric: 1 });
+    await alertRules.createIndex({ organizationId: 1 }, { sparse: true });
+    await alertRules.createIndex({ createdBy: 1 });
+
+    // Alert history collection (TTL: 90 days)
+    const alertHistory = db.collection('alert_history');
+    await alertHistory.createIndex({ alertId: 1 }, { unique: true });
+    await alertHistory.createIndex({ ruleId: 1, triggeredAt: -1 });
+    await alertHistory.createIndex({ status: 1, triggeredAt: -1 });
+    await alertHistory.createIndex({ metric: 1 });
+    await alertHistory.createIndex({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
+    // API metrics aggregation collection (TTL: 30 days for hourly, handled separately for daily)
+    const apiMetrics = db.collection('api_metrics');
+    await apiMetrics.createIndex({ period: 1, periodType: 1 }, { unique: true });
+    await apiMetrics.createIndex({ periodType: 1, createdAt: -1 });
+
+    // API metric samples collection (TTL: 1 hour for real-time data)
+    const apiMetricSamples = db.collection('api_metric_samples');
+    await apiMetricSamples.createIndex({ endpoint: 1, timestamp: -1 });
+    await apiMetricSamples.createIndex({ timestamp: 1 }, { expireAfterSeconds: 60 * 60 });
+
+    // Admin broadcasts collection
+    const broadcasts = db.collection('admin_broadcasts');
+    await broadcasts.createIndex({ broadcastId: 1 }, { unique: true });
+    await broadcasts.createIndex({ status: 1, startsAt: 1, expiresAt: 1 });
+    await broadcasts.createIndex({ audience: 1 });
+    await broadcasts.createIndex({ createdBy: 1 });
+
+    // Broadcast dismissals collection
+    const dismissals = db.collection('broadcast_dismissals');
+    await dismissals.createIndex({ broadcastId: 1, userId: 1 }, { unique: true });
+    await dismissals.createIndex({ userId: 1 });
 
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
@@ -571,6 +646,55 @@ export async function getInstalledApplicationsCollection(orgId: string): Promise
 export async function getApplicationReviewsCollection(): Promise<Collection<any>> {
   const db = await getPlatformDb();
   return db.collection('application_reviews');
+}
+
+// ============================================
+// Observability Collection Accessors
+// ============================================
+
+export async function getSystemHealthCollection(): Promise<Collection<SystemHealthCheck>> {
+  const db = await getPlatformDb();
+  return db.collection<SystemHealthCheck>('system_health_checks');
+}
+
+export async function getSystemHealthHistoryCollection(): Promise<Collection<SystemHealthHistory>> {
+  const db = await getPlatformDb();
+  return db.collection<SystemHealthHistory>('system_health_history');
+}
+
+export async function getPlatformErrorsCollection(): Promise<Collection<PlatformError>> {
+  const db = await getPlatformDb();
+  return db.collection<PlatformError>('platform_errors');
+}
+
+export async function getAlertRulesCollection(): Promise<Collection<AlertRule>> {
+  const db = await getPlatformDb();
+  return db.collection<AlertRule>('alert_rules');
+}
+
+export async function getAlertHistoryCollection(): Promise<Collection<AlertHistoryEntry>> {
+  const db = await getPlatformDb();
+  return db.collection<AlertHistoryEntry>('alert_history');
+}
+
+export async function getAPIMetricsCollection(): Promise<Collection<APIMetricAggregation>> {
+  const db = await getPlatformDb();
+  return db.collection<APIMetricAggregation>('api_metrics');
+}
+
+export async function getAPIMetricSamplesCollection(): Promise<Collection<APIMetricSample>> {
+  const db = await getPlatformDb();
+  return db.collection<APIMetricSample>('api_metric_samples');
+}
+
+export async function getAdminBroadcastsCollection(): Promise<Collection<AdminBroadcast>> {
+  const db = await getPlatformDb();
+  return db.collection<AdminBroadcast>('admin_broadcasts');
+}
+
+export async function getBroadcastDismissalsCollection(): Promise<Collection<BroadcastDismissal>> {
+  const db = await getPlatformDb();
+  return db.collection<BroadcastDismissal>('broadcast_dismissals');
 }
 
 // ============================================

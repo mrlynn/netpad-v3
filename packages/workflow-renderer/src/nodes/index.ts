@@ -59,6 +59,9 @@ export {
   VariableGetNode,
 } from './utility';
 
+// Output nodes
+export { HtmlOutputNode } from './output';
+
 // Node registry for WorkflowRenderer
 import type { ComponentType } from 'react';
 import { FormTriggerNode, WebhookTriggerNode, ScheduleTriggerNode, ManualTriggerNode } from './triggers';
@@ -67,6 +70,7 @@ import { MongoQueryNode, MongoInsertNode, MongoUpdateNode, MongoDeleteNode, Tran
 import { EmailSendNode, SlackSendNode, WebhookCallNode, HttpRequestNode, SmsSendNode, PushNotificationNode, FunctionNode } from './actions';
 import { LLMGenerateNode, LLMClassifyNode, LLMExtractNode, LLMSummarizeNode } from './ai';
 import { NoteNode, VariableSetNode, VariableGetNode } from './utility';
+import { HtmlOutputNode } from './output';
 import { BaseNode } from './BaseNode';
 import type { NodeType } from '../types/workflow';
 
@@ -112,6 +116,8 @@ export const nodeRegistry: Record<NodeType, AnyNodeComponent> = {
   note: NoteNode,
   variable_set: VariableSetNode,
   variable_get: VariableGetNode,
+  // Output
+  html_output: HtmlOutputNode,
 };
 
 /**

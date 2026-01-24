@@ -46,7 +46,7 @@ import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 import { SpotlightCard, hexToRgb } from '@/components/marketing';
 import { IntentOnboardingGate } from '@/components/Onboarding/IntentOnboardingGate';
-import { InstantFormBuilder, PillarsTabs } from '@/components/Landing';
+import { InstantFormBuilder, PillarsTabs, WorkflowDemoRenderer } from '@/components/Landing';
 import { useAutoNavigateToApp } from '@/hooks/useAutoNavigateToApp';
 
 // The four pillars of NetPad
@@ -1614,119 +1614,148 @@ const onboardingForm: FormConfiguration = {
       {/* Workflow Integration Demo Section */}
       <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6} sx={{ order: { xs: 2, md: 1 } }}>
+          {/* Section Header */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Chip
+              label="Visual Automation"
+              icon={<AccountTree sx={{ fontSize: 14 }} />}
+              size="small"
+              sx={{
+                mb: 2,
+                bgcolor: alpha('#9C27B0', 0.1),
+                color: '#9C27B0',
+                fontWeight: 600,
+                '& .MuiChip-icon': { color: '#9C27B0' }
+              }}
+            />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 1 }}>
+              Build Workflows Visually, Execute Programmatically
+            </Typography>
+            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), maxWidth: 700, mx: 'auto' }}>
+              Design automation flows in our visual builder, then trigger them from your code with our TypeScript SDK.
+            </Typography>
+          </Box>
+
+          {/* Workflow Visualization */}
+          <Box sx={{ mb: 4 }}>
+            <Paper
+              sx={{
+                bgcolor: 'transparent',
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid',
+                borderColor: alpha('#9C27B0', 0.2),
+              }}
+            >
+              <Box sx={{ bgcolor: alpha('#9C27B0', 0.1), px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: '#9C27B0', fontWeight: 'bold' }}>
+                  Order Processing Workflow
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Chip label="7 Nodes" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.15), color: '#9C27B0', fontSize: '0.7rem', height: 22 }} />
+                  <Chip label="Auto-Layout" size="small" sx={{ bgcolor: alpha('#00ED64', 0.15), color: '#00ED64', fontSize: '0.7rem', height: 22 }} />
+                </Box>
+              </Box>
+              <WorkflowDemoRenderer />
+            </Paper>
+          </Box>
+
+          {/* Code + Description Side by Side */}
+          <Grid container spacing={4} alignItems="stretch">
+            <Grid item xs={12} md={6}>
               {/* Code preview */}
               <Paper
                 sx={{
                   bgcolor: '#1e1e1e',
                   borderRadius: 2,
                   overflow: 'hidden',
+                  height: '100%',
                 }}
               >
                 <Box sx={{ bgcolor: '#9C27B0', px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                    Workflow Integration Demo
+                    Execute with @netpad/workflows
                   </Typography>
-                  <Chip label="Interactive" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
+                  <Chip label="TypeScript" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem' }} />
                 </Box>
                 <Box sx={{ p: 2 }}>
-                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.4, overflow: 'auto', maxHeight: 200 }}>
+                  <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '11px', lineHeight: 1.5, overflow: 'auto' }}>
 {`import { createNetPadWorkflowClient } from '@netpad/workflows';
 
 const client = createNetPadWorkflowClient({
   baseUrl: 'https://your-netpad.com',
   apiKey: 'np_live_xxx',
-  organizationId: 'org_123',
 });
 
-// Execute a workflow
+// Execute the order-processing workflow
 const { executionId } = await client.executeWorkflow(
   'order-processing',
   { payload: { orderId, customerId } }
 );
 
 // Wait for completion
-const result = await client.waitForExecution(executionId, {
-  timeoutMs: 60000,
-  intervalMs: 2000,
-});
-
-console.log('Status:', result.execution.status);
-console.log('Output:', result.execution.result?.output);`}
+const result = await client.waitForExecution(executionId);
+console.log('Status:', result.execution.status);`}
                   </pre>
                 </Box>
               </Paper>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ order: { xs: 1, md: 2 } }}>
-              <Chip
-                label="Example App"
-                icon={<School sx={{ fontSize: 14 }} />}
-                size="small"
-                sx={{
-                  mb: 2,
-                  bgcolor: alpha('#9C27B0', 0.1),
-                  color: '#9C27B0',
-                  fontWeight: 600,
-                  '& .MuiChip-icon': { color: '#9C27B0' }
-                }}
-              />
-              <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
-                Try the Interactive
-                <br />Workflow Demo
-              </Typography>
-              <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
-                Explore the Workflow Integration Demo to see how to connect to NetPad, trigger executions,
-                and monitor workflow status from your own applications.
-              </Typography>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#fff', mb: 2 }}>
+                  Trigger Workflows from Anywhere
+                </Typography>
+                <Typography variant="body1" sx={{ color: alpha('#fff', 0.6), mb: 3, lineHeight: 1.8 }}>
+                  Use our TypeScript SDK to execute workflows from your backend services, serverless functions, or any Node.js environment. Built-in polling, error handling, and full type safety.
+                </Typography>
 
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                <Chip label="Live Connection" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
-                <Chip label="Execute & Monitor" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
-                <Chip label="Code Examples" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
-                <Chip label="Error Handling" size="small" sx={{ bgcolor: alpha('#9C27B0', 0.1), color: '#9C27B0' }} />
-              </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                  <Chip label="Form Triggers" size="small" sx={{ bgcolor: alpha('#00ED64', 0.1), color: '#00ED64' }} />
+                  <Chip label="MongoDB Actions" size="small" sx={{ bgcolor: alpha('#2196F3', 0.1), color: '#2196F3' }} />
+                  <Chip label="Email & Slack" size="small" sx={{ bgcolor: alpha('#E91E63', 0.1), color: '#E91E63' }} />
+                  <Chip label="AI Nodes" size="small" sx={{ bgcolor: alpha('#FF6B35', 0.1), color: '#FF6B35' }} />
+                </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button
-                  component="a"
-                  href="https://github.com/mrlynn/netpad-v3/tree/main/examples/workflow-integration-demo"
-                  target="_blank"
-                  variant="contained"
-                  size="small"
-                  startIcon={<RocketLaunch />}
-                  sx={{
-                    background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                    color: '#fff',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
-                    }
-                  }}
-                >
-                  View Demo
-                </Button>
-                <Button
-                  component="a"
-                  href="https://github.com/mrlynn/netpad-v3/blob/main/packages/workflows/README.md"
-                  target="_blank"
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Code />}
-                  sx={{
-                    borderColor: alpha('#fff', 0.3),
-                    color: '#fff',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      borderColor: '#fff',
-                      bgcolor: alpha('#fff', 0.1),
-                    }
-                  }}
-                >
-                  API Reference
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    component={Link}
+                    href="/workflows"
+                    variant="contained"
+                    size="small"
+                    startIcon={<AccountTree />}
+                    sx={{
+                      background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                      color: '#fff',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #AB47BC 0%, #9C27B0 100%)',
+                      }
+                    }}
+                  >
+                    Build a Workflow
+                  </Button>
+                  <Button
+                    component="a"
+                    href="https://github.com/mrlynn/netpad-v3/blob/main/packages/workflows/README.md"
+                    target="_blank"
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Code />}
+                    sx={{
+                      borderColor: alpha('#fff', 0.3),
+                      color: '#fff',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#fff',
+                        bgcolor: alpha('#fff', 0.1),
+                      }
+                    }}
+                  >
+                    SDK Docs
+                  </Button>
+                </Box>
               </Box>
             </Grid>
           </Grid>

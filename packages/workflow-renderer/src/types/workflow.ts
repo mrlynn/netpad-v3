@@ -111,7 +111,9 @@ export type NodeType =
   // Utility (3)
   | 'note'
   | 'variable_set'
-  | 'variable_get';
+  | 'variable_get'
+  // Output (1)
+  | 'html_output';
 
 /**
  * Edge types
@@ -131,7 +133,8 @@ export type NodeCategory =
   | 'data'
   | 'action'
   | 'ai'
-  | 'utility';
+  | 'utility'
+  | 'output';
 
 /**
  * Map node types to their categories
@@ -172,6 +175,8 @@ export const NODE_CATEGORIES: Record<NodeType, NodeCategory> = {
   note: 'utility',
   variable_set: 'utility',
   variable_get: 'utility',
+  // Output
+  html_output: 'output',
 };
 
 /**

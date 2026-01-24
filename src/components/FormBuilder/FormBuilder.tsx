@@ -1429,6 +1429,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             onFormTitleChange={setCurrentFormName}
             onFormDescriptionChange={setCurrentFormDescription}
             formType={formType}
+            theme={themeConfig}
           />
 
           {/* Floating Action Toolbar - Google Forms Style */}

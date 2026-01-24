@@ -29,6 +29,7 @@ export const lightTheme: RendererTheme = {
     action: '#7C3AED',    // Purple
     ai: '#DB2777',        // Pink
     utility: '#475569',   // Slate
+    output: '#0891B2',    // Cyan
   },
 
   edge: {

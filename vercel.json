@@ -16,6 +16,10 @@
     {
       "path": "/api/workflows/process?count=5",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/observability",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": [

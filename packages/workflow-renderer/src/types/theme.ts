@@ -33,6 +33,7 @@ export interface RendererTheme {
     action: string;
     ai: string;
     utility: string;
+    output: string;
   };
 
   /** Edge styling */

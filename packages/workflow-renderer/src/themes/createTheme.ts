@@ -74,6 +74,7 @@ export function getThemeCSSVariables(theme: RendererTheme): Record<string, strin
     '--wr-cat-action': theme.nodeCategories.action,
     '--wr-cat-ai': theme.nodeCategories.ai,
     '--wr-cat-utility': theme.nodeCategories.utility,
+    '--wr-cat-output': theme.nodeCategories.output,
     '--wr-edge-default': theme.edge.default,
     '--wr-edge-selected': theme.edge.selected,
     '--wr-edge-animated': theme.edge.animated,

@@ -44,6 +44,8 @@ import {
   TableChart as SheetsIcon,
   StickyNote2 as StickyNoteIcon,
   Extension as ExtensionIcon,
+  Article as HtmlOutputIcon,
+  Output as OutputIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 import { useExtensionNodes, ExtensionNodeDefinition } from '@/hooks/useExtensionNodes';
@@ -83,6 +85,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   'Link': <WebhookIcon />,
   'PlayArrow': <ManualIcon />,
   'StickyNote2': <StickyNoteIcon />,
+  'Article': <HtmlOutputIcon />,
+  'Output': <OutputIcon />,
 };
 
 // Convert extension node definition to palette node
@@ -299,6 +303,16 @@ const PALETTE_NODES: PaletteNode[] = [
     category: 'custom',
   },
 
+  // Output
+  {
+    type: 'html-output',
+    label: 'HTML Output',
+    description: 'Render data as HTML using templates',
+    icon: <HtmlOutputIcon />,
+    color: '#0891B2',
+    category: 'output',
+  },
+
   // Annotations
   {
     type: 'sticky-note',
@@ -318,6 +332,7 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   actions: { label: 'Actions', icon: <EmailIcon />, color: '#2196F3' },
   data: { label: 'Data', icon: <TransformIcon />, color: '#607D8B' },
   ai: { label: 'AI', icon: <AiIcon />, color: '#E91E63' },
+  output: { label: 'Output', icon: <OutputIcon />, color: '#0891B2' },
   forms: { label: 'Forms', icon: <FormIcon />, color: '#00BCD4' },
   custom: { label: 'Custom', icon: <CategoryIcon />, color: '#795548' },
   annotations: { label: 'Annotations', icon: <StickyNoteIcon />, color: '#FBC02D' },

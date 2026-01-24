@@ -4,13 +4,14 @@ import { getOrgFormsCollection } from '@/lib/platform/db';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { getClient } from '@/lib/mongodb/clientCache';
 import { getGlobalSubmissionsForForm } from '@/lib/storage';
+import { withMetrics } from '@/lib/api/metricsMiddleware';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'form_builder';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export const GET = withMetrics(async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session.userId) {
@@ -142,4 +143,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

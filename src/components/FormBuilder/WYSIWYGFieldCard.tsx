@@ -29,7 +29,7 @@ import {
   ContentCopy,
   Star,
 } from '@mui/icons-material';
-import { FieldConfig, LayoutFieldType } from '@/types/form';
+import { FieldConfig, LayoutFieldType, FormTheme } from '@/types/form';
 import { ArrayFieldInput } from './ArrayFieldInput';
 import { NestedObjectField } from './NestedObjectField';
 import { LookupFieldInput } from './LookupFieldInput';
@@ -91,6 +91,8 @@ interface WYSIWYGFieldCardProps {
   onDragLeave: () => void;
   onDrop: () => void;
   draggable: boolean;
+  // Theme configuration for WYSIWYG preview
+  theme?: FormTheme;
 }
 
 export function WYSIWYGFieldCard({
@@ -110,12 +112,24 @@ export function WYSIWYGFieldCard({
   onDragLeave,
   onDrop,
   draggable,
+  theme,
 }: WYSIWYGFieldCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [editLabelValue, setEditLabelValue] = useState(config.label);
 
   const isLayout = isLayoutField(config);
+
+  // Theme-aware styling
+  const primaryColor = theme?.primaryColor || '#00ED64';
+  const backgroundColor = theme?.backgroundColor || '#FFFFFF';
+  const textColor = theme?.textColor || '#001E2B';
+  const textSecondaryColor = theme?.textSecondaryColor || '#5C6C75';
+  const errorColor = theme?.errorColor || '#CF4747';
+  const borderRadius = theme?.borderRadius || 8;
+  const inputBorderRadius = theme?.inputBorderRadius || borderRadius;
+  const inputStyle = theme?.inputStyle || 'outlined';
+  const isDarkMode = theme?.mode === 'dark';
 
   const getFieldValue = (path: string): any => {
     const keys = path.split('.');
@@ -179,11 +193,13 @@ export function WYSIWYGFieldCard({
           fullWidth
           value={displayValue}
           placeholder="Computed value will appear here"
+          variant={inputStyle as 'outlined' | 'filled' | 'standard'}
           InputProps={{
             readOnly: true,
             sx: {
-              bgcolor: alpha('#00ED64', 0.05),
-              '& input': { color: '#00ED64', fontWeight: 500 }
+              bgcolor: alpha(primaryColor, 0.05),
+              borderRadius: `${inputBorderRadius}px`,
+              '& input': { color: primaryColor, fontWeight: 500 }
             }
           }}
           helperText="Auto-calculated from formula"
@@ -219,13 +235,13 @@ export function WYSIWYGFieldCard({
                   checked={Boolean(value)}
                   onChange={(e) => onFormDataChange(config.path, e.target.checked)}
                   sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#00ED64' },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#00ED64' },
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: primaryColor },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: primaryColor },
                   }}
                 />
               }
               label={value ? yesLabel : noLabel}
-              sx={{ ml: 0 }}
+              sx={{ ml: 0, color: textColor }}
             />
           );
         }
@@ -240,9 +256,10 @@ export function WYSIWYGFieldCard({
                   cursor: 'pointer',
                   fontWeight: 500,
                   px: 2,
-                  bgcolor: value === true ? '#00ED64' : alpha('#00ED64', 0.1),
-                  color: value === true ? '#001E2B' : '#00ED64',
-                  '&:hover': { bgcolor: value === true ? '#00ED64' : alpha('#00ED64', 0.2) },
+                  borderRadius: `${inputBorderRadius}px`,
+                  bgcolor: value === true ? primaryColor : alpha(primaryColor, 0.1),
+                  color: value === true ? (isDarkMode ? '#000' : '#001E2B') : primaryColor,
+                  '&:hover': { bgcolor: value === true ? primaryColor : alpha(primaryColor, 0.2) },
                 }}
               />
               <Chip
@@ -252,9 +269,10 @@ export function WYSIWYGFieldCard({
                   cursor: 'pointer',
                   fontWeight: 500,
                   px: 2,
-                  bgcolor: value === false ? '#00ED64' : alpha('#00ED64', 0.1),
-                  color: value === false ? '#001E2B' : '#00ED64',
-                  '&:hover': { bgcolor: value === false ? '#00ED64' : alpha('#00ED64', 0.2) },
+                  borderRadius: `${inputBorderRadius}px`,
+                  bgcolor: value === false ? primaryColor : alpha(primaryColor, 0.1),
+                  color: value === false ? (isDarkMode ? '#000' : '#001E2B') : primaryColor,
+                  '&:hover': { bgcolor: value === false ? primaryColor : alpha(primaryColor, 0.2) },
                 }}
               />
             </Box>
@@ -292,11 +310,11 @@ export function WYSIWYGFieldCard({
           return (
             <Box sx={{ px: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">{lowLabel || minVal}</Typography>
+                <Typography variant="caption" sx={{ color: textSecondaryColor }}>{lowLabel || minVal}</Typography>
                 {showValue && (
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#00ED64' }}>{currentValue}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: primaryColor }}>{currentValue}</Typography>
                 )}
-                <Typography variant="caption" color="text.secondary">{highLabel || maxVal}</Typography>
+                <Typography variant="caption" sx={{ color: textSecondaryColor }}>{highLabel || maxVal}</Typography>
               </Box>
               <Slider
                 value={currentValue}
@@ -306,7 +324,7 @@ export function WYSIWYGFieldCard({
                 marks
                 valueLabelDisplay={showValue ? 'auto' : 'off'}
                 onChange={(_, newValue) => onFormDataChange(config.path, newValue as number)}
-                sx={{ color: '#00ED64' }}
+                sx={{ color: primaryColor }}
               />
             </Box>
           );
@@ -318,8 +336,8 @@ export function WYSIWYGFieldCard({
             <Box>
               {(lowLabel || highLabel) && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary">{lowLabel}</Typography>
-                  <Typography variant="caption" color="text.secondary">{highLabel}</Typography>
+                  <Typography variant="caption" sx={{ color: textSecondaryColor }}>{lowLabel}</Typography>
+                  <Typography variant="caption" sx={{ color: textSecondaryColor }}>{highLabel}</Typography>
                 </Box>
               )}
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -331,12 +349,13 @@ export function WYSIWYGFieldCard({
                     onClick={() => onFormDataChange(config.path, opt)}
                     sx={{
                       minWidth: 40,
-                      bgcolor: value === opt ? '#00ED64' : 'transparent',
-                      color: value === opt ? '#001E2B' : 'text.primary',
-                      borderColor: value === opt ? '#00ED64' : 'divider',
+                      borderRadius: `${inputBorderRadius}px`,
+                      bgcolor: value === opt ? primaryColor : 'transparent',
+                      color: value === opt ? (isDarkMode ? '#000' : '#001E2B') : textColor,
+                      borderColor: value === opt ? primaryColor : alpha(textColor, 0.2),
                       '&:hover': {
-                        bgcolor: value === opt ? '#00CC55' : alpha('#00ED64', 0.1),
-                        borderColor: '#00ED64',
+                        bgcolor: value === opt ? primaryColor : alpha(primaryColor, 0.1),
+                        borderColor: primaryColor,
                       },
                     }}
                   >
@@ -463,12 +482,12 @@ export function WYSIWYGFieldCard({
                     sx={{
                       width: 28,
                       height: 28,
-                      borderRadius: 0.5,
+                      borderRadius: `${Math.max(2, inputBorderRadius / 4)}px`,
                       bgcolor: color,
                       cursor: 'pointer',
                       border: '2px solid',
-                      borderColor: colorValue === color ? '#00ED64' : 'divider',
-                      boxShadow: colorValue === color ? '0 0 0 2px rgba(0,237,100,0.3)' : 'none',
+                      borderColor: colorValue === color ? primaryColor : alpha(textColor, 0.2),
+                      boxShadow: colorValue === color ? `0 0 0 2px ${alpha(primaryColor, 0.3)}` : 'none',
                       transition: 'all 0.15s ease',
                       '&:hover': {
                         transform: 'scale(1.1)',
@@ -496,12 +515,13 @@ export function WYSIWYGFieldCard({
               component="label"
               startIcon={<span style={{ fontSize: 18 }}>📎</span>}
               sx={{
-                borderColor: 'divider',
-                color: 'text.secondary',
+                borderColor: alpha(textColor, 0.2),
+                color: textSecondaryColor,
                 textTransform: 'none',
+                borderRadius: `${inputBorderRadius}px`,
                 '&:hover': {
-                  borderColor: '#00ED64',
-                  bgcolor: alpha('#00ED64', 0.05),
+                  borderColor: primaryColor,
+                  bgcolor: alpha(primaryColor, 0.05),
                 },
               }}
             >
@@ -637,7 +657,7 @@ export function WYSIWYGFieldCard({
 
   return (
     <Paper
-      elevation={isSelected ? 2 : isHovered ? 1 : 0}
+      elevation={isSelected ? 2 : isHovered ? 1 : (theme?.elevation ?? 0)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onSelect}
@@ -652,31 +672,31 @@ export function WYSIWYGFieldCard({
         p: 2.5,
         pl: 3,
         mb: 0,
-        borderRadius: 2,
+        borderRadius: `${borderRadius}px`,
         // Google Forms style: colored left border for selection
         border: '1px solid',
         borderColor: isDragOver
-          ? alpha('#00ED64', 0.4)
+          ? alpha(primaryColor, 0.4)
           : isHovered
-          ? 'divider'
-          : alpha('#000', 0.08),
+          ? alpha(textColor, 0.15)
+          : alpha(textColor, 0.08),
         // Override left border for selection indicator
         borderLeftWidth: 6,
         borderLeftStyle: 'solid',
         borderLeftColor: isSelected
-          ? '#00ED64'
+          ? primaryColor
           : isDragOver
-          ? alpha('#00ED64', 0.6)
+          ? alpha(primaryColor, 0.6)
           : 'transparent',
         bgcolor: isDragging
-          ? alpha('#00ED64', 0.05)
-          : 'background.paper',
+          ? alpha(primaryColor, 0.05)
+          : backgroundColor,
         opacity: isDragging ? 0.6 : 1,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         position: 'relative',
         '&:hover': {
-          borderColor: alpha('#00ED64', 0.3),
+          borderColor: alpha(primaryColor, 0.3),
           boxShadow: isSelected ? 2 : 1,
         },
         '&:active': draggable ? { cursor: 'grabbing' } : {},
@@ -692,8 +712,8 @@ export function WYSIWYGFieldCard({
             display: 'flex',
             alignItems: 'center',
             gap: 0.5,
-            bgcolor: 'background.paper',
-            borderRadius: 1,
+            bgcolor: backgroundColor,
+            borderRadius: `${Math.max(4, borderRadius / 2)}px`,
             boxShadow: 3,
             px: 0.5,
             py: 0.25,
@@ -713,8 +733,8 @@ export function WYSIWYGFieldCard({
                 sx={{
                   p: 0.5,
                   cursor: 'grab',
-                  color: 'text.secondary',
-                  '&:hover': { color: '#00ED64' },
+                  color: textSecondaryColor,
+                  '&:hover': { color: primaryColor },
                 }}
               >
                 <DragIndicator sx={{ fontSize: 16 }} />
@@ -731,8 +751,8 @@ export function WYSIWYGFieldCard({
               }}
               sx={{
                 p: 0.5,
-                color: 'text.secondary',
-                '&:hover': { color: '#00ED64', bgcolor: alpha('#00ED64', 0.1) },
+                color: textSecondaryColor,
+                '&:hover': { color: primaryColor, bgcolor: alpha(primaryColor, 0.1) },
               }}
             >
               <Edit sx={{ fontSize: 14 }} />
@@ -745,7 +765,7 @@ export function WYSIWYGFieldCard({
               onClick={() => onUpdateField(config.path, { required: !config.required })}
               sx={{
                 p: 0.5,
-                color: config.required ? '#ff9800' : 'text.secondary',
+                color: config.required ? '#ff9800' : textSecondaryColor,
                 '&:hover': { color: '#ff9800', bgcolor: alpha('#ff9800', 0.1) },
               }}
             >
@@ -759,7 +779,7 @@ export function WYSIWYGFieldCard({
               onClick={onSelect}
               sx={{
                 p: 0.5,
-                color: 'text.secondary',
+                color: textSecondaryColor,
                 '&:hover': { color: '#2196f3', bgcolor: alpha('#2196f3', 0.1) },
               }}
             >
@@ -774,8 +794,8 @@ export function WYSIWYGFieldCard({
                 onClick={onDelete}
                 sx={{
                   p: 0.5,
-                  color: 'text.secondary',
-                  '&:hover': { color: 'error.main', bgcolor: alpha('#f44336', 0.1) },
+                  color: textSecondaryColor,
+                  '&:hover': { color: errorColor, bgcolor: alpha(errorColor, 0.1) },
                 }}
               >
                 <Delete sx={{ fontSize: 14 }} />
@@ -795,14 +815,14 @@ export function WYSIWYGFieldCard({
               left: 0,
               right: 0,
               zIndex: 20,
-              bgcolor: 'background.paper',
-              borderRadius: 1,
+              bgcolor: backgroundColor,
+              borderRadius: `${Math.max(4, borderRadius / 2)}px`,
               boxShadow: 4,
               p: 1.5,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+            <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: textSecondaryColor }}>
               Edit Question Label
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -814,11 +834,22 @@ export function WYSIWYGFieldCard({
                 fullWidth
                 autoFocus
                 placeholder="Enter question label..."
+                variant={inputStyle as 'outlined' | 'filled' | 'standard'}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: '#00ED64' },
-                    '&:hover fieldset': { borderColor: '#00ED64' },
-                    '&.Mui-focused fieldset': { borderColor: '#00ED64', borderWidth: 2 },
+                    borderRadius: `${inputBorderRadius}px`,
+                    '& fieldset': { borderColor: primaryColor },
+                    '&:hover fieldset': { borderColor: primaryColor },
+                    '&.Mui-focused fieldset': { borderColor: primaryColor, borderWidth: 2 },
+                  },
+                  '& .MuiFilledInput-root': {
+                    borderRadius: `${inputBorderRadius}px`,
+                    '&:before': { borderBottomColor: primaryColor },
+                    '&:after': { borderBottomColor: primaryColor },
+                  },
+                  '& .MuiInput-root': {
+                    '&:before': { borderBottomColor: primaryColor },
+                    '&:after': { borderBottomColor: primaryColor },
                   },
                 }}
               />
@@ -826,9 +857,9 @@ export function WYSIWYGFieldCard({
                 size="small"
                 onClick={handleSaveLabel}
                 sx={{
-                  color: '#00ED64',
-                  bgcolor: alpha('#00ED64', 0.1),
-                  '&:hover': { bgcolor: alpha('#00ED64', 0.2) },
+                  color: primaryColor,
+                  bgcolor: alpha(primaryColor, 0.1),
+                  '&:hover': { bgcolor: alpha(primaryColor, 0.2) },
                 }}
               >
                 <Check sx={{ fontSize: 18 }} />
@@ -836,7 +867,7 @@ export function WYSIWYGFieldCard({
               <IconButton
                 size="small"
                 onClick={handleCancelLabel}
-                sx={{ color: 'text.secondary' }}
+                sx={{ color: textSecondaryColor }}
               >
                 <Close sx={{ fontSize: 18 }} />
               </IconButton>
@@ -854,7 +885,7 @@ export function WYSIWYGFieldCard({
             sx={{
               fontWeight: 500,
               mb: 1.5,
-              color: 'text.primary',
+              color: textColor,
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
@@ -862,7 +893,7 @@ export function WYSIWYGFieldCard({
           >
             {config.label}
             {config.required && (
-              <Typography component="span" sx={{ color: 'error.main', fontWeight: 400 }}>*</Typography>
+              <Typography component="span" sx={{ color: errorColor, fontWeight: 400 }}>*</Typography>
             )}
           </Typography>
         )}
@@ -871,7 +902,7 @@ export function WYSIWYGFieldCard({
 
       {/* Minimal bottom indicators - only show when relevant */}
       {(config.conditionalLogic?.conditions?.length || config.computed || config.lookup) && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: alpha(textColor, 0.1) }}>
           {config.conditionalLogic?.conditions?.length && (
             <Chip
               label="Conditional"
@@ -879,6 +910,7 @@ export function WYSIWYGFieldCard({
               sx={{
                 height: 20,
                 fontSize: '0.65rem',
+                borderRadius: `${Math.max(4, inputBorderRadius / 2)}px`,
                 bgcolor: alpha('#9c27b0', 0.08),
                 color: '#9c27b0',
               }}
@@ -891,8 +923,9 @@ export function WYSIWYGFieldCard({
               sx={{
                 height: 20,
                 fontSize: '0.65rem',
-                bgcolor: alpha('#00ED64', 0.08),
-                color: '#00ED64',
+                borderRadius: `${Math.max(4, inputBorderRadius / 2)}px`,
+                bgcolor: alpha(primaryColor, 0.08),
+                color: primaryColor,
               }}
             />
           )}
@@ -903,6 +936,7 @@ export function WYSIWYGFieldCard({
               sx={{
                 height: 20,
                 fontSize: '0.65rem',
+                borderRadius: `${Math.max(4, inputBorderRadius / 2)}px`,
                 bgcolor: alpha('#2196f3', 0.08),
                 color: '#2196f3',
               }}

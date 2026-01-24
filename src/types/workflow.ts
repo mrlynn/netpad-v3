@@ -255,6 +255,7 @@ export type NodeCategory =
   | 'integrations'
   | 'actions'
   | 'ai'
+  | 'output'
   | 'forms'
   | 'custom'
   | 'annotations';

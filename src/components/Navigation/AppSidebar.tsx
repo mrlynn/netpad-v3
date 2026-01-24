@@ -28,6 +28,9 @@ import {
   alpha,
   Skeleton,
   Collapse,
+  Tooltip,
+  IconButton,
+  Popover,
 } from '@mui/material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
@@ -41,6 +44,7 @@ import {
   Settings,
   Storage,
   ChevronRight,
+  ChevronLeft,
   FolderOpen,
   Folder,
 } from '@mui/icons-material';
@@ -51,12 +55,15 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { getAppUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
+import { useSidebarSafe } from '@/contexts/SidebarContext';
 
 // ============================================
 // Constants
 // ============================================
 
 export const SIDEBAR_WIDTH = 240;
+export const SIDEBAR_WIDTH_COLLAPSED = 52;
+export const SIDEBAR_TRANSITION = 'width 200ms ease-in-out';
 
 // ============================================
 // Types
@@ -453,6 +460,248 @@ function TreeSection({
 }
 
 // ============================================
+// Collapsed Sidebar Components
+// ============================================
+
+interface CollapsedNavItem {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  section?: string;
+}
+
+interface CollapsedSidebarContentProps {
+  currentAppSlug: string | null;
+  currentPath: string;
+  currentApp: Application | null;
+  recentItems: RecentItem[];
+  onToggle: () => void;
+}
+
+function CollapsedSidebarContent({
+  currentAppSlug,
+  currentPath,
+  currentApp,
+  recentItems,
+  onToggle,
+}: CollapsedSidebarContentProps) {
+  const [recentAnchor, setRecentAnchor] = useState<HTMLButtonElement | null>(null);
+
+  const navItems: CollapsedNavItem[] = currentAppSlug
+    ? [
+        { key: 'overview', icon: <Apps sx={{ fontSize: 20 }} />, label: 'Overview', section: '' },
+        { key: 'forms', icon: <Description sx={{ fontSize: 20, color: '#00ED64' }} />, label: 'Forms', section: 'forms' },
+        { key: 'workflows', icon: <AccountTree sx={{ fontSize: 20, color: '#9C27B0' }} />, label: 'Workflows', section: 'workflows' },
+        { key: 'data', icon: <Storage sx={{ fontSize: 20 }} />, label: 'Data', section: 'data' },
+        { key: 'settings', icon: <Settings sx={{ fontSize: 20 }} />, label: 'Settings', section: 'settings' },
+      ]
+    : [];
+
+  const isActive = (section: string) => {
+    if (!currentAppSlug) return false;
+    const basePath = `/apps/${currentAppSlug}`;
+    if (section === '') {
+      return currentPath === basePath || currentPath === `${basePath}/`;
+    }
+    return currentPath.startsWith(`${basePath}/${section}`);
+  };
+
+  const getHref = (section: string) => {
+    if (!currentAppSlug) return '#';
+    return section ? `/apps/${currentAppSlug}/${section}` : `/apps/${currentAppSlug}`;
+  };
+
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        bgcolor: 'background.paper',
+        py: 1,
+      }}
+    >
+      {/* Current App Icon */}
+      {currentApp && (
+        <Tooltip title={currentApp.name} placement="right">
+          <IconButton
+            component={Link}
+            href={getHref('')}
+            sx={{
+              width: 36,
+              height: 36,
+              mb: 1,
+              borderRadius: 1,
+              bgcolor: (theme) => alpha(currentApp.color || theme.palette.primary.main, 0.15),
+            }}
+          >
+            <Box
+              sx={{
+                width: 24,
+                height: 24,
+                borderRadius: 0.75,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: currentApp.color || 'primary.main',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 12,
+              }}
+            >
+              {currentApp.icon ? (
+                <TemplateIcon icon={currentApp.icon} size={14} color="#fff" />
+              ) : (
+                currentApp.name.charAt(0).toUpperCase()
+              )}
+            </Box>
+          </IconButton>
+        </Tooltip>
+      )}
+
+      <Divider sx={{ width: '70%', my: 1 }} />
+
+      {/* Navigation Icons */}
+      {navItems.slice(1).map((item) => (
+        <Tooltip key={item.key} title={item.label} placement="right">
+          <IconButton
+            component={Link}
+            href={getHref(item.section || '')}
+            sx={{
+              width: 36,
+              height: 36,
+              mb: 0.5,
+              borderRadius: 1,
+              color: isActive(item.section || '') ? 'primary.main' : 'text.secondary',
+              bgcolor: isActive(item.section || '')
+                ? (theme) => alpha(theme.palette.primary.main, 0.1)
+                : 'transparent',
+              '&:hover': {
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+              },
+            }}
+          >
+            {item.icon}
+          </IconButton>
+        </Tooltip>
+      ))}
+
+      {/* Spacer */}
+      <Box sx={{ flex: 1 }} />
+
+      {/* Recent Items */}
+      <Divider sx={{ width: '70%', my: 1 }} />
+      <Tooltip title="Recent items" placement="right">
+        <IconButton
+          onClick={(e) => setRecentAnchor(e.currentTarget)}
+          sx={{
+            width: 36,
+            height: 36,
+            mb: 1,
+            borderRadius: 1,
+            color: recentAnchor ? 'primary.main' : 'text.secondary',
+            bgcolor: recentAnchor
+              ? (theme) => alpha(theme.palette.primary.main, 0.1)
+              : 'transparent',
+            '&:hover': {
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+            },
+          }}
+        >
+          <History sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Tooltip>
+
+      {/* Recent Items Popover */}
+      <Popover
+        open={Boolean(recentAnchor)}
+        anchorEl={recentAnchor}
+        onClose={() => setRecentAnchor(null)}
+        anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'center', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              ml: 1,
+              width: 220,
+              maxHeight: 300,
+            },
+          },
+        }}
+      >
+        <Box sx={{ p: 1 }}>
+          <Typography
+            variant="overline"
+            sx={{ px: 1, color: 'text.secondary', fontSize: '0.65rem' }}
+          >
+            Recent Items
+          </Typography>
+          <List disablePadding>
+            {recentItems.length === 0 ? (
+              <ListItem>
+                <ListItemText
+                  primary="No recent items"
+                  primaryTypographyProps={{
+                    fontSize: '0.8125rem',
+                    color: 'text.disabled',
+                  }}
+                />
+              </ListItem>
+            ) : (
+              recentItems.map((item) => (
+                <ListItem key={`${item.type}-${item.id}`} disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={item.path}
+                    onClick={() => setRecentAnchor(null)}
+                    sx={{ borderRadius: 1, py: 0.75 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 28 }}>
+                      {item.type === 'form' ? (
+                        <Description sx={{ fontSize: 16, color: '#00ED64' }} />
+                      ) : (
+                        <AccountTree sx={{ fontSize: 16, color: '#9C27B0' }} />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.name}
+                      primaryTypographyProps={{
+                        fontSize: '0.8125rem',
+                        noWrap: true,
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))
+            )}
+          </List>
+        </Box>
+      </Popover>
+
+      {/* Toggle Button */}
+      <Tooltip title="Expand sidebar (Cmd+B)" placement="right">
+        <IconButton
+          onClick={onToggle}
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 1,
+            color: 'text.secondary',
+            '&:hover': {
+              bgcolor: 'action.hover',
+              color: 'text.primary',
+            },
+          }}
+        >
+          <ChevronRight sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -462,6 +711,7 @@ export function AppSidebar() {
   const { currentOrgId } = useOrganization();
   const { applications, currentApplication, isLoading } = useApplication();
   const { recentApps } = useRecentApplications(5);
+  const { isCollapsed, toggle } = useSidebarSafe();
 
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [showRecent, setShowRecent] = useState(true);
@@ -754,6 +1004,25 @@ export function AppSidebar() {
             )}
           </List>
         </Collapse>
+
+        {/* Toggle Button */}
+        <Box sx={{ p: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Tooltip title="Collapse sidebar (Cmd+B)" placement="right">
+            <IconButton
+              onClick={toggle}
+              size="small"
+              sx={{
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  color: 'text.primary',
+                },
+              }}
+            >
+              <ChevronLeft sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
     </Box>
   );
@@ -762,7 +1031,7 @@ export function AppSidebar() {
     <Box
       component="nav"
       sx={{
-        width: SIDEBAR_WIDTH,
+        width: isCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH,
         flexShrink: 0,
         display: { xs: 'none', md: 'block' },
         bgcolor: 'background.paper',
@@ -770,9 +1039,20 @@ export function AppSidebar() {
         borderColor: 'divider',
         height: '100%',
         overflow: 'hidden',
+        transition: SIDEBAR_TRANSITION,
       }}
     >
-      {drawerContent}
+      {isCollapsed ? (
+        <CollapsedSidebarContent
+          currentAppSlug={currentAppSlug || null}
+          currentPath={pathname || ''}
+          currentApp={currentApplication}
+          recentItems={recentItems}
+          onToggle={toggle}
+        />
+      ) : (
+        drawerContent
+      )}
     </Box>
   );
 }

@@ -7,10 +7,12 @@ import { HelpProvider } from '@/contexts/HelpContext';
 import { TourProvider } from '@/contexts/TourContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ApplicationProvider } from '@/contexts/ApplicationContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 import { IntentOnboardingProvider } from '@/contexts/IntentOnboardingContext';
 import { SignupOnboardingProvider } from '@/contexts/SignupOnboardingContext';
 import { DevPanelWrapper } from '@/components/dev/DevPanelWrapper';
 import { ImpersonationBanner } from '@/components/Admin/ImpersonationBanner';
+import { SystemBroadcast } from '@/components/common/SystemBroadcast';
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
@@ -62,16 +64,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ClientLayout>
           <AuthProvider>
             <ImpersonationBanner />
+            <SystemBroadcast />
             <SignupOnboardingProvider>
               <HelpProvider>
                 <TourProvider>
                   <OrganizationProvider>
                     <ApplicationProvider>
-                      <IntentOnboardingProvider>
-                        <PipelineProvider>{children}</PipelineProvider>
-                        <DevPanelWrapper />
-                        <Analytics />
-                      </IntentOnboardingProvider>
+                      <SidebarProvider>
+                        <IntentOnboardingProvider>
+                          <PipelineProvider>{children}</PipelineProvider>
+                          <DevPanelWrapper />
+                          <Analytics />
+                        </IntentOnboardingProvider>
+                      </SidebarProvider>
                     </ApplicationProvider>
                   </OrganizationProvider>
                 </TourProvider>

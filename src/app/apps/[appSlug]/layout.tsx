@@ -7,7 +7,8 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { AppNavBar, GLOBAL_BAR_HEIGHT } from '@/components/Navigation/AppNavBar';
-import { AppSidebar, SIDEBAR_WIDTH } from '@/components/Navigation/AppSidebar';
+import { AppSidebar, SIDEBAR_WIDTH, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_TRANSITION } from '@/components/Navigation/AppSidebar';
+import { useSidebarSafe } from '@/contexts/SidebarContext';
 import { PersistentApplicationBar } from '@/components/Navigation/ApplicationContextBar';
 import { Application } from '@/types/application';
 
@@ -30,6 +31,7 @@ export default function AppSlugLayout({
 
   const { currentOrgId, isLoading: isOrgLoading, selectOrganization } = useOrganization();
   const { applications, selectApplication, currentApplication, isLoading: isAppLoading, refreshApplications } = useApplication();
+  const { isCollapsed } = useSidebarSafe();
 
   const [isResolving, setIsResolving] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,8 +199,12 @@ export default function AppSlugLayout({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            // Account for sidebar width on desktop
-            width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+            // Account for sidebar width on desktop (dynamic based on collapse state)
+            width: {
+              xs: '100%',
+              md: `calc(100% - ${isCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH}px)`,
+            },
+            transition: SIDEBAR_TRANSITION,
           }}
         >
           {/* Zone 3A: App Header with tabs */}

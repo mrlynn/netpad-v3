@@ -10,6 +10,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   type NodeTypes,
   type EdgeTypes,
   type Node,
@@ -146,6 +147,8 @@ export function WorkflowRenderer({
   showControls = true,
   showBackground = true,
   backgroundVariant = 'dots',
+  showWatermark = true,
+  watermarkPosition = 'bottom-right',
 
   // Interaction
   pannable = true,
@@ -318,6 +321,49 @@ export function WorkflowRenderer({
               pannable={false}
               zoomable={false}
             />
+          )}
+
+          {showWatermark && (
+            <Panel
+              position={watermarkPosition}
+              className="wr-watermark"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0',
+                margin: '12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                pointerEvents: 'none',
+                userSelect: 'none',
+                opacity: 0.25,
+                width: 'fit-content',
+                minWidth: 'auto',
+              }}
+            >
+              <img
+                src="/micro-mark-black-trans.png"
+                alt="NetPad"
+                style={{
+                  height: '11px',
+                  width: 'auto',
+                  filter: theme.name === 'dark' ? 'invert(1) brightness(1.5)' : 'none',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '9px',
+                  fontWeight: 600,
+                  color: theme.node.textSecondary,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Made with NetPad
+              </span>
+            </Panel>
           )}
         </ReactFlow>
       </div>

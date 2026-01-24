@@ -17,11 +17,12 @@ import {
   DragIndicator,
   Info,
 } from '@mui/icons-material';
-import { FieldConfig, LayoutFieldType, FormHeader, FormType } from '@/types/form';
+import { FieldConfig, LayoutFieldType, FormHeader, FormType, FormTheme } from '@/types/form';
 import { WYSIWYGFieldCard } from './WYSIWYGFieldCard';
 import { AddQuestionDropzone } from './AddQuestionDropzone';
 import { FormHeaderDisplay } from './FormHeaderDisplay';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
+import { getResolvedTheme } from '@/lib/formThemes';
 
 const LAYOUT_FIELD_TYPES: LayoutFieldType[] = ['section-header', 'description', 'divider', 'image', 'spacer'];
 
@@ -52,6 +53,8 @@ interface WYSIWYGFormEditorProps {
   onFormDescriptionChange?: (description: string) => void;
   // Form type for conversational mode warning
   formType?: FormType;
+  // Theme configuration for WYSIWYG preview
+  theme?: FormTheme;
 }
 
 export function WYSIWYGFormEditor({
@@ -72,6 +75,7 @@ export function WYSIWYGFormEditor({
   onFormTitleChange,
   onFormDescriptionChange,
   formType,
+  theme: themeProp,
 }: WYSIWYGFormEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -80,6 +84,18 @@ export function WYSIWYGFormEditor({
   const dragCounter = useRef(0);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Resolve the form theme (applies preset defaults if needed)
+  const resolvedTheme = useMemo(() => getResolvedTheme(themeProp), [themeProp]);
+  const primaryColor = resolvedTheme.primaryColor || '#00ED64';
+  const backgroundColor = resolvedTheme.backgroundColor || '#FFFFFF';
+  const surfaceColor = resolvedTheme.surfaceColor || '#F9FBFA';
+  const textColor = resolvedTheme.textColor || '#001E2B';
+  const textSecondaryColor = resolvedTheme.textSecondaryColor || '#5C6C75';
+  const borderRadius = resolvedTheme.borderRadius || 8;
+  const inputStyle = resolvedTheme.inputStyle || 'outlined';
+  const inputBorderRadius = resolvedTheme.inputBorderRadius || borderRadius;
+  const isDarkMode = resolvedTheme.mode === 'dark';
 
   // Calculate form completion stats
   const formStats = useMemo(() => {
@@ -168,7 +184,14 @@ export function WYSIWYGFormEditor({
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', position: 'relative' }}>
+    <Box sx={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      bgcolor: isDarkMode ? resolvedTheme.backgroundColor : surfaceColor,
+      position: 'relative',
+      transition: 'background-color 0.3s ease',
+    }}>
       {/* Large centered NetPad logo watermark */}
       <Box
         sx={{
@@ -188,7 +211,7 @@ export function WYSIWYGFormEditor({
           sx={{
             width: 180,
             height: 180,
-            opacity: 0.03,
+            opacity: isDarkMode ? 0.05 : 0.03,
           }}
         />
       </Box>
@@ -232,13 +255,14 @@ export function WYSIWYGFormEditor({
           ) : (
             /* No header - show title card like published form would */
             <Paper
-              elevation={0}
+              elevation={resolvedTheme.elevation ?? 0}
               sx={{
                 p: 3,
-                borderRadius: 2,
+                borderRadius: `${borderRadius}px`,
                 borderTop: '4px solid',
-                borderColor: '#00ED64',
-                bgcolor: 'background.paper',
+                borderColor: primaryColor,
+                bgcolor: backgroundColor,
+                transition: 'all 0.3s ease',
               }}
             >
               {/* Title Field */}
@@ -263,12 +287,12 @@ export function WYSIWYGFormEditor({
                     fontSize: '1.75rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
-                    color: 'text.primary',
+                    color: textColor,
                     '& input': {
                       p: 0,
                       pb: 0.5,
                       borderBottom: '2px solid',
-                      borderColor: '#00ED64',
+                      borderColor: primaryColor,
                     },
                   }}
                 />
@@ -284,10 +308,10 @@ export function WYSIWYGFormEditor({
                     lineHeight: 1.2,
                     pb: 0.5,
                     cursor: 'text',
-                    color: formTitle ? 'text.primary' : 'text.disabled',
+                    color: formTitle ? textColor : textSecondaryColor,
                     borderBottom: '1px solid transparent',
                     '&:hover': {
-                      borderBottomColor: 'divider',
+                      borderBottomColor: alpha(textColor, 0.2),
                     },
                   }}
                 >
@@ -315,12 +339,12 @@ export function WYSIWYGFormEditor({
                     mt: 1.5,
                     fontSize: '0.95rem',
                     lineHeight: 1.5,
-                    color: 'text.secondary',
+                    color: textSecondaryColor,
                     '& textarea': {
                       p: 0,
                       pb: 0.5,
                       borderBottom: '2px solid',
-                      borderColor: '#00ED64',
+                      borderColor: primaryColor,
                     },
                   }}
                 />
@@ -336,11 +360,11 @@ export function WYSIWYGFormEditor({
                     fontSize: '0.95rem',
                     lineHeight: 1.5,
                     cursor: 'text',
-                    color: formDescription ? 'text.secondary' : 'text.disabled',
+                    color: formDescription ? textSecondaryColor : alpha(textSecondaryColor, 0.5),
                     borderBottom: '1px solid transparent',
                     minHeight: 24,
                     '&:hover': {
-                      borderBottomColor: 'divider',
+                      borderBottomColor: alpha(textColor, 0.2),
                     },
                   }}
                 >
@@ -363,9 +387,11 @@ export function WYSIWYGFormEditor({
                 zIndex: 100,
                 minWidth: 400,
                 maxWidth: 600,
+                bgcolor: backgroundColor,
+                borderRadius: `${borderRadius}px`,
               }}
             >
-              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, color: textSecondaryColor }}>
                 Edit Form Title
               </Typography>
               <InputBase
@@ -384,15 +410,16 @@ export function WYSIWYGFormEditor({
                 sx={{
                   fontSize: '1.5rem',
                   fontWeight: 600,
+                  color: textColor,
                   '& input': {
                     p: 1,
                     border: '2px solid',
-                    borderColor: '#00ED64',
-                    borderRadius: 1,
+                    borderColor: primaryColor,
+                    borderRadius: `${inputBorderRadius}px`,
                   },
                 }}
               />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              <Typography variant="caption" sx={{ mt: 1, display: 'block', color: textSecondaryColor }}>
                 Press Enter or click outside to save
               </Typography>
             </Paper>
@@ -405,24 +432,24 @@ export function WYSIWYGFormEditor({
             sx={{
               p: 6,
               textAlign: 'center',
-              bgcolor: alpha('#00ED64', 0.03),
+              bgcolor: alpha(primaryColor, 0.03),
               border: '2px dashed',
-              borderColor: alpha('#00ED64', 0.3),
-              borderRadius: 2,
+              borderColor: alpha(primaryColor, 0.3),
+              borderRadius: `${borderRadius}px`,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               '&:hover': {
-                borderColor: '#00ED64',
-                bgcolor: alpha('#00ED64', 0.08),
+                borderColor: primaryColor,
+                bgcolor: alpha(primaryColor, 0.08),
               },
             }}
             onClick={() => onAddFieldAtIndex?.(0)}
           >
-            <Add sx={{ fontSize: 48, color: alpha('#00ED64', 0.5), mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+            <Add sx={{ fontSize: 48, color: alpha(primaryColor, 0.5), mb: 2 }} />
+            <Typography variant="h6" sx={{ mb: 1, color: textSecondaryColor }}>
               Start building your form
             </Typography>
-            <Typography variant="body2" color="text.disabled">
+            <Typography variant="body2" sx={{ color: alpha(textSecondaryColor, 0.7) }}>
               Click here or use the + button to add your first question
             </Typography>
           </Paper>
@@ -502,6 +529,7 @@ export function WYSIWYGFormEditor({
                         onDragLeave={handleDragLeave}
                         onDrop={() => handleDrop(index)}
                         draggable={!!onReorderFields}
+                        theme={resolvedTheme}
                       />
                     </Box>
                   </Collapse>

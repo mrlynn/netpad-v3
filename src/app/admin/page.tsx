@@ -8,13 +8,13 @@ import {
   Typography,
   Paper,
   Grid,
-  Card,
-  CardContent,
-  CardActionArea,
   alpha,
   Chip,
+  Divider,
 } from '@mui/material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { AdminStatsDashboard } from '@/components/Admin/AdminStatsDashboard';
+import { Card, CardContent, CardActionArea } from '@mui/material';
 import {
   People,
   HourglassEmpty,
@@ -27,7 +27,15 @@ import {
   Storage,
   Extension,
   SettingsApplications,
+  CloudQueue,
+  History,
+  BugReport,
+  NotificationsActive,
+  Speed,
+  Campaign,
+  Rocket,
 } from '@mui/icons-material';
+import { CommandPalette, useCommandPalette } from '@/components/Admin/CommandPalette';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
@@ -102,9 +110,62 @@ const adminFeatures: AdminFeature[] = [
   },
 ];
 
+const observabilityFeatures: AdminFeature[] = [
+  {
+    title: 'System Status',
+    description: 'Monitor service health, uptime, and latency across all platform services',
+    href: '/admin/system-status',
+    icon: <CloudQueue sx={{ fontSize: 32 }} />,
+    color: '#00ED64',
+  },
+  {
+    title: 'Error Tracking',
+    description: 'View, acknowledge, and resolve platform errors with stack traces',
+    href: '/admin/errors',
+    icon: <BugReport sx={{ fontSize: 32 }} />,
+    color: '#f44336',
+  },
+  {
+    title: 'Audit Logs',
+    description: 'Search and export platform activity logs for compliance',
+    href: '/admin/audit-logs',
+    icon: <History sx={{ fontSize: 32 }} />,
+    color: '#2196F3',
+  },
+  {
+    title: 'Alerts',
+    description: 'Configure alert rules and view triggered alert history',
+    href: '/admin/alerts',
+    icon: <NotificationsActive sx={{ fontSize: 32 }} />,
+    color: '#FF9800',
+  },
+  {
+    title: 'API Metrics',
+    description: 'Monitor API performance, latency percentiles, and error rates',
+    href: '/admin/api-metrics',
+    icon: <Speed sx={{ fontSize: 32 }} />,
+    color: '#9C27B0',
+  },
+  {
+    title: 'Broadcasts',
+    description: 'Create and manage system-wide announcements and notifications',
+    href: '/admin/broadcasts',
+    icon: <Campaign sx={{ fontSize: 32 }} />,
+    color: '#00BCD4',
+  },
+  {
+    title: 'Deployments',
+    description: 'View current deployment, build info, and git commit details',
+    href: '/admin/deployments',
+    icon: <Rocket sx={{ fontSize: 32 }} />,
+    color: '#607D8B',
+  },
+];
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
+  const commandPalette = useCommandPalette();
 
   // Fetch stats for each section
   const { data: userStats } = useSWR(
@@ -203,83 +264,44 @@ export default function AdminDashboardPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Command Palette */}
+      <CommandPalette open={commandPalette.open} onClose={commandPalette.onClose} />
+
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Admin Dashboard
-        </Typography>
-        <Typography color="text.secondary">
-          Manage users, waitlist applications, and platform settings
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+              Admin Dashboard
+            </Typography>
+            <Typography color="text.secondary">
+              Manage users, waitlist applications, and platform settings
+            </Typography>
+          </Box>
+          <Chip
+            label="⌘K"
+            onClick={commandPalette.onOpen}
+            sx={{
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              '&:hover': { bgcolor: 'action.selected' },
+            }}
+          />
+        </Box>
       </Box>
 
-      {/* Quick Stats */}
-      {(userStats?.stats || waitlistStats?.stats) && (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            mb: 4,
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? alpha('#fff', 0.03) : alpha('#000', 0.02),
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-            Quick Stats
-          </Typography>
-          <Grid container spacing={3}>
-            {userStats?.stats && (
-              <>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {userStats.stats.total}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Users
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#00ED64' }}>
-                    {userStats.stats.emailVerified}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Verified
-                  </Typography>
-                </Grid>
-              </>
-            )}
-            {waitlistStats?.stats && (
-              <>
-                <Grid item xs={6} sm={3}>
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      fontWeight: 700,
-                      color: waitlistStats.stats.pending > 0 ? '#FF9800' : 'text.primary',
-                    }}
-                  >
-                    {waitlistStats.stats.pending}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending Waitlist
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#2196F3' }}>
-                    {waitlistStats.stats.approved}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Approved
-                  </Typography>
-                </Grid>
-              </>
-            )}
-          </Grid>
-        </Paper>
-      )}
+      {/* Platform Statistics Dashboard */}
+      <AdminStatsDashboard />
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Section Header for Admin Tools */}
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+        Admin Tools
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Manage platform resources and settings
+      </Typography>
 
       {/* Feature Cards */}
       <Grid container spacing={3}>
@@ -362,6 +384,86 @@ export default function AdminDashboardPage() {
             </Grid>
           );
         })}
+      </Grid>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Observability Section Header */}
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+        Observability & Alerts
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Monitor platform health, track errors, and configure alerting
+      </Typography>
+
+      {/* Observability Feature Cards */}
+      <Grid container spacing={3}>
+        {observabilityFeatures.map((feature) => (
+          <Grid item xs={12} sm={6} md={4} key={feature.href}>
+            <Card
+              elevation={0}
+              sx={{
+                height: '100%',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: feature.color,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 20px ${alpha(feature.color, 0.15)}`,
+                },
+              }}
+            >
+              <CardActionArea
+                component={Link}
+                href={feature.href}
+                sx={{ height: '100%' }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      mb: 2,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: alpha(feature.color, 0.1),
+                        color: feature.color,
+                      }}
+                    >
+                      {feature.icon}
+                    </Box>
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {feature.description}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      mt: 2,
+                      color: feature.color,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500, mr: 0.5 }}>
+                      View
+                    </Typography>
+                    <ArrowForward sx={{ fontSize: 16 }} />
+                  </Box>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
       {/* Additional Info */}

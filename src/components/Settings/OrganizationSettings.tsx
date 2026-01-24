@@ -145,6 +145,19 @@ export function OrganizationSettings() {
   const [orgHierarchies, setOrgHierarchies] = useState<Record<string, OrgHierarchy>>({});
   const [loadingHierarchy, setLoadingHierarchy] = useState<Record<string, boolean>>({});
 
+  // Copy to clipboard state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = async (id: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   useEffect(() => {
     fetchOrganizations();
   }, []);
@@ -518,6 +531,23 @@ export function OrganizationSettings() {
                         <Typography variant="caption" color="text.secondary">
                           /{org.slug}
                         </Typography>
+                        <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Tooltip title={copiedId === org.orgId ? 'Copied!' : 'Click to copy Org ID'}>
+                            <Chip
+                              size="small"
+                              label={`ID: ${org.orgId.substring(0, 8)}...`}
+                              onClick={() => copyToClipboard(org.orgId, 'Org ID')}
+                              icon={copiedId === org.orgId ? <Check sx={{ fontSize: 14 }} /> : <ContentCopy sx={{ fontSize: 14 }} />}
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                cursor: 'pointer',
+                                bgcolor: copiedId === org.orgId ? alpha('#00ED64', 0.2) : alpha('#888', 0.1),
+                                '&:hover': { bgcolor: alpha('#00ED64', 0.1) },
+                              }}
+                            />
+                          </Tooltip>
+                        </Box>
                       </Box>
                       <IconButton
                         size="small"
@@ -612,9 +642,31 @@ export function OrganizationSettings() {
                                       <Folder sx={{ fontSize: 18, color: '#00ED64' }} />
                                     </ListItemIcon>
                                     <ListItemText
-                                      primary={project.name}
+                                      primary={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <span>{project.name}</span>
+                                          <Tooltip title={copiedId === project.projectId ? 'Copied!' : 'Copy Project ID'}>
+                                            <Chip
+                                              size="small"
+                                              label={copiedId === project.projectId ? 'Copied!' : 'ID'}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyToClipboard(project.projectId, 'Project ID');
+                                              }}
+                                              icon={copiedId === project.projectId ? <Check sx={{ fontSize: 12 }} /> : <ContentCopy sx={{ fontSize: 12 }} />}
+                                              sx={{
+                                                height: 18,
+                                                fontSize: '0.6rem',
+                                                cursor: 'pointer',
+                                                bgcolor: copiedId === project.projectId ? alpha('#00ED64', 0.2) : alpha('#888', 0.1),
+                                                '&:hover': { bgcolor: alpha('#00ED64', 0.15) },
+                                              }}
+                                            />
+                                          </Tooltip>
+                                        </Box>
+                                      }
                                       secondary={`${projectApps.length} app${projectApps.length !== 1 ? 's' : ''}`}
-                                      primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+                                      primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem', component: 'div' }}
                                       secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                     />
                                     {projectApps.length > 0 && (
@@ -634,13 +686,35 @@ export function OrganizationSettings() {
                                             <Apps sx={{ fontSize: 16, color: 'text.secondary' }} />
                                           </ListItemIcon>
                                           <ListItemText
-                                            primary={app.name}
+                                            primary={
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <span>{app.name}</span>
+                                                <Tooltip title={copiedId === app.applicationId ? 'Copied!' : 'Copy App ID'}>
+                                                  <Chip
+                                                    size="small"
+                                                    label={copiedId === app.applicationId ? 'Copied!' : 'ID'}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      copyToClipboard(app.applicationId, 'App ID');
+                                                    }}
+                                                    icon={copiedId === app.applicationId ? <Check sx={{ fontSize: 12 }} /> : <ContentCopy sx={{ fontSize: 12 }} />}
+                                                    sx={{
+                                                      height: 18,
+                                                      fontSize: '0.6rem',
+                                                      cursor: 'pointer',
+                                                      bgcolor: copiedId === app.applicationId ? alpha('#00ED64', 0.2) : alpha('#888', 0.1),
+                                                      '&:hover': { bgcolor: alpha('#00ED64', 0.15) },
+                                                    }}
+                                                  />
+                                                </Tooltip>
+                                              </Box>
+                                            }
                                             secondary={
                                               app.stats
                                                 ? `${app.stats.formsCount || 0} forms, ${app.stats.workflowsCount || 0} workflows`
                                                 : undefined
                                             }
-                                            primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                                            primaryTypographyProps={{ fontSize: '0.8125rem', component: 'div' }}
                                             secondaryTypographyProps={{ fontSize: '0.7rem' }}
                                           />
                                         </ListItemButton>
