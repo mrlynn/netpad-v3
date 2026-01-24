@@ -16,7 +16,6 @@ import {
   ListItemText,
   ListItemButton,
   Collapse,
-  CircularProgress,
   Alert,
   Chip,
   Stack,
@@ -30,6 +29,7 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage as DatabaseIcon,
   TableChart as CollectionIcon,
@@ -219,7 +219,7 @@ export function CollectionBrowser({
       {/* Loading */}
       {loading && (
         <Box sx={{ p: 4, textAlign: 'center' }}>
-          <CircularProgress size={24} />
+          <NetPadLoader size="large" variant="ascii" message="Loading databases..." />
         </Box>
       )}
 
@@ -237,7 +237,7 @@ export function CollectionBrowser({
                   secondary={db.sizeOnDisk ? formatSize(db.sizeOnDisk) : undefined}
                 />
                 {loadingDb === db.name ? (
-                  <CircularProgress size={16} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : expandedDbs.has(db.name) ? (
                   <CollapseIcon />
                 ) : (

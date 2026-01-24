@@ -8,7 +8,6 @@ import {
   Switch,
   FormControlLabel,
   Button,
-  CircularProgress,
   Alert,
   Collapse,
   Divider,
@@ -32,6 +31,7 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ArrowBack, ArrowForward, Check, Add, Delete, Lock, CloudUpload, InsertDriveFile, Close, Visibility, Info, Lightbulb, Warning, CheckCircle, Celebration, ThumbUp, Edit as EditIcon, Refresh, OpenInNew } from '@mui/icons-material';
 import { FormConfiguration, FieldConfig, LookupConfig, FormPage, FormTheme, LayoutFieldType, LayoutConfig, URLParamConfig, FieldInteractionData, FormDraft, FormHeader, PageType, PageContent, PageCallout, SummaryPageConfig, CompletionPageConfig } from '@/types/form';
 import { evaluateConditionalLogic } from '@/utils/conditionalLogic';
@@ -4289,7 +4289,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
               }}
             >
               {submitting ? (
-                <CircularProgress size={24} sx={{ color: isDarkMode ? '#000' : '#fff' }} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : isPreview ? (
                 'Test Submit (Preview)'
               ) : isSummaryPage && currentPageData?.summaryConfig?.confirmLabel ? (

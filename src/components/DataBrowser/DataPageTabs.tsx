@@ -5,9 +5,9 @@ import {
   Box,
   Tabs,
   Tab,
-  CircularProgress,
   Badge,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AccountTree,
   CloudQueue,
@@ -164,7 +164,7 @@ export function DataPageTabs() {
     <Suspense
       fallback={
         <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       }
     >

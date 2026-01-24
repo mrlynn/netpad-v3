@@ -19,7 +19,6 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
-  CircularProgress,
   Alert,
   Chip,
   Divider,
@@ -35,6 +34,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Download as DownloadIcon,
   Article as FormIcon,
@@ -194,7 +194,7 @@ export function ProjectExportDialog({
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
+            <NetPadLoader size="large" variant="ascii" message="Loading..." />
           </Box>
         ) : preview ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -540,7 +540,7 @@ export function ProjectExportDialog({
           onClick={handleExport}
           variant="contained"
           disabled={!preview || exporting}
-          startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+          startIcon={exporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DownloadIcon />}
           sx={{
             background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
             '&:hover': {

@@ -18,10 +18,10 @@ import {
   IconButton,
   Chip,
   alpha,
-  CircularProgress,
   Alert,
   Checkbox,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Delete,
   Visibility,
@@ -174,7 +174,7 @@ export function ResponseList({ formId, connectionString }: ResponseListProps) {
   if (loading && responses.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading responses..." />
       </Box>
     );
   }

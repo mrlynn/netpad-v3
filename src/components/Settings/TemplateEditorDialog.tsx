@@ -20,7 +20,6 @@ import {
   Chip,
   Paper,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   Divider,
@@ -31,6 +30,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close,
   Save,
@@ -920,7 +920,7 @@ export function TemplateEditorDialog({
           onClick={handleSave}
           variant="contained"
           disabled={saving}
-          startIcon={saving ? <CircularProgress size={16} /> : <Save />}
+          startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Save />}
           sx={{
             bgcolor: '#00ED64',
             color: '#000',

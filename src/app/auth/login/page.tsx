@@ -11,7 +11,6 @@ import {
   Button,
   alpha,
   Divider,
-  CircularProgress,
   Alert,
   Collapse,
   Checkbox,
@@ -35,6 +34,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 type LoginStep = 'email' | 'magic-link-sent' | 'passkey-prompt';
 
@@ -217,7 +217,7 @@ function LoginContent() {
           justifyContent: 'center',
         }}
       >
-        <CircularProgress sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -322,7 +322,7 @@ function LoginContent() {
                     fullWidth
                     variant="contained"
                     size="large"
-                    startIcon={loading ? <CircularProgress size={20} /> : <Fingerprint />}
+                    startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Fingerprint />}
                     onClick={handlePasskeyLogin}
                     disabled={loading}
                     sx={{
@@ -407,7 +407,7 @@ function LoginContent() {
                 fullWidth
                 variant={hasPasskey ? 'outlined' : 'contained'}
                 size="large"
-                endIcon={loading ? <CircularProgress size={20} /> : <ArrowForward />}
+                endIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ArrowForward />}
                 onClick={handleSendMagicLink}
                 disabled={loading}
                 sx={hasPasskey ? {
@@ -502,7 +502,7 @@ function LoginContent() {
                         fullWidth
                         variant="contained"
                         size="large"
-                        endIcon={loading ? <CircularProgress size={20} /> : <ArrowForward />}
+                        endIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ArrowForward />}
                         onClick={handlePasswordLogin}
                         disabled={loading || !email || !password}
                         sx={{
@@ -728,7 +728,7 @@ export default function LoginPage() {
             justifyContent: 'center',
           }}
         >
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       }
     >

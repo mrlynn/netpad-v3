@@ -22,7 +22,6 @@ import {
   Chip,
   Divider,
   Alert,
-  CircularProgress,
   LinearProgress,
   alpha,
   useTheme,
@@ -36,6 +35,7 @@ import {
   Radio,
   TextField,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CreditCard,
   Zap,
@@ -121,7 +121,7 @@ export function BillingSettings() {
   if (orgsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -355,7 +355,7 @@ function BillingSettingsContent({ orgId, orgName }: { orgId: string; orgName: st
   if (subscriptionLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -594,7 +594,7 @@ function BillingSettingsContent({ orgId, orgName }: { orgId: string; orgName: st
             variant="contained"
             onClick={handleUpgrade}
             disabled={actionLoading}
-            startIcon={actionLoading ? <CircularProgress size={16} /> : <TrendingUp size={16} />}
+            startIcon={actionLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <TrendingUp size={16} />}
           >
             Continue to Checkout
           </Button>

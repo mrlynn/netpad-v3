@@ -18,6 +18,8 @@ import {
   Divider,
 } from '@mui/material';
 import { Save, Add, Folder, Close, CheckCircle, ContentCopy, OpenInNew, NoteAdd, Public, Settings, MoreVert, PostAdd, Keyboard, TuneOutlined, Visibility, FileDownload, FileUpload, CloudUpload as PublishToMarketplaceIcon } from '@mui/icons-material';
+import { FileMenu } from '@/components/common/FileMenu';
+import { EntityStatusChip, SaveStatus } from '@/components/common/EntityStatusChip';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { FormSaveDialog, SavedFormInfo } from './FormSaveDialog';
 import { FormLibrary } from './FormLibrary';
@@ -118,6 +120,9 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     conversationalConfig?: import('@/types/conversational').ConversationalFormConfig;
   } | null>(null);
   const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // File input ref for importing forms
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -159,8 +164,12 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
 
     if (currentState !== initialStateRef.current) {
       markDirty();
+      // Only mark as unsaved if we're not currently saving
+      if (saveStatus !== 'saving') {
+        setSaveStatus('unsaved');
+      }
     }
-  }, [fieldConfigs, currentFormName, formType, themeConfig, multiPageConfig, variables, markDirty]);
+  }, [fieldConfigs, currentFormName, formType, themeConfig, multiPageConfig, variables, markDirty, saveStatus]);
 
   // Get selected field config
   const selectedFieldConfig = selectedFieldPath
@@ -350,6 +359,94 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     setMoreMenuAnchor(null);
   }, []);
 
+  // Direct save function - saves without dialog for existing forms
+  const handleDirectSave = useCallback(async (): Promise<boolean> => {
+    // If no form ID (new form), open the dialog instead
+    if (!currentFormId || !currentFormName) {
+      setSaveDialogOpen(true);
+      return false;
+    }
+
+    // If no fields, nothing to save
+    if (fieldConfigs.length === 0) {
+      return false;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const config = {
+        id: currentFormId,
+        name: currentFormName,
+        description: currentFormDescription,
+        slug: currentFormSlug,
+        isPublished: currentFormIsPublished,
+        collection: collection || '',
+        database: databaseName || '',
+        fieldConfigs,
+        variables,
+        multiPage: multiPageConfig,
+        lifecycle: lifecycleConfig,
+        theme: themeConfig,
+        hooks: hooksConfig,
+        formType,
+        searchConfig,
+        conversationalConfig,
+        dataSource,
+        accessControl,
+        organizationId,
+        projectId,
+        applicationId: propApplicationId,
+        botProtection,
+        draftSettings,
+      };
+
+      const response = await fetch('/api/forms-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formConfig: config, publish: currentFormIsPublished })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save form');
+      }
+
+      // Update state with saved info
+      setCurrentFormSlug(data.form.slug);
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      markClean();
+
+      // Update initial state snapshot
+      initialStateRef.current = JSON.stringify({
+        fieldConfigs,
+        formName: currentFormName,
+        formType,
+        themeConfig,
+        multiPageConfig,
+        variables,
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Failed to save form:', err);
+      setSaveStatus('error');
+      setError(err instanceof Error ? err.message : 'Failed to save form');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    currentFormId, currentFormName, currentFormDescription, currentFormSlug,
+    currentFormIsPublished, collection, databaseName, fieldConfigs, variables,
+    multiPageConfig, lifecycleConfig, themeConfig, hooksConfig, formType,
+    searchConfig, conversationalConfig, dataSource, accessControl,
+    organizationId, projectId, propApplicationId, botProtection, draftSettings, markClean
+  ]);
+
   // Keyboard shortcuts for power users
   const handleKeyboardShortcuts = useCallback((e: KeyboardEvent) => {
     // Don't trigger if user is typing in an input
@@ -361,8 +458,15 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const cmdKey = isMac ? e.metaKey : e.ctrlKey;
 
-    // Cmd/Ctrl + S: Save form
+    // Cmd/Ctrl + S: Save form (direct save for existing forms, dialog for new)
     if (cmdKey && e.key === 's') {
+      e.preventDefault();
+      if (fieldConfigs.length > 0) {
+        handleDirectSave();
+      }
+    }
+    // Cmd/Ctrl + Shift + S: Save As (always opens dialog)
+    else if (cmdKey && e.shiftKey && e.key === 'S') {
       e.preventDefault();
       if (fieldConfigs.length > 0) {
         setSaveDialogOpen(true);
@@ -405,7 +509,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         handlePreviewForm();
       }
     }
-  }, [fieldConfigs.length, selectedFieldPath, settingsDrawerOpen, showLibrary, currentFormId, handlePreviewForm]);
+  }, [fieldConfigs.length, selectedFieldPath, settingsDrawerOpen, showLibrary, currentFormId, handlePreviewForm, handleDirectSave]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyboardShortcuts);
@@ -423,9 +527,29 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   }, [effectiveOrgId, effectiveProjectId]);
 
   // Auto-populate dataSource when default vault data is available (via SWR cache)
+  // ONLY for new forms - don't auto-populate when editing an existing form
   useEffect(() => {
+    console.log('[FormBuilder] Auto-populate dataSource effect:', {
+      initialFormId,
+      hasDataSource: !!dataSource?.vaultId,
+      dataSourceVaultId: dataSource?.vaultId,
+      hasDefaultVault: defaultVaultData?.hasDefaultVault,
+      defaultVaultId: defaultVaultData?.vault?.vaultId,
+      currentFormId,
+    });
+
+    // Don't auto-populate if we're editing an existing form (initialFormId provided)
+    // The form's saved dataSource will be loaded by loadFormById
+    if (initialFormId) {
+      console.log('[FormBuilder] Skipping auto-populate: editing existing form');
+      return;
+    }
+
     // Don't override if dataSource is already set (user may have manually configured it)
-    if (dataSource?.vaultId) return;
+    if (dataSource?.vaultId) {
+      console.log('[FormBuilder] Skipping auto-populate: dataSource already set');
+      return;
+    }
 
     if (defaultVaultData?.hasDefaultVault && defaultVaultData.vault) {
       // Auto-generate collection name from form name if form name exists
@@ -433,13 +557,18 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         ? formNameToCollectionName(currentFormName)
         : 'form_responses';
 
+      console.log('[FormBuilder] Auto-populating dataSource with default vault:', {
+        vaultId: defaultVaultData.vault.vaultId,
+        collection: collectionName,
+      });
+
       setDataSource({
         vaultId: defaultVaultData.vault.vaultId,
         collection: collectionName,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultVaultData]); // Note: intentionally not including dataSource to avoid loops
+  }, [defaultVaultData, initialFormId]); // Note: intentionally not including dataSource to avoid loops
 
   // Auto-update collection name when form name changes (if using default vault)
   useEffect(() => {
@@ -460,12 +589,13 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   }, [currentFormName]); // Only depend on form name, not dataSource to avoid loops
 
   // Load form from initialFormId when provided (e.g., from URL params)
+  // Wait for effectiveOrgId to be available to ensure we load from the org database
   useEffect(() => {
-    if (initialFormId) {
+    if (initialFormId && effectiveOrgId) {
       loadFormById(initialFormId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialFormId]);
+  }, [initialFormId, effectiveOrgId]);
 
   // Load form from initialFormConfig when provided (e.g., from landing page generation)
   useEffect(() => {
@@ -519,6 +649,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         setDataSource(config.dataSource);
         setAccessControl(config.accessControl);
         setOrganizationId(config.organizationId);
+        setProjectId(config.projectId);
         setFormData({});
       } else {
         setError(data.error || 'Failed to load form');
@@ -987,8 +1118,29 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           gap: 2,
         }}
       >
-        {/* Left: Form identity */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+        {/* Left: File menu + Form identity */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <FileMenu
+            entityType="form"
+            entityName={currentFormName}
+            entityId={currentFormId}
+            isDirty={isDirty}
+            onNew={() => handleNewForm()}
+            onOpen={() => setShowLibrary(true)}
+            onSave={handleDirectSave}
+            onSaveAs={() => setSaveDialogOpen(true)}
+            onExport={handleExportForm}
+            onImport={() => importInputRef.current?.click()}
+            onDelete={currentFormId ? () => {
+              // TODO: Implement delete confirmation dialog
+              if (window.confirm(`Are you sure you want to delete "${currentFormName}"?`)) {
+                // Delete logic will be added
+              }
+            } : undefined}
+          />
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
           <Typography
             variant="body2"
             sx={{
@@ -1003,19 +1155,14 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             {currentFormName || 'New Form'}
           </Typography>
 
-          {/* Status badges - minimal */}
-          {isDirty && (
-            <Tooltip title="Unsaved changes">
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: 'warning.main',
-                }}
-              />
-            </Tooltip>
-          )}
+          {/* Status chip - always visible */}
+          <EntityStatusChip
+            status={saveStatus}
+            lastSaved={lastSaved}
+            onRetry={saveStatus === 'error' ? handleDirectSave : undefined}
+            entityType="form"
+          />
+
           {currentFormIsPublished && (
             <Tooltip title="Published">
               <Public sx={{ fontSize: 16, color: 'success.main' }} />
@@ -1053,15 +1200,6 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             </IconButton>
           </Tooltip>
 
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={fieldConfigs.length === 0}
-            sx={{ minWidth: 'auto', px: 1.5 }}
-          >
-            Save
-          </Button>
 
           <Button
             variant="outlined"
@@ -1536,6 +1674,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
               setDataSource(config.dataSource);
               setAccessControl(config.accessControl);
               setOrganizationId(config.organizationId);
+              setProjectId(config.projectId);
               setFormData({});
               setShowLibrary(false);
             }}

@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   Alert,
-  CircularProgress,
   Chip,
   alpha,
   Dialog,
@@ -22,6 +21,7 @@ import {
   LinearProgress,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   DataObject,
   PlayArrow,
@@ -396,7 +396,7 @@ export function SampleDataLoader({ organizationId, onDataLoaded }: SampleDataLoa
               variant="contained"
               onClick={handleLoadData}
               disabled={!selectedDataset || loading}
-              startIcon={loading ? <CircularProgress size={16} /> : <PlayArrow />}
+              startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayArrow />}
               sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
             >
               {loading ? 'Creating...' : 'Create Demo Form'}

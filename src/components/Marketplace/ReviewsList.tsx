@@ -78,7 +78,8 @@ export function ReviewsList({
         sortBy,
       });
 
-      const response = await fetch(`/api/marketplace/applications/${applicationId}/reviews?${params}`);
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}/reviews?${params}`);
 
       if (!response.ok) {
         throw new Error('Failed to load reviews');

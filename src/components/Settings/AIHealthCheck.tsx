@@ -7,7 +7,6 @@ import {
   CardContent,
   Typography,
   Button,
-  CircularProgress,
   Alert,
   Chip,
   Grid,
@@ -16,6 +15,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
@@ -122,10 +122,7 @@ export function AIHealthCheck() {
   if (loading && !health) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
-        <CircularProgress />
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Checking AI/LLM configuration...
-        </Typography>
+        <NetPadLoader size="large" variant="ascii" message="Checking AI/LLM configuration..." />
       </Box>
     );
   }
@@ -493,7 +490,7 @@ export function AIHealthCheck() {
 
       {loading && health && (
         <Box sx={{ textAlign: 'center', py: 2 }}>
-          <CircularProgress size={24} />
+          <NetPadLoader size="small" variant="ascii" showPhrases={false} />
         </Box>
       )}
     </Box>

@@ -19,7 +19,6 @@ import {
   Select,
   MenuItem,
   Alert,
-  CircularProgress,
   Paper,
   alpha,
   Chip,
@@ -27,6 +26,7 @@ import {
   Autocomplete,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   VpnKey,
@@ -397,10 +397,7 @@ export function DataSourceSetupModal({
 
         {loading && organizations.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress sx={{ color: '#00ED64' }} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Loading...
-            </Typography>
+            <NetPadLoader size="large" variant="ascii" message="Loading..." />
           </Box>
         ) : organizations.length === 0 ? (
           <Paper
@@ -579,7 +576,7 @@ export function DataSourceSetupModal({
 
                 {loading ? (
                   <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+                    <NetPadLoader size="large" variant="ascii" message="Loading..." />
                   </Box>
                 ) : connections.length === 0 ? (
                   <Paper

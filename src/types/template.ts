@@ -284,12 +284,13 @@ export interface BundleExport {
 
 /**
  * Marketplace Item Types
- * The marketplace supports three distinct item types:
+ * The marketplace supports four distinct item types:
  * - application: Complete bundles with forms, workflows, and connections
  * - form: Standalone form definitions
  * - workflow: Standalone workflow definitions
+ * - extension: NetPad extensions (custom workflow nodes, integrations, etc.)
  */
-export type MarketplaceItemType = 'application' | 'form' | 'workflow';
+export type MarketplaceItemType = 'application' | 'form' | 'workflow' | 'extension';
 
 /**
  * Standalone Form Bundle
@@ -332,9 +333,105 @@ export interface WorkflowBundle {
 }
 
 /**
+ * Extension Workflow Node Definition
+ * Describes a custom workflow node provided by an extension
+ */
+export interface ExtensionNodeDefinition {
+  /** Unique type identifier (convention: 'extensionid:node-name') */
+  type: string;
+  /** Display name shown in the palette */
+  label: string;
+  /** Description shown in tooltips */
+  description: string;
+  /** Which palette section this node appears in */
+  category: 'triggers' | 'logic' | 'integrations' | 'actions' | 'data' | 'ai' | 'forms' | 'custom' | 'annotations';
+  /** Node color (hex) */
+  color: string;
+  /** MUI icon name */
+  icon: string;
+  /** Semantic version of this node definition */
+  version: string;
+  /** Configuration fields for the node editor */
+  configFields?: Array<{
+    name: string;
+    label: string;
+    type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'json' | 'expression';
+    defaultValue?: unknown;
+    placeholder?: string;
+    helpText?: string;
+    required?: boolean;
+    options?: Array<{ label: string; value: string }>;
+  }>;
+  /** Output handles for downstream node connections */
+  outputs?: Array<{ id: string; label: string; primary?: boolean }>;
+}
+
+/**
+ * Extension Definition
+ * The structure of a NetPad extension as exported for the marketplace
+ */
+export interface ExtensionDefinition {
+  /** Extension metadata */
+  metadata: {
+    /** Unique extension identifier */
+    id: string;
+    /** Human-readable name */
+    name: string;
+    /** Semantic version */
+    version: string;
+    /** Description of what the extension does */
+    description?: string;
+    /** Author or organization name */
+    author?: string;
+  };
+  /** Feature flags this extension provides */
+  features?: string[];
+  /** Custom workflow nodes provided by this extension */
+  workflowNodes?: Array<{
+    definition: ExtensionNodeDefinition;
+    /** Handler code is not included in marketplace - just metadata */
+  }>;
+  /** Optional API routes provided by extension */
+  routes?: Array<{
+    path: string;
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    description?: string;
+    requiresAuth?: boolean;
+  }>;
+  /** Services provided for dependency injection */
+  serviceNames?: string[];
+}
+
+/**
+ * Extension Bundle
+ * Bundle for publishing NetPad extensions to the marketplace
+ */
+export interface ExtensionBundle {
+  /** The extension definition */
+  extension: ExtensionDefinition;
+  /** Extension-specific marketplace metadata */
+  extensionMetadata?: {
+    /** Type of extension */
+    extensionType: 'node' | 'integration' | 'theme' | 'hook' | 'multi';
+    /** Number of workflow nodes provided */
+    nodeCount: number;
+    /** Categories of nodes provided */
+    nodeCategories: string[];
+    /** Number of API routes provided */
+    routeCount: number;
+    /** npm package name for installation */
+    npmPackage?: string;
+    /** Minimum NetPad version required */
+    minNetPadVersion?: string;
+    /** Whether the extension has been verified/tested */
+    verified?: boolean;
+  };
+}
+
+/**
  * Union type for all marketplace bundle types
  */
-export type MarketplaceBundle = BundleExport | FormBundle | WorkflowBundle;
+export type MarketplaceBundle = BundleExport | FormBundle | WorkflowBundle | ExtensionBundle;
 
 /**
  * Type guard to check if bundle is a FormBundle
@@ -355,6 +452,13 @@ export function isWorkflowBundle(bundle: MarketplaceBundle): bundle is WorkflowB
  */
 export function isApplicationBundle(bundle: MarketplaceBundle): bundle is BundleExport {
   return 'manifest' in bundle && ('forms' in bundle || 'workflows' in bundle);
+}
+
+/**
+ * Type guard to check if bundle is an ExtensionBundle
+ */
+export function isExtensionBundle(bundle: MarketplaceBundle): bundle is ExtensionBundle {
+  return 'extension' in bundle && !('form' in bundle) && !('workflow' in bundle) && !('forms' in bundle);
 }
 
 /**

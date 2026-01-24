@@ -19,8 +19,8 @@ import {
   alpha,
   useTheme,
   Fade,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ArrowForward,
   ArrowBack,
@@ -282,7 +282,7 @@ export function TeamInvitesStep({ onContinue, onBack }: TeamInvitesStepProps) {
               disabled={isProcessing}
               endIcon={
                 isProcessing ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : (
                   <ArrowForward />
                 )

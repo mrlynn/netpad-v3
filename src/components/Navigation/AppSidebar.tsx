@@ -28,8 +28,8 @@ import {
   alpha,
   Skeleton,
   Collapse,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Apps,
   Add,
@@ -372,8 +372,7 @@ function TreeSection({
         <List disablePadding sx={{ pl: 2 }}>
           {loading ? (
             <ListItem sx={{ py: 0.5, px: 1 }}>
-              <CircularProgress size={12} sx={{ mr: 1 }} />
-              <Typography variant="caption" color="text.secondary">Loading...</Typography>
+              <NetPadLoader size="small" variant="ascii" showPhrases={false} />
             </ListItem>
           ) : items.length === 0 ? (
             <ListItem sx={{ py: 0.5, px: 1 }}>

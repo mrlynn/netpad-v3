@@ -16,7 +16,6 @@ import {
   TextField,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Chip,
   LinearProgress,
@@ -36,6 +35,7 @@ import {
   Divider,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome as AIIcon,
   Close as CloseIcon,
@@ -267,10 +267,7 @@ export default function AIWorkflowGeneratorDialog({
         {/* Loading state */}
         {loading && (
           <Box textAlign="center" py={4}>
-            <CircularProgress size={40} sx={{ color: '#9C27B0' }} />
-            <Typography variant="body2" color="text.secondary" mt={2}>
-              Generating your workflow...
-            </Typography>
+            <NetPadLoader size="large" variant="ascii" message="Generating your workflow..." />
           </Box>
         )}
 
@@ -424,7 +421,7 @@ export default function AIWorkflowGeneratorDialog({
             variant="contained"
             onClick={handleGenerate}
             disabled={loading || !canGenerate}
-            startIcon={loading ? <CircularProgress size={16} /> : <AIIcon />}
+            startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AIIcon />}
             sx={{
               background: 'linear-gradient(135deg, #9C27B0 0%, #E91E63 100%)',
               '&:hover': {

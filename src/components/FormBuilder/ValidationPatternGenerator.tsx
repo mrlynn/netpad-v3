@@ -10,7 +10,6 @@ import {
   Chip,
   Typography,
   Paper,
-  CircularProgress,
   Alert,
   alpha,
   Divider,
@@ -20,6 +19,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome,
   CheckCircle,
@@ -189,7 +189,7 @@ export function ValidationPatternGenerator({
           </List>
         ) : (
           <Box sx={{ p: 2, textAlign: 'center' }}>
-            <CircularProgress size={20} />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
           </Box>
         )}
       </Menu>
@@ -223,7 +223,7 @@ export function ValidationPatternGenerator({
             <Button
               size="small"
               variant="contained"
-              startIcon={aiLoading ? <CircularProgress size={14} /> : <AutoAwesome />}
+              startIcon={aiLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AutoAwesome />}
               onClick={handleAIGenerate}
               disabled={!aiDescription.trim() || aiLoading}
               sx={{

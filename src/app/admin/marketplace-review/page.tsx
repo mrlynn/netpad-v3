@@ -45,6 +45,10 @@ import {
   Pending as PendingIcon,
   Verified as VerifiedIcon,
   NavigateNext as NavigateNextIcon,
+  Article as FormIcon,
+  AccountTree as WorkflowIcon,
+  Inventory as ApplicationIcon,
+  Extension as ExtensionIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,9 +56,11 @@ import useSWR from 'swr';
 import { fetcher } from '@/lib/swr';
 
 type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+type ItemType = 'application' | 'form' | 'workflow' | 'extension';
 
 interface MarketplaceApplication {
   id: string;
+  itemType?: ItemType;
   name: string;
   summary?: string;
   description?: string;
@@ -72,9 +78,26 @@ interface MarketplaceApplication {
   reviewedAt?: string;
   reviewedBy?: string;
   rejectionReason?: string;
-  formsCount: number;
-  workflowsCount: number;
-  connectionsCount: number;
+  // Application bundle fields
+  formsCount?: number;
+  workflowsCount?: number;
+  connectionsCount?: number;
+  // Form fields
+  fieldCount?: number;
+  formType?: string;
+  isMultiPage?: boolean;
+  hasConditionalLogic?: boolean;
+  // Workflow fields
+  nodeCount?: number;
+  triggerType?: string;
+  nodeTypes?: string[];
+  // Extension fields
+  extensionType?: string;
+  nodeCategories?: string[];
+  routeCount?: number;
+  npmPackage?: string;
+  minNetPadVersion?: string;
+  verified?: boolean;
   stats: {
     downloads: number;
     rating?: number;
@@ -132,7 +155,9 @@ export default function MarketplaceReviewPage() {
 
     setReviewing(true);
     try {
-      const response = await fetch(`/api/marketplace/applications/${selectedApp.id}/review`, {
+      // URL-encode the ID to handle special characters like @ and /
+      const encodedId = encodeURIComponent(selectedApp.id);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,6 +209,35 @@ export default function MarketplaceReviewPage() {
         return <CancelIcon />;
       default:
         return undefined;
+    }
+  };
+
+  const getItemTypeInfo = (itemType?: ItemType) => {
+    switch (itemType) {
+      case 'form':
+        return { label: 'Form', icon: <FormIcon fontSize="small" />, color: '#2196F3' };
+      case 'workflow':
+        return { label: 'Workflow', icon: <WorkflowIcon fontSize="small" />, color: '#9C27B0' };
+      case 'extension':
+        return { label: 'Extension', icon: <ExtensionIcon fontSize="small" />, color: '#a855f7' };
+      case 'application':
+      default:
+        return { label: 'Application', icon: <ApplicationIcon fontSize="small" />, color: '#00ED64' };
+    }
+  };
+
+  const getItemTypeMetadata = (app: MarketplaceApplication) => {
+    const itemType = app.itemType || 'application';
+    switch (itemType) {
+      case 'form':
+        return `${app.fieldCount || 0} fields • ${app.formType || 'traditional'}${app.isMultiPage ? ' • Multi-page' : ''}`;
+      case 'workflow':
+        return `${app.nodeCount || 0} nodes • ${app.triggerType || 'manual'} trigger`;
+      case 'extension':
+        return `${app.nodeCount || 0} nodes • ${app.routeCount || 0} routes${app.npmPackage ? ` • ${app.npmPackage}` : ''}`;
+      case 'application':
+      default:
+        return `${app.formsCount || 0} forms • ${app.workflowsCount || 0} workflows`;
     }
   };
 
@@ -302,13 +356,21 @@ export default function MarketplaceReviewPage() {
           </Paper>
         ) : (
           <Stack spacing={2}>
-            {applications.map((app) => (
+            {applications.map((app) => {
+              const typeInfo = getItemTypeInfo(app.itemType);
+              return (
               <Card key={app.id} variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Typography variant="h6">{app.icon || '📦'} {app.name}</Typography>
+                        <Chip
+                          icon={typeInfo.icon}
+                          label={typeInfo.label}
+                          size="small"
+                          sx={{ bgcolor: `${typeInfo.color}20`, color: typeInfo.color }}
+                        />
                         {(() => {
                           const statusIcon = getStatusIcon(app.status);
                           return statusIcon ? (
@@ -352,10 +414,7 @@ export default function MarketplaceReviewPage() {
                           Category: {app.category}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {app.formsCount} form{app.formsCount !== 1 ? 's' : ''}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {app.workflowsCount} workflow{app.workflowsCount !== 1 ? 's' : ''}
+                          {getItemTypeMetadata(app)}
                         </Typography>
                         {app.author && (
                           <Typography variant="caption" color="text.secondary">
@@ -409,7 +468,8 @@ export default function MarketplaceReviewPage() {
                   </>
                 )}
               </Card>
-            ))}
+              );
+            })}
           </Stack>
         )}
 

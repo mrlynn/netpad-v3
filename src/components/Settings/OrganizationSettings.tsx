@@ -17,7 +17,6 @@ import {
   DialogActions,
   TextField,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   List,
@@ -35,6 +34,7 @@ import {
   ListItemButton,
   ListItemIcon,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   Business,
@@ -427,7 +427,7 @@ export function OrganizationSettings() {
   if (loading) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
-        <CircularProgress sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -584,7 +584,7 @@ export function OrganizationSettings() {
                     <Box sx={{ px: 2, pb: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                       {loadingHierarchy[org.orgId] ? (
                         <Box sx={{ py: 2, textAlign: 'center' }}>
-                          <CircularProgress size={20} sx={{ color: '#00ED64' }} />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         </Box>
                       ) : orgHierarchies[org.orgId] ? (
                         <List dense sx={{ py: 1 }}>
@@ -749,7 +749,7 @@ export function OrganizationSettings() {
             disabled={creating || !newOrgName || !newOrgSlug}
             sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
           >
-            {creating ? <CircularProgress size={20} /> : 'Create'}
+            {creating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -774,7 +774,7 @@ export function OrganizationSettings() {
 
           {loadingMembers ? (
             <Box sx={{ textAlign: 'center', py: 3 }}>
-              <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+              <NetPadLoader size="small" variant="svg" showPhrases={false} />
             </Box>
           ) : (
             <List>
@@ -859,7 +859,7 @@ export function OrganizationSettings() {
             disabled={inviting || !inviteEmail}
             sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
           >
-            {inviting ? <CircularProgress size={20} /> : 'Send Invite'}
+            {inviting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Send Invite'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -912,7 +912,7 @@ export function OrganizationSettings() {
             variant="contained"
             color="error"
             disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={20} /> : <Delete />}
+            startIcon={deleting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Delete />}
           >
             {deleting ? 'Deleting...' : 'Delete Organization'}
           </Button>
@@ -1020,7 +1020,7 @@ export function OrganizationSettings() {
               variant="contained"
               color="warning"
               disabled={resetting}
-              startIcon={resetting ? <CircularProgress size={20} /> : <RestartAlt />}
+              startIcon={resetting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RestartAlt />}
             >
               {resetting ? 'Resetting...' : 'Reset Organization'}
             </Button>

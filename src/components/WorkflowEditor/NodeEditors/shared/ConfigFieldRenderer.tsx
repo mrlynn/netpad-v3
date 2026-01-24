@@ -19,11 +19,11 @@ import {
   Typography,
   Autocomplete,
   Chip,
-  CircularProgress,
   alpha,
   useTheme,
   Button,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { OpenInNew as OpenInNewIcon } from '@mui/icons-material';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -253,7 +253,7 @@ export function ConfigFieldRenderer({
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {formsLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {formsLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -350,7 +350,7 @@ export function ConfigFieldRenderer({
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {connectionsLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {connectionsLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -539,7 +539,7 @@ export function ConfigFieldRenderer({
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {emailCredentialsLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                      {emailCredentialsLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),

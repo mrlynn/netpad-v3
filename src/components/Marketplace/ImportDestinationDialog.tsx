@@ -27,8 +27,8 @@ import {
   InputAdornment,
   alpha,
   Chip,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -208,7 +208,7 @@ export function ImportDestinationDialog({
         {/* Existing Applications List */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress size={32} sx={{ color: typeColor }} />
+            <NetPadLoader size="large" variant="ascii" message="Loading..." />
           </Box>
         ) : filteredApps.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>

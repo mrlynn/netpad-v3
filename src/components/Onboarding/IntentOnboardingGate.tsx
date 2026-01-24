@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { usePathname } from 'next/navigation';
 import { useIntentOnboarding } from '@/contexts/IntentOnboardingContext';
 import { IntentOnboarding } from './IntentOnboarding';
@@ -55,10 +56,7 @@ export function IntentOnboardingGate({ children }: IntentOnboardingGateProps) {
           gap: 2,
         }}
       >
-        <CircularProgress size={32} />
-        <Typography variant="body2" color="text.secondary">
-          Loading...
-        </Typography>
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }

@@ -12,7 +12,6 @@ import {
   TextField,
   Button,
   Typography,
-  CircularProgress,
   Alert,
   Collapse,
   Paper,
@@ -23,6 +22,7 @@ import {
   ListItem,
   ListItemText,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome as AIIcon,
   ContentCopy as CopyIcon,
@@ -139,7 +139,7 @@ export default function AIFormulaAssistant({
             disabled={loading || !prompt.trim()}
             sx={{ minWidth: 'auto', px: 2 }}
           >
-            {loading ? <CircularProgress size={20} /> : <AIIcon />}
+            {loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AIIcon />}
           </Button>
         </Box>
 
@@ -221,7 +221,7 @@ export default function AIFormulaAssistant({
           size="small"
           onClick={handleGenerate}
           disabled={loading || !prompt.trim()}
-          startIcon={loading ? <CircularProgress size={16} /> : <AIIcon />}
+          startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AIIcon />}
         >
           Generate
         </Button>

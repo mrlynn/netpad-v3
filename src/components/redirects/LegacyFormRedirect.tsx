@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { getAppUrl } from '@/lib/routing';
 
 interface LegacyFormRedirectProps {
@@ -73,8 +74,7 @@ export function LegacyFormRedirect({ orgId, projectId, formId }: LegacyFormRedir
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 2 }}>
-      <CircularProgress />
-      <Typography color="text.secondary">Redirecting...</Typography>
+      <NetPadLoader size="large" variant="ascii" message="Redirecting..." />
     </Box>
   );
 }
@@ -138,8 +138,7 @@ export function LegacyWorkflowRedirect({ orgId, projectId, workflowId }: { orgId
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 2 }}>
-      <CircularProgress />
-      <Typography color="text.secondary">Redirecting...</Typography>
+      <NetPadLoader size="large" variant="ascii" message="Redirecting..." />
     </Box>
   );
 }

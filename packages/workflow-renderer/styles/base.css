@@ -1,0 +1,64 @@
+/**
+ * Base styles for @netpad/workflow-renderer
+ */
+
+/* Container */
+.wr-workflow-renderer {
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ReactFlow overrides */
+.wr-workflow-renderer .react-flow__node {
+  cursor: pointer;
+}
+
+.wr-workflow-renderer .react-flow__node.selected {
+  z-index: 10;
+}
+
+.wr-workflow-renderer .react-flow__edge {
+  cursor: pointer;
+}
+
+.wr-workflow-renderer .react-flow__handle {
+  cursor: default;
+}
+
+/* Controls styling */
+.wr-workflow-renderer .react-flow__controls {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.wr-workflow-renderer .react-flow__controls-button {
+  border-bottom: none;
+}
+
+.wr-workflow-renderer .react-flow__controls-button:first-child {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.wr-workflow-renderer .react-flow__controls-button:last-child {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+/* Minimap styling */
+.wr-workflow-renderer .react-flow__minimap {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Background styling */
+.wr-workflow-renderer .react-flow__background {
+  background-color: inherit;
+}
+
+/* Attribution hidden by proOptions, but adding style as fallback */
+.wr-workflow-renderer .react-flow__attribution {
+  display: none;
+}

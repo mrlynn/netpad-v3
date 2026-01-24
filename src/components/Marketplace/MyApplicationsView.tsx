@@ -148,7 +148,8 @@ export function MyApplicationsView({ organizationId }: MyApplicationsViewProps) 
 
   const handleTogglePublish = async (app: MyApplication) => {
     try {
-      const response = await fetch(`/api/marketplace/applications/${app.id}`, {
+      const encodedId = encodeURIComponent(app.id);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -172,7 +173,8 @@ export function MyApplicationsView({ organizationId }: MyApplicationsViewProps) 
     if (!appToDelete) return;
 
     try {
-      const response = await fetch(`/api/marketplace/applications/${appToDelete.id}`, {
+      const encodedId = encodeURIComponent(appToDelete.id);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}`, {
         method: 'DELETE',
       });
 

@@ -15,7 +15,6 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   Menu,
@@ -26,6 +25,7 @@ import {
   Divider,
   Stack,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   Chat,
@@ -555,7 +555,7 @@ export function TemplateSettings() {
       {/* Loading State */}
       {loading && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       )}
 
@@ -800,7 +800,7 @@ export function TemplateSettings() {
             onClick={handleCloneConfirm}
             variant="contained"
             disabled={cloning}
-            startIcon={cloning ? <CircularProgress size={16} /> : <ContentCopy />}
+            startIcon={cloning ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ContentCopy />}
             sx={{
               bgcolor: '#00ED64',
               color: '#000',
@@ -828,7 +828,7 @@ export function TemplateSettings() {
             onClick={handleDeleteConfirm}
             color="error"
             disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={16} /> : null}
+            startIcon={deleting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
           >
             Delete
           </Button>
@@ -867,7 +867,7 @@ export function TemplateSettings() {
             zIndex: 9999,
           }}
         >
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       )}
     </Box>

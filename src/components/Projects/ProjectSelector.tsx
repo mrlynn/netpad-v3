@@ -14,10 +14,10 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  CircularProgress,
   Box,
   Chip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Project } from '@/types/platform';
 
 interface ProjectSelectorProps {
@@ -87,7 +87,7 @@ export function ProjectSelector({
         >
           <MenuItem value="">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={16} />
+              <NetPadLoader size="small" variant="svg" showPhrases={false} />
               Loading projects...
             </Box>
           </MenuItem>

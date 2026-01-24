@@ -5,7 +5,6 @@ import {
   Box,
   TextField,
   Button,
-  CircularProgress,
   Alert,
   Typography,
   Paper,
@@ -50,6 +49,7 @@ import {
 } from '@mui/icons-material';
 import { FormConfiguration, FieldConfig, SearchConfig, SearchOperator, SearchOptionsSource } from '@/types/form';
 import { getResolvedTheme } from '@/lib/formThemes';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 // Type for distinct value options
 interface DistinctOption {
@@ -539,7 +539,7 @@ export function SearchFormRenderer({
                     ...params.InputProps,
                     endAdornment: (
                       <>
-                        {isLoadingOptions ? <CircularProgress color="inherit" size={16} /> : null}
+                        {isLoadingOptions ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                         {params.InputProps.endAdornment}
                       </>
                     ),
@@ -900,7 +900,7 @@ export function SearchFormRenderer({
         <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
           <Button
             variant="contained"
-            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Search />}
+            startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Search />}
             onClick={handleSearch}
             disabled={loading}
             sx={{

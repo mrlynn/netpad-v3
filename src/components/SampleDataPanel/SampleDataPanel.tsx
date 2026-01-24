@@ -12,7 +12,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  CircularProgress,
   Alert,
   Tabs,
   Tab,
@@ -23,6 +22,7 @@ import {
   TextField,
   InputAdornment,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ExpandMore,
   Description,
@@ -228,10 +228,7 @@ export function SampleDataPanel({
           height: '100%',
         }}
       >
-        <CircularProgress size={40} />
-        <Typography variant="body2" color="text.secondary">
-          Loading sample data...
-        </Typography>
+        <NetPadLoader size="large" variant="ascii" message="Loading sample data..." />
       </Paper>
     );
   }

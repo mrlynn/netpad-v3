@@ -310,6 +310,22 @@ Community collaboration features:
 * **Submissions** - Collaboration application system
 * **UI Components** - Pre-built React components
 
+### @netpad/demo-node
+
+A simple demonstration extension that shows how to create custom workflow nodes:
+
+* **Log Message Node** - A custom workflow node that logs messages with configurable levels
+* **Template for Extension Development** - Use as a starting point for your own extensions
+* **Complete Example** - Shows node definition, handler implementation, and extension structure
+
+**Node Details:**
+- Type: demo:log-message
+- Category: Custom
+- Config Fields: message (textarea), level (select: info/warn/error), label (text), passthrough (boolean)
+- Outputs: Success output with log data and optional passthrough of input data
+
+This extension serves as the canonical example for creating workflow node extensions. See the package README for detailed instructions on using it as a template.
+
 ## Extension Architecture
 
 Extensions follow a clear architectural pattern:
@@ -389,13 +405,120 @@ Extensions are loaded during application startup.
 
 ## Creating Custom Extensions
 
-To create your own extension:
+To create your own extension, use **@netpad/demo-node** as a template:
 
-1. **Create an npm package** with the extension code
-2. **Export a NetPadExtension** object as the default export
-3. **Implement required interfaces** (metadata, routes, services, etc.)
-4. **Publish to npm** or use locally
-5. **Enable via NETPAD_EXTENSIONS** environment variable
+1. **Copy the demo-node package** to a new directory
+2. **Update package.json** with your extension name and metadata
+3. **Modify src/index.ts**:
+   - Update extension metadata (id, name, version, description)
+   - Define your workflow nodes (type, label, category, config fields)
+   - Implement your node handlers (business logic)
+   - Export the extension as default
+4. **Install and enable**:
+   - Run: npm install @myorg/my-extension
+   - Add to .env.local: NETPAD_EXTENSIONS=@myorg/my-extension
+5. **Restart NetPad** - Your extension will be loaded automatically
+
+### Example: Creating a Custom Workflow Node
+
+Based on the demo-node structure:
+
+\`\`\`typescript
+// 1. Define your node configuration interface
+interface MyNodeConfig {
+  action: string;
+  target: string;
+}
+
+// 2. Implement the node handler
+const myNodeHandler: NodeHandler = async (context) => {
+  const config = context.resolvedConfig as MyNodeConfig;
+  const inputs = context.inputs;
+  
+  // Your business logic here
+  const result = await performAction(config.action, config.target);
+  
+  return {
+    success: true,
+    data: { result },
+    metadata: { durationMs: Date.now() - startTime },
+  };
+};
+
+// 3. Define the node appearance
+const myNodeDefinition = {
+  type: 'myext:my-node',        // Unique type (convention: extid:nodename)
+  label: 'My Custom Node',
+  description: 'Does something custom',
+  category: 'custom' as const,
+  color: '#FF6B35',
+  icon: 'Extension',            // MUI icon name
+  version: '1.0.0',
+  configFields: [
+    {
+      name: 'action',
+      label: 'Action',
+      type: 'select' as const,
+      options: [
+        { label: 'Create', value: 'create' },
+        { label: 'Update', value: 'update' },
+      ],
+    },
+    {
+      name: 'target',
+      label: 'Target',
+      type: 'text' as const,
+      required: true,
+    },
+  ],
+  outputs: [{ id: 'output', label: 'Success', primary: true }],
+};
+
+// 4. Export the extension
+export const myExtension: NetPadExtension = {
+  metadata: {
+    id: 'my-extension',
+    name: 'My Extension',
+    version: '1.0.0',
+  },
+  workflowNodes: [
+    {
+      definition: myNodeDefinition,
+      handler: myNodeHandler,
+    },
+  ],
+  initialize: async () => {
+    console.log('[My Extension] Initialized!');
+  },
+};
+
+export default myExtension;
+\`\`\`
+
+### Node Handler Context
+
+The handler receives a \`NodeExecutionContext\` with:
+
+- **config**: Raw configuration from the editor
+- **resolvedConfig**: Configuration with variables like \`{{formData.email}}\` already resolved
+- **inputs**: Data from previous nodes in the workflow
+- **trigger**: Information about what triggered the workflow
+- **getConnection()**: Helper to get MongoDB connection details
+- **getEmailCredentials()**: Helper to get email service credentials
+
+### Node Categories
+
+When defining your node, choose an appropriate category:
+
+- **triggers**: Workflow entry points (form submission, webhook, schedule)
+- **logic**: Control flow (condition, switch, loop, delay)
+- **integrations**: External services (Slack, email, HTTP)
+- **actions**: Data operations (MongoDB queries, transforms)
+- **data**: Data manipulation (set variable, code execution)
+- **ai**: AI-powered operations (generate, classify, extract)
+- **forms**: Form-specific operations
+- **custom**: Custom extensions (use this for your own nodes)
+- **annotations**: Non-executable nodes (notes, labels)
 
 ## Extension Loading
 

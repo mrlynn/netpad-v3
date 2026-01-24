@@ -15,9 +15,11 @@ import {
   MarketplaceBundle,
   FormBundle,
   WorkflowBundle,
+  ExtensionBundle,
   isFormBundle,
   isWorkflowBundle,
   isApplicationBundle,
+  isExtensionBundle,
 } from '@/types/template';
 import { getApplicationReleasesCollection } from '@/lib/platform/db';
 import { buildBundleFromRelease } from '@/lib/marketplace/release-bundle';
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
       queryConditions.push({ source });
     }
 
-    // Filter by item type (application, form, workflow)
+    // Filter by item type (application, form, workflow, extension)
     // Default behavior: 'all' returns everything, with applications sorted first
     // Handle legacy items that don't have itemType field (treat as 'application')
     if (itemType && itemType !== 'all') {
@@ -134,7 +136,7 @@ export async function GET(request: NextRequest) {
             { itemType: { $exists: false } },
           ],
         });
-      } else if (itemType === 'form' || itemType === 'workflow') {
+      } else if (itemType === 'form' || itemType === 'workflow' || itemType === 'extension') {
         queryConditions.push({ itemType });
       }
     }
@@ -243,6 +245,18 @@ export async function GET(request: NextRequest) {
           triggerType: bundle.workflowMetadata?.triggerType || 'manual',
           nodeTypes: bundle.workflowMetadata?.nodeTypes || [],
         };
+      } else if (resolvedItemType === 'extension') {
+        // Extension - show extension metadata
+        const bundle = app.bundle as ExtensionBundle;
+        typeMetadata = {
+          extensionType: bundle.extensionMetadata?.extensionType || 'node',
+          nodeCount: bundle.extensionMetadata?.nodeCount || bundle.extension?.workflowNodes?.length || 0,
+          nodeCategories: bundle.extensionMetadata?.nodeCategories || [],
+          routeCount: bundle.extensionMetadata?.routeCount || bundle.extension?.routes?.length || 0,
+          npmPackage: bundle.extensionMetadata?.npmPackage,
+          minNetPadVersion: bundle.extensionMetadata?.minNetPadVersion,
+          verified: bundle.extensionMetadata?.verified || false,
+        };
       }
 
       return {
@@ -342,6 +356,31 @@ export async function POST(request: NextRequest) {
       };
       publishableBundle = workflowBundle;
     }
+    // Handle extension publishing
+    else if (itemType === 'extension') {
+      const { extension, manifest, extensionMetadata } = body;
+      if (!extension && !bundle?.extension) {
+        return NextResponse.json({ error: 'Extension definition is required for extension type' }, { status: 400 });
+      }
+      if (!manifest && !bundle?.manifest) {
+        return NextResponse.json({ error: 'Manifest is required' }, { status: 400 });
+      }
+
+      const ext = extension || bundle.extension;
+      const extensionBundle: ExtensionBundle = {
+        extension: ext,
+        extensionMetadata: extensionMetadata || bundle?.extensionMetadata || {
+          extensionType: ext?.workflowNodes?.length > 0 ? 'node' : 'integration',
+          nodeCount: ext?.workflowNodes?.length || 0,
+          nodeCategories: [...new Set(ext?.workflowNodes?.map((n: any) => n.definition?.category) || [])],
+          routeCount: ext?.routes?.length || 0,
+          npmPackage: body.npmPackage,
+          minNetPadVersion: body.minNetPadVersion,
+          verified: false,
+        },
+      };
+      publishableBundle = extensionBundle;
+    }
     // Handle application bundle publishing (existing behavior)
     else if (releaseId) {
       // Preferred: publish from a release
@@ -390,11 +429,11 @@ export async function POST(request: NextRequest) {
     const db = await getPlatformDb();
     const collection = db.collection<MarketplaceApplication>('marketplace_applications');
 
-    // Get the manifest - for form/workflow types it comes from the request body
+    // Get the manifest - for form/workflow/extension types it comes from the request body
     // For application bundles it's part of the bundle
     let manifest: ApplicationManifest;
-    if (itemType === 'form' || itemType === 'workflow') {
-      // For standalone forms/workflows, manifest is passed separately in the body
+    if (itemType === 'form' || itemType === 'workflow' || itemType === 'extension') {
+      // For standalone forms/workflows/extensions, manifest is passed separately in the body
       manifest = body.manifest as ApplicationManifest;
     } else {
       // For application bundles, manifest is part of the bundle
@@ -402,7 +441,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate item ID from manifest with type prefix
-    const typePrefix = itemType === 'application' ? 'app' : itemType;
+    const typePrefixMap: Record<MarketplaceItemType, string> = {
+      application: 'app',
+      form: 'form',
+      workflow: 'workflow',
+      extension: 'ext',
+    };
+    const typePrefix = typePrefixMap[itemType] || itemType;
     const appId =
       manifest.id ||
       `${typePrefix}_${manifest.name.toLowerCase().replace(/\s+/g, '-')}_${manifest.version}`;

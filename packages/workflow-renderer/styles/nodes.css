@@ -1,0 +1,36 @@
+/**
+ * Node styles for @netpad/workflow-renderer
+ */
+
+/* Base node */
+.wr-base-node {
+  font-family: inherit;
+}
+
+/* Note node */
+.wr-note-node {
+  font-family: inherit;
+  cursor: default;
+}
+
+/* Node selection glow effect */
+.wr-workflow-renderer .react-flow__node.selected .wr-base-node > div:first-child {
+  box-shadow: 0 0 0 2px rgba(0, 237, 100, 0.3);
+}
+
+/* Status pulse animation */
+@keyframes wr-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* Node hover effect */
+.wr-base-node:hover > div:first-child {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}

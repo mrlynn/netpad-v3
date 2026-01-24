@@ -12,11 +12,11 @@ import {
   Typography,
   TextField,
   Button,
-  CircularProgress,
   alpha,
   InputAdornment,
   Alert,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Business, ArrowForward } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useOnboardingGate } from '@/contexts/OnboardingGateContext';
@@ -134,7 +134,7 @@ export function OrgStep() {
         onClick={handleCreateWorkspace}
         disabled={!workspaceName.trim() || isCreating}
         endIcon={
-          isCreating ? <CircularProgress size={18} color="inherit" /> : <ArrowForward />
+          isCreating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ArrowForward />
         }
         sx={{
           mt: 3,

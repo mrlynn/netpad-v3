@@ -13,11 +13,11 @@ import {
   Chip,
   TextField,
   InputAdornment,
-  CircularProgress,
   Collapse,
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   AutoAwesome,
@@ -743,7 +743,7 @@ export function EmptyFormState({
                         }}
                       >
                         {isGenerating ? (
-                          <CircularProgress size={20} sx={{ color: 'white' }} />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         ) : (
                           <Send sx={{ fontSize: 18 }} />
                         )}

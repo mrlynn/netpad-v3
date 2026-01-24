@@ -11,6 +11,7 @@ import { installCommand } from './commands/install.js';
 import { listCommand } from './commands/list.js';
 import { createAppCommand } from './commands/create-app.js';
 import { searchCommand } from './commands/search.js';
+import { submitCommand } from './commands/submit.js';
 import { versionCommand } from './commands/version.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
@@ -84,6 +85,27 @@ program
   .option('-d, --dir <directory>', 'Output directory', '.')
   .option('--scope <scope>', 'npm scope (e.g., @myorg)', '@netpad')
   .action(createAppCommand);
+
+// Submit command
+program
+  .command('submit')
+  .alias('publish')
+  .description('Submit a package to the NetPad marketplace for approval')
+  .argument('<source>', 'Source: path to package.json, bundle.json, or npm package name')
+  .option('-t, --type <type>', 'Package type: application, form, workflow, or extension')
+  .option('-n, --name <name>', 'Display name')
+  .option('-d, --description <desc>', 'Description')
+  .option('-s, --summary <summary>', 'Short summary')
+  .option('-v, --version <version>', 'Version')
+  .option('-c, --category <category>', 'Category')
+  .option('--tags <tags>', 'Comma-separated tags')
+  .option('-a, --author <author>', 'Author name')
+  .option('-i, --icon <icon>', 'Icon (emoji)')
+  .option('--npm-package <name>', 'npm package name (for extensions)')
+  .option('--min-netpad-version <version>', 'Minimum NetPad version required')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(submitCommand);
 
 // Version command
 program

@@ -15,8 +15,8 @@ import {
   Collapse,
   Paper,
   alpha,
-  CircularProgress
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ExpandMore, ExpandLess, Link as LinkIcon } from '@mui/icons-material';
 import { FieldConfig, LookupConfig, FormDataSource } from '@/types/form';
 import { usePipeline } from '@/contexts/PipelineContext';
@@ -283,7 +283,7 @@ export function LookupConfigEditor({
                   disabled={collectionsLoading}
                   endAdornment={
                     collectionsLoading ? (
-                      <CircularProgress size={16} sx={{ mr: 2 }} />
+                      <NetPadLoader size="small" variant="svg" showPhrases={false} />
                     ) : null
                   }
                 >
@@ -308,7 +308,7 @@ export function LookupConfigEditor({
 
               {loading && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={16} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   <Typography variant="caption">Loading fields...</Typography>
                 </Box>
               )}

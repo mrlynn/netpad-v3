@@ -13,8 +13,8 @@ import {
   CardActionArea,
   alpha,
   Chip,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   People,
   HourglassEmpty,
@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
           minHeight: '60vh',
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading admin dashboard..." />
       </Box>
     );
   }

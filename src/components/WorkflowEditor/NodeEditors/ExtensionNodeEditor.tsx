@@ -17,12 +17,12 @@ import {
   InputLabel,
   Typography,
   InputAdornment,
-  CircularProgress,
   Alert,
   Chip,
   alpha,
   useTheme,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Extension as ExtensionIcon } from '@mui/icons-material';
 import { VariablePickerButton } from '../VariablePicker';
 import { NodeEditorProps } from './shared/utils';
@@ -254,10 +254,7 @@ export function ExtensionNodeEditor({
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 3 }}>
-        <CircularProgress size={24} sx={{ mr: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          Loading extension configuration...
-        </Typography>
+        <NetPadLoader size="large" variant="ascii" message="Loading extension configuration..." />
       </Box>
     );
   }

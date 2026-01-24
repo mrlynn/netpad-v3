@@ -2,7 +2,8 @@
 
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
-import { Paper, Box, Typography, Badge, alpha, CircularProgress, IconButton, Tooltip } from '@mui/material';
+import { Paper, Box, Typography, Badge, alpha, IconButton, Tooltip } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Delete } from '@mui/icons-material';
 import { StageNodeData } from '@/types/pipeline';
 import { getStageDefinition } from '@/lib/stageDefinitions';
@@ -83,7 +84,7 @@ export const StageNode = memo(({ data, selected, id }: NodeProps<StageNodeData>)
           }}
         >
           {isExecuting ? (
-            <CircularProgress size={18} sx={{ color: definition.color }} />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
           ) : (
             <IconComponent sx={{ color: definition.color, fontSize: 18 }} />
           )}

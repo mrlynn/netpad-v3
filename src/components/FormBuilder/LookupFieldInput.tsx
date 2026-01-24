@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Autocomplete,
   TextField,
-  CircularProgress,
   Chip,
   Box,
   Typography,
   alpha
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { FieldConfig, LookupConfig } from '@/types/form';
 import { usePipeline } from '@/contexts/PipelineContext';
 
@@ -174,7 +174,7 @@ export function LookupFieldInput({
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                   {params.InputProps.endAdornment}
                 </>
               )

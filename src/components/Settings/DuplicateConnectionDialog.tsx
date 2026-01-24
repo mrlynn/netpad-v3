@@ -11,12 +11,12 @@ import {
   Button,
   TextField,
   Alert,
-  CircularProgress,
   alpha,
   IconButton,
   Chip,
   Autocomplete,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ContentCopy,
   Close,
@@ -283,7 +283,7 @@ export function DuplicateConnectionDialog({
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {loadingCollections ? <CircularProgress size={20} /> : null}
+                      {loadingCollections ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -302,7 +302,7 @@ export function DuplicateConnectionDialog({
           variant="contained"
           onClick={handleDuplicate}
           disabled={duplicating || !name.trim()}
-          startIcon={duplicating ? <CircularProgress size={20} /> : <ContentCopy />}
+          startIcon={duplicating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ContentCopy />}
           sx={{
             bgcolor: '#2196f3',
             '&:hover': { bgcolor: '#1976d2' },

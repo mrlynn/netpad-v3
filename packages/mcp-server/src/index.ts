@@ -250,6 +250,123 @@ server.resource(
   })
 );
 
+server.resource(
+  'netpad-demo-node',
+  'netpad://examples/demo-node',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://examples/demo-node',
+        mimeType: 'text/markdown',
+        text: `# @netpad/demo-node Extension Example
+
+The demo-node extension is a complete, working example of how to create NetPad workflow node extensions. Use it as a template for your own extensions.
+
+## What It Provides
+
+A single workflow node called **"Log Message"** that:
+- Logs configurable messages to the console
+- Supports different log levels (info, warn, error)
+- Can pass through input data to downstream nodes
+- Demonstrates all key extension concepts
+
+## Node Details
+
+**Type:** \`demo:log-message\`
+**Category:** Custom
+**Icon:** Terminal (MUI icon)
+**Color:** #FF6B35 (orange)
+
+### Configuration Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| Message | textarea | The message to log. Supports \`{{variable}}\` syntax for dynamic values |
+| Log Level | select | info, warn, or error |
+| Label | text | Custom label for the log entry |
+| Pass Through | boolean | Include input data in output (default: true) |
+
+### Example Usage
+
+1. Drag the "Log Message" node onto the workflow canvas
+2. Connect it after a form trigger or other node
+3. Configure the message: \`New submission from {{formData.email}}\`
+4. The node will log the message and pass data to the next node
+
+## Using as a Template
+
+1. **Copy the package** to a new directory
+2. **Update package.json** with your extension name
+3. **Modify src/index.ts**:
+   - Change extension metadata (id, name, version)
+   - Update node definition (type, label, icon, color, config fields)
+   - Implement your business logic in the handler
+4. **Export the extension** as default export
+
+## Key Concepts Demonstrated
+
+- **Extension Metadata**: Identifies your extension in the system
+- **Workflow Nodes**: Custom nodes that appear in the workflow editor palette
+- **Node Definition**: Describes the node's appearance and configuration UI
+- **Node Handler**: The function that executes when the node runs
+- **Configuration Fields**: UI fields for node configuration
+- **Output Handles**: Connection points for downstream nodes
+- **Lifecycle Hooks**: initialize() and cleanup() functions
+
+## File Structure
+
+\`\`\`
+packages/demo-node/
+├── package.json          # Package metadata
+├── README.md             # Documentation
+└── src/
+    └── index.ts          # Extension + node definition + handler
+\`\`\`
+
+## Extension Structure
+
+\`\`\`typescript
+export const demoNodeExtension: NetPadExtension = {
+  metadata: {
+    id: 'netpad-demo-node',
+    name: 'Demo Node Extension',
+    version: '1.0.0',
+  },
+  features: ['custom:demo-node'],
+  workflowNodes: [
+    {
+      definition: {
+        type: 'demo:log-message',
+        label: 'Log Message',
+        category: 'custom',
+        // ... node appearance config
+      },
+      handler: async (context) => {
+        // ... execution logic
+        return { success: true, data: {...} };
+      },
+    },
+  ],
+  initialize: async () => { /* setup */ },
+  cleanup: async () => { /* teardown */ },
+};
+\`\`\`
+
+## Handler Implementation
+
+The handler receives a \`NodeExecutionContext\` with:
+- \`resolvedConfig\`: Configuration with variables resolved
+- \`inputs\`: Data from previous nodes
+- \`trigger\`: Workflow trigger information
+- Helper functions for connections and credentials
+
+See the full source code in \`packages/demo-node/src/index.ts\` for complete implementation details.
+`,
+      },
+    ],
+  })
+);
+
 // ============================================================================
 // TOOLS - Form building capabilities
 // ============================================================================

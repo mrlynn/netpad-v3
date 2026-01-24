@@ -13,7 +13,6 @@ import {
   Button,
   Chip,
   Collapse,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -24,6 +23,7 @@ import {
   alpha,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   History,
   Restore,
@@ -316,7 +316,7 @@ export function VersionHistoryPanel({
 
           {loading ? (
             <Box sx={{ p: 3, textAlign: 'center' }}>
-              <CircularProgress size={24} />
+              <NetPadLoader size="large" variant="ascii" message="Loading versions..." />
             </Box>
           ) : versions.length === 0 ? (
             <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -422,7 +422,7 @@ export function VersionHistoryPanel({
                               disabled={restoring === version.id}
                             >
                               {restoring === version.id ? (
-                                <CircularProgress size={16} />
+                                <NetPadLoader size="small" variant="svg" showPhrases={false} />
                               ) : (
                                 <Restore fontSize="small" />
                               )}
@@ -476,7 +476,7 @@ export function VersionHistoryPanel({
             onClick={handleCreateVersion}
             variant="contained"
             disabled={creating}
-            startIcon={creating ? <CircularProgress size={16} /> : <Add />}
+            startIcon={creating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Add />}
             sx={{
               bgcolor: '#2196f3',
               '&:hover': { bgcolor: '#1976d2' },
@@ -503,7 +503,7 @@ export function VersionHistoryPanel({
         <DialogContent>
           {previewLoading ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
-              <CircularProgress />
+              <NetPadLoader size="large" variant="ascii" message="Loading preview..." />
             </Box>
           ) : previewVersion ? (
             <Box>

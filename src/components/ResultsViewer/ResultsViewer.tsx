@@ -16,7 +16,6 @@ import {
   Chip,
   Tabs,
   Tab,
-  CircularProgress,
   Alert,
   Collapse,
   Tooltip,
@@ -27,6 +26,7 @@ import {
   Button,
   TextField
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ExpandMore,
   ExpandLess,
@@ -240,7 +240,7 @@ export function ResultsViewer({
           bgcolor: 'background.default'
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading results..." />
       </Box>
     );
   }

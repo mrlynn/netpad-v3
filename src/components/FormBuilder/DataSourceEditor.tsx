@@ -11,7 +11,6 @@ import {
   TextField,
   Button,
   Alert,
-  CircularProgress,
   Paper,
   Chip,
   alpha,
@@ -21,6 +20,7 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   VpnKey,
@@ -545,7 +545,7 @@ export function DataSourceEditor({
           {/* Connection Selector */}
           {loading ? (
         <Box sx={{ textAlign: 'center', py: 2 }}>
-          <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       ) : connections.length === 0 && !showInlineCreate ? (
         <Paper
@@ -663,7 +663,7 @@ export function DataSourceEditor({
             <Button
               size="small"
               variant="outlined"
-              startIcon={testing ? <CircularProgress size={14} /> : <PlayArrow />}
+              startIcon={testing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayArrow />}
               onClick={handleTestConnection}
               disabled={testing || !newConnectionString || !newDatabase}
               sx={{ borderColor: '#00ED64', color: '#00ED64' }}
@@ -673,7 +673,7 @@ export function DataSourceEditor({
             <Button
               size="small"
               variant="contained"
-              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <Storage />}
+              startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Storage />}
               onClick={handleCreateConnection}
               disabled={saving || !newConnectionString || !newDatabase}
               sx={{

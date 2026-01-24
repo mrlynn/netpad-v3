@@ -17,8 +17,8 @@ import {
   alpha,
   useTheme,
   Fade,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ArrowForward, ArrowBack, Business } from '@mui/icons-material';
 import { useSignupOnboarding } from '@/contexts/SignupOnboardingContext';
 
@@ -219,7 +219,7 @@ export function WorkspaceStep({ onContinue, onBack }: WorkspaceStepProps) {
             disabled={!isValid || isProcessing}
             endIcon={
               isProcessing ? (
-                <CircularProgress size={20} color="inherit" />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <ArrowForward />
               )

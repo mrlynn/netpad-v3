@@ -16,7 +16,8 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Paper, Typography, alpha, CircularProgress, useTheme } from '@mui/material';
+import { Box, Paper, Typography, alpha, useTheme } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { CollectionNode } from './CollectionNode';
 
 // Define nodeTypes outside component and memoize
@@ -85,7 +86,7 @@ function ERDCanvasInner({ collections, isLoading }: ERDCanvasProps) {
           bgcolor: 'background.default'
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }

@@ -22,8 +22,8 @@ import {
   alpha,
   useTheme,
   Fade,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ArrowForward,
   ArrowBack,
@@ -219,7 +219,7 @@ export function DatabaseStep({ onContinue, onBack }: DatabaseStepProps) {
             disabled={isProcessing}
             endIcon={
               isProcessing && !expanded ? (
-                <CircularProgress size={20} color="inherit" />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <ArrowForward />
               )
@@ -334,7 +334,7 @@ export function DatabaseStep({ onContinue, onBack }: DatabaseStepProps) {
               disabled={isProcessing || !connectionString.trim()}
               endIcon={
                 isProcessing && expanded ? (
-                  <CircularProgress size={20} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : (
                   <ArrowForward />
                 )

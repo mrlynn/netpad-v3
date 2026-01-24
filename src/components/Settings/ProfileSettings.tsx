@@ -17,8 +17,8 @@ import {
   IconButton,
   Alert,
   alpha,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Person,
   Email,
@@ -69,7 +69,7 @@ export function ProfileSettings() {
   if (!user) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
-        <CircularProgress sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="large" variant="ascii" message="Loading profile..." />
       </Box>
     );
   }
@@ -129,7 +129,7 @@ export function ProfileSettings() {
                 disabled={saving}
                 sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
               >
-                {saving ? <CircularProgress size={20} /> : 'Save Changes'}
+                {saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Save Changes'}
               </Button>
               {saveSuccess && (
                 <Chip

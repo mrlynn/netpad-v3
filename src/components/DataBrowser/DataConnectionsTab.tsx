@@ -11,7 +11,6 @@ import {
   Chip,
   IconButton,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   FormControl,
@@ -21,6 +20,7 @@ import {
   Divider,
   Container,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   VpnKey,
@@ -308,7 +308,7 @@ export function DataConnectionsTab({ onConnectAndBrowse }: DataConnectionsTabPro
 
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading connections..." />
         </Box>
       ) : connections.length === 0 ? (
         <Card
@@ -409,7 +409,7 @@ export function DataConnectionsTab({ onConnectAndBrowse }: DataConnectionsTabPro
                       <Button
                         variant="contained"
                         size="small"
-                        startIcon={connecting === conn.vaultId ? <CircularProgress size={14} color="inherit" /> : <TableChart />}
+                        startIcon={connecting === conn.vaultId ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <TableChart />}
                         onClick={() => handleConnectAndBrowse(conn)}
                         disabled={connecting !== null || conn.status !== 'active'}
                         sx={{

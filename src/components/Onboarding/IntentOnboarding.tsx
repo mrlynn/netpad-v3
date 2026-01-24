@@ -17,7 +17,6 @@ import {
   Button,
   Paper,
   Chip,
-  CircularProgress,
   Stepper,
   Step,
   StepLabel,
@@ -28,6 +27,7 @@ import {
   Fade,
   Grow,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome,
   ArrowForward,
@@ -219,7 +219,7 @@ export function IntentOnboarding() {
                   size="large"
                   onClick={handleSubmit}
                   disabled={!localIntent.trim() || isSubmitting}
-                  startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <RocketLaunch />}
+                  startIcon={isSubmitting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RocketLaunch />}
                   endIcon={!isSubmitting && <ArrowForward />}
                   sx={{
                     px: 4,
@@ -271,8 +271,8 @@ export function IntentOnboarding() {
       >
         <Container maxWidth="sm">
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+            <NetPadLoader size="large" variant="ascii" message="Creating your application" />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, mt: 2 }}>
               Creating your application
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -314,7 +314,7 @@ export function IntentOnboarding() {
                   {index === activeStep && (
                     <StepContent>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
-                        <CircularProgress size={16} />
+                        <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         <Typography variant="body2" color="text.secondary">
                           In progress...
                         </Typography>

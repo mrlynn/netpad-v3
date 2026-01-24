@@ -11,10 +11,10 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  CircularProgress,
   Stack,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CloudQueue as ClusterIcon,
   ExpandMore as ExpandIcon,
@@ -107,7 +107,7 @@ export function ClusterNode({ cluster, onToggle }: ClusterNodeProps) {
         }}
       />
       {cluster.isLoading ? (
-        <CircularProgress size={16} sx={{ color: '#2196F3' }} />
+        <NetPadLoader size="small" variant="svg" showPhrases={false} />
       ) : cluster.isExpanded ? (
         <CollapseIcon fontSize="small" sx={{ color: 'text.secondary' }} />
       ) : (

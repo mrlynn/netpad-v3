@@ -31,7 +31,6 @@ import {
   Switch,
   Chip,
   Alert,
-  CircularProgress,
   IconButton,
   Tooltip,
   Divider,
@@ -44,6 +43,7 @@ import {
   Collapse,
   LinearProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Cloud as CloudIcon,
   Rocket as RocketIcon,
@@ -486,7 +486,7 @@ export function DeploymentWizard({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
+          <NetPadLoader size="large" variant="ascii" message="Loading project data..." />
         </Box>
       ) : bundlePreview ? (
         <>
@@ -806,7 +806,7 @@ export function DeploymentWizard({
               deploymentProgress.status === 'failed' ? (
                 <ErrorIcon />
               ) : (
-                <CircularProgress size={20} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               )
             }
           >
@@ -852,7 +852,7 @@ export function DeploymentWizard({
               <ListItem>
                 <ListItemIcon sx={{ minWidth: 36 }}>
                   {deploymentProgress.status === 'draft' && !deploymentProgress.deploymentId ? (
-                    <CircularProgress size={16} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : (
                     <CheckIcon fontSize="small" color="success" />
                   )}
@@ -862,10 +862,10 @@ export function DeploymentWizard({
               <ListItem>
                 <ListItemIcon sx={{ minWidth: 36 }}>
                   {deploymentProgress.status === 'draft' && deploymentProgress.deploymentId ? (
-                    <CircularProgress size={16} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : deploymentProgress.status === 'configuring' &&
                     deploymentProgress.statusMessage?.includes('Injecting') ? (
-                    <CircularProgress size={16} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : ['configuring', 'provisioning', 'deploying', 'active'].includes(
                       deploymentProgress.status
                     ) ? (
@@ -883,7 +883,7 @@ export function DeploymentWizard({
                 <ListItemIcon sx={{ minWidth: 36 }}>
                   {deploymentProgress.status === 'configuring' &&
                   !deploymentProgress.statusMessage?.includes('Injecting') ? (
-                    <CircularProgress size={16} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : ['provisioning', 'deploying', 'active'].includes(deploymentProgress.status) ? (
                     <CheckIcon fontSize="small" color="success" />
                   ) : (
@@ -896,7 +896,7 @@ export function DeploymentWizard({
                 <ListItem>
                   <ListItemIcon sx={{ minWidth: 36 }}>
                     {deploymentProgress.status === 'provisioning' ? (
-                      <CircularProgress size={16} />
+                      <NetPadLoader size="small" variant="svg" showPhrases={false} />
                     ) : ['deploying', 'active'].includes(deploymentProgress.status) ? (
                       <CheckIcon fontSize="small" color="success" />
                     ) : (
@@ -916,7 +916,7 @@ export function DeploymentWizard({
               <ListItem>
                 <ListItemIcon sx={{ minWidth: 36 }}>
                   {deploymentProgress.status === 'deploying' ? (
-                    <CircularProgress size={16} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : deploymentProgress.status === 'active' ? (
                     <CheckIcon fontSize="small" color="success" />
                   ) : (
@@ -1078,7 +1078,7 @@ export function DeploymentWizard({
               disabled={!isStepValid() || deploying}
               startIcon={
                 deploying ? (
-                  <CircularProgress size={16} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : activeStep === STEPS.length - 1 ? (
                   <RocketIcon />
                 ) : null

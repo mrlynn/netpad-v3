@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, Button, CircularProgress, useTheme, alpha } from '@mui/material';
+import { Box, Typography, Button, useTheme, alpha } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Visibility as ViewIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -66,7 +67,7 @@ export function ImpersonationBanner() {
         size="small"
         onClick={handleEndImpersonation}
         disabled={isEnding}
-        startIcon={isEnding ? <CircularProgress size={14} color="inherit" /> : <CloseIcon />}
+        startIcon={isEnding ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <CloseIcon />}
         sx={{
           ml: 2,
           bgcolor: alpha(theme.palette.common.black, 0.2),

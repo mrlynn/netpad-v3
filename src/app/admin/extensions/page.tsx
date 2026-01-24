@@ -15,7 +15,6 @@ import {
   Typography,
   Paper,
   Alert,
-  CircularProgress,
   Card,
   CardContent,
   Chip,
@@ -43,6 +42,7 @@ import {
 } from '@mui/icons-material';
 import useSWR from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -172,7 +172,7 @@ export default function AdminExtensionsPage() {
   if (authLoading || isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading extensions..." />
       </Box>
     );
   }

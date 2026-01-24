@@ -48,6 +48,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Inventory as BundleIcon,
   ViewList as FieldIcon,
+  Extension as ExtensionIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
@@ -117,6 +118,23 @@ interface ApplicationDetail {
       type: string;
       label: string;
     }>;
+    // Extension-specific fields
+    extensionType?: 'node' | 'integration';
+    nodeCategories?: string[];
+    routeCount?: number;
+    npmPackage?: string;
+    minNetPadVersion?: string;
+    verified?: boolean;
+    workflowNodes?: Array<{
+      type: string;
+      label: string;
+      description?: string;
+      category?: string;
+    }>;
+    routes?: Array<{
+      path: string;
+      method: string;
+    }>;
   };
   stats: {
     downloads: number;
@@ -141,6 +159,21 @@ interface ApplicationDetail {
     publishedBy: string;
   }>;
   latestVersion?: string;
+}
+
+// Helper function to get item type display info
+function getItemTypeInfo(itemType?: MarketplaceItemType) {
+  switch (itemType) {
+    case 'form':
+      return { label: 'Form', color: '#58a6ff' };
+    case 'workflow':
+      return { label: 'Workflow', color: '#d29922' };
+    case 'extension':
+      return { label: 'Extension', color: '#a855f7' };
+    case 'application':
+    default:
+      return { label: 'Application', color: '#00ED64' };
+  }
 }
 
 export function ApplicationDetailDialog({
@@ -203,7 +236,8 @@ export function ApplicationDetailDialog({
     setError(null);
 
     try {
-      const response = await fetch(`/api/marketplace/applications/${applicationId}`);
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}`);
 
       if (!response.ok) {
         throw new Error('Failed to load application details');
@@ -223,7 +257,8 @@ export function ApplicationDetailDialog({
     if (!user) return;
 
     try {
-      const response = await fetch(`/api/marketplace/applications/${applicationId}/reviews/me`);
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}/reviews/me`);
       if (response.ok) {
         const data = await response.json();
         setUserReview(data.review);
@@ -235,7 +270,8 @@ export function ApplicationDetailDialog({
 
   const handleReviewSubmit = async (reviewData: { rating: number; title?: string; review?: string }) => {
     try {
-      const response = await fetch(`/api/marketplace/applications/${applicationId}/reviews`, {
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewData),
@@ -260,8 +296,9 @@ export function ApplicationDetailDialog({
     if (!userReview) return;
 
     try {
+      const encodedId = encodeURIComponent(applicationId);
       const response = await fetch(
-        `/api/marketplace/applications/${applicationId}/reviews/${userReview.reviewId}`,
+        `/api/marketplace/applications/${encodedId}/reviews/${userReview.reviewId}`,
         {
           method: 'DELETE',
         }
@@ -348,7 +385,8 @@ export function ApplicationDetailDialog({
     setError(null);
 
     try {
-      const response = await fetch(`/api/marketplace/applications/${applicationId}`, {
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -398,7 +436,8 @@ export function ApplicationDetailDialog({
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(`/api/marketplace/applications/${applicationId}?download=true`);
+      const encodedId = encodeURIComponent(applicationId);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}?download=true`);
 
       if (!response.ok) {
         throw new Error('Download failed');
@@ -429,50 +468,35 @@ export function ApplicationDetailDialog({
           <Box sx={{ flex: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
               <Typography variant="h6">
-                {detail?.manifest.name || (detail?.itemType === 'form' ? 'Form' : detail?.itemType === 'workflow' ? 'Workflow' : 'Application')}
+                {detail?.manifest.name || getItemTypeInfo(detail?.itemType).label}
               </Typography>
               {/* Item Type Badge */}
-              {detail && (
-                <Chip
-                  icon={
-                    detail.itemType === 'form' ? <FormIcon sx={{ fontSize: 14 }} /> :
-                    detail.itemType === 'workflow' ? <WorkflowIcon sx={{ fontSize: 14 }} /> :
-                    <BundleIcon sx={{ fontSize: 14 }} />
-                  }
-                  label={
-                    detail.itemType === 'form' ? 'Form' :
-                    detail.itemType === 'workflow' ? 'Workflow' :
-                    'Application'
-                  }
-                  size="small"
-                  sx={{
-                    height: 20,
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    bgcolor: alpha(
-                      detail.itemType === 'form' ? '#58a6ff' :
-                      detail.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                      0.1
-                    ),
-                    color: detail.itemType === 'form' ? '#58a6ff' :
-                      detail.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                    border: `1px solid ${alpha(
-                      detail.itemType === 'form' ? '#58a6ff' :
-                      detail.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                      0.3
-                    )}`,
-                    '& .MuiChip-icon': {
-                      fontSize: 14,
-                      color: detail.itemType === 'form' ? '#58a6ff' :
-                        detail.itemType === 'workflow' ? '#d29922' :
-                        '#00ED64',
-                    },
-                  }}
-                />
-              )}
+              {detail && (() => {
+                const typeInfo = getItemTypeInfo(detail.itemType);
+                const TypeIcon = detail.itemType === 'form' ? FormIcon :
+                  detail.itemType === 'workflow' ? WorkflowIcon :
+                  detail.itemType === 'extension' ? ExtensionIcon :
+                  BundleIcon;
+                return (
+                  <Chip
+                    icon={<TypeIcon sx={{ fontSize: 14 }} />}
+                    label={typeInfo.label}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      bgcolor: alpha(typeInfo.color, 0.1),
+                      color: typeInfo.color,
+                      border: `1px solid ${alpha(typeInfo.color, 0.3)}`,
+                      '& .MuiChip-icon': {
+                        fontSize: 14,
+                        color: typeInfo.color,
+                      },
+                    }}
+                  />
+                );
+              })()}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="caption" color="text.secondary">
@@ -515,18 +539,8 @@ export function ApplicationDetailDialog({
               variant="outlined"
               sx={{
                 p: 2,
-                bgcolor: alpha(
-                  detail.itemType === 'form' ? '#58a6ff' :
-                  detail.itemType === 'workflow' ? '#d29922' :
-                  '#00ED64',
-                  0.02
-                ),
-                borderColor: alpha(
-                  detail.itemType === 'form' ? '#58a6ff' :
-                  detail.itemType === 'workflow' ? '#d29922' :
-                  '#00ED64',
-                  0.2
-                ),
+                bgcolor: alpha(getItemTypeInfo(detail.itemType).color, 0.02),
+                borderColor: alpha(getItemTypeInfo(detail.itemType).color, 0.2),
               }}
             >
               <Typography variant="body2" sx={{ mb: 1.5 }}>
@@ -601,6 +615,50 @@ export function ApplicationDetailDialog({
                         <TriggerIcon fontSize="small" color="action" />
                         <Typography variant="caption">{detail.preview.triggerType}</Typography>
                       </Box>
+                    )}
+                  </>
+                )}
+                {detail.itemType === 'extension' && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <ExtensionIcon fontSize="small" sx={{ color: '#a855f7' }} />
+                      <Typography variant="caption">
+                        {detail.preview.nodeCount || 0} workflow nodes
+                      </Typography>
+                    </Box>
+                    {(detail.preview.routeCount || 0) > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <LinkIcon fontSize="small" color="action" />
+                        <Typography variant="caption">
+                          {detail.preview.routeCount} routes
+                        </Typography>
+                      </Box>
+                    )}
+                    {detail.preview.npmPackage && (
+                      <Chip
+                        icon={<NpmIcon sx={{ fontSize: 12 }} />}
+                        label={detail.preview.npmPackage}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.65rem',
+                          bgcolor: alpha('#CB3837', 0.1),
+                          color: '#CB3837',
+                        }}
+                      />
+                    )}
+                    {detail.preview.verified && (
+                      <Chip
+                        icon={<CheckCircleIcon sx={{ fontSize: 12 }} />}
+                        label="Verified"
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.65rem',
+                          bgcolor: alpha('#00ED64', 0.1),
+                          color: '#00ED64',
+                        }}
+                      />
                     )}
                   </>
                 )}
@@ -721,6 +779,101 @@ export function ApplicationDetailDialog({
                           secondary={`Type: ${node.type}`}
                           primaryTypographyProps={{ variant: 'body2' }}
                           secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* Extension Workflow Nodes - for extensions */}
+            {detail.itemType === 'extension' && detail.preview.workflowNodes && detail.preview.workflowNodes.length > 0 && (
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ExtensionIcon fontSize="small" sx={{ color: '#a855f7' }} />
+                    <Typography variant="subtitle2">
+                      Workflow Nodes ({detail.preview.workflowNodes.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <List dense disablePadding>
+                    {detail.preview.workflowNodes.map((node, index) => (
+                      <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckIcon fontSize="small" color="success" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={node.label || node.type}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Type: {node.type}
+                              </Typography>
+                              {node.category && (
+                                <Chip
+                                  label={node.category}
+                                  size="small"
+                                  sx={{
+                                    height: 16,
+                                    fontSize: '0.6rem',
+                                    bgcolor: alpha('#a855f7', 0.1),
+                                    color: '#a855f7',
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* Extension Routes - for extensions */}
+            {detail.itemType === 'extension' && detail.preview.routes && detail.preview.routes.length > 0 && (
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LinkIcon fontSize="small" sx={{ color: '#a855f7' }} />
+                    <Typography variant="subtitle2">
+                      API Routes ({detail.preview.routes.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <List dense disablePadding>
+                    {detail.preview.routes.map((route, index) => (
+                      <ListItem key={index} disablePadding sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <Chip
+                            label={route.method}
+                            size="small"
+                            sx={{
+                              height: 18,
+                              fontSize: '0.6rem',
+                              fontWeight: 600,
+                              bgcolor: route.method === 'GET' ? alpha('#4CAF50', 0.1) :
+                                route.method === 'POST' ? alpha('#2196F3', 0.1) :
+                                route.method === 'PUT' ? alpha('#FF9800', 0.1) :
+                                route.method === 'DELETE' ? alpha('#f44336', 0.1) :
+                                alpha('#9E9E9E', 0.1),
+                              color: route.method === 'GET' ? '#4CAF50' :
+                                route.method === 'POST' ? '#2196F3' :
+                                route.method === 'PUT' ? '#FF9800' :
+                                route.method === 'DELETE' ? '#f44336' :
+                                '#9E9E9E',
+                            }}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={route.path}
+                          primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
                         />
                       </ListItem>
                     ))}
@@ -1068,48 +1221,22 @@ export function ApplicationDetailDialog({
             startIcon={isImported ? <CheckCircleIcon /> : importing ? <NetPadSpinner size={16} /> : <UploadIcon />}
             sx={{
               bgcolor: isImported
-                ? alpha(
-                    detail?.itemType === 'form' ? '#58a6ff' :
-                    detail?.itemType === 'workflow' ? '#d29922' :
-                    '#00ED64',
-                    0.1
-                  )
-                : detail?.itemType === 'form' ? '#58a6ff' :
-                  detail?.itemType === 'workflow' ? '#d29922' :
-                  '#00ED64',
+                ? alpha(getItemTypeInfo(detail?.itemType).color, 0.1)
+                : getItemTypeInfo(detail?.itemType).color,
               color: isImported
-                ? (detail?.itemType === 'form' ? '#58a6ff' :
-                   detail?.itemType === 'workflow' ? '#d29922' :
-                   '#00ED64')
+                ? getItemTypeInfo(detail?.itemType).color
                 : 'white',
               '&:hover': {
                 bgcolor: isImported
-                  ? alpha(
-                      detail?.itemType === 'form' ? '#58a6ff' :
-                      detail?.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                      0.15
-                    )
-                  : alpha(
-                      detail?.itemType === 'form' ? '#58a6ff' :
-                      detail?.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                      0.85
-                    ),
+                  ? alpha(getItemTypeInfo(detail?.itemType).color, 0.15)
+                  : alpha(getItemTypeInfo(detail?.itemType).color, 0.85),
               },
               '&.Mui-disabled': {
                 bgcolor: isImported
-                  ? alpha(
-                      detail?.itemType === 'form' ? '#58a6ff' :
-                      detail?.itemType === 'workflow' ? '#d29922' :
-                      '#00ED64',
-                      0.1
-                    )
+                  ? alpha(getItemTypeInfo(detail?.itemType).color, 0.1)
                   : undefined,
                 color: isImported
-                  ? (detail?.itemType === 'form' ? '#58a6ff' :
-                     detail?.itemType === 'workflow' ? '#d29922' :
-                     '#00ED64')
+                  ? getItemTypeInfo(detail?.itemType).color
                   : undefined,
               },
             }}
@@ -1118,7 +1245,7 @@ export function ApplicationDetailDialog({
               ? 'Already Imported'
               : importing
                 ? 'Importing...'
-                : `Import ${detail?.itemType === 'form' ? 'Form' : detail?.itemType === 'workflow' ? 'Workflow' : 'Application'}`
+                : `Import ${getItemTypeInfo(detail?.itemType).label}`
             }
           </Button>
         )}

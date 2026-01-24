@@ -24,11 +24,11 @@ import {
   Chip,
   Autocomplete,
   Alert,
-  CircularProgress,
   Divider,
   alpha,
   FormHelperText,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Publish as PublishIcon,
   Check as CheckIcon,
@@ -144,7 +144,8 @@ export function ApplicationPublishDialog({
         if (sourceManifest.id || sourceManifest.name) {
           try {
             const appId = sourceManifest.id || `app_${(sourceManifest.name || '').toLowerCase().replace(/\s+/g, '-')}_${sourceManifest.version || '1.0.0'}`;
-            const checkResponse = await fetch(`/api/marketplace/applications/${appId}`);
+            const encodedId = encodeURIComponent(appId);
+            const checkResponse = await fetch(`/api/marketplace/applications/${encodedId}`);
             if (checkResponse.ok) {
               const existingData = await checkResponse.json();
               if (existingData.id) {
@@ -596,7 +597,7 @@ export function ApplicationPublishDialog({
           onClick={handlePublish}
           variant="contained"
           disabled={publishing || !name.trim() || !summary.trim() || !category}
-          startIcon={publishing ? <CircularProgress size={16} /> : <PublishIcon />}
+          startIcon={publishing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PublishIcon />}
           sx={{
             bgcolor: '#00ED64',
             '&:hover': {

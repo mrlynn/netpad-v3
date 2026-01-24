@@ -1,0 +1,53 @@
+/**
+ * Theme CSS variables for @netpad/workflow-renderer
+ *
+ * These are set dynamically by the WorkflowRenderer component,
+ * but defaults are provided here for reference.
+ */
+
+.wr-workflow-renderer {
+  /* Canvas */
+  --wr-canvas-bg: #0a0e14;
+  --wr-canvas-pattern: rgba(255, 255, 255, 0.03);
+
+  /* Node */
+  --wr-node-bg: #1a1f2e;
+  --wr-node-border: #2d3548;
+  --wr-node-radius: 8px;
+  --wr-node-text: #f0f0f0;
+  --wr-node-text-secondary: #9ca3af;
+  --wr-node-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Node categories */
+  --wr-cat-trigger: #10B981;
+  --wr-cat-logic: #F59E0B;
+  --wr-cat-data: #3B82F6;
+  --wr-cat-action: #8B5CF6;
+  --wr-cat-ai: #EC4899;
+  --wr-cat-utility: #64748B;
+
+  /* Edges */
+  --wr-edge-default: #00ED64;
+  --wr-edge-selected: #00FF7F;
+  --wr-edge-animated: #00ED64;
+  --wr-edge-error: #EF4444;
+  --wr-edge-label: #f0f0f0;
+  --wr-edge-label-bg: #1a1f2e;
+
+  /* Controls */
+  --wr-controls-bg: #1a1f2e;
+  --wr-controls-border: #2d3548;
+  --wr-controls-icon: #9ca3af;
+  --wr-controls-icon-hover: #f0f0f0;
+
+  /* Minimap */
+  --wr-minimap-bg: #0a0e14;
+  --wr-minimap-mask: rgba(0, 0, 0, 0.6);
+  --wr-minimap-node: #00ED64;
+
+  /* Status */
+  --wr-status-idle: #64748B;
+  --wr-status-running: #3B82F6;
+  --wr-status-success: #10B981;
+  --wr-status-error: #EF4444;
+}

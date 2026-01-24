@@ -32,8 +32,8 @@ import {
   LinearProgress,
   Tooltip,
   alpha,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Upload,
   Delete,
@@ -213,7 +213,7 @@ export function DocumentAttachmentPanel({
       case 'error':
         return <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />;
       case 'processing':
-        return <CircularProgress size={16} />;
+        return <NetPadLoader size="small" variant="svg" showPhrases={false} />;
       default:
         return <HourglassEmpty sx={{ fontSize: 16, color: 'text.disabled' }} />;
     }
@@ -279,10 +279,7 @@ export function DocumentAttachmentPanel({
 
         {loading ? (
           <Box sx={{ py: 3, textAlign: 'center' }}>
-            <CircularProgress size={24} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Loading documents...
-            </Typography>
+            <NetPadLoader size="large" variant="ascii" message="Loading documents..." />
           </Box>
         ) : documents.length === 0 ? (
           <Alert severity="info">
@@ -560,7 +557,7 @@ function UploadDialog({ open, onClose, onUpload, uploading, error }: UploadDialo
           onClick={handleSubmit}
           variant="contained"
           disabled={!file || uploading}
-          startIcon={uploading ? <CircularProgress size={16} /> : <Upload />}
+          startIcon={uploading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Upload />}
         >
           {uploading ? 'Uploading...' : 'Upload'}
         </Button>

@@ -16,9 +16,9 @@ import {
   Typography,
   Paper,
   Alert,
-  CircularProgress,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CloudUpload as UploadIcon,
   Schema as SchemaIcon,
@@ -422,7 +422,7 @@ export function DataImportWizard({
         <Button onClick={handleCancel} disabled={loading}>
           Cancel
         </Button>
-        {loading && <CircularProgress size={24} />}
+        {loading && <NetPadLoader size="small" variant="svg" showPhrases={false} />}
       </Box>
     </Paper>
   );

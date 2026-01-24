@@ -11,10 +11,10 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  CircularProgress,
   Stack,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage as DatabaseIcon,
   ExpandMore as ExpandIcon,
@@ -90,7 +90,7 @@ export function DatabaseNode({ database, onToggle }: DatabaseNodeProps) {
         }}
       />
       {database.isLoading ? (
-        <CircularProgress size={14} sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="small" variant="svg" showPhrases={false} />
       ) : database.isExpanded ? (
         <CollapseIcon fontSize="small" sx={{ color: 'text.secondary' }} />
       ) : (

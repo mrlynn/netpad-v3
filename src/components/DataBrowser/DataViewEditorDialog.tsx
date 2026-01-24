@@ -31,10 +31,10 @@ import {
   AccordionDetails,
   Grid,
     Autocomplete,
-  CircularProgress,
   ListItemText,
   Checkbox,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close,
   Add,
@@ -467,7 +467,7 @@ export function DataViewEditorDialog({
                   <>
                     <Button
                       size="small"
-                      startIcon={loadingFields ? <CircularProgress size={16} /> : <Refresh />}
+                      startIcon={loadingFields ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Refresh />}
                       onClick={discoverFields}
                       variant="outlined"
                       disabled={loadingFields}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Box,
@@ -28,7 +28,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Autocomplete,
-  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -42,6 +42,7 @@ import {
   CallSplit as ConditionalIcon,
   Palette as PaletteIcon,
   Circle as CircleIcon,
+  CheckCircle as SavedIcon,
 } from '@mui/icons-material';
 import { WorkflowNode, RetryPolicy, StickyNoteStyle } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
@@ -270,9 +271,15 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
     return upstream;
   }, [selectedNode, nodes, edges]);
 
+  // Track if this is the initial sync (to avoid triggering autosave on mount)
+  const isInitialSyncRef = useRef(true);
+  const autosaveTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
   // Sync local state with selected node
   useEffect(() => {
     if (selectedNode) {
+      isInitialSyncRef.current = true;
       setLabel(selectedNode.label || '');
       setNotes(selectedNode.notes || '');
       setEnabled(selectedNode.enabled !== false);
@@ -282,27 +289,45 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
       if (selectedNode.retryPolicy) {
         setRetryPolicy(selectedNode.retryPolicy);
       }
-
-      // Conditional node state is now managed by LogicNodeEditor
+      // Allow autosave after initial sync
+      requestAnimationFrame(() => {
+        isInitialSyncRef.current = false;
+      });
     }
   }, [selectedNode]);
 
-  // Save changes
-  const handleSave = () => {
-    if (!selectedNode) return;
+  // Debounced autosave function
+  const debouncedSave = useCallback(() => {
+    if (!selectedNode || isInitialSyncRef.current) return;
 
-    // Config is already updated by LogicNodeEditor for conditional nodes
-    updateNode(selectedNode.id, {
-      label: label || undefined,
-      notes: notes || undefined,
-      enabled,
-      timeout: timeout || undefined,
-      config: config,
-      retryPolicy: retryEnabled ? retryPolicy : undefined,
-    });
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
 
-    onClose();
-  };
+    autosaveTimerRef.current = globalThis.setTimeout(() => {
+      updateNode(selectedNode.id, {
+        label: label || undefined,
+        notes: notes || undefined,
+        enabled,
+        timeout: timeout || undefined,
+        config: config,
+        retryPolicy: retryEnabled ? retryPolicy : undefined,
+      });
+      setLastSaved(new Date());
+    }, 300); // 300ms debounce
+  }, [selectedNode, label, notes, enabled, timeout, config, retryEnabled, retryPolicy, updateNode]);
+
+  // Trigger autosave when any value changes
+  useEffect(() => {
+    if (!isInitialSyncRef.current && selectedNode) {
+      debouncedSave();
+    }
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [label, notes, enabled, timeout, config, retryEnabled, retryPolicy, debouncedSave, selectedNode]);
 
   // Update config field
   const handleConfigChange = (key: string, value: unknown) => {
@@ -382,6 +407,25 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
         <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
           Node Configuration
         </Typography>
+        {lastSaved && (
+          <Tooltip title={`Last saved: ${lastSaved.toLocaleTimeString()}`}>
+            <Chip
+              icon={<SavedIcon sx={{ fontSize: 14 }} />}
+              label="Auto-saved"
+              size="small"
+              sx={{
+                height: 24,
+                fontSize: '0.75rem',
+                color: theme.palette.success.main,
+                bgcolor: alpha(theme.palette.success.main, 0.1),
+                border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                '& .MuiChip-icon': {
+                  color: 'inherit',
+                },
+              }}
+            />
+          </Tooltip>
+        )}
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
@@ -882,14 +926,11 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
           p: 2,
           borderTop: `1px solid ${theme.palette.divider}`,
           display: 'flex',
-          gap: 1,
+          justifyContent: 'flex-end',
         }}
       >
-        <Button variant="outlined" onClick={onClose} sx={{ flex: 1 }}>
-          Cancel
-        </Button>
-        <Button variant="contained" onClick={handleSave} sx={{ flex: 1 }}>
-          Save Changes
+        <Button variant="outlined" onClick={onClose}>
+          Done
         </Button>
       </Box>
     </Drawer>

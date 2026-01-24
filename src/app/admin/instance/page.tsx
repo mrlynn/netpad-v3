@@ -14,7 +14,6 @@ import {
   Typography,
   Paper,
   Alert,
-  CircularProgress,
   Card,
   CardContent,
   Chip,
@@ -47,6 +46,7 @@ import {
 } from '@mui/icons-material';
 import useSWR from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -195,7 +195,7 @@ export default function AdminInstancePage() {
   if (authLoading || isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading instance status..." />
       </Box>
     );
   }
@@ -564,12 +564,9 @@ export default function AdminInstancePage() {
         <DialogContent>
           {restarting ? (
             <Box sx={{ textAlign: 'center', py: 3 }}>
-              <CircularProgress sx={{ mb: 2 }} />
-              <Typography>
-                {restartResult?.success
+              <NetPadLoader size="medium" variant="ascii" message={restartResult?.success
                   ? 'Instance is restarting... Waiting for it to come back online.'
-                  : 'Triggering restart...'}
-              </Typography>
+                  : 'Triggering restart...'} />
             </Box>
           ) : restartResult ? (
             <Alert severity={restartResult.success ? 'success' : 'error'} sx={{ mb: 2 }}>

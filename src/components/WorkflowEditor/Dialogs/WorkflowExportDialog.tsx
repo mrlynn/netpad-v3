@@ -30,8 +30,8 @@ import {
   Chip,
   alpha,
   useTheme,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   ContentCopy as CopyIcon,
@@ -245,10 +245,7 @@ function MermaidDiagram({
           gap: 2,
         }}
       >
-        <CircularProgress size={32} />
-        <Typography variant="body2" color="text.secondary">
-          Rendering diagram...
-        </Typography>
+        <NetPadLoader size="large" variant="ascii" message="Rendering diagram..." />
       </Box>
     );
   }
@@ -572,7 +569,7 @@ function MermaidPreview({
                 disabled={isExporting}
               >
                 {isExporting ? (
-                  <CircularProgress size={16} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : copyStatus === 'png' ? (
                   <CheckIcon fontSize="small" />
                 ) : (
@@ -588,7 +585,7 @@ function MermaidPreview({
             </Tooltip>
             <Tooltip title="Download PNG">
               <IconButton size="small" onClick={handleDownloadPng} disabled={isExporting}>
-                {isExporting ? <CircularProgress size={16} /> : <DownloadIcon fontSize="small" />}
+                {isExporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DownloadIcon fontSize="small" />}
               </IconButton>
             </Tooltip>
           </Box>

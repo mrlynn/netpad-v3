@@ -10,12 +10,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  CircularProgress,
   alpha,
   InputAdornment,
   Alert,
   LinearProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Business,
   Storage,
@@ -281,7 +281,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 size="large"
                 onClick={handleCreateWorkspace}
                 disabled={!workspaceName.trim() || isCreating}
-                endIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <ArrowForward />}
+                endIcon={isCreating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <ArrowForward />}
                 sx={{
                   mt: 3,
                   bgcolor: '#00ED64',

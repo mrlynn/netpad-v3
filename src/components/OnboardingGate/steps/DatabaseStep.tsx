@@ -14,13 +14,13 @@ import {
   Typography,
   TextField,
   Button,
-  CircularProgress,
   alpha,
   InputAdornment,
   Alert,
   Paper,
   Chip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   Cloud,
@@ -351,7 +351,7 @@ export function DatabaseStep() {
             disabled={isSubmitting}
             endIcon={
               isSubmitting ? (
-                <CircularProgress size={18} color="inherit" />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <ArrowForward />
               )
@@ -465,7 +465,7 @@ export function DatabaseStep() {
             disabled={isSubmitting || !connectionString.trim() || !database.trim()}
             endIcon={
               isSubmitting ? (
-                <CircularProgress size={18} color="inherit" />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <ArrowForward />
               )

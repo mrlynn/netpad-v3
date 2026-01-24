@@ -14,7 +14,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  CircularProgress,
   List,
   ListItem,
   ListItemText,
@@ -28,6 +27,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   History as HistoryIcon,
@@ -533,7 +533,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {loading && executions.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
+            <NetPadLoader size="large" variant="ascii" message="Loading executions..." />
           </Box>
         ) : error ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -684,7 +684,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                       {currentExecution.job.status === 'pending' ? (
                         <WaitingIcon sx={{ fontSize: 18, color: 'warning.main' }} />
                       ) : currentExecution.job.status === 'processing' ? (
-                        <CircularProgress size={16} />
+                        <NetPadLoader size="small" variant="svg" showPhrases={false} />
                       ) : null}
                       <Typography variant="subtitle2">
                         Job: {currentExecution.job.status}
@@ -712,7 +712,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                           size="small"
                           variant="outlined"
                           color="primary"
-                          startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
+                          startIcon={actionLoading === 'retry' ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RetryIcon />}
                           onClick={() => handleRetry(currentExecution._id!)}
                           disabled={actionLoading !== null}
                         >
@@ -724,7 +724,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                           size="small"
                           variant="outlined"
                           color="error"
-                          startIcon={actionLoading === 'cancel' ? <CircularProgress size={14} /> : <CancelIcon />}
+                          startIcon={actionLoading === 'cancel' ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <CancelIcon />}
                           onClick={() => handleCancel(currentExecution._id!)}
                           disabled={actionLoading !== null}
                         >
@@ -736,7 +736,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                           size="small"
                           variant="outlined"
                           color="secondary"
-                          startIcon={actionLoading === 'replay' ? <CircularProgress size={14} /> : <PlayIcon />}
+                          startIcon={actionLoading === 'replay' ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayIcon />}
                           onClick={() => handleReplay(currentExecution._id!)}
                           disabled={actionLoading !== null}
                         >
@@ -755,7 +755,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                         size="small"
                         variant="outlined"
                         color="primary"
-                        startIcon={actionLoading === 'retry' ? <CircularProgress size={14} /> : <RetryIcon />}
+                        startIcon={actionLoading === 'retry' ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RetryIcon />}
                         onClick={() => handleRetry(currentExecution._id!)}
                         disabled={actionLoading !== null}
                       >
@@ -767,7 +767,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
                         size="small"
                         variant="outlined"
                         color="secondary"
-                        startIcon={actionLoading === 'replay' ? <CircularProgress size={14} /> : <PlayIcon />}
+                        startIcon={actionLoading === 'replay' ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayIcon />}
                         onClick={() => handleReplay(currentExecution._id!)}
                         disabled={actionLoading !== null}
                       >
@@ -947,7 +947,7 @@ export function ExecutionLogsPanel({ open, onClose, workflowId, orgId }: Executi
         }}
       >
         <Button variant="outlined" onClick={fetchExecutions} disabled={loading}>
-          {loading ? <CircularProgress size={20} /> : 'Refresh'}
+          {loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Refresh'}
         </Button>
         <Button variant="outlined" onClick={onClose}>
           Close

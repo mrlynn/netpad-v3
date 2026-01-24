@@ -15,7 +15,6 @@ import {
   IconButton,
   Chip,
   alpha,
-  CircularProgress,
   Alert,
   FormControl,
   Select,
@@ -25,6 +24,7 @@ import {
   Tooltip,
   Collapse,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Visibility,
   ExpandMore,
@@ -210,7 +210,7 @@ export function ConversationList({ formId, orgId }: ConversationListProps) {
   if (loading && conversations.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -349,7 +349,7 @@ export function ConversationList({ formId, orgId }: ConversationListProps) {
                           >
                             {loadingExpanded ? (
                               <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                                <CircularProgress size={24} />
+                                <NetPadLoader size="large" variant="ascii" message="Loading..." />
                               </Box>
                             ) : expandedData ? (
                               <Box sx={{ display: 'flex', gap: 3 }}>

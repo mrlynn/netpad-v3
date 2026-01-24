@@ -177,18 +177,34 @@ NetPad supports extensions that add custom functionality:
 **Built-in Extensions:**
 - **@netpad/cloud-features**: Billing, Atlas provisioning, premium AI features (cloud only)
 - **@netpad/collaborate**: Community gallery and collaboration features
+- **@netpad/demo-node**: Example extension showing how to create custom workflow nodes (use as template)
 
 **Extension Capabilities:**
 - Custom API routes under /api/ext/{extension-name}/
-- Custom workflow node types
+- Custom workflow node types (see @netpad/demo-node for example)
 - Shared services (billing, provisioning, analytics)
 - Request/response middleware
 - React UI components
 - Feature flags
 
+**Creating Custom Extensions:**
+Use @netpad/demo-node as a template:
+1. Copy the demo-node package
+2. Update package.json with your extension name
+3. Modify the node definition and handler in src/index.ts
+4. Export your extension as default
+5. Install and enable via NETPAD_EXTENSIONS
+
 **Enabling Extensions:**
 Set NETPAD_EXTENSIONS environment variable:
-\`NETPAD_EXTENSIONS=@netpad/collaborate,@myorg/custom-extension\`
+\`NETPAD_EXTENSIONS=@netpad/collaborate,@netpad/demo-node,@myorg/custom-extension\`
+
+**Example: Demo Node Extension**
+The @netpad/demo-node extension provides a "Log Message" workflow node that:
+- Logs messages with configurable levels (info/warn/error)
+- Supports {{variable}} syntax for dynamic values
+- Can pass through input data to downstream nodes
+- Demonstrates complete extension structure (metadata, node definition, handler, lifecycle hooks)
 
 For more information, visit https://netpad.io and https://docs.netpad.io/docs/extensions/overview
 `,

@@ -18,9 +18,9 @@ import {
   Button,
   Tabs,
   Tab,
-  CircularProgress,
   Alert
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ExpandMore,
   ExpandLess,
@@ -230,7 +230,7 @@ export function ResultsPanel() {
             <Button
               variant="contained"
               size="small"
-              startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrow />}
+              startIcon={isExecuting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayArrow />}
               onClick={(e) => {
                 e.stopPropagation();
                 executePipeline();

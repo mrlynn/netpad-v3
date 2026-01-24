@@ -29,6 +29,7 @@ import {
   InstallMobile as InstallIcon,
   CheckCircle as CheckCircleIcon,
   Inventory as BundleIcon,
+  Extension as ExtensionIcon,
 } from '@mui/icons-material';
 import { MarketplaceItemType } from '@/types/template';
 
@@ -63,6 +64,13 @@ interface MarketplaceItem {
   nodeCount?: number;
   triggerType?: string;
   nodeTypes?: string[];
+  // Extension-specific fields
+  extensionType?: 'node' | 'integration' | 'theme' | 'hook' | 'multi';
+  nodeCategories?: string[];
+  routeCount?: number;
+  npmPackage?: string;
+  minNetPadVersion?: string;
+  verified?: boolean;
   // Common fields
   publishedAt?: string;
   isOfficial?: boolean;
@@ -111,6 +119,16 @@ export const ITEM_TYPE_THEMES = {
     glowColor: 'rgba(210, 153, 34, 0.12)',
     borderColor: 'rgba(210, 153, 34, 0.2)',
     hoverBorderColor: 'rgba(210, 153, 34, 0.5)',
+  },
+  extension: {
+    label: 'Extension',
+    icon: <ExtensionIcon sx={{ fontSize: 16 }} />,
+    color: '#a855f7', // Purple for extensions
+    gradientStart: '#a855f7',
+    gradientEnd: '#7c3aed',
+    glowColor: 'rgba(168, 85, 247, 0.12)',
+    borderColor: 'rgba(168, 85, 247, 0.2)',
+    hoverBorderColor: 'rgba(168, 85, 247, 0.5)',
   },
 } as const;
 

@@ -17,7 +17,7 @@ export default function AppDataPage() {
   if (isAppLoading || !currentApplication) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <NetPadLoader fullPage variant="ascii" />
+      <NetPadLoader size="large" variant="ascii" />
       </Box>
     );
   }

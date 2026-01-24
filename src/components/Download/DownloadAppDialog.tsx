@@ -17,7 +17,6 @@ import {
   Checkbox,
   TextField,
   Divider,
-  CircularProgress,
   Alert,
   Chip,
   Stack,
@@ -25,6 +24,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   Download as DownloadIcon,
@@ -427,7 +427,7 @@ export function DownloadAppDialog({
           variant="contained"
           onClick={handleDownload}
           disabled={downloading || !options.appName.trim()}
-          startIcon={downloading ? <CircularProgress size={20} /> : <DownloadIcon />}
+          startIcon={downloading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DownloadIcon />}
           sx={{
             bgcolor: '#00ED64',
             color: 'white',

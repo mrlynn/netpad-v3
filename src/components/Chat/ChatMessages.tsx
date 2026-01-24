@@ -7,10 +7,10 @@ import {
   Paper,
   Button,
   Chip,
-  CircularProgress,
   useTheme,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome as AIIcon,
   Person as PersonIcon,
@@ -61,7 +61,7 @@ export function ChatMessages({ messages, isLoading, onExecuteAction }: ChatMessa
       ))}
       {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
-          <CircularProgress size={16} />
+          <NetPadLoader size="small" variant="svg" showPhrases={false} />
           <Typography variant="caption" color="text.secondary">
             Thinking...
           </Typography>
@@ -140,7 +140,7 @@ const MessageBubble = memo(function MessageBubble({ message, onExecuteAction }: 
       >
         {isStreaming && !message.content ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CircularProgress size={14} color={isUser ? 'inherit' : 'primary'} />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
             <Typography variant="body2">Thinking...</Typography>
           </Box>
         ) : (

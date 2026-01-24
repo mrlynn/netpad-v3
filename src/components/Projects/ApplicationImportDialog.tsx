@@ -16,7 +16,6 @@ import {
   Button,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Chip,
   Divider,
@@ -34,6 +33,7 @@ import {
   Checkbox,
   FormGroup,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Upload as UploadIcon,
   Article as FormIcon,
@@ -205,10 +205,7 @@ export function ApplicationImportDialog({
           >
             {loading ? (
               <>
-                <CircularProgress size={48} sx={{ color: '#00ED64' }} />
-                <Typography variant="body2" color="text.secondary">
-                  Loading bundle...
-                </Typography>
+                <NetPadLoader size="large" variant="ascii" message="Loading bundle..." />
               </>
             ) : (
               <>
@@ -509,7 +506,7 @@ export function ApplicationImportDialog({
             onClick={handleImport}
             variant="contained"
             disabled={importing}
-            startIcon={importing ? <CircularProgress size={16} /> : <UploadIcon />}
+            startIcon={importing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <UploadIcon />}
             sx={{
               background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
               '&:hover': {

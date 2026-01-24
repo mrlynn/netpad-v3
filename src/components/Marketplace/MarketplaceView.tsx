@@ -41,6 +41,8 @@ import {
   Inventory as BundleIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Extension as ExtensionIcon,
+  CloudUpload as UploadIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,11 +54,13 @@ import { ApplicationDetailDialog } from './ApplicationDetailDialog';
 import { MyApplicationsView } from './MyApplicationsView';
 import { FeaturedMarketplaceSection } from './FeaturedMarketplaceSection';
 import { ImportDestinationDialog } from './ImportDestinationDialog';
+import { SubmitToMarketplaceDialog } from './SubmitToMarketplaceDialog';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { Button } from '@mui/material';
 import { useInstalledApplications } from '@/hooks/useInstalledApplications';
 
 /** Item type discriminator for marketplace items */
-export type MarketplaceItemType = 'application' | 'form' | 'workflow';
+export type MarketplaceItemType = 'application' | 'form' | 'workflow' | 'extension';
 
 interface MarketplaceApplication {
   id: string;
@@ -89,6 +93,13 @@ interface MarketplaceApplication {
   nodeCount?: number;
   triggerType?: string;
   nodeTypes?: string[];
+  // Extension-specific fields
+  extensionType?: 'node' | 'integration' | 'theme' | 'hook' | 'multi';
+  nodeCategories?: string[];
+  routeCount?: number;
+  npmPackage?: string;
+  minNetPadVersion?: string;
+  verified?: boolean;
   // Common fields
   publishedAt?: string;
   isOfficial?: boolean;
@@ -150,6 +161,14 @@ const SECTION_CONFIG = {
     gradientStart: '#d29922',
     gradientEnd: '#f1a43c',
   },
+  extension: {
+    title: 'Extensions',
+    subtitle: 'Custom workflow nodes, integrations, and plugins',
+    icon: ExtensionIcon,
+    color: '#a855f7',
+    gradientStart: '#a855f7',
+    gradientEnd: '#7c3aed',
+  },
 } as const;
 
 export function MarketplaceView({ organizationId: propOrganizationId, onImportComplete }: MarketplaceViewProps) {
@@ -191,6 +210,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
     name: string;
     itemType: MarketplaceItemType;
   } | null>(null);
+  // Submit to marketplace dialog state
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
 
   const limit = 50; // Increase limit when showing grouped view to get all types
 
@@ -357,7 +378,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
   // Execute the actual import with optional target application
   const executeImport = async (id: string, targetApplicationId?: string) => {
     try {
-      const response = await fetch(`/api/marketplace/applications/${id}`, {
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -427,7 +449,8 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
   const handleDownload = async (id: string) => {
     try {
-      const response = await fetch(`/api/marketplace/applications/${id}?download=true`);
+      const encodedId = encodeURIComponent(id);
+      const response = await fetch(`/api/marketplace/applications/${encodedId}?download=true`);
       
       if (!response.ok) {
         throw new Error('Download failed');
@@ -527,11 +550,27 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
 
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <AppsIcon sx={{ fontSize: 40, color: '#00ED64' }} />
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Marketplace
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AppsIcon sx={{ fontSize: 40, color: '#00ED64' }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              Marketplace
+            </Typography>
+          </Box>
+          {user && !isWaitlistUser && (
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              onClick={() => setSubmitDialogOpen(true)}
+              sx={{
+                bgcolor: '#00ED64',
+                color: '#001E2B',
+                '&:hover': { bgcolor: '#00CC55' },
+              }}
+            >
+              Submit
+            </Button>
+          )}
         </Box>
         <Typography variant="body1" color="text.secondary">
           Discover and import ready-to-use applications, forms, and workflows
@@ -576,6 +615,15 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
             onClick={() => { setItemType('workflow'); setPage(1); }}
             color={itemType === 'workflow' ? 'primary' : 'default'}
             variant={itemType === 'workflow' ? 'filled' : 'outlined'}
+            sx={{ cursor: 'pointer' }}
+          />
+          <Chip
+            icon={<ExtensionIcon fontSize="small" />}
+            label="Extensions"
+            size="small"
+            onClick={() => { setItemType('extension'); setPage(1); }}
+            color={itemType === 'extension' ? 'primary' : 'default'}
+            variant={itemType === 'extension' ? 'filled' : 'outlined'}
             sx={{ cursor: 'pointer' }}
           />
         </Box>
@@ -821,7 +869,7 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
           {itemType === 'all' ? (
             // Grouped display with section headers
             <Box sx={{ mb: 4 }}>
-              {(['application', 'form', 'workflow'] as MarketplaceItemType[]).map((sectionType) => {
+              {(['application', 'form', 'workflow', 'extension'] as MarketplaceItemType[]).map((sectionType) => {
                 const items = groupedApplicationsWithoutFeatured[sectionType] || [];
                 if (items.length === 0) return null;
 
@@ -999,6 +1047,17 @@ export function MarketplaceView({ organizationId: propOrganizationId, onImportCo
           projectId={projectId}
         />
       )}
+
+      {/* Submit to Marketplace Dialog */}
+      <SubmitToMarketplaceDialog
+        open={submitDialogOpen}
+        onClose={() => setSubmitDialogOpen(false)}
+        onSuccess={() => {
+          setSubmitDialogOpen(false);
+          // Refresh the list
+          loadApplications();
+        }}
+      />
         </>
       )}
     </Container>

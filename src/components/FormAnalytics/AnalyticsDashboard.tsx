@@ -6,12 +6,12 @@ import {
   Paper,
   Typography,
   Grid,
-  CircularProgress,
   Alert,
   alpha,
   Card,
   CardContent,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { FormAnalytics, FormDropOffAnalytics } from '@/types/form';
 import { ResponseTrendChart } from './charts/ResponseTrendChart';
 import { FieldDropOffChart } from './charts/FieldDropOffChart';
@@ -89,7 +89,7 @@ export function AnalyticsDashboard({
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading analytics..." />
       </Box>
     );
   }

@@ -10,7 +10,6 @@ import {
   Toolbar,
   AppBar,
   Divider,
-  CircularProgress,
   Snackbar,
   Alert,
   Tooltip,
@@ -70,6 +69,8 @@ import { ComponentProtectionIndicator } from '@/components/Applications/Componen
 import { WorkflowExportDialog } from './Dialogs/WorkflowExportDialog';
 import { WorkflowTestDialog } from './Dialogs/WorkflowTestDialog';
 import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
+import { FileMenu } from '@/components/common/FileMenu';
+import { EntityStatusChip, SaveStatus } from '@/components/common/EntityStatusChip';
 
 interface WorkflowEditorProps {
   orgId: string;
@@ -247,6 +248,10 @@ function WorkflowEditorInner({
   // Publish to marketplace dialog state
   const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
 
+  // Save status tracking for EntityStatusChip
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
   // Open node config panel on double-click
   const handleNodeDoubleClick = useCallback(() => {
     if (selectedNodeId) {
@@ -280,23 +285,36 @@ function WorkflowEditorInner({
   }, [orgId, workflowId, loadWorkflow]);
 
   // Handle save
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    setSaveStatus('saving');
     const success = await saveWorkflow(orgId);
     if (success) {
+      setSaveStatus('saved');
+      setLastSaved(new Date());
       setSnackbar({
         open: true,
         message: 'Workflow saved successfully',
         severity: 'success',
       });
       onSave?.();
+      return true;
     } else {
+      setSaveStatus('error');
       setSnackbar({
         open: true,
         message: 'Failed to save workflow',
         severity: 'error',
       });
+      return false;
     }
   }, [saveWorkflow, orgId, onSave]);
+
+  // Update save status when dirty state changes
+  useEffect(() => {
+    if (isDirty && saveStatus === 'saved') {
+      setSaveStatus('unsaved');
+    }
+  }, [isDirty, saveStatus]);
 
   // Handle run
   const handleRun = async () => {
@@ -586,10 +604,40 @@ function WorkflowEditorInner({
             </Tooltip>
           )}
 
+          {/* File Menu */}
+          <FileMenu
+            entityType="workflow"
+            entityName={workflow?.name}
+            entityId={workflow?.id}
+            isDirty={isDirty}
+            onNew={() => {
+              // TODO: Implement new workflow creation
+            }}
+            onOpen={() => {
+              // TODO: Implement workflow library/browser
+            }}
+            onSave={handleSave}
+            onSaveAs={() => {
+              // TODO: Implement save as dialog
+            }}
+            onExport={() => setExportDialogOpen(true)}
+            onImport={() => importInputRef.current?.click()}
+            onClose={onClose}
+          />
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             {workflow?.name || 'New Workflow'}
-            {isDirty && <span style={{ color: theme.palette.warning.main }}> *</span>}
           </Typography>
+
+          {/* Save Status Chip */}
+          <EntityStatusChip
+            status={saveStatus}
+            lastSaved={lastSaved}
+            onRetry={saveStatus === 'error' ? handleSave : undefined}
+            entityType="workflow"
+          />
 
           {/* Status Chip */}
           {workflow && (
@@ -673,24 +721,13 @@ function WorkflowEditorInner({
             </IconButton>
           </Tooltip>
 
-          <Button
-            data-tour="workflow-save"
-            variant="outlined"
-            size="small"
-            startIcon={isSaving ? <CircularProgress size={16} /> : <SaveIcon />}
-            onClick={handleSave}
-            disabled={!isDirty || isSaving}
-          >
-            Save
-          </Button>
-
           <Tooltip title={hasUnpublishedChanges ? 'Publish changes to make them active' : 'No changes to publish'}>
             <span>
               <Button
                 variant={hasUnpublishedChanges ? 'contained' : 'outlined'}
                 size="small"
                 color={hasUnpublishedChanges ? 'primary' : 'inherit'}
-                startIcon={isPublishing ? <CircularProgress size={16} /> : <PublishIcon />}
+                startIcon={isPublishing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PublishIcon />}
                 onClick={handlePublish}
                 disabled={!workflow || workflow.canvas.nodes.length === 0 || isPublishing || !hasUnpublishedChanges}
               >

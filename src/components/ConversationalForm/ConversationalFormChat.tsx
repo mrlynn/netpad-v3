@@ -21,8 +21,8 @@ import {
   alpha,
   Collapse,
   Tooltip,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Send,
   AutoAwesome,
@@ -360,7 +360,7 @@ function PendingFilePreview({
         </Typography>
       </Box>
       {isUploading ? (
-        <CircularProgress size={16} />
+        <NetPadLoader size="small" variant="svg" showPhrases={false} />
       ) : (
         <IconButton size="small" onClick={onRemove} sx={{ p: 0.25 }}>
           <Close sx={{ fontSize: 14 }} />
@@ -444,7 +444,7 @@ function MessageAttachment({
             <>
               <Typography variant="caption" sx={{ opacity: 0.6 }}>•</Typography>
               <Typography variant="caption" sx={{ opacity: 0.8, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CircularProgress size={10} sx={{ color: 'inherit' }} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 Analyzing...
               </Typography>
             </>
@@ -956,7 +956,7 @@ export function ConversationalFormChat({
               }}
             >
               {isUploading ? (
-                <CircularProgress size={20} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <AttachFile />
               )}
@@ -990,7 +990,7 @@ export function ConversationalFormChat({
             }}
           >
             {isStreaming ? (
-              <CircularProgress size={20} sx={{ color: 'white' }} />
+              <NetPadLoader size="small" variant="svg" showPhrases={false} />
             ) : (
               <Send />
             )}

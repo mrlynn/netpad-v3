@@ -8,12 +8,12 @@ import {
   Button,
   Alert,
   AlertTitle,
-  CircularProgress,
   Collapse,
   alpha,
   LinearProgress,
   Chip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   Cloud,
@@ -55,7 +55,7 @@ export function ClusterSetupBanner({
   if (isLoading) {
     return compact ? null : (
       <Box sx={{ p: 2, textAlign: 'center' }}>
-        <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -82,7 +82,7 @@ export function ClusterSetupBanner({
       return (
         <Alert
           severity="info"
-          icon={<CircularProgress size={20} />}
+          icon={<NetPadLoader size="small" variant="svg" showPhrases={false} />}
           sx={{ mb: 2 }}
         >
           <AlertTitle>Database Setup in Progress</AlertTitle>
@@ -104,7 +104,7 @@ export function ClusterSetupBanner({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <CircularProgress size={32} sx={{ color: '#2196f3' }} />
+          <NetPadLoader size="large" variant="ascii" message="" />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#2196f3' }}>
               Setting Up Your Database
@@ -149,7 +149,7 @@ export function ClusterSetupBanner({
               size="small"
               onClick={handleProvision}
               disabled={provisioning}
-              startIcon={provisioning ? <CircularProgress size={16} /> : <RocketLaunch />}
+              startIcon={provisioning ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RocketLaunch />}
             >
               {provisioning ? 'Starting...' : 'Set Up'}
             </Button>
@@ -219,7 +219,7 @@ export function ClusterSetupBanner({
             {clusterStatus?.provisioningAvailable && (
               <Button
                 variant="contained"
-                startIcon={provisioning ? <CircularProgress size={20} color="inherit" /> : <Cloud />}
+                startIcon={provisioning ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Cloud />}
                 onClick={handleProvision}
                 disabled={provisioning}
                 sx={{

@@ -11,13 +11,13 @@ import {
   Button,
   TextField,
   Alert,
-  CircularProgress,
   alpha,
   IconButton,
   Chip,
   Collapse,
   Autocomplete,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Lock,
   Visibility,
@@ -296,7 +296,7 @@ export function AddConnectionDialog({
         <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
           <Button
             variant="outlined"
-            startIcon={testing ? <CircularProgress size={16} /> : <PlayArrow />}
+            startIcon={testing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayArrow />}
             onClick={handleTestConnection}
             disabled={testing || !connectionString || !database}
             sx={{ borderColor: '#00ED64', color: '#00ED64' }}
@@ -341,7 +341,7 @@ export function AddConnectionDialog({
           onClick={handleCreateConnection}
           variant="contained"
           disabled={creating || !connectionName || !connectionString || !database || !(propProjectId || selectedProjectId)}
-          startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Lock />}
+          startIcon={creating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Lock />}
           sx={{
             background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
             color: '#001E2B',

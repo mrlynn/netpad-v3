@@ -18,7 +18,6 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  CircularProgress,
   alpha,
   Skeleton,
 } from '@mui/material';

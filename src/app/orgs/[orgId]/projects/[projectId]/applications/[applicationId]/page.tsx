@@ -1224,7 +1224,7 @@ function ApplicationDetailContent() {
         <AppNavBar />
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <NetPadLoader fullPage variant="ascii" />
+            <NetPadLoader size="large" variant="ascii" />
           </Box>
         </Container>
       </Box>

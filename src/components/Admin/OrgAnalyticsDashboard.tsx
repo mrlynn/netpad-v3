@@ -7,7 +7,6 @@ import {
   Paper,
   Typography,
   Grid,
-  CircularProgress,
   Alert,
   Tabs,
   Tab,
@@ -26,6 +25,7 @@ import {
   Tooltip,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -60,7 +60,7 @@ export function OrgAnalyticsDashboard({ orgId, orgName }: OrgAnalyticsDashboardP
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }

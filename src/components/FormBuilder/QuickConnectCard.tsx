@@ -9,13 +9,13 @@ import {
   TextField,
   IconButton,
   Collapse,
-  CircularProgress,
   Alert,
   Chip,
   alpha,
   Tooltip,
   InputAdornment,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   CheckCircle,
@@ -259,7 +259,7 @@ export function QuickConnectCard({
             gap: 2,
           }}
         >
-          <CircularProgress size={20} sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="small" variant="svg" showPhrases={false} />
           <Typography variant="body2" color="text.secondary">
             Loading connection...
           </Typography>
@@ -482,7 +482,7 @@ export function QuickConnectCard({
             <Button
               size="small"
               variant="outlined"
-              startIcon={testing ? <CircularProgress size={14} /> : <PlayArrow />}
+              startIcon={testing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayArrow />}
               onClick={handleTestConnection}
               disabled={testing || !connectionString || !database}
               sx={{ borderColor: '#00ED64', color: '#00ED64' }}
@@ -492,7 +492,7 @@ export function QuickConnectCard({
             <Button
               size="small"
               variant="contained"
-              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <Storage />}
+              startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Storage />}
               onClick={handleQuickSave}
               disabled={saving || !connectionString || !database || !collection}
               sx={{

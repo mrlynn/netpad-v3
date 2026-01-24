@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   Alert,
-  CircularProgress,
   Chip,
   LinearProgress,
   alpha,
@@ -33,6 +32,7 @@ import {
   StepLabel,
   StepContent,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   CheckCircle,
@@ -169,10 +169,7 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
     return (
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress size={32} sx={{ color: '#00ED64' }} />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Loading cluster information...
-          </Typography>
+          <NetPadLoader size="large" variant="ascii" message="Loading cluster information..." />
         </CardContent>
       </Card>
     );
@@ -447,7 +444,7 @@ export function ClusterManagement({ organizationId }: ClusterManagementProps) {
             <Button
               variant="contained"
               size="large"
-              startIcon={provisioning ? <CircularProgress size={20} color="inherit" /> : <CloudQueue />}
+              startIcon={provisioning ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <CloudQueue />}
               onClick={handleProvision}
               disabled={provisioning || !selectedProjectId}
               sx={{
@@ -655,7 +652,7 @@ function ExportDataDialog({
           variant="contained"
           onClick={handleExport}
           disabled={exporting}
-          startIcon={exporting ? <CircularProgress size={16} /> : <Download />}
+          startIcon={exporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Download />}
           sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
         >
           {exporting ? 'Exporting...' : 'Export'}
@@ -934,7 +931,7 @@ function DeleteClusterDialog({
           color="error"
           onClick={onConfirm}
           disabled={!canDelete || deleting}
-          startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <Delete />}
+          startIcon={deleting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Delete />}
         >
           {deleting ? 'Deleting...' : 'Delete Cluster'}
         </Button>

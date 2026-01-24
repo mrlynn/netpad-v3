@@ -27,11 +27,11 @@ import {
   AccordionDetails,
   Tabs,
   Tab,
-  CircularProgress,
   Skeleton,
   alpha,
   useTheme,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   PlayArrow as PlayIcon,
@@ -412,7 +412,7 @@ export function WorkflowTestDialog({
         </Button>
         <Button
           variant="contained"
-          startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayIcon />}
+          startIcon={isExecuting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <PlayIcon />}
           onClick={handleRunTest}
           disabled={!canTest || isExecuting || (triggerType === 'webhook-trigger' && Boolean(webhookPayloadError))}
           sx={{

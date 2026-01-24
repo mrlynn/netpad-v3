@@ -7,7 +7,6 @@ import {
   Typography,
   TextField,
   Button,
-  CircularProgress,
   alpha,
   Alert,
   Autocomplete,
@@ -17,6 +16,7 @@ import {
   MenuItem,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Rocket,
   Storage,
@@ -241,7 +241,7 @@ export function QuickPublishPopover({
 
             {loadingConnections ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 2 }}>
-                <CircularProgress size={16} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 <Typography variant="body2" color="text.secondary">
                   Loading connections...
                 </Typography>
@@ -320,7 +320,7 @@ export function QuickPublishPopover({
             onClick={handlePublish}
             variant="contained"
             disabled={!formName.trim() || publishing || (needsCollectionSelection && (!selectedVaultId || !selectedCollection)) || false}
-            startIcon={publishing ? <CircularProgress size={16} /> : <Rocket />}
+            startIcon={publishing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Rocket />}
             sx={{
               flex: 1,
               background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',

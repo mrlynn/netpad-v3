@@ -25,7 +25,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { Box, useTheme, Fab, Tooltip, alpha } from '@mui/material';
-import { netpadColors } from '@/theme/theme';
 import { HelpOutline } from '@mui/icons-material';
 import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
@@ -798,19 +797,8 @@ export function WorkflowEditorCanvas({
         left: 0,
         right: 0,
         bottom: 0,
-        // NetPad branded canvas background
+        // NetPad branded canvas background - clean, minimal
         bgcolor: colorMode === 'dark' ? '#0a0e14' : '#F8FAF9',
-        // Enhanced NetPad grid pattern overlay - signature identity
-        backgroundImage: colorMode === 'dark'
-          ? `${netpadColors.gridPatternDark}, 
-             radial-gradient(circle at 50% 50%, rgba(0, 237, 100, 0.03) 0%, transparent 50%),
-             linear-gradient(0deg, transparent 0%, rgba(0, 237, 100, 0.02) 50%, transparent 100%)`
-          : `${netpadColors.gridPatternLight}, 
-             radial-gradient(circle at 50% 50%, rgba(0, 104, 74, 0.05) 0%, transparent 50%),
-             linear-gradient(0deg, transparent 0%, rgba(0, 104, 74, 0.03) 50%, transparent 100%)`,
-        backgroundSize: `${netpadColors.gridSize}, 200% 200%, 100% 200px`,
-        backgroundPosition: '0 0, center, 0 0',
-        backgroundRepeat: 'repeat, no-repeat, repeat-y',
         // Override React Flow styles for dark mode
         '& .react-flow__node': {
           color: colorMode === 'dark' ? '#fff' : 'inherit',

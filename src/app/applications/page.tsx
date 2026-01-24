@@ -52,8 +52,8 @@ export default function ApplicationsRedirect() {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      {/* <NetPadLoader fullPage variant="ascii" /> */}
-      <NetPadLoader fullPage variant="ascii" />
+      {/* <NetPadLoader size="large" variant="ascii" /> */}
+      <NetPadLoader size="large" variant="ascii" />
 
     </Box>
   );

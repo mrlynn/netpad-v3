@@ -23,12 +23,12 @@ import {
   Checkbox,
   Chip,
   Alert,
-  CircularProgress,
   Divider,
   IconButton,
   alpha,
   Autocomplete,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close,
   Download,
@@ -305,7 +305,7 @@ export function ExportDialog({
 
             {previewLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={32} />
+                <NetPadLoader size="large" variant="ascii" message="Loading preview..." />
               </Box>
             ) : preview && (
               <>
@@ -474,7 +474,7 @@ export function ExportDialog({
             variant="contained"
             onClick={handleExport}
             disabled={exporting || previewLoading || !!previewError}
-            startIcon={exporting ? <CircularProgress size={16} color="inherit" /> : <Download />}
+            startIcon={exporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Download />}
             sx={{
               background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
               color: '#001E2B',

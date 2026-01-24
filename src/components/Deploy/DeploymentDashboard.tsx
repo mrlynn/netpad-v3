@@ -23,7 +23,6 @@ import {
   Menu,
   MenuItem,
   Tooltip,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -32,6 +31,7 @@ import {
   alpha,
   Skeleton,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Refresh as RefreshIcon,
   MoreVert as MoreVertIcon,
@@ -325,7 +325,7 @@ export function DeploymentDashboard({ project, organizationId }: DeploymentDashb
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
-            startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshIcon />}
+            startIcon={refreshing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RefreshIcon />}
             onClick={handleRefresh}
             disabled={refreshing}
           >
@@ -400,7 +400,7 @@ export function DeploymentDashboard({ project, organizationId }: DeploymentDashb
                         ['configuring', 'provisioning', 'deploying'].includes(
                           deployment.status
                         ) ? (
-                          <CircularProgress size={12} color="inherit" />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         ) : undefined
                       }
                     />
@@ -511,7 +511,7 @@ export function DeploymentDashboard({ project, organizationId }: DeploymentDashb
             color="error"
             variant="contained"
             disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />}
+            startIcon={deleting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DeleteIcon />}
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>

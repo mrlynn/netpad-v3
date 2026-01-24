@@ -15,11 +15,11 @@ import {
   InputAdornment,
   IconButton,
   Tooltip,
-  CircularProgress,
   Alert,
   Paper,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
@@ -151,7 +151,7 @@ export function DataExplorerTree({
                     disabled={loading}
                   >
                     {loading ? (
-                      <CircularProgress size={16} />
+                      <NetPadLoader size="small" variant="svg" showPhrases={false} />
                     ) : (
                       <RefreshIcon fontSize="small" />
                     )}
@@ -185,7 +185,7 @@ export function DataExplorerTree({
               height: '100%',
             }}
           >
-            <CircularProgress size={32} sx={{ color: '#00ED64' }} />
+            <NetPadLoader size="large" variant="ascii" message="Loading..." />
           </Box>
         ) : clusters.length === 0 ? (
           <Box

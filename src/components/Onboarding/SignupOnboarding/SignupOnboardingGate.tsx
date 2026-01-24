@@ -8,8 +8,9 @@
  */
 
 import React, { ReactNode } from 'react';
-import { Box, CircularProgress, alpha, useTheme } from '@mui/material';
+import { Box, alpha, useTheme } from '@mui/material';
 import { useSignupOnboarding } from '@/contexts/SignupOnboardingContext';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { SignupOnboardingFlow } from './SignupOnboardingFlow';
 
 interface SignupOnboardingGateProps {
@@ -37,23 +38,7 @@ function FullScreenLoader() {
           gap: 2,
         }}
       >
-        <Box
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: '16px',
-            bgcolor: alpha(theme.palette.primary.main, 0.1),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <CircularProgress
-            size={32}
-            thickness={4}
-            sx={{ color: theme.palette.primary.main }}
-          />
-        </Box>
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     </Box>
   );

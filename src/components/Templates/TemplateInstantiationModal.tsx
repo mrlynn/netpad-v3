@@ -22,7 +22,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  CircularProgress,
   Alert,
   Chip,
   Stack,
@@ -32,6 +31,7 @@ import {
   useTheme,
   IconButton,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   RocketLaunch as RocketIcon,
@@ -268,11 +268,8 @@ export function TemplateInstantiationModal({
         {/* Creating status */}
         {status.step === 'creating' && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress sx={{ color: '#00ED64', mb: 2 }} />
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Creating Your App
-            </Typography>
-            <Typography color="text.secondary">
+            <NetPadLoader size="large" variant="ascii" message="Creating Your App" />
+            <Typography color="text.secondary" sx={{ mt: 2 }}>
               {status.message}
             </Typography>
           </Box>

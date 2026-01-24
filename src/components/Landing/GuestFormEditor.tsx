@@ -25,11 +25,11 @@ import {
   FormControl,
   Divider,
   Chip,
-  CircularProgress,
   IconButton,
   Tooltip,
   useTheme,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Settings,
   Palette,
@@ -376,7 +376,7 @@ function ConversationalFormPreview({
         <Suspense
           fallback={
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={24} sx={{ color: netpadColors.primary }} />
+              <NetPadLoader size="large" variant="ascii" message="Loading..." />
             </Box>
           }
         >

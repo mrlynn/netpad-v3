@@ -22,8 +22,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import CookieIcon from '@mui/icons-material/Cookie';
 import PrivacyTipIcon from '@mui/icons-material/PrivacyTip';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -309,7 +309,7 @@ export function PrivacySettings() {
             </Box>
             <Button
               variant="outlined"
-              startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+              startIcon={exporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DownloadIcon />}
               onClick={handleExportData}
               disabled={exporting}
             >
@@ -371,7 +371,7 @@ export function PrivacySettings() {
         <DialogContent>
           {!deleteCheck ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
+              <NetPadLoader size="large" variant="ascii" message="Loading..." />
             </Box>
           ) : deleteCheck.blockers?.length > 0 ? (
             <Box>
@@ -477,7 +477,7 @@ export function PrivacySettings() {
               color="error"
               onClick={handleDeleteData}
               disabled={deleting || deleteEmail.toLowerCase() !== user?.email?.toLowerCase()}
-              startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteForeverIcon />}
+              startIcon={deleting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <DeleteForeverIcon />}
             >
               {deleting ? 'Deleting...' : 'Permanently Delete My Account'}
             </Button>

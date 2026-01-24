@@ -8,12 +8,12 @@ import {
   CardContent,
   Button,
   Alert,
-  CircularProgress,
   Chip,
   LinearProgress,
   alpha,
   Collapse,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Storage,
   CheckCircle,
@@ -107,10 +107,7 @@ export function ClusterProvisioningStatus({ organizationId }: ClusterProvisionin
     return (
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress size={32} sx={{ color: '#00ED64' }} />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Checking database status...
-          </Typography>
+          <NetPadLoader size="large" variant="ascii" message="Checking database status..." />
         </CardContent>
       </Card>
     );
@@ -291,7 +288,7 @@ export function ClusterProvisioningStatus({ organizationId }: ClusterProvisionin
           <Button
             variant="contained"
             size="large"
-            startIcon={provisioning ? <CircularProgress size={20} color="inherit" /> : <Speed />}
+            startIcon={provisioning ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Speed />}
             onClick={handleProvision}
             disabled={provisioning}
             sx={{

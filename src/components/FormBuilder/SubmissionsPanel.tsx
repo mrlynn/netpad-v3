@@ -15,12 +15,12 @@ import {
   IconButton,
   Chip,
   Collapse,
-  CircularProgress,
   Alert,
   Tooltip,
   alpha,
   Button,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Delete,
   ExpandMore,
@@ -170,7 +170,7 @@ export function SubmissionsPanel({ formId, formName }: SubmissionsPanelProps) {
           p: 4,
         }}
       >
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading submissions..." />
       </Box>
     );
   }

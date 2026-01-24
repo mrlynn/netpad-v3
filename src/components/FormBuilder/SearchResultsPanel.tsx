@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  CircularProgress,
   Alert,
   alpha,
   Checkbox,
@@ -25,6 +24,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Edit,
   Visibility,
@@ -235,10 +235,7 @@ export function SearchResultsPanel({
       {/* Loading state */}
       {loading && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4 }}>
-          <CircularProgress size={24} sx={{ mr: 2 }} />
-          <Typography variant="body2" color="text.secondary">
-            Searching...
-          </Typography>
+          <NetPadLoader size="large" variant="ascii" message="Searching..." />
         </Box>
       )}
 

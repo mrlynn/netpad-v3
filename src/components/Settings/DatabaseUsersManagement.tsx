@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   Alert,
-  CircularProgress,
   Chip,
   alpha,
   Divider,
@@ -31,6 +30,7 @@ import {
   Paper,
   InputAdornment,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Person,
   Add,
@@ -145,7 +145,7 @@ export function DatabaseUsersManagement({
 
         {loading ? (
           <Box sx={{ textAlign: 'center', py: 3 }}>
-            <CircularProgress size={24} sx={{ color: '#00ED64' }} />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
           </Box>
         ) : users.length === 0 ? (
           <Paper
@@ -447,7 +447,7 @@ function CreateUserDialog({
             variant="contained"
             onClick={handleCreate}
             disabled={creating || !username || !password}
-            startIcon={creating ? <CircularProgress size={16} /> : <Add />}
+            startIcon={creating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Add />}
             sx={{ bgcolor: '#00ED64', color: '#001E2B', '&:hover': { bgcolor: '#00c853' } }}
           >
             {creating ? 'Creating...' : 'Create User'}

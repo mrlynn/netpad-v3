@@ -8,7 +8,6 @@ import {
   Typography,
   Paper,
   alpha,
-  CircularProgress,
   Alert,
   Select,
   MenuItem,
@@ -31,6 +30,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CheckCircle,
   Error as ErrorIcon,
@@ -653,7 +653,7 @@ export function ConnectionPanel() {
             fullWidth
             onClick={testConnection}
             disabled={isTesting || !connString.trim()}
-            startIcon={isTesting ? <CircularProgress size={16} /> : <Storage />}
+            startIcon={isTesting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Storage />}
             sx={{ mb: 2 }}
           >
             {isTesting ? 'Connecting...' : 'Connect'}
@@ -691,7 +691,7 @@ export function ConnectionPanel() {
                     {isLoadingCollections ? (
                       <MenuItem disabled>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={16} />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                           Loading collections...
                         </Box>
                       </MenuItem>
@@ -810,7 +810,7 @@ export function ConnectionPanel() {
             <Box sx={{ p: 2 }}>
               {isLoadingSavedConnections || isLoadingVault ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                  <CircularProgress />
+                  <NetPadLoader size="large" variant="ascii" message="Loading connections..." />
                 </Box>
               ) : savedConnections.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -934,7 +934,7 @@ export function ConnectionPanel() {
             onClick={saveCurrentConnection}
             disabled={!connectionName.trim() || isSaving}
             variant="contained"
-            startIcon={isSaving ? <CircularProgress size={16} /> : <Save />}
+            startIcon={isSaving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Save />}
           >
             {isSaving ? 'Saving...' : 'Save'}
           </Button>

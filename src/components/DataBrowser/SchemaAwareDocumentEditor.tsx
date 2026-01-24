@@ -20,7 +20,6 @@ import {
   Button,
   IconButton,
   Alert,
-  CircularProgress,
   Divider,
   FormControl,
   FormControlLabel,
@@ -36,6 +35,7 @@ import {
   Tooltip,
   Collapse,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close,
   Check,
@@ -158,7 +158,7 @@ function FieldEditor({
           sx={{ color: isHidden ? 'warning.main' : 'text.secondary' }}
         >
           {isDecrypting ? (
-            <CircularProgress size={16} color="warning" />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
           ) : revealedEncrypted ? (
             <VisibilityOff fontSize="small" />
           ) : (
@@ -758,7 +758,7 @@ export function SchemaAwareDocumentEditor({
             variant="contained"
             onClick={handleSave}
             disabled={saving || !!parseError}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <Check />}
+            startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Check />}
             sx={{
               flex: 1,
               background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',

@@ -20,12 +20,12 @@ import {
   MenuItem,
   Chip,
   Alert,
-  CircularProgress,
   Tooltip,
   alpha,
   useTheme,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -387,7 +387,7 @@ export function IntegrationCredentialsSettings() {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress sx={{ color: '#00ED64' }} />
+        <NetPadLoader size="large" variant="ascii" message="Loading..." />
       </Box>
     );
   }
@@ -765,7 +765,7 @@ export function IntegrationCredentialsSettings() {
                     variant="outlined"
                     onClick={handleTestAtlasConnection}
                     disabled={!formAtlasOrgId || !formAtlasPublicKey || !formAtlasPrivateKey || testingConnection}
-                    startIcon={testingConnection ? <CircularProgress size={16} /> : null}
+                    startIcon={testingConnection ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
                   >
                     {testingConnection ? 'Testing...' : 'Test Connection'}
                   </Button>
@@ -970,7 +970,7 @@ export function IntegrationCredentialsSettings() {
               '&:hover': { bgcolor: '#00C853' },
             }}
           >
-            {saving ? <CircularProgress size={20} /> : 'Add Credential'}
+            {saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Add Credential'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -994,7 +994,7 @@ export function IntegrationCredentialsSettings() {
             onClick={handleDelete}
             disabled={saving}
           >
-            {saving ? <CircularProgress size={20} /> : 'Delete'}
+            {saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

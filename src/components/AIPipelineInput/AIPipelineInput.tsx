@@ -8,10 +8,10 @@ import {
   Paper,
   Typography,
   alpha,
-  CircularProgress,
   Fade,
   Chip
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Send, AutoAwesome, X } from '@mui/icons-material';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { SerializedStage } from '@/lib/pipelineSerializer';
@@ -279,7 +279,7 @@ export function AIPipelineInput({ onPipelineGenerated }: AIPipelineInputProps) {
                 }}
               >
                 {isGenerating ? (
-                  <CircularProgress size={20} sx={{ color: '#00ED64' }} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : (
                   <Send />
                 )}

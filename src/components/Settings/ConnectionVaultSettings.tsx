@@ -11,7 +11,6 @@ import {
   Chip,
   IconButton,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   FormControl,
@@ -20,6 +19,7 @@ import {
   MenuItem,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   VpnKey,
@@ -285,7 +285,7 @@ export function ConnectionVaultSettings({ organizationId: propOrgId, projectId }
 
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading..." />
         </Box>
       ) : connections.length === 0 ? (
         <Card

@@ -12,13 +12,13 @@ import {
   TextField,
   IconButton,
   Tooltip,
-  CircularProgress,
   alpha,
   Snackbar,
   Alert,
   InputAdornment,
   Paper,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Rocket,
   ContentCopy,
@@ -364,7 +364,7 @@ export function QuickPublishButton({
         ref={buttonRef}
         variant="contained"
         size="small"
-        startIcon={publishing ? <CircularProgress size={16} color="inherit" /> : <Rocket />}
+        startIcon={publishing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Rocket />}
         onClick={handleQuickPublishClick}
         disabled={disabled || publishing}
         sx={{

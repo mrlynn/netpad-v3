@@ -17,7 +17,6 @@ import {
   Chip,
   Paper,
   alpha,
-  CircularProgress,
   Stepper,
   Step,
   StepLabel,

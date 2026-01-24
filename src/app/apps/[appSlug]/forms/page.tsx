@@ -433,8 +433,8 @@ export default function AppFormsPage() {
   if (isAppLoading || !currentApplication) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <NetPadLoader fullPage variant="ascii" />
-        <NetPadLoader fullPage variant="ascii" />
+        <NetPadLoader size="large" variant="ascii" />
+        <NetPadLoader size="large" variant="ascii" />
 
       </Box>
     );
@@ -549,7 +549,7 @@ export default function AppFormsPage() {
               minHeight: 300,
             }}
           >
-            <NetPadLoader fullPage variant="ascii" />
+            <NetPadLoader size="large" variant="ascii" />
           </Box>
         ) : filteredForms.length === 0 ? (
           <Paper

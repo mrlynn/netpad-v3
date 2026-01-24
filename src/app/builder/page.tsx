@@ -76,7 +76,7 @@ function BuilderRedirectContent() {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <NetPadLoader fullPage variant="ascii" />
+      <NetPadLoader size="large" variant="ascii" />
     </Box>
   );
 }

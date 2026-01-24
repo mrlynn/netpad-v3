@@ -176,7 +176,9 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
 
     // If current app no longer exists in the applications list, clear it
     // This handles the case where an application was deleted
-    if (currentApplication && applications.length >= 0) {
+    // IMPORTANT: Only check if we actually have applications loaded (length > 0)
+    // If applications is empty, don't clear - it might just be a temporary state during revalidation
+    if (currentApplication && applications.length > 0) {
       const stillExists = applications.some(a => a.applicationId === currentApplication.applicationId);
       if (!stillExists) {
         console.warn(`[ApplicationContext] Current app ${currentApplication.applicationId} no longer exists. Clearing.`);

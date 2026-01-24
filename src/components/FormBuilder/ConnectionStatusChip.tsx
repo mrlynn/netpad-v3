@@ -5,8 +5,8 @@ import {
   Chip,
   Tooltip,
   alpha,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   CheckCircle,
   LinkOff,
@@ -73,7 +73,7 @@ export function ConnectionStatusChip({
     return (
       <Chip
         size="small"
-        icon={<CircularProgress size={12} sx={{ color: 'inherit' }} />}
+        icon={<NetPadLoader size="small" variant="svg" showPhrases={false} />}
         label="Loading..."
         variant="outlined"
         sx={{

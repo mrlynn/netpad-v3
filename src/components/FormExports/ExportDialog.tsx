@@ -15,11 +15,11 @@ import {
   Checkbox,
   Box,
   Typography,
-  CircularProgress,
   TextField,
   Chip,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Download } from '@mui/icons-material';
 import { FormConfiguration } from '@/types/form';
 import { loadFormConfiguration } from '@/lib/formStorage';
@@ -219,7 +219,7 @@ export function ExportDialog({
           onClick={handleExport}
           variant="contained"
           disabled={exporting || selectedFields.length === 0}
-          startIcon={exporting ? <CircularProgress size={16} /> : <Download />}
+          startIcon={exporting ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Download />}
           sx={{
             background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
             '&:hover': {

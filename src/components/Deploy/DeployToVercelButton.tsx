@@ -12,12 +12,12 @@ import {
   TextField,
   IconButton,
   Tooltip,
-  CircularProgress,
   Alert,
   Chip,
   alpha,
   Divider,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Cloud,
   ContentCopy,
@@ -246,7 +246,7 @@ export function DeployToVercelButton({
         variant={variant}
         size={size}
         disabled
-        startIcon={<CircularProgress size={16} />}
+        startIcon={<NetPadLoader size="small" variant="svg" showPhrases={false} />}
         sx={sx}
       >
         {showLabel && 'Loading...'}
@@ -293,7 +293,7 @@ export function DeployToVercelButton({
         <DialogContent>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
+              <NetPadLoader size="large" variant="ascii" message="Loading configuration..." />
             </Box>
           ) : error ? (
             <Alert severity="error" sx={{ mb: 2 }}>

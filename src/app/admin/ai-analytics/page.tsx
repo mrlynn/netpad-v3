@@ -17,7 +17,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CircularProgress,
   ToggleButton,
   ToggleButtonGroup,
   Table,
@@ -53,6 +52,7 @@ import {
   Science as ScienceIcon,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useAuth } from '@/contexts/AuthContext';
 import { AIUsageSummary } from '@/types/ai-analytics';
 import useSWR from 'swr';
@@ -396,7 +396,7 @@ export default function AIAnalyticsPage() {
   if (authLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
+        <NetPadLoader size="large" variant="ascii" message="Loading AI analytics..." />
       </Box>
     );
   }

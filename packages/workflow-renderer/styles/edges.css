@@ -1,0 +1,34 @@
+/**
+ * Edge styles for @netpad/workflow-renderer
+ */
+
+/* Edge label */
+.wr-edge-label {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Animated edge flow */
+.wr-animated-edge {
+  stroke-dasharray: 5;
+  animation: wr-edge-flow 0.5s linear infinite;
+}
+
+@keyframes wr-edge-flow {
+  0% {
+    stroke-dashoffset: 10;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Edge selection glow */
+.wr-workflow-renderer .react-flow__edge.selected path {
+  filter: drop-shadow(0 0 4px rgba(0, 237, 100, 0.5));
+}
+
+/* Edge hover effect */
+.wr-workflow-renderer .react-flow__edge:hover path {
+  stroke-width: 3;
+}

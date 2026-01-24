@@ -8,7 +8,8 @@
  */
 
 import { ReactNode } from 'react';
-import { Box, CircularProgress, Typography, alpha } from '@mui/material';
+import { Box, Typography, alpha } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useOnboardingGate } from '@/contexts/OnboardingGateContext';
 import { OnboardingGateOverlay } from './OnboardingGateOverlay';
 
@@ -37,15 +38,7 @@ function OnboardingLoadingState() {
         gap: 2,
       }}
     >
-      <CircularProgress
-        size={40}
-        sx={{
-          color: '#00ED64',
-        }}
-      />
-      <Typography variant="body2" color="text.secondary">
-        Loading...
-      </Typography>
+      <NetPadLoader size="large" variant="ascii" message="Loading..." />
     </Box>
   );
 }

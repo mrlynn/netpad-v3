@@ -73,6 +73,14 @@ const knownExtensionLoaders: Record<string, () => Promise<unknown>> = {
       return null;
     });
   },
+  '@netpad/netpad-ext-approval-gate': async () => {
+    const mod = tryRequire('@netpad/netpad-ext-approval-gate');
+    if (mod) return mod;
+    return import('@netpad/netpad-ext-approval-gate').catch((e) => {
+      console.error('[Extensions] Failed to import @netpad/netpad-ext-approval-gate:', e.message || e);
+      return null;
+    });
+  },
 };
 
 /**
@@ -123,6 +131,7 @@ async function loadExtensionPackage(packageName: string): Promise<NetPadExtensio
       'cloudExtension',
       'collaborateExtension',
       'demoNodeExtension',
+      'approvalGateExtension',
       `${packageName.split('/').pop()}Extension`,
     ];
 

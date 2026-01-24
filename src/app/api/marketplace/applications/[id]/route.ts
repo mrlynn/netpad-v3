@@ -171,6 +171,34 @@ export async function GET(
           label: n.data?.label || n.type,
         })) || [],
       };
+    } else if (itemType === 'extension') {
+      // For extensions, show extension-specific details
+      const extensionBundle = (application as any).bundle;
+      const extension = extensionBundle?.extension;
+      const extensionMetadata = extensionBundle?.extensionMetadata;
+
+      preview = {
+        // Extension-specific fields
+        extensionType: extensionMetadata?.extensionType || 'node',
+        nodeCount: extensionMetadata?.nodeCount || extension?.workflowNodes?.length || 0,
+        nodeCategories: extensionMetadata?.nodeCategories || [],
+        routeCount: extensionMetadata?.routeCount || extension?.routes?.length || 0,
+        npmPackage: extensionMetadata?.npmPackage,
+        minNetPadVersion: extensionMetadata?.minNetPadVersion,
+        verified: extensionMetadata?.verified || false,
+        // Workflow nodes details
+        workflowNodes: extension?.workflowNodes?.map((n: any) => ({
+          type: n.definition?.type || n.type,
+          label: n.definition?.label || n.label,
+          description: n.definition?.description || n.description,
+          category: n.definition?.category || n.category,
+        })) || [],
+        // Routes details
+        routes: extension?.routes?.map((r: any) => ({
+          path: r.path,
+          method: r.method,
+        })) || [],
+      };
     } else {
       // For applications (bundles), show the full preview
       preview = {

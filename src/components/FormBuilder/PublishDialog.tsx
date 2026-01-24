@@ -12,7 +12,6 @@ import {
   Button,
   IconButton,
   Tooltip,
-  CircularProgress,
   alpha,
   Alert,
   InputAdornment,
@@ -24,6 +23,7 @@ import {
   Autocomplete,
   Chip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Rocket,
   ContentCopy,
@@ -442,7 +442,7 @@ export function PublishDialog({
                     endAdornment: (
                       <InputAdornment position="end">
                         {checkingSlug ? (
-                          <CircularProgress size={16} />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         ) : slugAvailable === true ? (
                           <Chip label="Available" size="small" color="success" />
                         ) : slugAvailable === false && !slugError ? (
@@ -480,7 +480,7 @@ export function PublishDialog({
 
             {loadingConnections ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 2 }}>
-                <CircularProgress size={16} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 <Typography variant="body2" color="text.secondary">
                   Loading connections...
                 </Typography>
@@ -561,7 +561,7 @@ export function PublishDialog({
             publishing ||
             Boolean(needsCollectionSelection && (!selectedVaultId || !selectedCollection))
           }
-          startIcon={publishing ? <CircularProgress size={16} /> : <Rocket />}
+          startIcon={publishing ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Rocket />}
           sx={{
             background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
             '&:hover': {

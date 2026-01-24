@@ -17,7 +17,6 @@ import {
   Button,
   IconButton,
   Alert,
-  CircularProgress,
   Divider,
   Tabs,
   Tab,
@@ -31,6 +30,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close,
   Check,
@@ -591,7 +591,7 @@ export function DataViewRowDetailDrawer({
               variant="contained"
               onClick={handleSaveFields}
               disabled={saving || !hasChanges || !capabilities.canEdit}
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <Check />}
+              startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Check />}
               sx={{
                 flex: 1,
                 background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',
@@ -609,7 +609,7 @@ export function DataViewRowDetailDrawer({
               variant="contained"
               onClick={handleSaveJson}
               disabled={saving || !hasChanges || !jsonTabEnabled || !!jsonError}
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <Check />}
+              startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Check />}
               sx={{
                 flex: 1,
                 background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',

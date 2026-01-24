@@ -33,8 +33,9 @@ import {
   AccountTree as WorkflowIcon,
   Inventory as BundleIcon,
   CloudUpload as PublishIcon,
+  Extension as ExtensionIcon,
 } from '@mui/icons-material';
-import { MarketplaceItemType, ApplicationManifest, FormDefinition, WorkflowDefinition } from '@/types/template';
+import { MarketplaceItemType, ApplicationManifest, FormDefinition, WorkflowDefinition, ExtensionDefinition } from '@/types/template';
 import { NetPadSpinner } from '@/components/common/NetPadLoader';
 
 const CATEGORIES = [
@@ -49,6 +50,10 @@ const CATEGORIES = [
   'business',
   'events',
   'support',
+  'integrations',
+  'developer-tools',
+  'ai-ml',
+  'data-processing',
   'other',
 ];
 
@@ -68,6 +73,11 @@ const COMMON_TAGS = [
   'lead-generation',
   'registration',
   'booking',
+  'extension',
+  'workflow-node',
+  'integration',
+  'ai',
+  'api',
 ];
 
 interface PublishItemDialogProps {
@@ -78,6 +88,12 @@ interface PublishItemDialogProps {
   form?: FormDefinition;
   /** Workflow definition when publishing a workflow */
   workflow?: WorkflowDefinition;
+  /** Extension definition when publishing an extension */
+  extension?: ExtensionDefinition;
+  /** NPM package name for extension */
+  npmPackage?: string;
+  /** Minimum NetPad version required for extension */
+  minNetPadVersion?: string;
   /** Pre-filled manifest data (e.g., from existing marketplace item) */
   existingManifest?: Partial<ApplicationManifest>;
   /** Callback when publish succeeds */
@@ -101,6 +117,13 @@ function getItemTypeInfo(itemType: MarketplaceItemType) {
         color: '#9C27B0', // Purple
         description: 'Publish this workflow to the marketplace as a standalone item.',
       };
+    case 'extension':
+      return {
+        label: 'Extension',
+        icon: <ExtensionIcon />,
+        color: '#a855f7', // Purple for extensions
+        description: 'Publish this extension to the marketplace for other users to install.',
+      };
     case 'application':
     default:
       return {
@@ -118,6 +141,9 @@ export function PublishItemDialog({
   itemType,
   form,
   workflow,
+  extension,
+  npmPackage,
+  minNetPadVersion,
   existingManifest,
   onPublishSuccess,
 }: PublishItemDialogProps) {
@@ -175,9 +201,18 @@ export function PublishItemDialog({
         setCategory('other');
         setTags(workflow.tags || []);
         setIcon('');
+      } else if (itemType === 'extension' && extension) {
+        setName(extension.metadata?.name || '');
+        setDescription(extension.metadata?.description || '');
+        setSummary('');
+        setVersion(extension.metadata?.version || '1.0.0');
+        setCategory('other');
+        setTags(['extension', 'workflow-node']);
+        setIcon('🔌');
+        setAuthorName(extension.metadata?.author || '');
       }
     }
-  }, [open, itemType, form, workflow, existingManifest]);
+  }, [open, itemType, form, workflow, extension, existingManifest]);
 
   const handlePublish = async () => {
     if (!name.trim()) {
@@ -226,6 +261,19 @@ export function PublishItemDialog({
           nodeCount: workflow.canvas?.nodes?.length || 0,
           triggerType: 'manual', // TODO: detect from workflow config
           nodeTypes: [...new Set(workflow.canvas?.nodes?.map((n: any) => n.type) || [])],
+        };
+      } else if (itemType === 'extension' && extension) {
+        body.extension = extension;
+        body.npmPackage = npmPackage;
+        body.minNetPadVersion = minNetPadVersion;
+        body.extensionMetadata = {
+          extensionType: extension.workflowNodes && extension.workflowNodes.length > 0 ? 'node' : 'integration',
+          nodeCount: extension.workflowNodes?.length || 0,
+          nodeCategories: [...new Set(extension.workflowNodes?.map((n: any) => n.definition?.category).filter(Boolean) || [])],
+          routeCount: extension.routes?.length || 0,
+          npmPackage,
+          minNetPadVersion,
+          verified: false,
         };
       }
 

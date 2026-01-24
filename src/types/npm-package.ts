@@ -10,9 +10,9 @@
  */
 export interface NetPadPackageConfig {
   /**
-   * Package type: "application" or "plugin"
+   * Package type: "application", "plugin", or "extension"
    */
-  type: 'application' | 'plugin';
+  type: 'application' | 'plugin' | 'extension';
 
   /**
    * Application-specific fields (when type === 'application')
@@ -47,6 +47,51 @@ export interface NetPadPackageConfig {
     description: string;
     code?: string;
   }>;
+
+  /**
+   * Extension-specific fields (when type === 'extension')
+   */
+  extensionType?: 'node' | 'integration' | 'theme' | 'hook' | 'multi';
+  /** Extension metadata */
+  extensionMetadata?: {
+    id: string;
+    name: string;
+    version: string;
+    description?: string;
+    author?: string;
+  };
+  /** Workflow nodes provided by the extension */
+  workflowNodes?: Array<{
+    type: string;
+    label: string;
+    description: string;
+    category: string;
+    color: string;
+    icon: string;
+    version: string;
+    configFields?: Array<{
+      name: string;
+      label: string;
+      type: string;
+      defaultValue?: unknown;
+      placeholder?: string;
+      helpText?: string;
+      required?: boolean;
+      options?: Array<{ label: string; value: string }>;
+    }>;
+    outputs?: Array<{ id: string; label: string; primary?: boolean }>;
+  }>;
+  /** API routes provided by the extension */
+  routes?: Array<{
+    path: string;
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    description?: string;
+    requiresAuth?: boolean;
+  }>;
+  /** Feature flags the extension provides */
+  features?: string[];
+  /** Services for dependency injection */
+  serviceNames?: string[];
 
   /**
    * Dependencies

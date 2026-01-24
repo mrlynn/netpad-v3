@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 
 declare global {
   interface Window {
@@ -219,7 +220,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetRef, TurnstileWidgetPro
         }}
       >
         {isLoading && (
-          <CircularProgress size={24} />
+          <NetPadLoader size="small" variant="svg" showPhrases={false} />
         )}
         <Box
           ref={containerRef}

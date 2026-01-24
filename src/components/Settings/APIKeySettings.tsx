@@ -11,7 +11,6 @@ import {
   Chip,
   IconButton,
   Alert,
-  CircularProgress,
   alpha,
   Tooltip,
   Dialog,
@@ -29,6 +28,7 @@ import {
   Divider,
   Paper,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   Key,
@@ -289,7 +289,7 @@ export function APIKeySettings() {
 
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: '#00ED64' }} />
+          <NetPadLoader size="large" variant="ascii" message="Loading API keys..." />
         </Box>
       ) : apiKeys.length === 0 ? (
         <Card
@@ -588,7 +588,7 @@ export function APIKeySettings() {
               '&:hover': { bgcolor: '#00c853' },
             }}
           >
-            {creating ? <CircularProgress size={20} /> : 'Create Key'}
+            {creating ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : 'Create Key'}
           </Button>
         </DialogActions>
       </Dialog>

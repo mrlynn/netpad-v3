@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  CircularProgress,
   Alert,
   Button,
   TextField,
@@ -496,7 +495,7 @@ function DocumentEditDrawer({
             variant="contained"
             onClick={handleSave}
             disabled={saving || !!parseError}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <Check />}
+            startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Check />}
             sx={{
               flex: 1,
               background: 'linear-gradient(135deg, #00ED64 0%, #4DFF9F 100%)',

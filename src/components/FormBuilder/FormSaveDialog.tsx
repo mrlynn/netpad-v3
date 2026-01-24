@@ -13,7 +13,6 @@ import {
   Typography,
   Switch,
   FormControlLabel,
-  CircularProgress,
   Alert,
   Chip,
   alpha,
@@ -23,10 +22,12 @@ import {
   MenuItem,
   FormHelperText,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { Save, Public, Edit } from '@mui/icons-material';
 import { FormConfiguration } from '@/types/form';
 import { saveFormConfiguration } from '@/lib/formStorage';
 import { usePipeline } from '@/contexts/PipelineContext';
+import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 import { generateFormThumbnail, FormThumbnailData } from '@/lib/thumbnail/formThumbnail';
 
@@ -58,18 +59,28 @@ export function FormSaveDialog({
   const { connectionString } = usePipeline();
   const params = useParams();
   const searchParams = useSearchParams();
-  // Check if we're in a project context from the URL
+  const appContext = useApplicationSafe();
+
+  // Check if we're in a project context from the URL (legacy route)
   const urlOrgId = params?.orgId as string | undefined;
   const urlProjectId = params?.projectId as string | undefined;
   const urlApplicationId = searchParams?.get('applicationId') || undefined;
-  const isInProjectContext = !!urlProjectId;
+
+  // Phase 2: Also check ApplicationContext for app-centric routes (/apps/[appSlug])
+  const contextProjectId = appContext?.currentApplication?.projectId;
+  const contextApplicationId = appContext?.currentApplication?.applicationId;
+
+  // Use URL params first (legacy), then ApplicationContext (new app-centric routes)
+  const effectiveProjectId = urlProjectId || contextProjectId;
+  const effectiveApplicationId = urlApplicationId || contextApplicationId;
+  const isInProjectContext = !!effectiveProjectId;
   
   const [name, setName] = useState(formConfig.name || '');
   const [description, setDescription] = useState(formConfig.description || '');
   const [publish, setPublish] = useState(formConfig.isPublished || false);
-  // If we're in a project context, use the URL projectId; otherwise use formConfig or empty
-  const [projectId, setProjectId] = useState<string>(isInProjectContext ? (urlProjectId || '') : (formConfig.projectId || ''));
-  const [applicationId, setApplicationId] = useState<string>(formConfig.applicationId || '');
+  // If we're in a project context, use the effective projectId (URL or ApplicationContext); otherwise use formConfig or empty
+  const [projectId, setProjectId] = useState<string>(isInProjectContext ? (effectiveProjectId || '') : (formConfig.projectId || ''));
+  const [applicationId, setApplicationId] = useState<string>(formConfig.applicationId || effectiveApplicationId || '');
   const [applications, setApplications] = useState<Array<{ applicationId: string; name: string; isDefault?: boolean }>>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -84,23 +95,23 @@ export function FormSaveDialog({
       setName(formConfig.name || '');
       setDescription(formConfig.description || '');
       setPublish(formConfig.isPublished || false);
-      // If we're in a project context, always use the URL projectId
-      if (isInProjectContext && urlProjectId) {
-        setProjectId(urlProjectId);
-        // Prefer applicationId from: 1) formConfig, 2) URL query param, 3) empty
-        setApplicationId(formConfig.applicationId || urlApplicationId || '');
+      // If we're in a project context (URL or ApplicationContext), always use the effective projectId
+      if (isInProjectContext && effectiveProjectId) {
+        setProjectId(effectiveProjectId);
+        // Prefer applicationId from: 1) formConfig, 2) effective (URL or context), 3) empty
+        setApplicationId(formConfig.applicationId || effectiveApplicationId || '');
       } else if (formConfig.projectId) {
         // Otherwise, use projectId from formConfig if available
         setProjectId(formConfig.projectId);
-        setApplicationId(formConfig.applicationId || urlApplicationId || '');
+        setApplicationId(formConfig.applicationId || effectiveApplicationId || '');
       } else {
         // If no projectId in formConfig, reset to empty so user can select
         setProjectId('');
-        setApplicationId(formConfig.applicationId || urlApplicationId || '');
+        setApplicationId(formConfig.applicationId || effectiveApplicationId || '');
       }
       setError(null);
     }
-  }, [open, formConfig, isInProjectContext, urlProjectId]);
+  }, [open, formConfig, isInProjectContext, effectiveProjectId, effectiveApplicationId]);
 
   // Load applications for the selected project (when in org/project context)
   useEffect(() => {
@@ -115,27 +126,27 @@ export function FormSaveDialog({
         setLoadingApplications(true);
         console.log('[FormSaveDialog] Fetching applications:', { orgId, projectId });
         const response = await fetch(`/api/applications?orgId=${orgId}&projectId=${projectId}`);
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.error('[FormSaveDialog] Failed to load applications:', response.status, errorData);
           setApplications([]);
           return;
         }
-        
+
         const data = await response.json();
         console.log('[FormSaveDialog] Applications API response:', data);
 
         // Handle both response formats: { success: true, applications: [...] } or { applications: [...] }
         const appsArray = data.success ? data.applications : (data.applications || []);
-        
+
         if (Array.isArray(appsArray) && appsArray.length > 0) {
           const apps = appsArray as Array<{ applicationId: string; name: string; isDefault?: boolean }>;
           setApplications(apps);
 
-          // Priority: 1) applicationId from formConfig (application context), 2) URL query param, 3) current applicationId state, 4) default app
+          // Priority: 1) applicationId from formConfig (application context), 2) effective (URL or context), 3) current applicationId state, 4) default app
           // Always check formConfig.applicationId first (it's the source of truth from the application context)
-          const preferredApplicationId = formConfig.applicationId || urlApplicationId;
+          const preferredApplicationId = formConfig.applicationId || effectiveApplicationId;
           
           console.log('[FormSaveDialog] Loading applications:', {
             preferredApplicationId,
@@ -189,7 +200,7 @@ export function FormSaveDialog({
     loadApplications();
     // Note: We intentionally don't include `applicationId` in deps to avoid re-renders when we set it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, formConfig.organizationId, formConfig.applicationId, urlOrgId]);
+  }, [projectId, formConfig.organizationId, formConfig.applicationId, urlOrgId, effectiveApplicationId]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -400,7 +411,7 @@ export function FormSaveDialog({
               helperText="Select a project to organize this form"
             />
           )}
-          {formConfig.organizationId && isInProjectContext && urlProjectId && (
+          {formConfig.organizationId && isInProjectContext && effectiveProjectId && (
             <Box
               sx={{
                 p: 1.5,
@@ -411,10 +422,14 @@ export function FormSaveDialog({
               }}
             >
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                <strong style={{ color: '#00ED64' }}>Current Project</strong>
+                <strong style={{ color: '#00ED64' }}>
+                  {appContext?.currentApplication?.name
+                    ? `Saving to: ${appContext.currentApplication.name}`
+                    : 'Current Project'}
+                </strong>
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                This form will be saved to the current project
+                This form will be saved to the current application
               </Typography>
             </Box>
           )}
@@ -492,7 +507,7 @@ export function FormSaveDialog({
           onClick={handleSave}
           variant="contained"
           disabled={!name.trim() || saving}
-          startIcon={saving ? <CircularProgress size={16} /> : <Save />}
+          startIcon={saving ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Save />}
           sx={{
             background: isExistingForm
               ? 'linear-gradient(135deg, #2196f3 0%, #64b5f6 100%)'

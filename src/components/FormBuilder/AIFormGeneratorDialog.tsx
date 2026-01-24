@@ -17,7 +17,6 @@ import {
   TextField,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   Chip,
   LinearProgress,
@@ -42,6 +41,7 @@ import {
   Tooltip,
   alpha,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome as AIIcon,
   Close as CloseIcon,
@@ -1052,7 +1052,7 @@ ${confirmedRelationships.length > 0 ? '7. For reference fields listed above, use
                 variant="outlined"
                 onClick={handleSampleSchema}
                 disabled={loadingSchema}
-                startIcon={loadingSchema ? <CircularProgress size={16} /> : <RefreshIcon />}
+                startIcon={loadingSchema ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <RefreshIcon />}
                 fullWidth
                 sx={{ mb: 2 }}
               >
@@ -1242,12 +1242,7 @@ ${confirmedRelationships.length > 0 ? '7. For reference fields listed above, use
         {/* Loading state */}
         {loading && (
           <Box textAlign="center" py={4}>
-            <CircularProgress size={40} />
-            <Typography variant="body2" color="text.secondary" mt={2}>
-              {mode === 'schema'
-                ? 'Analyzing schema and generating form...'
-                : 'Generating your form...'}
-            </Typography>
+            <NetPadLoader size="large" variant="ascii" message={mode === 'schema' ? 'Analyzing schema and generating form...' : 'Generating your form...'} />
           </Box>
         )}
 
@@ -1349,7 +1344,7 @@ ${confirmedRelationships.length > 0 ? '7. For reference fields listed above, use
             variant="contained"
             onClick={handleGenerate}
             disabled={loading || !canGenerate}
-            startIcon={loading ? <CircularProgress size={16} /> : <AIIcon />}
+            startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AIIcon />}
           >
             {loading ? 'Generating...' : 'Generate Form'}
           </Button>

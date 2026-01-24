@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { sessionOptions, ensureSessionId, SavedForm } from '@/lib/session';
-import { FormConfiguration, FormVersion } from '@/types/form';
+import { FormConfiguration, FormVersion, FormDataSource } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { getForms, saveForm, publishForm, getVersionsForForm, addFormVersion } from '@/lib/storage';
 import { checkFieldLimit } from '@/lib/platform/usageService';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { ensureDefaultApplication } from '@/lib/platform/applications';
+import { getProjectDefaultVault } from '@/lib/platform/projects';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -19,6 +20,50 @@ function generateSlug(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .substring(0, 50);
+}
+
+// Generate a collection name from a form name
+function formNameToCollectionName(formName: string): string {
+  return formName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+    .substring(0, 40) + '_responses';
+}
+
+// Auto-assign dataSource from project's default vault if not set
+async function ensureDataSource(
+  dataSource: FormDataSource | undefined,
+  projectId: string | undefined,
+  formName: string
+): Promise<FormDataSource | undefined> {
+  // If dataSource already has a vaultId, keep it
+  if (dataSource?.vaultId) {
+    return dataSource;
+  }
+
+  // If no projectId, can't auto-assign
+  if (!projectId) {
+    return dataSource;
+  }
+
+  try {
+    const defaultVault = await getProjectDefaultVault(projectId);
+    if (defaultVault?.vaultId) {
+      console.log('[API forms-save] Auto-assigning dataSource from project default vault:', {
+        projectId,
+        vaultId: defaultVault.vaultId,
+      });
+      return {
+        vaultId: defaultVault.vaultId,
+        collection: formNameToCollectionName(formName),
+      };
+    }
+  } catch (error) {
+    console.error('[API forms-save] Failed to get project default vault:', error);
+  }
+
+  return dataSource;
 }
 
 export async function POST(request: NextRequest) {
@@ -176,7 +221,7 @@ export async function POST(request: NextRequest) {
 
       // Build savedForm, explicitly handling dataSource, organizationId, projectId, and applicationId to preserve them
       const { dataSource: formDataSource, organizationId: formOrgId, projectId: formProjectId, applicationId: formApplicationId, ...restFormConfig } = formConfig;
-      
+
       // Determine applicationId: use provided, existing, or ensure default app exists
       let finalApplicationId = formApplicationId || existing.applicationId;
       if (!finalApplicationId && formProjectId && formOrgId) {
@@ -189,7 +234,16 @@ export async function POST(request: NextRequest) {
           // Continue without applicationId for now - will be backfilled in migration
         }
       }
-      
+
+      // Determine projectId: use provided or existing
+      const finalProjectId = formProjectId !== undefined ? formProjectId : existing.projectId;
+
+      // Determine dataSource: use provided, existing, or auto-assign from project default vault
+      let finalDataSource = formDataSource !== undefined ? formDataSource : existing.dataSource;
+      if (!finalDataSource?.vaultId && finalProjectId) {
+        finalDataSource = await ensureDataSource(finalDataSource, finalProjectId, formConfig.name);
+      }
+
       savedForm = {
         ...existing,
         ...restFormConfig,
@@ -198,10 +252,10 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
         isPublished: publish ? true : existing.isPublished,
         publishedAt: publish && !existing.publishedAt ? now : existing.publishedAt,
-        // Explicitly preserve dataSource, organizationId, projectId, and applicationId - use formConfig values if provided, otherwise keep existing
-        dataSource: formDataSource !== undefined ? formDataSource : existing.dataSource,
+        // Explicitly preserve dataSource, organizationId, projectId, and applicationId
+        dataSource: finalDataSource,
         organizationId: formOrgId !== undefined ? formOrgId : existing.organizationId,
-        projectId: formProjectId !== undefined ? formProjectId : existing.projectId,
+        projectId: finalProjectId,
         applicationId: finalApplicationId,
       };
     } else {
@@ -222,11 +276,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Ensure dataSource is set if projectId is provided - auto-assign from project default vault
+      let dataSource = formConfig.dataSource;
+      if (!dataSource?.vaultId && formConfig.projectId) {
+        dataSource = await ensureDataSource(dataSource, formConfig.projectId, formConfig.name);
+      }
+
       savedForm = {
         ...formConfig,
         id,
         slug,
         applicationId,
+        dataSource,
         createdAt: now,
         updatedAt: now,
         isPublished: publish,

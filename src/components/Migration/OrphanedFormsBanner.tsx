@@ -14,10 +14,10 @@ import {
   Button,
   Box,
   Collapse,
-  CircularProgress,
   Typography,
   IconButton,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Close as CloseIcon,
   AutoFixHigh as MigrateIcon,
@@ -166,7 +166,7 @@ export function OrphanedFormsBanner({ orgId, onMigrationComplete }: OrphanedForm
 
         {state === 'migrating' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <CircularProgress size={20} />
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
             <Typography variant="body2">
               Moving forms to apps...
             </Typography>

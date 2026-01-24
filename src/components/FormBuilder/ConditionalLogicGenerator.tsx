@@ -7,13 +7,13 @@ import {
   TextField,
   Paper,
   Typography,
-  CircularProgress,
   Alert,
   alpha,
   Chip,
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome,
   CheckCircle,
@@ -97,7 +97,7 @@ export function ConditionalLogicGenerator({
         <Button
           size="small"
           variant="contained"
-          startIcon={loading ? <CircularProgress size={14} /> : <AutoAwesome />}
+          startIcon={loading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AutoAwesome />}
           onClick={handleGenerate}
           disabled={!description.trim() || loading}
           sx={{

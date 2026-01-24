@@ -18,8 +18,8 @@ import {
   useTheme,
   alpha,
   Chip,
-  CircularProgress,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   ExpandMore as ExpandIcon,
   Search as SearchIcon,
@@ -603,7 +603,7 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
           {extensionLoading ? (
             <>
-              <CircularProgress size={12} />
+              <NetPadLoader size="small" variant="svg" showPhrases={false} />
               Loading extension nodes...
             </>
           ) : (

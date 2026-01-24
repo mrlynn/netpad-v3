@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   Alert,
-  CircularProgress,
   Chip,
   alpha,
   Container,
@@ -46,6 +45,7 @@ import {
   Add,
 } from '@mui/icons-material';
 import Link from 'next/link';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { ClusterManagement } from '@/components/Settings/ClusterManagement';
 import { AddConnectionDialog } from '@/components/Settings/AddConnectionDialog';
 import { DeployToVercelButton } from '@/components/Deploy';
@@ -350,7 +350,7 @@ export function DataInfrastructureTab() {
               {isReady ? (
                 <CheckCircle sx={{ color: '#00ED64' }} />
               ) : isProvisioning ? (
-                <CircularProgress size={20} sx={{ color: '#2196f3' }} />
+                <NetPadLoader size="small" variant="svg" showPhrases={false} />
               ) : (
                 <CloudQueue sx={{ color: 'text.secondary' }} />
               )}
@@ -502,7 +502,7 @@ export function DataInfrastructureTab() {
             size="large"
             onClick={handleInitializeDatabase}
             disabled={initializingDb}
-            startIcon={initializingDb ? <CircularProgress size={20} color="inherit" /> : <Storage />}
+            startIcon={initializingDb ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <Storage />}
             sx={{
               bgcolor: '#00ED64',
               color: 'black',
@@ -700,7 +700,7 @@ export function DataInfrastructureTab() {
                         disabled={loadingConnectionString}
                       >
                         {loadingConnectionString ? (
-                          <CircularProgress size={18} />
+                          <NetPadLoader size="small" variant="svg" showPhrases={false} />
                         ) : showConnectionString ? (
                           <VisibilityOff fontSize="small" />
                         ) : (
@@ -722,7 +722,7 @@ export function DataInfrastructureTab() {
                 }}
               >
                 {loadingConnectionString ? (
-                  <CircularProgress size={20} />
+                  <NetPadLoader size="small" variant="svg" showPhrases={false} />
                 ) : (
                   <ContentCopy sx={{ color: '#9c27b0' }} />
                 )}

@@ -16,10 +16,10 @@ import {
   ListItemText,
   Tooltip,
   TextField,
-  CircularProgress,
   Alert,
   IconButton,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   Add,
   AutoAwesome,
@@ -818,7 +818,7 @@ export function EmptyWorkflowState({
                   <Box sx={{ textAlign: 'center' }}>
                     <Button
                       variant="contained"
-                      startIcon={aiLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
+                      startIcon={aiLoading ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : <AutoAwesome />}
                       onClick={handleAIGenerate}
                       disabled={aiLoading || !aiPrompt.trim()}
                       sx={{

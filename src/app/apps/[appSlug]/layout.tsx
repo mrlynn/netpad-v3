@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
+import { Box, Alert, Button } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { AppNavBar, GLOBAL_BAR_HEIGHT } from '@/components/Navigation/AppNavBar';
@@ -139,10 +140,7 @@ export default function AppSlugLayout({
             gap: 2,
           }}
         >
-          <CircularProgress size={32} />
-          <Typography variant="body2" color="text.secondary">
-            Loading application...
-          </Typography>
+          <NetPadLoader size="large" variant="ascii" message="Loading application..." />
         </Box>
       </Box>
     );

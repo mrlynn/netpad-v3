@@ -1,0 +1,101 @@
+{
+  "name": "@netpad/workflow-renderer",
+  "version": "1.0.0",
+  "description": "React component library for rendering NetPad workflow definitions as interactive, read-only visualizations",
+  "author": "MongoDB",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./nodes": {
+      "types": "./dist/nodes/index.d.ts",
+      "import": "./dist/nodes/index.mjs",
+      "require": "./dist/nodes/index.js"
+    },
+    "./edges": {
+      "types": "./dist/edges/index.d.ts",
+      "import": "./dist/edges/index.mjs",
+      "require": "./dist/edges/index.js"
+    },
+    "./themes": {
+      "types": "./dist/themes/index.d.ts",
+      "import": "./dist/themes/index.mjs",
+      "require": "./dist/themes/index.js"
+    },
+    "./layout": {
+      "types": "./dist/layout/index.d.ts",
+      "import": "./dist/layout/index.mjs",
+      "require": "./dist/layout/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "tsup && npm run build:css",
+    "build:css": "cat styles/*.css > dist/styles.css",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run typecheck"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.0.0",
+    "@dagrejs/dagre": "^1.1.4"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.16"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "netpad",
+    "workflow",
+    "react",
+    "reactflow",
+    "xyflow",
+    "diagram",
+    "visualization",
+    "mongodb",
+    "automation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrlynn/netpad-v3.git",
+    "directory": "packages/workflow-renderer"
+  },
+  "bugs": {
+    "url": "https://github.com/mrlynn/netpad-v3/issues"
+  },
+  "homepage": "https://github.com/mrlynn/netpad-v3/tree/main/packages/workflow-renderer#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

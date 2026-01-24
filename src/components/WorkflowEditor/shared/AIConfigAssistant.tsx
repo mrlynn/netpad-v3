@@ -14,11 +14,11 @@ import {
   Collapse,
   Paper,
   Button,
-  CircularProgress,
   Chip,
   alpha,
   useTheme,
 } from '@mui/material';
+import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
   AutoAwesome as AIIcon,
   Send as SendIcon,
@@ -395,7 +395,7 @@ export function AIConfigAssistant({
                   }}
                 >
                   {isGenerating ? (
-                    <CircularProgress size={16} sx={{ color: 'inherit' }} />
+                    <NetPadLoader size="small" variant="svg" showPhrases={false} />
                   ) : (
                     <SendIcon sx={{ fontSize: 16 }} />
                   )}
