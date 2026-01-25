@@ -23,6 +23,7 @@ import {
   Cloud,
   Chat,
   SmartToy,
+  Share,
 } from '@mui/icons-material';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +36,7 @@ import { IntegrationCredentialsSettings } from '@/components/Settings/Integratio
 import { BillingSettings } from '@/components/Settings/BillingSettings';
 import { TemplateSettings } from '@/components/Settings/TemplateSettings';
 import { AIHealthCheck } from '@/components/Settings/AIHealthCheck';
+import { ReferralDashboard } from '@/components/Referrals';
 import { DeployToVercelButton } from '@/components/Deploy';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -75,15 +77,16 @@ function SettingsContent() {
     else if (tab === 'templates') setTabValue(3);
     else if (tab === 'api-keys') setTabValue(4);
     else if (tab === 'billing') setTabValue(5);
-    else if (tab === 'ai-health') setTabValue(6);
-    else if (tab === 'profile') setTabValue(7);
-    else if (tab === 'privacy') setTabValue(8);
+    else if (tab === 'referrals') setTabValue(6);
+    else if (tab === 'ai-health') setTabValue(7);
+    else if (tab === 'profile') setTabValue(8);
+    else if (tab === 'privacy') setTabValue(9);
   }, [searchParams]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Update URL
-    const tabs = ['organizations', 'connections', 'integrations', 'templates', 'api-keys', 'billing', 'ai-health', 'profile', 'privacy'];
+    const tabs = ['organizations', 'connections', 'integrations', 'templates', 'api-keys', 'billing', 'referrals', 'ai-health', 'profile', 'privacy'];
     router.push(`/settings?tab=${tabs[newValue]}`, { scroll: false });
   };
 
@@ -215,6 +218,11 @@ function SettingsContent() {
               label="Billing"
             />
             <Tab
+              icon={<Share sx={{ fontSize: 20 }} />}
+              iconPosition="start"
+              label="Referrals"
+            />
+            <Tab
               icon={<SmartToy sx={{ fontSize: 20 }} />}
               iconPosition="start"
               label="AI Health"
@@ -252,12 +260,15 @@ function SettingsContent() {
             <BillingSettings />
           </TabPanel>
           <TabPanel value={tabValue} index={6}>
-            <AIHealthCheck />
+            <ReferralDashboard />
           </TabPanel>
           <TabPanel value={tabValue} index={7}>
-            <ProfileSettings />
+            <AIHealthCheck />
           </TabPanel>
           <TabPanel value={tabValue} index={8}>
+            <ProfileSettings />
+          </TabPanel>
+          <TabPanel value={tabValue} index={9}>
             <PrivacySettings />
           </TabPanel>
         </Box>

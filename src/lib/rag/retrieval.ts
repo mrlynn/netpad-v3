@@ -5,7 +5,7 @@
  */
 
 import { getOrgDb } from '@/lib/platform/db';
-import { generateQueryEmbedding } from './embeddings';
+import { generateQueryEmbedding, getCurrentEmbeddingDimensions } from './embeddings';
 import { getReadyDocuments } from './storage';
 import {
   RetrievedChunk,
@@ -323,7 +323,9 @@ export async function checkVectorSearchAvailable(
 
     // Try a minimal vector search to verify index
     // This will fail if index doesn't exist
-    const testEmbedding = new Array(1536).fill(0);
+    // Use dynamic dimensions based on configured embedding provider
+    const dimensions = getCurrentEmbeddingDimensions();
+    const testEmbedding = new Array(dimensions).fill(0);
     await chunksCollection
       .aggregate([
         {

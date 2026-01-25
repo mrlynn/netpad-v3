@@ -96,6 +96,14 @@ const NODE_OPTIONS: NodeTypeOption[] = [
     color: '#9C27B0',
     category: 'triggers',
   },
+  {
+    type: 'field-event-trigger',
+    label: 'Field Event',
+    description: 'Trigger when a form field changes',
+    icon: <FormIcon />,
+    color: '#00BCD4',
+    category: 'triggers',
+  },
   // Logic
   {
     type: 'conditional',

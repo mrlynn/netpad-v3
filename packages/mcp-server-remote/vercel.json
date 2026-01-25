@@ -10,6 +10,18 @@
       "destination": "/api/health"
     },
     {
+      "source": "/authorize",
+      "destination": "/api/authorize"
+    },
+    {
+      "source": "/token",
+      "destination": "/api/token"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/.well-known/oauth-authorization-server"
+    },
+    {
       "source": "/",
       "destination": "/api/index"
     }

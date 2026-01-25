@@ -58,8 +58,10 @@ import { IntegrationNodeEditor } from '../NodeEditors/IntegrationNodeEditor';
 import { ActionNodeEditor } from '../NodeEditors/ActionNodeEditor';
 import { DataNodeEditor } from '../NodeEditors/DataNodeEditor';
 import { AINodeEditor } from '../NodeEditors/AINodeEditor';
+import { EmbeddingNodeEditor } from '../NodeEditors/EmbeddingNodeEditor';
 import { CustomNodeEditor } from '../NodeEditors/CustomNodeEditor';
 import { ExtensionNodeEditor } from '../NodeEditors/ExtensionNodeEditor';
+import { FormsNodeEditor } from '../NodeEditors/FormsNodeEditor';
 
 interface NodeConfigPanelProps {
   open: boolean;
@@ -358,17 +360,19 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
   const isTriggerNode = ['manual-trigger', 'form-trigger', 'webhook-trigger', 'schedule-trigger'].includes(selectedNode.type);
   const isLogicNode = ['conditional', 'switch', 'loop', 'delay'].includes(selectedNode.type);
   const isIntegrationNode = ['http-request', 'mongodb-query', 'mongodb-write', 'google-sheets', 'atlas-cluster', 'atlas-data-api'].includes(selectedNode.type);
-  const isActionNode = ['email-send', 'notification'].includes(selectedNode.type);
+  const isActionNode = ['email-send', 'notification', 'html-output'].includes(selectedNode.type);
   const isDataNode = ['transform', 'filter'].includes(selectedNode.type);
   const isAINode = ['ai-prompt', 'ai-classify', 'ai-extract'].includes(selectedNode.type);
+  const isEmbeddingNode = ['ai-embed', 'vector-search', 'semantic-search'].includes(selectedNode.type);
   const isCustomNode = ['code'].includes(selectedNode.type);
+  const isFormsNode = ['field-event-trigger', 'form-field-update'].includes(selectedNode.type);
 
   // Extension nodes are identified by having a colon in the type (e.g., 'collaborate:notify-collaborators')
   // or by having extension metadata in config
   const isExtensionNode = selectedNode.type.includes(':') || Boolean(selectedNode.config?._providedBy);
 
   // Determine if node has config (all node types except conditional and sticky-note use editors)
-  const hasConfig = !isConditionalNode && !isStickyNote && (isTriggerNode || isLogicNode || isIntegrationNode || isActionNode || isDataNode || isAINode || isCustomNode || isExtensionNode);
+  const hasConfig = !isConditionalNode && !isStickyNote && (isTriggerNode || isLogicNode || isIntegrationNode || isActionNode || isDataNode || isAINode || isEmbeddingNode || isCustomNode || isExtensionNode || isFormsNode);
 
   // Get current sticky note style
   const currentStickyStyle = getStyleFromConfig(config);
@@ -772,8 +776,30 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
                   connectionsLoading={connectionsLoading}
                   nodeId={selectedNode.id}
                 />
+              ) : isEmbeddingNode ? (
+                <EmbeddingNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
               ) : isCustomNode ? (
                 <CustomNodeEditor
+                  node={selectedNode}
+                  config={config}
+                  onConfigChange={handleConfigChange}
+                  availableForms={availableForms}
+                  formsLoading={formsLoading}
+                  availableConnections={availableConnections}
+                  connectionsLoading={connectionsLoading}
+                  nodeId={selectedNode.id}
+                />
+              ) : isFormsNode ? (
+                <FormsNodeEditor
                   node={selectedNode}
                   config={config}
                   onConfigChange={handleConfigChange}

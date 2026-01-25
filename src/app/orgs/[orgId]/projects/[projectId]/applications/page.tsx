@@ -464,7 +464,8 @@ export default function ApplicationsPage() {
     const edit = searchParams.get('edit');
     const appId = searchParams.get('applicationId');
 
-    if (create === 'true') {
+    const action = searchParams.get('action');
+    if (create === 'true' || action === 'create') {
       setEditingApplication(null);
       setDialogOpen(true);
       // Clean up URL

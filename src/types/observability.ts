@@ -383,7 +383,25 @@ export interface APIMetricsSummary {
 // Admin Broadcasts
 // ============================================
 
-export type BroadcastType = 'info' | 'warning' | 'alert' | 'maintenance' | 'success';
+export type BroadcastType = 'info' | 'warning' | 'alert' | 'maintenance' | 'success' | 'custom';
+
+// Custom badge options for 'custom' broadcast type
+export type CustomBadge =
+  | 'new'
+  | 'hot'
+  | 'attention'
+  | 'special'
+  | 'urgent'
+  | 'announcement'
+  | 'breaking'
+  | 'launch'
+  | 'update'
+  | 'tip'
+  | 'promo'
+  | 'security'
+  | 'policy'
+  | 'beta'
+  | 'limited';
 export type BroadcastAudience = 'all' | 'admins' | 'specific_orgs' | 'specific_users';
 export type BroadcastPlacement = 'banner' | 'toast' | 'modal';
 export type BroadcastStatus = 'draft' | 'scheduled' | 'active' | 'expired' | 'cancelled';
@@ -399,6 +417,7 @@ export interface AdminBroadcast {
   title: string;
   message: string;
   type: BroadcastType;
+  customBadge?: CustomBadge; // Only used when type is 'custom'
   linkUrl?: string;
   linkText?: string;
 

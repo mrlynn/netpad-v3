@@ -140,6 +140,21 @@ export function AppNavBar() {
   // Register global keyboard shortcut for app switcher (Cmd+K / Ctrl+K)
   useApplicationSwitcherShortcut(() => setAppSwitcherOpen(true));
 
+  // Handle create new application from switcher
+  const handleCreateApp = () => {
+    // Navigate to applications page where user can create a new app
+    // We need org and project context to create an application
+    if (currentOrgId && currentProjectId) {
+      router.push(getOrgProjectUrl(currentOrgId, currentProjectId, 'applications') + '?action=create');
+    } else if (currentOrgId) {
+      // If we have org but no project, go to projects page
+      router.push(`/orgs/${currentOrgId}/projects`);
+    } else {
+      // Fallback to dashboard where user can select org/project
+      router.push('/dashboard');
+    }
+  };
+
   // Get current org/project from URL or context
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
@@ -901,6 +916,7 @@ export function AppNavBar() {
       <ApplicationSwitcher
         open={appSwitcherOpen}
         onClose={() => setAppSwitcherOpen(false)}
+        onCreateApp={handleCreateApp}
       />
 
       {/* Mobile Navigation Drawer */}

@@ -51,3 +51,12 @@ import './code';
 
 // Output/Rendering
 import './htmlOutput';
+
+// Embedding & Vector Search
+import './embedding';
+import './vectorSearch';
+import './semanticSearch';
+
+// Form Reactions
+import './fieldEventTrigger';
+import './formFieldUpdate';

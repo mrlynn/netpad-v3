@@ -6,7 +6,10 @@ Remote MCP server for NetPad, deployable to Vercel for use with Claude Custom Co
 
 This package provides a remote HTTP-based MCP server that can be used as a **Claude Custom Connector**. Unlike the stdio-based `@netpad/mcp-server` (for Claude Desktop), this server runs as a web service that Claude can connect to over the internet.
 
-**Authentication:** Uses your existing NetPad API keys (`np_live_xxx` or `np_test_xxx`).
+**Features:**
+- **All 80+ tools** from `@netpad/mcp-server` - forms, workflows, extensions, templates, data browser, and more
+- **API key authentication** using your existing NetPad API keys (`np_live_xxx` or `np_test_xxx`)
+- **Ready to deploy** to Vercel
 
 ## Quick Start
 
@@ -96,22 +99,69 @@ Manage your API keys at [netpad.io/settings](https://netpad.io/settings):
 - **Monitor** usage statistics
 - **Set expiration** dates for temporary access
 
-## Available Tools
+## Available Tools (80+)
 
-The remote server includes a subset of the full NetPad MCP tools:
+The remote server includes **all tools from `@netpad/mcp-server`**:
 
-### Form Building
-- `generate_form` - Generate form configurations from natural language
-- `list_field_types` - List all 23+ supported field types
-- `list_form_templates` - Browse pre-built form templates
-- `create_form_from_template` - Create forms from templates
+### 1. Form Building (6 tools)
+- `generate_form` - Generate complete form configurations
+- `generate_field` - Create individual field configurations
+- `generate_conditional_logic` - Create show/hide logic
+- `generate_computed_field` - Create formula-based fields
+- `generate_multipage_config` - Multi-page wizard configurations
+- `validate_form_config` - Validate form configurations
 
-### Workflow Automation
-- `list_workflow_templates` - Browse workflow templates
-- `list_workflow_node_types` - List available workflow nodes
+### 2. Application Management (7 tools)
+- `create_application` - Generate code to create applications
+- `generate_application_contract` - Define API contracts
+- `generate_application_release` - Create versioned releases
+- And more...
 
-### Data
-- `generate_mongodb_query` - Generate MongoDB queries
+### 3. Marketplace & npm (8 tools)
+- `publish_to_marketplace` - Publish applications
+- `search_marketplace` - Search for applications
+- `install_from_npm` - Install from npm registry
+- And more...
+
+### 4. Workflow Automation (10 tools)
+- `create_workflow` - Generate workflow configurations
+- `add_workflow_node` - Add nodes to workflows
+- `connect_workflow_nodes` - Connect nodes with edges
+- `list_workflow_node_types` - Browse 25+ node types
+- And more...
+
+### 5. Conversational & Search Forms (11 tools)
+- `create_conversational_form` - AI-powered conversational forms
+- `configure_rag_settings` - Enable RAG with document retrieval
+- `create_search_form` - Build MongoDB search interfaces
+- And more...
+
+### 6. Enhanced Templates (5 tools)
+- `list_form_templates` - Browse 25+ form templates
+- `get_form_template` - Get template details
+- `create_form_from_template` - Create with customizations
+- And more...
+
+### 7. Data Browser (12 tools)
+- `generate_connection_config` - Configure MongoDB connections
+- `generate_data_browser_query` - Generate find/aggregate queries
+- `generate_aggregation_pipeline` - Build aggregation pipelines
+- `generate_index_recommendations` - Get index suggestions
+- And more...
+
+### 8. Extension Development (5 tools) - NEW
+- `generate_extension` - Generate complete extension packages
+- `list_node_categories` - List workflow node categories
+- `list_config_field_types` - List configuration field types
+- `list_workflow_icons` - List commonly used icons
+- `list_workflow_colors` - List suggested colors
+
+### 9. Consolidated Reference Tools
+- `get_reference` - Unified access to all reference documentation
+- `browse_templates` - Browse all 40+ templates with filtering
+
+### 10. Legacy Reference & Helper (16 tools)
+- Documentation, best practices, debugging tools
 
 ## Local Development
 
@@ -164,6 +214,10 @@ This server uses the MCP SDK's `StreamableHTTPServerTransport` which implements 
 - Session management via `Mcp-Session-Id` header
 - Bearer token authentication via NetPad API
 
+### Code Sharing
+
+The remote server imports `createNetPadMcpServer()` from `@netpad/mcp-server`, ensuring both servers have identical tool capabilities. Any updates to the main MCP server automatically apply to the remote server.
+
 ### Authentication Flow
 
 ```
@@ -204,6 +258,14 @@ This server uses the MCP SDK's `StreamableHTTPServerTransport` which implements 
 
 - [@netpad/mcp-server](../mcp-server) - Local stdio MCP server for Claude Desktop (no auth required)
 - [NetPad Platform](https://netpad.io) - Full form builder platform
+- [Documentation](https://docs.netpad.io/docs/developer/mcp-server) - MCP server documentation
+
+## Version History
+
+| Version | Changes |
+|---------|---------|
+| **1.1.0** | Full parity with @netpad/mcp-server (80+ tools), imports shared server factory |
+| **1.0.1** | Initial release with subset of tools |
 
 ## License
 

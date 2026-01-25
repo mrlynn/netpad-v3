@@ -1,8 +1,8 @@
 {
   "name": "@netpad/mcp-server",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "MCP server for AI-assisted NetPad application development - 75 tools for forms, workflows, applications, marketplace, npm, conversational forms, search interfaces, 25+ templates, and MongoDB data browser",
-  "author": "MongoDB",
+  "author": "Michael Lynn",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",

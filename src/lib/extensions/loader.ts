@@ -267,6 +267,14 @@ export async function loadExtensions(): Promise<void> {
     const cloudExtension = await loadCloudExtension();
     if (cloudExtension) {
       registerExtension(cloudExtension);
+
+      // Initialize referral database operations for cloud-features
+      try {
+        const { initializeReferralDbOps } = await import('@/lib/platform/referralDbOps');
+        await initializeReferralDbOps();
+      } catch (error) {
+        console.log('[Extensions] Could not initialize referral database operations:', error);
+      }
     }
 
     // Load additional extensions from environment variable

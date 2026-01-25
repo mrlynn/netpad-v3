@@ -383,6 +383,54 @@ export const WORKFLOW_NODE_TYPES = {
       ],
     },
   ],
+
+  // Forms (Form Reactions)
+  forms: [
+    {
+      type: 'field-event-trigger',
+      name: 'Field Event Trigger',
+      description: 'Trigger workflow when a form field event occurs (blur, change, focus). Entry point for form reaction workflows.',
+      icon: 'bolt',
+      color: '#00BCD4',
+      category: 'forms',
+      stage: 'trigger',
+      inputs: [],
+      outputs: [
+        { id: 'triggerField', label: 'Trigger Field', type: 'string' },
+        { id: 'triggerEvent', label: 'Event Type', type: 'string' },
+        { id: 'fieldValue', label: 'Field Value', type: 'any' },
+        { id: 'formData', label: 'Form Data', type: 'object' },
+        { id: 'formId', label: 'Form ID', type: 'string' },
+        { id: 'reactionId', label: 'Reaction ID', type: 'string' },
+      ],
+      configFields: [
+        { key: 'formId', label: 'Form ID', type: 'string', required: false },
+        { key: 'triggerMode', label: 'Trigger Mode', type: 'select', options: ['any', 'all'], default: 'any' },
+        { key: 'debounceMs', label: 'Debounce (ms)', type: 'number', default: 0 },
+      ],
+    },
+    {
+      type: 'form-field-update',
+      name: 'Form Field Update',
+      description: 'Update form fields with workflow data. Maps workflow outputs to form fields for real-time updates.',
+      icon: 'edit_note',
+      color: '#00BCD4',
+      category: 'forms',
+      stage: 'action',
+      inputs: [{ id: 'data', label: 'Input Data', type: 'object' }],
+      outputs: [
+        { id: 'success', label: 'Success', type: 'boolean' },
+        { id: 'updates', label: 'Updates', type: 'object' },
+        { id: 'updatedFields', label: 'Updated Fields', type: 'array' },
+        { id: 'skippedFields', label: 'Skipped Fields', type: 'array' },
+      ],
+      configFields: [
+        { key: 'feedbackMode', label: 'Feedback Mode', type: 'select', options: ['silent', 'subtle', 'toast'], default: 'silent' },
+        { key: 'validateAfterUpdate', label: 'Validate After Update', type: 'boolean', default: false },
+        { key: 'updates', label: 'Field Mappings', type: 'array', itemType: 'object', required: true },
+      ],
+    },
+  ],
 };
 
 // ============================================================================
@@ -645,6 +693,126 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplateDefinition> = {
         source: 'query_1',
         sourceHandle: 'documents',
         target: 'email_1',
+        targetHandle: 'data',
+      },
+    ],
+  },
+  'company-lookup-reaction': {
+    id: 'company-lookup-reaction',
+    name: 'Company Domain Lookup Reaction',
+    description: 'Form reaction that fetches company data when user enters a domain and auto-fills related fields',
+    category: 'forms',
+    tags: ['reaction', 'forms', 'auto-fill', 'api'],
+    nodes: [
+      {
+        id: 'trigger_1',
+        type: 'field-event-trigger',
+        label: 'Domain Field Event',
+        position: { x: 100, y: 200 },
+        config: { triggerMode: 'any', debounceMs: 500 },
+        enabled: true,
+      },
+      {
+        id: 'http_1',
+        type: 'http-request',
+        label: 'Fetch Company Data',
+        position: { x: 350, y: 200 },
+        config: {
+          url: 'https://api.example.com/company?domain={{nodes.trigger_1.fieldValue}}',
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        },
+        enabled: true,
+      },
+      {
+        id: 'update_1',
+        type: 'form-field-update',
+        label: 'Update Form Fields',
+        position: { x: 600, y: 200 },
+        config: {
+          feedbackMode: 'subtle',
+          validateAfterUpdate: false,
+          updates: [
+            { fieldPath: 'companyName', sourcePath: 'http_1.response.name', nullBehavior: 'skip' },
+            { fieldPath: 'industry', sourcePath: 'http_1.response.industry', nullBehavior: 'skip' },
+            { fieldPath: 'employeeCount', sourcePath: 'http_1.response.size', nullBehavior: 'skip' },
+          ],
+        },
+        enabled: true,
+      },
+    ],
+    edges: [
+      {
+        id: 'edge_1',
+        source: 'trigger_1',
+        sourceHandle: 'fieldValue',
+        target: 'http_1',
+        targetHandle: 'body',
+      },
+      {
+        id: 'edge_2',
+        source: 'http_1',
+        sourceHandle: 'response',
+        target: 'update_1',
+        targetHandle: 'data',
+      },
+    ],
+  },
+  'ai-categorization-reaction': {
+    id: 'ai-categorization-reaction',
+    name: 'AI Field Categorization Reaction',
+    description: 'Form reaction that uses AI to categorize text input and auto-fills category field',
+    category: 'forms',
+    tags: ['reaction', 'forms', 'ai', 'classification'],
+    nodes: [
+      {
+        id: 'trigger_1',
+        type: 'field-event-trigger',
+        label: 'Description Field Event',
+        position: { x: 100, y: 200 },
+        config: { triggerMode: 'any', debounceMs: 1000 },
+        enabled: true,
+      },
+      {
+        id: 'classify_1',
+        type: 'ai-classify',
+        label: 'Classify Content',
+        position: { x: 350, y: 200 },
+        config: {
+          categories: ['Technical Support', 'Billing', 'Feature Request', 'Bug Report', 'General Inquiry'],
+          instructions: 'Classify the support ticket based on its description.',
+        },
+        enabled: true,
+      },
+      {
+        id: 'update_1',
+        type: 'form-field-update',
+        label: 'Update Category',
+        position: { x: 600, y: 200 },
+        config: {
+          feedbackMode: 'subtle',
+          validateAfterUpdate: false,
+          updates: [
+            { fieldPath: 'category', sourcePath: 'classify_1.category', nullBehavior: 'skip' },
+            { fieldPath: 'aiConfidence', sourcePath: 'classify_1.confidence', nullBehavior: 'skip' },
+          ],
+        },
+        enabled: true,
+      },
+    ],
+    edges: [
+      {
+        id: 'edge_1',
+        source: 'trigger_1',
+        sourceHandle: 'fieldValue',
+        target: 'classify_1',
+        targetHandle: 'text',
+      },
+      {
+        id: 'edge_2',
+        source: 'classify_1',
+        sourceHandle: 'category',
+        target: 'update_1',
         targetHandle: 'data',
       },
     ],

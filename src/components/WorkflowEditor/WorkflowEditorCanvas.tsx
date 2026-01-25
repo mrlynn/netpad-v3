@@ -41,6 +41,14 @@ import { TriggerNode } from './Nodes/TriggerNode';
 import { LogicNode, getNodeOutputs } from './Nodes/LogicNode';
 import { StickyNote, STICKY_COLORS, DEFAULT_WIDTH, DEFAULT_HEIGHT } from './Nodes/StickyNote';
 
+// Custom edge components
+import {
+  CustomEdge,
+  CustomStraightEdge,
+  CustomStepEdge,
+  CustomSmoothStepEdge,
+} from './Edges/CustomEdge';
+
 // Base custom node types mapping (built-in nodes)
 const builtInNodeTypes: NodeTypes = {
   // Default node type
@@ -68,19 +76,32 @@ const builtInNodeTypes: NodeTypes = {
   // Atlas nodes
   'atlas-cluster': BaseNode,
   'atlas-data-api': BaseNode,
+  // Integration nodes
+  'google-sheets': BaseNode,
   // AI nodes
   'ai-prompt': BaseNode,
   'ai-classify': BaseNode,
   'ai-extract': BaseNode,
+  'ai-embed': BaseNode,
+  'vector-search': BaseNode,
+  'semantic-search': BaseNode,
+  // Form nodes
+  'field-event-trigger': TriggerNode,
+  'form-field-update': BaseNode,
+  // Output nodes
+  'html-output': BaseNode,
   // Custom nodes
   'code': BaseNode,
   // Annotations
   'sticky-note': StickyNote,
 };
 
-// Custom edge types (can add custom edges later)
+// Custom edge types that properly respect style properties
 const edgeTypes: EdgeTypes = {
-  // default is fine for now
+  default: CustomEdge,
+  straight: CustomStraightEdge,
+  step: CustomStepEdge,
+  smoothstep: CustomSmoothStepEdge,
 };
 
 interface WorkflowEditorCanvasProps {
@@ -809,14 +830,8 @@ export function WorkflowEditorCanvas({
           border: 'none',
           boxShadow: 'none',
         },
-        '& .react-flow__edge-path': {
-          stroke: colorMode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
-          strokeWidth: 2.5, // Slightly thicker for visibility
-          // NetPad signature: more visible glow on edges
-          filter: colorMode === 'dark'
-            ? 'drop-shadow(0 0 3px rgba(0, 237, 100, 0.4))'
-            : 'drop-shadow(0 0 2px rgba(0, 104, 74, 0.3))',
-        },
+        // Edge styles are handled by custom edge components (CustomEdge, etc.)
+        // to properly support custom stroke colors and widths
         '& .react-flow__handle': {
           backgroundColor: colorMode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
           width: 12,

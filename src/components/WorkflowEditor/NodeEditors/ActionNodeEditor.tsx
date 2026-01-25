@@ -76,6 +76,45 @@ const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     // Notification node config - if it exists, add fields here
     // Currently notification may not have config fields defined
   ],
+  'html-output': [
+    {
+      key: 'template',
+      label: 'HTML Template',
+      type: 'code',
+      description: 'HTML template with {{variable}} placeholders. Access form data via {{trigger.data.fieldName}} or {{input.fieldName}}',
+      required: true,
+      aiAssist: {
+        enabled: true,
+        promptHint: 'e.g., "Create a confirmation page showing submitted form data"',
+        buttonLabel: 'Generate Template',
+      },
+    },
+    {
+      key: 'format',
+      label: 'Output Format',
+      type: 'select',
+      description: 'Output format for the rendered content',
+      options: ['html', 'markdown'],
+    },
+    {
+      key: 'title',
+      label: 'Document Title',
+      type: 'text',
+      description: 'Title for the HTML document (optional)',
+    },
+    {
+      key: 'includeWrapper',
+      label: 'Include HTML Wrapper',
+      type: 'boolean',
+      description: 'Wrap output in full HTML document structure',
+    },
+    {
+      key: 'defaultStyles',
+      label: 'Include Default Styles',
+      type: 'boolean',
+      description: 'Include built-in CSS styles for common elements',
+    },
+  ],
 };
 
 export function ActionNodeEditor({

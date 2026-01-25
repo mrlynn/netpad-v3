@@ -951,6 +951,15 @@ export interface FormConfiguration {
   hooks?: import('./formHooks').FormHooksConfig;
 
   // ============================================
+  // Form Reactions (Field-triggered Workflows)
+  // ============================================
+
+  // Reactions connect form field events to workflow executions.
+  // When a user interacts with a field (change, blur, etc.), the linked
+  // workflow executes and can update other form fields with the result.
+  reactions?: import('./reactions').FormReaction[];
+
+  // ============================================
   // Thumbnail Preview
   // ============================================
 

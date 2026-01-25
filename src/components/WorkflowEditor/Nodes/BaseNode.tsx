@@ -18,8 +18,11 @@ import {
   Error as ErrorIcon,
   Schedule as PendingIcon,
   MoreVert as MoreIcon,
+  HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { WorkflowNode } from '@/types/workflow';
+import { useHelp } from '@/contexts/HelpContext';
+import type { HelpTopicId } from '@/types/help';
 
 // Node status type for execution visualization
 type NodeStatus = 'idle' | 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -47,6 +50,7 @@ const NODE_COLORS: Record<string, string> = {
   'mongodb-write': '#00897B',
   'atlas-cluster': '#00684A',
   'atlas-data-api': '#00684A',
+  'google-sheets': '#0F9D58',
   'email-send': '#2196F3',
   'notification': '#2196F3',
   'transform': '#607D8B',
@@ -55,6 +59,12 @@ const NODE_COLORS: Record<string, string> = {
   'ai-prompt': '#E91E63',
   'ai-classify': '#E91E63',
   'ai-extract': '#E91E63',
+  'ai-embed': '#00897B',
+  'vector-search': '#00897B',
+  'semantic-search': '#00897B',
+  'field-event-trigger': '#4CAF50',
+  'form-field-update': '#2196F3',
+  'html-output': '#00897B',
   'code': '#795548',
 };
 
@@ -72,6 +82,7 @@ const NODE_ICONS: Record<string, string> = {
   'mongodb-write': '💾',
   'atlas-cluster': '☁️',
   'atlas-data-api': '🔌',
+  'google-sheets': '📊',
   'email-send': '📧',
   'notification': '🔔',
   'transform': '🔧',
@@ -80,14 +91,62 @@ const NODE_ICONS: Record<string, string> = {
   'ai-prompt': '🤖',
   'ai-classify': '🏷️',
   'ai-extract': '📋',
+  'ai-embed': '🔗',
+  'vector-search': '🔍',
+  'semantic-search': '🔎',
+  'field-event-trigger': '⚡',
+  'form-field-update': '✏️',
+  'html-output': '📄',
   'code': '💻',
+};
+
+// Map node types to help topic IDs
+const NODE_HELP_TOPICS: Record<string, HelpTopicId> = {
+  'manual-trigger': 'node-manual-trigger',
+  'form-trigger': 'node-form-trigger',
+  'webhook-trigger': 'node-webhook-trigger',
+  'schedule-trigger': 'node-schedule-trigger',
+  'conditional': 'node-conditional',
+  'switch': 'node-switch',
+  'loop': 'node-loop',
+  'delay': 'node-delay',
+  'http-request': 'node-http-request',
+  'mongodb-query': 'node-mongodb-query',
+  'mongodb-write': 'node-mongodb-write',
+  'atlas-cluster': 'node-atlas-cluster',
+  'atlas-data-api': 'node-atlas-data-api',
+  'google-sheets': 'node-google-sheets',
+  'email-send': 'node-email-send',
+  'notification': 'node-notification',
+  'transform': 'node-transform',
+  'filter': 'node-filter',
+  'merge': 'node-merge',
+  'ai-prompt': 'node-ai-prompt',
+  'ai-classify': 'node-ai-classify',
+  'ai-extract': 'node-ai-extract',
+  'ai-embed': 'node-ai-embed',
+  'vector-search': 'node-vector-search',
+  'semantic-search': 'node-semantic-search',
+  'code': 'node-code',
+  'html-output': 'node-html-output',
 };
 
 function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNodeData>) {
   const theme = useTheme();
+  const { openHelp } = useHelp();
+
   // Use extension-provided color/icon if available, otherwise fall back to hardcoded maps
   const nodeColor = data.extensionColor || NODE_COLORS[data.type] || theme.palette.grey[500];
   const nodeIcon = data.extensionIcon || NODE_ICONS[data.type] || '⚙️';
+  const helpTopicId = NODE_HELP_TOPICS[data.type];
+
+  // Handle help button click
+  const handleHelpClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent node selection when clicking help
+    if (helpTopicId) {
+      openHelp(helpTopicId);
+    }
+  };
 
   // Status indicator
   const StatusIndicator = () => {
@@ -149,6 +208,25 @@ function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNode
             {data.label || data.type}
           </Typography>
           <StatusIndicator />
+          {helpTopicId && (
+            <Tooltip title="Help" placement="top" arrow>
+              <IconButton
+                size="small"
+                onClick={handleHelpClick}
+                sx={{
+                  p: 0.25,
+                  opacity: 0.5,
+                  transition: 'opacity 0.2s',
+                  '&:hover': {
+                    opacity: 1,
+                    bgcolor: alpha(nodeColor, 0.1),
+                  },
+                }}
+              >
+                <HelpIcon sx={{ fontSize: 14, color: nodeColor }} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
 
         {/* Body */}
@@ -203,14 +281,10 @@ function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNode
         id="input"
         isConnectable={isConnectable}
         style={{
-          position: 'absolute',
           width: 12,
           height: 12,
           background: nodeColor,
           border: `2px solid ${theme.palette.background.paper}`,
-          left: -6,
-          top: '50%',
-          transform: 'translateY(-50%)',
         }}
       />
 
@@ -221,14 +295,10 @@ function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNode
         id="output"
         isConnectable={isConnectable}
         style={{
-          position: 'absolute',
           width: 12,
           height: 12,
           background: nodeColor,
           border: `2px solid ${theme.palette.background.paper}`,
-          right: -6,
-          top: '50%',
-          transform: 'translateY(-50%)',
         }}
       />
     </Box>

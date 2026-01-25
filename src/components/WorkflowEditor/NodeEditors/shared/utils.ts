@@ -72,13 +72,16 @@ export interface NodeEditorProps {
 /**
  * Helper to determine which category a node type belongs to
  */
-export function getNodeCategory(nodeType: string): 'triggers' | 'logic' | 'actions' | 'integrations' | 'data' | 'ai' | 'custom' | 'annotations' {
+export function getNodeCategory(nodeType: string): 'triggers' | 'logic' | 'actions' | 'integrations' | 'data' | 'ai' | 'custom' | 'annotations' | 'output' {
+  // Triggers - including field-event-trigger which triggers on form field changes
   if (nodeType.includes('trigger')) return 'triggers';
   if (['conditional', 'switch', 'loop', 'delay'].includes(nodeType)) return 'logic';
-  if (['email-send', 'notification'].includes(nodeType)) return 'actions';
+  // Actions - including form-field-update which updates form state
+  if (['email-send', 'notification', 'form-field-update'].includes(nodeType)) return 'actions';
   if (['http-request', 'mongodb-query', 'mongodb-write', 'google-sheets', 'atlas-cluster', 'atlas-data-api'].includes(nodeType)) return 'integrations';
   if (['transform', 'filter', 'merge'].includes(nodeType)) return 'data';
-  if (nodeType.startsWith('ai-')) return 'ai';
+  if (nodeType.startsWith('ai-') || ['vector-search', 'semantic-search'].includes(nodeType)) return 'ai';
+  if (nodeType === 'html-output') return 'output';
   if (nodeType === 'code') return 'custom';
   if (nodeType === 'sticky-note') return 'annotations';
   return 'triggers'; // default

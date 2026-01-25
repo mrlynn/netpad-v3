@@ -12,6 +12,7 @@ import {
   BroadcastPlacement,
   BroadcastAudience,
   BroadcastStatus,
+  CustomBadge,
 } from '@/types/observability';
 import { getAdminBroadcastsCollection, getBroadcastDismissalsCollection } from './db';
 
@@ -29,6 +30,7 @@ export interface CreateBroadcastInput {
   title: string;
   message: string;
   type: BroadcastType;
+  customBadge?: CustomBadge;
   audience: BroadcastAudience;
   targetOrganizations?: string[];
   targetUsers?: string[];
@@ -59,6 +61,7 @@ export async function createBroadcast(input: CreateBroadcastInput): Promise<Admi
     title: input.title,
     message: input.message,
     type: input.type,
+    customBadge: input.customBadge,
     linkUrl: input.linkUrl,
     linkText: input.linkText,
     audience: input.audience,
@@ -247,7 +250,7 @@ export async function getBroadcastStats(): Promise<{
     }
   }
 
-  const byType: Record<BroadcastType, number> = { info: 0, warning: 0, alert: 0, maintenance: 0, success: 0 };
+  const byType: Record<BroadcastType, number> = { info: 0, warning: 0, alert: 0, maintenance: 0, success: 0, custom: 0 };
   for (const item of typeStats) {
     if (item._id && item._id in byType) {
       byType[item._id as BroadcastType] = item.count;

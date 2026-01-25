@@ -157,6 +157,28 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
 
   // ============================================
+  // Referral Code Capture
+  // ============================================
+  // Capture referral code from URL parameter and store in cookie
+  // This enables attribution when user signs up later
+  const refCode = searchParams.get('ref');
+  const shouldSetRefCookie = refCode && !request.cookies.get('netpad_ref');
+
+  // Helper to set referral cookie on any response
+  const setRefCookieIfNeeded = (response: NextResponse) => {
+    if (shouldSetRefCookie && refCode) {
+      response.cookies.set('netpad_ref', refCode.toUpperCase(), {
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+      });
+    }
+    return response;
+  };
+
+  // ============================================
   // Subdomain Routing (Organization Portals)
   // ============================================
   // Handle subdomain-based routing for organization portals
@@ -172,14 +194,14 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/static/') ||
       pathname.includes('.')
     ) {
-      return NextResponse.next();
+      return setRefCookieIfNeeded(NextResponse.next());
     }
 
     // Rewrite to portal route
     const url = request.nextUrl.clone();
     url.pathname = `/portal/${orgSlug}${pathname}`;
 
-    return NextResponse.rewrite(url);
+    return setRefCookieIfNeeded(NextResponse.rewrite(url));
   }
 
   // ============================================
@@ -254,12 +276,12 @@ export async function middleware(request: NextRequest) {
 
   // Allow public form pages
   if (isPublicFormPage(pathname)) {
-    return NextResponse.next();
+    return setRefCookieIfNeeded(NextResponse.next());
   }
 
   // Check if route requires authentication
   if (!isProtectedRoute(pathname)) {
-    return NextResponse.next();
+    return setRefCookieIfNeeded(NextResponse.next());
   }
 
   // For protected routes, check authentication
@@ -305,7 +327,7 @@ export async function middleware(request: NextRequest) {
 
     // User is authenticated and approved (or legacy user), allow access
     // Return the response that iron-session may have modified
-    return response;
+    return setRefCookieIfNeeded(response);
   } catch (error) {
     console.error('[Middleware] Auth check failed:', error);
 

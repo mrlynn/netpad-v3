@@ -47,7 +47,7 @@ import {
   Analytics,
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { useParams, useSearchParams, usePathname } from 'next/navigation';
+import { useParams, useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { getOrgProjectUrl, getAppUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
@@ -104,6 +104,7 @@ export function ApplicationContextBar({
   const params = useParams();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Extract from URL params/query if not provided as props
   const urlOrgId = params?.orgId as string | undefined;
@@ -189,6 +190,17 @@ export function ApplicationContextBar({
 
   const handleSwitchMenuClose = () => {
     setSwitchMenuAnchor(null);
+  };
+
+  // Handle create new application from switcher
+  const handleCreateApp = () => {
+    if (orgId && projectId) {
+      router.push(getOrgProjectUrl(orgId, projectId, 'applications') + '?action=create');
+    } else if (orgId) {
+      router.push(`/orgs/${orgId}/projects`);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   // Don't render if we don't have application context
@@ -513,6 +525,7 @@ interface NavTab {
 
 export function PersistentApplicationBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const applicationContext = useApplicationSafe();
   const currentApplication = applicationContext?.currentApplication ?? null;
   const { organization, currentOrgId } = useOrganization();
@@ -571,6 +584,18 @@ export function PersistentApplicationBar() {
 
     fetchProjectName();
   }, [currentApplication?.projectId, currentOrgId]);
+
+  // Handle create new application from switcher
+  const handleCreateApp = () => {
+    const projectId = currentApplication?.projectId;
+    if (currentOrgId && projectId) {
+      router.push(getOrgProjectUrl(currentOrgId, projectId, 'applications') + '?action=create');
+    } else if (currentOrgId) {
+      router.push(`/orgs/${currentOrgId}/projects`);
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
   // Fetch current form/workflow name for breadcrumb when in edit mode
   useEffect(() => {
@@ -877,6 +902,7 @@ export function PersistentApplicationBar() {
       <ApplicationSwitcher
         open={appSwitcherOpen}
         onClose={() => setAppSwitcherOpen(false)}
+        onCreateApp={handleCreateApp}
       />
     </>
   );

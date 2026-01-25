@@ -81,6 +81,9 @@ export async function PATCH(
     if (body.title !== undefined) updates.title = body.title;
     if (body.message !== undefined) updates.message = body.message;
     if (body.type !== undefined) updates.type = body.type;
+    if (body.customBadge !== undefined) updates.customBadge = body.customBadge;
+    if (body.linkUrl !== undefined) updates.linkUrl = body.linkUrl || null;
+    if (body.linkText !== undefined) updates.linkText = body.linkText || null;
     if (body.audience !== undefined) updates.audience = body.audience;
     if (body.targetOrganizations !== undefined) updates.targetOrganizations = body.targetOrganizations;
     if (body.placement !== undefined) updates.placement = body.placement;

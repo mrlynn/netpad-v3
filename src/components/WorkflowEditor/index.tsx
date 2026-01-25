@@ -50,6 +50,8 @@ import {
 } from '@mui/icons-material';
 import { WorkflowStatus } from '@/types/workflow';
 import { ReactFlowProvider } from 'reactflow';
+import { useRouter, useParams } from 'next/navigation';
+import { getOrgProjectUrl } from '@/lib/routing';
 
 import { WorkflowProvider, useWorkflow, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
 import { useTour } from '@/contexts/TourContext';
@@ -94,9 +96,14 @@ function WorkflowEditorInner({
   onSave,
 }: WorkflowEditorProps) {
   const theme = useTheme();
+  const router = useRouter();
+  const params = useParams();
+  const projectId = params?.projectId as string | undefined;
+
   const {
     loadWorkflow,
     saveWorkflow,
+    createWorkflow,
     executeWorkflow,
     updateStatus,
     publishWorkflow,
@@ -573,11 +580,13 @@ function WorkflowEditorInner({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flex: 1,
+          minHeight: 'calc(100vh - 200px)',
           height: '100%',
           width: '100%',
         }}
       >
-        <NetPadLoader size="large" fullPage={false} />
+        <NetPadLoader size="large" variant="ascii" message="Loading workflow..." />
       </Box>
     );
   }
@@ -610,11 +619,41 @@ function WorkflowEditorInner({
             entityName={workflow?.name}
             entityId={workflow?.id}
             isDirty={isDirty}
-            onNew={() => {
-              // TODO: Implement new workflow creation
+            onNew={async () => {
+              // Check for unsaved changes
+              if (isDirty) {
+                const confirmDiscard = window.confirm(
+                  'You have unsaved changes. Do you want to discard them and create a new workflow?'
+                );
+                if (!confirmDiscard) return;
+              }
+
+              // Navigate to workflows list with createNew flag
+              if (projectId) {
+                const applicationId = workflow?.applicationId;
+                const newUrl = applicationId
+                  ? `${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${applicationId}&createNew=true`
+                  : `${getOrgProjectUrl(orgId, projectId, 'workflows')}?createNew=true`;
+                router.push(newUrl);
+              } else {
+                // Fallback: create workflow directly
+                const newWorkflowId = await createWorkflow(orgId, 'New Workflow');
+                if (newWorkflowId) {
+                  setSnackbar({
+                    open: true,
+                    message: 'New workflow created',
+                    severity: 'success',
+                  });
+                  // Reload with new workflow
+                  window.location.href = window.location.pathname.replace(workflowId || '', newWorkflowId);
+                }
+              }
             }}
             onOpen={() => {
-              // TODO: Implement workflow library/browser
+              // Navigate to workflows list
+              if (projectId) {
+                router.push(getOrgProjectUrl(orgId, projectId, 'workflows'));
+              }
             }}
             onSave={handleSave}
             onSaveAs={() => {

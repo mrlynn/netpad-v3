@@ -397,10 +397,45 @@ export const DEFAULT_CHUNKING_OPTIONS: ChunkingOptions = {
 };
 
 /**
- * Embedding model constants
+ * Embedding provider type
+ */
+export type EmbeddingProviderType = 'openai' | 'voyage' | 'atlas-ai';
+
+/**
+ * Embedding model constants (defaults for backward compatibility)
+ * Note: Actual dimensions are determined by the configured provider
  */
 export const EMBEDDING_MODEL = 'text-embedding-3-small';
 export const EMBEDDING_DIMENSIONS = 1536;
+
+/**
+ * Model-to-dimensions mapping for all supported embedding models
+ */
+export const EMBEDDING_MODEL_DIMENSIONS: Record<string, number> = {
+  // OpenAI models
+  'text-embedding-3-small': 1536,
+  'text-embedding-3-large': 3072,
+  'text-embedding-ada-002': 1536,
+
+  // Voyage AI models
+  'voyage-3': 1024,
+  'voyage-3-lite': 512,
+  'voyage-code-3': 1536,
+  'voyage-3-large': 1024,
+
+  // Atlas AI (uses Voyage)
+  'atlas-ai-default': 1024,
+};
+
+/**
+ * Get dimensions for an embedding model
+ *
+ * @param model - Model name
+ * @returns Dimensions for the model, or default 1536 if unknown
+ */
+export function getEmbeddingDimensions(model: string): number {
+  return EMBEDDING_MODEL_DIMENSIONS[model] ?? EMBEDDING_DIMENSIONS;
+}
 
 /**
  * Maximum document size (5MB)

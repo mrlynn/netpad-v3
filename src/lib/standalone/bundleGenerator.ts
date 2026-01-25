@@ -1933,6 +1933,7 @@ export async function GET() {
 
 function generateSetupWizard(options: BundleOptions): string {
   const primaryColor = options.theme?.primaryColor || '#00ED64';
+  const showBranding = !options.removeBranding;
   return `'use client';
 
 import { useState } from 'react';
@@ -1957,6 +1958,7 @@ import {
   Storage,
   PlayArrow,
 } from '@mui/icons-material';
+${showBranding ? "import { NetPadBadge } from '@/components/NetPadBadge';" : ''}
 
 interface SetupStatus {
   configured: boolean;
@@ -2199,6 +2201,7 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 
         {renderStepContent()}
       </Paper>
+      ${showBranding ? '<NetPadBadge />' : ''}
     </Container>
   );
 }

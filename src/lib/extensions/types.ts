@@ -69,6 +69,9 @@ export type ExtensionFeature =
   | 'team_management_premium'
   | 'sso_saml'
   | 'audit_logs_extended'
+  // Referral Program
+  | 'referral_program'
+  | 'referral_commissions'
   // Custom features (extension-defined)
   // Use format: 'custom:{feature_name}'
   | `custom:${string}`;
@@ -432,6 +435,176 @@ export interface AdminService {
 }
 
 // ============================================
+// Referral Service Types
+// ============================================
+
+/**
+ * Commission rates by referral year
+ */
+export interface CommissionRates {
+  year1: number;  // e.g., 0.20 = 20%
+  year2: number;
+  year3: number;
+  yearN: number;
+}
+
+/**
+ * Benefits given to the referred user when they sign up with a referral code.
+ * All fields are optional - only specify the benefits that apply.
+ */
+export interface ReferredUserBenefits {
+  /** Percentage discount on first N payments (0.10 = 10% off) */
+  discountPercent?: number;
+  /** Number of payments the discount applies to (default: 1) */
+  discountPayments?: number;
+  /** Flat credit amount in cents to apply to account */
+  creditAmountCents?: number;
+  /** Additional trial days beyond the standard trial */
+  trialExtensionDays?: number;
+  /** Temporary feature unlocks (feature names) */
+  featureUnlocks?: string[];
+  /** How long feature unlocks last in days */
+  featureUnlockDays?: number;
+}
+
+/**
+ * Referral code information
+ */
+export interface ReferralCodeInfo {
+  code: string;
+  type: 'standard' | 'influencer' | 'partner' | 'campaign';
+  shareUrl: string;
+  commissionRates: CommissionRates;
+  /** Benefits given to users who sign up with this code */
+  referredUserBenefits?: ReferredUserBenefits;
+  isActive: boolean;
+  stats: {
+    totalReferrals: number;
+    qualifiedReferrals: number;
+    totalEarnings: number;
+    availableEarnings: number;
+  };
+}
+
+/**
+ * Referral statistics
+ */
+export interface ReferralStats {
+  totalReferrals: number;
+  qualifiedReferrals: number;
+  pendingReferrals: number;
+  churnedReferrals: number;
+  totalEarnings: number;
+  availableForPayout: number;
+  pendingEarnings: number;
+  paidOut: number;
+}
+
+/**
+ * Earnings list
+ */
+export interface EarningsList {
+  earnings: Array<{
+    earningId: string;
+    amount: number;
+    status: string;
+    earnedAt: Date;
+    referredOrgName?: string;
+  }>;
+  total: number;
+}
+
+/**
+ * Referral service interface - handles referral program
+ */
+export interface ReferralService {
+  // Code Management
+  /** Create a referral code for an organization */
+  createReferralCode(params: {
+    organizationId: string;
+    type?: 'standard' | 'influencer' | 'partner';
+    customCode?: string;
+  }): Promise<{ code: string; shareUrl: string }>;
+
+  /** Get referral code for an organization */
+  getReferralCode(organizationId: string): Promise<ReferralCodeInfo | null>;
+
+  /** Customize referral code */
+  customizeCode(organizationId: string, newCode: string): Promise<{ success: boolean; code?: string; error?: string }>;
+
+  /** Validate a referral code */
+  validateCode(code: string): Promise<{
+    valid: boolean;
+    referrerName?: string;
+    benefits?: ReferredUserBenefits;
+  }>;
+
+  // Attribution
+  /** Attribute a signup to a referral code */
+  attributeReferral(params: {
+    referralCode: string;
+    referredOrgId: string;
+    attribution?: { source: string; signupUrl?: string };
+  }): Promise<{ success: boolean; referralId?: string }>;
+
+  // Commission Processing (called from webhook)
+  /** Process a payment for commission calculation */
+  processPaymentForCommission(params: {
+    organizationId: string;
+    stripeInvoiceId: string;
+    amountPaid: number;
+    currency: string;
+  }): Promise<{ commissionCreated: boolean; amount?: number }>;
+
+  /** Process churn for a referred organization */
+  processChurn(organizationId: string): Promise<void>;
+
+  // Stats & Earnings
+  /** Get referral statistics */
+  getReferralStats(organizationId: string): Promise<ReferralStats>;
+
+  /** Get earnings list */
+  getEarnings(organizationId: string, params?: { status?: string; limit?: number; offset?: number }): Promise<EarningsList>;
+
+  /** Get available balance for payout */
+  getAvailableBalance(organizationId: string): Promise<{ amount: number; currency: string }>;
+
+  // Payouts
+  /** Request a payout */
+  requestPayout(params: {
+    organizationId: string;
+    amount?: number;
+    method: string;
+    paymentDetails: Record<string, string>;
+  }): Promise<{ payoutId: string; status: string }>;
+
+  // Admin
+  /** Create a special referral code (admin) */
+  createSpecialCode(params: {
+    code: string;
+    organizationId?: string;
+    type: 'influencer' | 'partner' | 'campaign';
+    commissionRates: CommissionRates;
+    /** Optional benefits for users who sign up with this code */
+    referredUserBenefits?: ReferredUserBenefits;
+  }): Promise<{ code: string }>;
+
+  /** Get applicable benefits for a referred organization (for checkout/billing integration) */
+  getApplicableBenefits(organizationId: string): Promise<{
+    hasReferral: boolean;
+    benefits?: ReferredUserBenefits;
+    discountAppliesTo?: number;  // Number of remaining discounted payments
+    referralCode?: string;
+  }>;
+
+  /** Approve a payout request (admin) */
+  approvePayout(payoutId: string, adminUserId: string): Promise<void>;
+
+  /** Reject a payout request (admin) */
+  rejectPayout(payoutId: string, reason: string, adminUserId: string): Promise<void>;
+}
+
+// ============================================
 // Route Definitions
 // ============================================
 
@@ -530,6 +703,7 @@ export interface NetPadExtension {
     waitlist?: WaitlistService;
     usage?: UsageService;
     admin?: AdminService;
+    referrals?: ReferralService;
   };
 
   /** Initialization function (called on app startup) */

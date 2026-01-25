@@ -59,6 +59,40 @@ export type HelpTopicId =
   | 'api-keys-management'
   | 'workflow-variables'
   | 'workflow-nodes'
+  // Trigger nodes
+  | 'node-form-trigger'
+  | 'node-webhook-trigger'
+  | 'node-schedule-trigger'
+  | 'node-manual-trigger'
+  // Logic nodes
+  | 'node-conditional'
+  | 'node-switch'
+  | 'node-delay'
+  | 'node-loop'
+  // Integration nodes
+  | 'node-http-request'
+  | 'node-mongodb-query'
+  | 'node-mongodb-write'
+  | 'node-google-sheets'
+  | 'node-atlas-cluster'
+  | 'node-atlas-data-api'
+  // Action nodes
+  | 'node-email-send'
+  | 'node-notification'
+  // Data nodes
+  | 'node-transform'
+  | 'node-filter'
+  | 'node-merge'
+  // AI nodes
+  | 'node-ai-prompt'
+  | 'node-ai-classify'
+  | 'node-ai-extract'
+  | 'node-ai-embed'
+  | 'node-vector-search'
+  | 'node-semantic-search'
+  // Custom nodes
+  | 'node-code'
+  | 'node-html-output'
   | 'employee-onboarding'
   | 'mcp-server'
   | 'netpad-forms-package'
@@ -89,4 +123,10 @@ export type HelpTopicId =
   // Open Core / Operations topics
   | 'open-core-architecture'
   | 'extension-system'
-  | 'admin-extension-management';
+  | 'admin-extension-management'
+  // Form Reactions
+  | 'form-reactions'
+  | 'node-field-event-trigger'
+  | 'node-form-field-update'
+  | 'reactions-api'
+  | 'use-form-reactions-hook';

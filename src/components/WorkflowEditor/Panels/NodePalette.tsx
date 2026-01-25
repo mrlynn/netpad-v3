@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -10,14 +10,13 @@ import {
   AccordionDetails,
   TextField,
   InputAdornment,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Tooltip,
   useTheme,
   alpha,
   Chip,
+  IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import {
@@ -46,9 +45,31 @@ import {
   Extension as ExtensionIcon,
   Article as HtmlOutputIcon,
   Output as OutputIcon,
+  Hub as EmbedIcon,
+  Bolt as FieldEventIcon,
+  EditNote as FormUpdateIcon,
+  ChevronLeft as CollapseIcon,
+  ChevronRight as ExpandPaletteIcon,
+  ViewModule as GridViewIcon,
+  ViewList as ListViewIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 import { useExtensionNodes, ExtensionNodeDefinition } from '@/hooks/useExtensionNodes';
+
+// Storage key for palette preferences
+const PALETTE_PREFS_KEY = 'netpad_node_palette_prefs';
+
+interface PalettePrefs {
+  collapsed: boolean;
+  viewMode: 'list' | 'grid';
+  expandedCategories: NodeCategory[];
+}
+
+const DEFAULT_PREFS: PalettePrefs = {
+  collapsed: false,
+  viewMode: 'grid',
+  expandedCategories: ['triggers', 'logic', 'actions'],
+};
 
 // Node definition for palette
 interface PaletteNode {
@@ -87,6 +108,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   'StickyNote2': <StickyNoteIcon />,
   'Article': <HtmlOutputIcon />,
   'Output': <OutputIcon />,
+  'Hub': <EmbedIcon />,
+  'Search': <SearchIcon />,
+  'Bolt': <FieldEventIcon />,
+  'EditNote': <FormUpdateIcon />,
 };
 
 // Convert extension node definition to palette node
@@ -292,6 +317,48 @@ const PALETTE_NODES: PaletteNode[] = [
     color: '#E91E63',
     category: 'ai',
   },
+  {
+    type: 'ai-embed',
+    label: 'Generate Embeddings',
+    description: 'Generate vector embeddings using Voyage AI or OpenAI',
+    icon: <EmbedIcon />,
+    color: '#00897B',
+    category: 'ai',
+  },
+  {
+    type: 'vector-search',
+    label: 'Vector Search',
+    description: 'Search MongoDB Atlas Vector Search index',
+    icon: <SearchIcon />,
+    color: '#00897B',
+    category: 'ai',
+  },
+  {
+    type: 'semantic-search',
+    label: 'Semantic Search',
+    description: 'Embed query and search in one step',
+    icon: <SearchIcon />,
+    color: '#00897B',
+    category: 'ai',
+  },
+
+  // Form Reactions - Field Event is a trigger, Update Fields is an action
+  {
+    type: 'field-event-trigger',
+    label: 'Field Event',
+    description: 'Trigger workflow on form field change/blur',
+    icon: <FieldEventIcon />,
+    color: '#00BCD4',
+    category: 'triggers',  // This is a trigger - belongs with other triggers
+  },
+  {
+    type: 'form-field-update',
+    label: 'Update Fields',
+    description: 'Update form fields with workflow data',
+    icon: <FormUpdateIcon />,
+    color: '#00BCD4',
+    category: 'actions',  // This is an action that modifies form state
+  },
 
   // Custom
   {
@@ -338,6 +405,19 @@ const CATEGORY_CONFIG: Record<NodeCategory, { label: string; icon: React.ReactNo
   annotations: { label: 'Annotations', icon: <StickyNoteIcon />, color: '#FBC02D' },
 };
 
+// Category order for display
+const CATEGORY_ORDER: NodeCategory[] = [
+  'triggers',
+  'logic',
+  'integrations',
+  'actions',
+  'data',
+  'ai',
+  'output',
+  'custom',
+  'annotations',
+];
+
 interface NodePaletteProps {
   onNodeSelect?: (nodeType: string) => void;
 }
@@ -345,7 +425,33 @@ interface NodePaletteProps {
 export function NodePalette({ onNodeSelect }: NodePaletteProps) {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<NodeCategory[]>(['triggers', 'logic', 'actions']);
+
+  // Load preferences from localStorage
+  const [prefs, setPrefs] = useState<PalettePrefs>(DEFAULT_PREFS);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PALETTE_PREFS_KEY);
+      if (stored) {
+        setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(stored) });
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // Save preferences to localStorage
+  const updatePrefs = (updates: Partial<PalettePrefs>) => {
+    setPrefs((prev) => {
+      const newPrefs = { ...prev, ...updates };
+      try {
+        localStorage.setItem(PALETTE_PREFS_KEY, JSON.stringify(newPrefs));
+      } catch {
+        // Ignore storage errors
+      }
+      return newPrefs;
+    });
+  };
 
   // Fetch extension nodes
   const { nodes: extensionNodes, loading: extensionLoading } = useExtensionNodes();
@@ -410,22 +516,117 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
 
   // Handle accordion expand
   const handleAccordionChange = (category: NodeCategory) => (
-    event: React.SyntheticEvent,
+    _event: React.SyntheticEvent,
     isExpanded: boolean
   ) => {
-    setExpandedCategories((prev) =>
-      isExpanded ? [...prev, category] : prev.filter((c) => c !== category)
-    );
+    updatePrefs({
+      expandedCategories: isExpanded
+        ? [...prefs.expandedCategories, category]
+        : prefs.expandedCategories.filter((c) => c !== category),
+    });
   };
 
+  // Collapsed view - just show category icons
+  if (prefs.collapsed) {
+    return (
+      <Paper
+        square
+        elevation={0}
+        data-tour="node-palette"
+        sx={{
+          borderRadius: 0,
+          width: 48,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Expand button */}
+        <Box sx={{ p: 0.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Tooltip title="Expand palette" placement="right">
+            <IconButton
+              size="small"
+              onClick={() => updatePrefs({ collapsed: false })}
+              sx={{ width: 36, height: 36 }}
+            >
+              <ExpandPaletteIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* Category icons */}
+        <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
+          {CATEGORY_ORDER.map((category) => {
+            const nodes = nodesByCategory[category];
+            if (!nodes || nodes.length === 0) return null;
+            const config = CATEGORY_CONFIG[category];
+
+            return (
+              <Tooltip
+                key={category}
+                title={`${config.label} (${nodes.length})`}
+                placement="right"
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    py: 0.75,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 32,
+                      height: 32,
+                      borderRadius: 1,
+                      bgcolor: alpha(config.color, 0.1),
+                      color: config.color,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      '&:hover': {
+                        bgcolor: alpha(config.color, 0.2),
+                        transform: 'scale(1.1)',
+                      },
+                    }}
+                    onClick={() => {
+                      updatePrefs({
+                        collapsed: false,
+                        expandedCategories: [category],
+                      });
+                    }}
+                  >
+                    {config.icon}
+                  </Box>
+                </Box>
+              </Tooltip>
+            );
+          })}
+        </Box>
+
+        {/* Extension loading indicator */}
+        {extensionLoading && (
+          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
+            <NetPadLoader size="small" variant="svg" showPhrases={false} />
+          </Box>
+        )}
+      </Paper>
+    );
+  }
+
+  // Expanded view
   return (
     <Paper
       square
       elevation={0}
       data-tour="node-palette"
       sx={{
-        borderRadius: 0, // Explicitly override theme for structural element
-        width: 280,
+        borderRadius: 0,
+        width: 260,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -434,10 +635,44 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
       }}
     >
       {/* Header */}
-      <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>
-          Node Palette
-        </Typography>
+      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
+            Nodes
+          </Typography>
+
+          {/* View mode toggle */}
+          <ToggleButtonGroup
+            size="small"
+            value={prefs.viewMode}
+            exclusive
+            onChange={(_, value) => value && updatePrefs({ viewMode: value })}
+            sx={{ height: 28 }}
+          >
+            <ToggleButton value="grid" sx={{ px: 0.75, py: 0 }}>
+              <Tooltip title="Grid view">
+                <GridViewIcon sx={{ fontSize: 16 }} />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value="list" sx={{ px: 0.75, py: 0 }}>
+              <Tooltip title="List view">
+                <ListViewIcon sx={{ fontSize: 16 }} />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          {/* Collapse button */}
+          <Tooltip title="Collapse palette">
+            <IconButton
+              size="small"
+              onClick={() => updatePrefs({ collapsed: true })}
+              sx={{ width: 28, height: 28 }}
+            >
+              <CollapseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
         <TextField
           data-tour="node-search"
           fullWidth
@@ -448,25 +683,27 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+                <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
               </InputAdornment>
             ),
+            sx: { height: 32, fontSize: '0.875rem' },
           }}
         />
       </Box>
 
       {/* Node Categories */}
       <Box sx={{ flex: 1, overflow: 'auto' }}>
-        {(Object.keys(CATEGORY_CONFIG) as NodeCategory[]).map((category) => {
+        {CATEGORY_ORDER.map((category) => {
           const nodes = nodesByCategory[category];
           if (!nodes || nodes.length === 0) return null;
 
           const config = CATEGORY_CONFIG[category];
+          const isExpanded = prefs.expandedCategories.includes(category);
 
           return (
             <Accordion
               key={category}
-              expanded={expandedCategories.includes(category)}
+              expanded={isExpanded}
               onChange={handleAccordionChange(category)}
               disableGutters
               elevation={0}
@@ -476,13 +713,15 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
               }}
             >
               <AccordionSummary
-                expandIcon={<ExpandIcon />}
+                expandIcon={<ExpandIcon sx={{ fontSize: 18 }} />}
                 sx={{
-                  minHeight: 48,
+                  minHeight: 40,
+                  px: 1.5,
                   '& .MuiAccordionSummary-content': {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
+                    my: 0.5,
                   },
                 }}
               >
@@ -491,70 +730,90 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 28,
-                    height: 28,
-                    borderRadius: 1,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 0.75,
                     bgcolor: alpha(config.color, 0.1),
                     color: config.color,
+                    '& svg': { fontSize: 16 },
                   }}
                 >
                   {config.icon}
                 </Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
                   {config.label}
                 </Typography>
                 <Typography
                   variant="caption"
-                  sx={{ ml: 'auto', mr: 1, color: 'text.secondary' }}
+                  sx={{ ml: 'auto', mr: 0.5, color: 'text.secondary', fontSize: '0.7rem' }}
                 >
                   {nodes.length}
                 </Typography>
               </AccordionSummary>
-              <AccordionDetails sx={{ p: 0 }}>
-                <List dense disablePadding>
-                  {nodes.map((node) => (
-                    <Tooltip
-                      key={node.type}
-                      title={
-                        <Box>
-                          <Typography variant="body2">{node.description}</Typography>
-                          {node.isExtension && (
-                            <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block' }}>
-                              Extension: {node.providedBy}
+              <AccordionDetails sx={{ p: 0.75, pt: 0 }}>
+                {/* Grid View */}
+                {prefs.viewMode === 'grid' ? (
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: 0.5,
+                    }}
+                  >
+                    {nodes.map((node) => (
+                      <Tooltip
+                        key={node.type}
+                        title={
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {node.label}
                             </Typography>
-                          )}
-                        </Box>
-                      }
-                      placement="right"
-                      arrow
-                    >
-                      <ListItem
-                        draggable
-                        onDragStart={(e) => onDragStart(e, node)}
-                        onClick={() => onNodeSelect?.(node.type)}
-                        sx={{
-                          cursor: 'grab',
-                          '&:hover': {
-                            bgcolor: alpha(node.color, 0.08),
-                          },
-                          '&:active': {
-                            cursor: 'grabbing',
-                          },
-                        }}
+                            <Typography variant="caption">{node.description}</Typography>
+                            {node.isExtension && (
+                              <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block' }}>
+                                Extension: {node.providedBy}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                        placement="right"
+                        arrow
                       >
-                        <ListItemIcon sx={{ minWidth: 36 }}>
+                        <Box
+                          draggable
+                          onDragStart={(e) => onDragStart(e, node)}
+                          onClick={() => onNodeSelect?.(node.type)}
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 0.25,
+                            p: 0.75,
+                            borderRadius: 1,
+                            cursor: 'grab',
+                            transition: 'all 0.15s',
+                            '&:hover': {
+                              bgcolor: alpha(node.color, 0.1),
+                              transform: 'scale(1.05)',
+                            },
+                            '&:active': {
+                              cursor: 'grabbing',
+                              transform: 'scale(0.95)',
+                            },
+                          }}
+                        >
                           <Box
                             sx={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              width: 28,
-                              height: 28,
+                              width: 32,
+                              height: 32,
                               borderRadius: 1,
-                              bgcolor: alpha(node.color, 0.1),
+                              bgcolor: alpha(node.color, 0.15),
                               color: node.color,
-                              fontSize: 18,
                               position: 'relative',
+                              '& svg': { fontSize: 18 },
                             }}
                           >
                             {node.icon}
@@ -562,45 +821,130 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
                               <Box
                                 sx={{
                                   position: 'absolute',
-                                  top: -4,
-                                  right: -4,
-                                  width: 10,
-                                  height: 10,
+                                  top: -3,
+                                  right: -3,
+                                  width: 8,
+                                  height: 8,
                                   borderRadius: '50%',
                                   bgcolor: theme.palette.info.main,
-                                  border: `1.5px solid ${theme.palette.background.paper}`,
+                                  border: `1px solid ${theme.palette.background.paper}`,
                                 }}
                               />
                             )}
                           </Box>
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              {node.label}
-                              {node.isExtension && (
-                                <Chip
-                                  label="Ext"
-                                  size="small"
-                                  sx={{
-                                    height: 16,
-                                    fontSize: '0.65rem',
-                                    bgcolor: alpha(theme.palette.info.main, 0.1),
-                                    color: theme.palette.info.main,
-                                  }}
-                                />
-                              )}
-                            </Box>
-                          }
-                          primaryTypographyProps={{
-                            variant: 'body2',
-                            fontWeight: 500,
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: '0.65rem',
+                              textAlign: 'center',
+                              lineHeight: 1.2,
+                              color: 'text.secondary',
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {node.label.split(' ')[0]}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    ))}
+                  </Box>
+                ) : (
+                  /* List View */
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    {nodes.map((node) => (
+                      <Tooltip
+                        key={node.type}
+                        title={
+                          <Box>
+                            <Typography variant="body2">{node.description}</Typography>
+                            {node.isExtension && (
+                              <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block' }}>
+                                Extension: {node.providedBy}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                        placement="right"
+                        arrow
+                      >
+                        <Box
+                          draggable
+                          onDragStart={(e) => onDragStart(e, node)}
+                          onClick={() => onNodeSelect?.(node.type)}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 0.75,
+                            cursor: 'grab',
+                            transition: 'all 0.15s',
+                            '&:hover': {
+                              bgcolor: alpha(node.color, 0.08),
+                            },
+                            '&:active': {
+                              cursor: 'grabbing',
+                            },
                           }}
-                        />
-                      </ListItem>
-                    </Tooltip>
-                  ))}
-                </List>
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 24,
+                              height: 24,
+                              borderRadius: 0.75,
+                              bgcolor: alpha(node.color, 0.1),
+                              color: node.color,
+                              position: 'relative',
+                              '& svg': { fontSize: 14 },
+                            }}
+                          >
+                            {node.icon}
+                            {node.isExtension && (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: -2,
+                                  right: -2,
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  bgcolor: theme.palette.info.main,
+                                  border: `1px solid ${theme.palette.background.paper}`,
+                                }}
+                              />
+                            )}
+                          </Box>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontSize: '0.8rem', fontWeight: 500 }}
+                          >
+                            {node.label}
+                          </Typography>
+                          {node.isExtension && (
+                            <Chip
+                              label="Ext"
+                              size="small"
+                              sx={{
+                                height: 14,
+                                fontSize: '0.6rem',
+                                ml: 'auto',
+                                bgcolor: alpha(theme.palette.info.main, 0.1),
+                                color: theme.palette.info.main,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Tooltip>
+                    ))}
+                  </Box>
+                )}
               </AccordionDetails>
             </Accordion>
           );
@@ -610,27 +954,28 @@ export function NodePalette({ onNodeSelect }: NodePaletteProps) {
       {/* Help text */}
       <Box
         sx={{
-          p: 2,
+          px: 1.5,
+          py: 1,
           borderTop: `1px solid ${theme.palette.divider}`,
           bgcolor: alpha(theme.palette.primary.main, 0.04),
         }}
       >
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.7rem' }}>
           {extensionLoading ? (
             <>
               <NetPadLoader size="small" variant="svg" showPhrases={false} />
-              Loading extension nodes...
+              Loading extensions...
             </>
           ) : (
             <>
-              Drag nodes onto the canvas to add them to your workflow
+              Drag nodes to canvas
               {extensionNodes.length > 0 && (
                 <Chip
                   label={`+${extensionNodes.length} ext`}
                   size="small"
                   sx={{
-                    height: 16,
-                    fontSize: '0.65rem',
+                    height: 14,
+                    fontSize: '0.6rem',
                     bgcolor: alpha(theme.palette.info.main, 0.1),
                     color: theme.palette.info.main,
                   }}

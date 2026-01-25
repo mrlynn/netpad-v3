@@ -191,6 +191,7 @@ export function WYSIWYGFieldCard({
       return (
         <TextField
           fullWidth
+          label={config.label}
           value={displayValue}
           placeholder="Computed value will appear here"
           variant={inputStyle as 'outlined' | 'filled' | 'standard'}
@@ -203,7 +204,12 @@ export function WYSIWYGFieldCard({
             }
           }}
           helperText="Auto-calculated from formula"
-          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: `${inputBorderRadius}px`,
+              '& fieldset': { borderColor: alpha(textColor, 0.2) },
+            },
+          }}
         />
       );
     }
@@ -391,10 +397,21 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="date"
+            label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
-            size="small"
+            required={config.required}
+            InputLabelProps={{ shrink: true }}
+            variant={inputStyle as 'outlined' | 'filled' | 'standard'}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${inputBorderRadius}px`,
+                '& fieldset': { borderColor: alpha(textColor, 0.2) },
+                '&:hover fieldset': { borderColor: alpha(primaryColor, 0.5) },
+                '&.Mui-focused fieldset': { borderColor: primaryColor },
+              },
+            }}
           />
         );
 
@@ -403,10 +420,20 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="email"
+            label={config.label}
             placeholder={config.placeholder || 'email@example.com'}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
-            size="small"
+            required={config.required}
+            variant={inputStyle as 'outlined' | 'filled' | 'standard'}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${inputBorderRadius}px`,
+                '& fieldset': { borderColor: alpha(textColor, 0.2) },
+                '&:hover fieldset': { borderColor: alpha(primaryColor, 0.5) },
+                '&.Mui-focused fieldset': { borderColor: primaryColor },
+              },
+            }}
           />
         );
 
@@ -415,10 +442,20 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="url"
+            label={config.label}
             placeholder={config.placeholder || 'https://'}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
-            size="small"
+            required={config.required}
+            variant={inputStyle as 'outlined' | 'filled' | 'standard'}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${inputBorderRadius}px`,
+                '& fieldset': { borderColor: alpha(textColor, 0.2) },
+                '&:hover fieldset': { borderColor: alpha(primaryColor, 0.5) },
+                '&.Mui-focused fieldset': { borderColor: primaryColor },
+              },
+            }}
           />
         );
 
@@ -641,15 +678,25 @@ export function WYSIWYGFieldCard({
         return (
           <TextField
             fullWidth
-            placeholder={config.placeholder || 'Your answer'}
+            label={config.label}
+            placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
             multiline={config.type === 'textarea' || config.type === 'string' && (value?.length || 0) > 50}
             rows={config.type === 'textarea' ? 3 : config.type === 'string' && (value?.length || 0) > 50 ? 4 : 1}
+            required={config.required}
             inputProps={{
               maxLength: config.validation?.maxLength
             }}
-            size="small"
+            variant={inputStyle as 'outlined' | 'filled' | 'standard'}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: `${inputBorderRadius}px`,
+                '& fieldset': { borderColor: alpha(textColor, 0.2) },
+                '&:hover fieldset': { borderColor: alpha(primaryColor, 0.5) },
+                '&.Mui-focused fieldset': { borderColor: primaryColor },
+              },
+            }}
           />
         );
     }
@@ -657,7 +704,7 @@ export function WYSIWYGFieldCard({
 
   return (
     <Paper
-      elevation={isSelected ? 2 : isHovered ? 1 : (theme?.elevation ?? 0)}
+      elevation={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onSelect}
@@ -669,35 +716,25 @@ export function WYSIWYGFieldCard({
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); onDrop(); }}
       sx={{
-        p: 2.5,
-        pl: 3,
+        p: 2,
         mb: 0,
         borderRadius: `${borderRadius}px`,
-        // Google Forms style: colored left border for selection
+        // Clean, subtle border styling matching preview
         border: '1px solid',
-        borderColor: isDragOver
-          ? alpha(primaryColor, 0.4)
-          : isHovered
-          ? alpha(textColor, 0.15)
-          : alpha(textColor, 0.08),
-        // Override left border for selection indicator
-        borderLeftWidth: 6,
-        borderLeftStyle: 'solid',
-        borderLeftColor: isSelected
+        borderColor: isSelected
           ? primaryColor
           : isDragOver
-          ? alpha(primaryColor, 0.6)
-          : 'transparent',
+          ? alpha(primaryColor, 0.4)
+          : alpha(textColor, 0.12),
         bgcolor: isDragging
-          ? alpha(primaryColor, 0.05)
+          ? alpha(primaryColor, 0.02)
           : backgroundColor,
         opacity: isDragging ? 0.6 : 1,
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
         position: 'relative',
         '&:hover': {
-          borderColor: alpha(primaryColor, 0.3),
-          boxShadow: isSelected ? 2 : 1,
+          borderColor: isSelected ? primaryColor : alpha(textColor, 0.25),
         },
         '&:active': draggable ? { cursor: 'grabbing' } : {},
       }}
@@ -876,15 +913,15 @@ export function WYSIWYGFieldCard({
         </ClickAwayListener>
       )}
 
-      {/* Field content - cleaner Google Forms style */}
+      {/* Field content */}
       <Box>
-        {/* Simplified Question Label Display */}
-        {!isLayout && (
+        {/* Show separate label only for non-TextField field types that don't have built-in labels */}
+        {!isLayout && !['string', 'text', 'textarea', 'email', 'url', 'phone', 'number', 'date', 'datetime', 'time'].includes(config.type || '') && !config.computed && (
           <Typography
-            variant="body1"
+            variant="body2"
             sx={{
               fontWeight: 500,
-              mb: 1.5,
+              mb: 1,
               color: textColor,
               display: 'flex',
               alignItems: 'center',
@@ -893,7 +930,7 @@ export function WYSIWYGFieldCard({
           >
             {config.label}
             {config.required && (
-              <Typography component="span" sx={{ color: errorColor, fontWeight: 400 }}>*</Typography>
+              <Typography component="span" sx={{ color: errorColor, ml: 0.5 }}>*</Typography>
             )}
           </Typography>
         )}

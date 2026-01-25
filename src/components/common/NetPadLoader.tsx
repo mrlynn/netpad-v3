@@ -154,9 +154,13 @@ function NetPadLogoIcon({
 }
 
 /**
- * NetPad ASCII loader: [◉ ◉] NetPad
+ * NetPad ASCII loader with antenna, eyes, and chin:
+ *      ●
+ *      |
+ *   [◉ ◉]
+ *     ▽
  * - blinking eyes
- * - bobbing antenna dot
+ * - bobbing antenna
  * - theme-aware color
  */
 function NetPadAsciiLoaderIcon({
@@ -168,14 +172,15 @@ function NetPadAsciiLoaderIcon({
 }) {
   const colors = getLoaderColors(isDark);
 
-  const fontSize =
-    size === 'small' ? 18 : size === 'medium' ? 22 : 26;
+  const fontSize = size === 'small' ? 16 : size === 'medium' ? 20 : 24;
+  const eyeSize = size === 'small' ? 14 : size === 'medium' ? 16 : 18;
+  const antennaFontSize = size === 'small' ? 10 : size === 'medium' ? 12 : 14;
+  const chinFontSize = size === 'small' ? 12 : size === 'medium' ? 14 : 16;
+  const brandWeight = size === 'small' ? 600 : 700;
+  const brandFontSize = size === 'small' ? 14 : size === 'medium' ? 18 : 22;
 
-  const eyeSize =
-    size === 'small' ? 18 : size === 'medium' ? 20 : 22;
-
-  const brandWeight =
-    size === 'small' ? 600 : 700;
+  const monoFont =
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
   return (
     <Box
@@ -183,47 +188,61 @@ function NetPadAsciiLoaderIcon({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 0.75,
+        gap: 0.5,
       }}
     >
+      {/* Robot face with antenna and chin */}
       <Box
         sx={{
           display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          lineHeight: 1,
+          flexDirection: 'column',
+          alignItems: 'center',
           animation: `${asciiShimmer} 1.6s ease-in-out infinite`,
         }}
       >
+        {/* Antenna ball */}
         <Box
           component="span"
           aria-hidden="true"
           sx={{
-            display: 'inline-block',
-            fontFamily:
-              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-            fontSize: 14,
+            fontFamily: monoFont,
+            fontSize: antennaFontSize,
             color: colors.accent,
-            transformOrigin: '50% 100%',
+            lineHeight: 1,
             animation: `${antennaBob} 1.2s ease-in-out infinite`,
-            marginRight: '6px',
-            marginBottom: '2px',
           }}
         >
           ●
         </Box>
-
-        <Typography
+        {/* Antenna stem */}
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            fontFamily: monoFont,
+            fontSize: antennaFontSize,
+            color: colors.primary,
+            lineHeight: 0.8,
+            marginTop: '-2px',
+            marginBottom: size === 'small' ? '6px' : size === 'medium' ? '8px' : '10px',
+            animation: `${antennaBob} 1.2s ease-in-out infinite`,
+          }}
+        >
+          │
+        </Box>
+        {/* Face with eyes */}
+        <Box
           component="span"
           sx={{
-            fontFamily:
-              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            fontFamily: monoFont,
             fontSize,
             fontWeight: 700,
-            letterSpacing: '0.02em',
             color: colors.primary,
             userSelect: 'none',
             whiteSpace: 'nowrap',
+            lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
           [
@@ -234,8 +253,7 @@ function NetPadAsciiLoaderIcon({
               fontSize: eyeSize,
               transformOrigin: '50% 60%',
               animation: `${eyeBlink} 2.2s ease-in-out infinite`,
-              marginLeft: '6px',
-              marginRight: '10px',
+              mx: 0.5,
             }}
           >
             ◉
@@ -248,33 +266,56 @@ function NetPadAsciiLoaderIcon({
               transformOrigin: '50% 60%',
               animation: `${eyeBlink} 2.2s ease-in-out infinite`,
               animationDelay: '0.08s',
-              marginRight: '6px',
+              mx: 0.5,
             }}
           >
             ◉
           </Box>
-          ]{' '}
-          <Box
-            component="span"
-            sx={{
-              fontWeight: brandWeight,
-              color: 'text.primary',
-            }}
-          >
-            NetPad
-          </Box>
-        </Typography>
+          ]
+        </Box>
+        {/* Chin / point */}
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            fontFamily: monoFont,
+            fontSize: chinFontSize,
+            color: colors.primary,
+            lineHeight: 0.6,
+            marginTop: size === 'small' ? '6px' : size === 'medium' ? '8px' : '10px',
+            marginBottom: size === 'small' ? '6px' : size === 'medium' ? '1px' : '4px',
+          }}
+        >
+          ▽
+        </Box>
       </Box>
 
-      <Box
+      {/* Brand name */}
+      {/* <Typography
+        component="span"
         sx={{
-          width: size === 'small' ? 120 : size === 'medium' ? 160 : 200,
+          fontFamily: monoFont,
+          fontSize: brandFontSize,
+          fontWeight: brandWeight,
+          color: 'text.primary',
+          letterSpacing: '0.02em',
+          mt: 0.5,
+        }}
+      >
+        NetPad
+      </Typography> */}
+
+      {/* Gradient line */}
+      {/* <Box
+        sx={{
+          width: size === 'small' ? 80 : size === 'medium' ? 100 : 120,
           height: 2,
           borderRadius: 999,
           background: `linear-gradient(90deg, transparent, ${colors.accent}, transparent)`,
           opacity: 0.6,
+          mt: 0.25,
         }}
-      />
+      /> */}
     </Box>
   );
 }

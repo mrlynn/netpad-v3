@@ -40,11 +40,28 @@ export async function getRAGChunksCollection(
   return db.collection<RAGDocumentChunk>('rag_document_chunks');
 }
 
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __ragIndexesCreated: Set<string> | undefined;
+}
+
+if (!global.__ragIndexesCreated) {
+  global.__ragIndexesCreated = new Set();
+}
+
+const ragIndexesCreated = global.__ragIndexesCreated;
+
 /**
  * Create indexes for RAG collections
  * Called on first connection to org database
  */
 export async function createRAGIndexes(orgId: string): Promise<void> {
+  // Skip if already created for this org
+  if (ragIndexesCreated.has(orgId)) {
+    return;
+  }
+
   try {
     const db = await getOrgDb(orgId);
 
@@ -66,9 +83,11 @@ export async function createRAGIndexes(orgId: string): Promise<void> {
     // Index name: rag_vector_index
     // See: docs/internal/knowledge-guided-conversational-forms-implementation-plan.md
 
+    ragIndexesCreated.add(orgId);
     console.log(`[RAG] Indexes created for ${orgId}`);
   } catch (error) {
     // Indexes may already exist
+    ragIndexesCreated.add(orgId);
     console.log(`[RAG] Index creation completed for ${orgId} (some may already exist)`);
   }
 }

@@ -34,6 +34,7 @@ import {
   Speed,
   Campaign,
   Rocket,
+  Share,
 } from '@mui/icons-material';
 import { CommandPalette, useCommandPalette } from '@/components/Admin/CommandPalette';
 import Link from 'next/link';
@@ -91,6 +92,14 @@ const adminFeatures: AdminFeature[] = [
     icon: <StoreMallDirectory sx={{ fontSize: 32 }} />,
     color: '#9C27B0',
     statsKey: 'marketplace',
+  },
+  {
+    title: 'Referrals',
+    description: 'Manage referral codes, view all referrals, and approve payouts',
+    href: '/admin/referrals',
+    icon: <Share sx={{ fontSize: 32 }} />,
+    color: '#4CAF50',
+    statsKey: 'referrals',
   },
   {
     title: 'Extensions',
@@ -192,6 +201,10 @@ export default function AdminDashboardPage() {
     user?.platformRole === 'admin' ? '/api/admin/instance' : null,
     fetcher
   );
+  const { data: referralStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/referrals/payouts?status=pending&limit=1' : null,
+    fetcher
+  );
 
   // Redirect non-admins
   useEffect(() => {
@@ -249,6 +262,10 @@ export default function AdminDashboardPage() {
     if (feature.statsKey === 'instance' && instanceStats?.instance) {
       return instanceStats.instance.uptime;
     }
+    if (feature.statsKey === 'referrals' && referralStats) {
+      const pending = referralStats.total || 0;
+      return pending > 0 ? `${pending} pending` : 'No pending';
+    }
     return null;
   };
 
@@ -258,6 +275,9 @@ export default function AdminDashboardPage() {
     }
     if (feature.statsKey === 'clusters' && clusterStats?.stats) {
       return clusterStats.stats.inactive30Days > 0 ? 'warning' : 'info';
+    }
+    if (feature.statsKey === 'referrals' && referralStats) {
+      return referralStats.total > 0 ? 'warning' : 'default';
     }
     return 'info';
   };

@@ -2,15 +2,31 @@ import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
 import { User, MagicLink, TrustedDevice, PasskeyCredential } from '@/types/auth';
 import crypto from 'crypto';
 
-// MongoDB connection for auth database
-let client: MongoClient | null = null;
-let db: Db | null = null;
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __authDbState: {
+    client: MongoClient | null;
+    db: Db | null;
+    indexesCreated: boolean;
+  } | undefined;
+}
+
+if (!global.__authDbState) {
+  global.__authDbState = {
+    client: null,
+    db: null,
+    indexesCreated: false,
+  };
+}
+
+const authState = global.__authDbState;
 
 const AUTH_DB_URI = process.env.AUTH_MONGODB_URI || process.env.MONGODB_URI || '';
 const AUTH_DB_NAME = process.env.AUTH_DB_NAME || 'mdb_tools_auth';
 
 export async function getAuthDb(): Promise<Db> {
-  if (db) return db;
+  if (authState.db) return authState.db;
 
   if (!AUTH_DB_URI) {
     console.error('[Auth DB] No MongoDB URI configured. Set AUTH_MONGODB_URI or MONGODB_URI in .env.local');
@@ -19,15 +35,18 @@ export async function getAuthDb(): Promise<Db> {
 
   try {
     console.log('[Auth DB] Connecting to:', AUTH_DB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-    client = new MongoClient(AUTH_DB_URI);
-    await client.connect();
-    db = client.db(AUTH_DB_NAME);
+    authState.client = new MongoClient(AUTH_DB_URI);
+    await authState.client.connect();
+    authState.db = authState.client.db(AUTH_DB_NAME);
     console.log('[Auth DB] Connected to database:', AUTH_DB_NAME);
 
-    // Create indexes
-    await createIndexes(db);
+    // Create indexes only once
+    if (!authState.indexesCreated) {
+      await createIndexes(authState.db);
+      authState.indexesCreated = true;
+    }
 
-    return db;
+    return authState.db;
   } catch (error) {
     console.error('[Auth DB] Connection failed:', error);
     throw error;

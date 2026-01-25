@@ -2335,8 +2335,2104 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Each node type outputs specific data that can be referenced by downstream nodes. Click a node and expand "Available Data" to see what variables it provides.',
       },
     ],
-    relatedTopics: ['workflow-variables'],
+    relatedTopics: ['workflow-variables', 'node-form-trigger', 'node-conditional', 'node-http-request', 'node-transform'],
     keywords: ['nodes', 'triggers', 'logic', 'data', 'integrations', 'workflow'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Triggers
+  // ============================================
+
+  'node-form-trigger': {
+    id: 'node-form-trigger',
+    title: 'Form Trigger Node',
+    description: 'Start a workflow automatically when a form is submitted. The most common way to trigger workflows in NetPad.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Form Trigger node starts your workflow whenever a linked form receives a submission. This is the primary way to automate actions based on user input.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form: Select which form should trigger this workflow',
+          'The trigger automatically receives all form submission data',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'data: Object containing all submitted form field values',
+          'formId: Unique identifier of the form',
+          'formName: Display name of the form',
+          'submissionId: Unique identifier of this submission',
+          'submittedAt: ISO timestamp of when the form was submitted',
+          '_rawPayload: Full trigger payload for advanced use cases',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Accessing Form Data',
+      },
+      {
+        type: 'text',
+        content: 'Use variable syntax to access submitted field values in downstream nodes:',
+      },
+      {
+        type: 'code',
+        content: [
+          '{{nodes.formTrigger.data.email}}',
+          '{{nodes.formTrigger.data.firstName}}',
+          '{{nodes.formTrigger.data.address.city}}',
+          '{{nodes.formTrigger.submissionId}}',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'A contact form workflow: Form Trigger → Send Email (notify sales team) → MongoDB Write (save to CRM collection)',
+      },
+      {
+        type: 'tip',
+        content: 'Each form can trigger multiple workflows. Create separate workflows for different automation needs (email notifications, data processing, integrations).',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'workflow-variables', 'node-webhook-trigger'],
+    keywords: ['form', 'trigger', 'submission', 'start', 'workflow', 'data'],
+  },
+
+  'node-webhook-trigger': {
+    id: 'node-webhook-trigger',
+    title: 'Webhook Trigger Node',
+    description: 'Start a workflow from external HTTP requests. Integrate with third-party services, CI/CD pipelines, or custom applications.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Webhook Trigger creates a unique URL endpoint that external systems can call to start your workflow. Perfect for integrations with services like Stripe, GitHub, Zapier, or custom applications.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Webhook URL: Auto-generated unique URL for this trigger',
+          'HTTP Methods: Which methods to accept (POST, GET, PUT, etc.)',
+          'Authentication: Optional secret token for security',
+          'Response Mode: Sync (wait for workflow) or Async (immediate acknowledgment)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'body: The JSON body of the incoming request',
+          'headers: HTTP headers from the request',
+          'method: HTTP method used (POST, GET, etc.)',
+          'query: URL query parameters',
+          'path: Request path',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Webhook Call',
+      },
+      {
+        type: 'code',
+        content: [
+          'curl -X POST https://your-domain.com/api/webhooks/wh_abc123 \\',
+          '  -H "Content-Type: application/json" \\',
+          '  -H "X-Webhook-Secret: your-secret-token" \\',
+          '  -d \'{"event": "user.created", "data": {"id": "123", "email": "user@example.com"}}\'',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Security Best Practices',
+      },
+      {
+        type: 'list',
+        content: [
+          'Always use a webhook secret for production workflows',
+          'Validate the request body structure in a Conditional node',
+          'Use HTTPS endpoints only',
+          'Log incoming requests for debugging',
+        ],
+      },
+      {
+        type: 'warning',
+        content: 'Webhook URLs should be kept secret. Anyone with the URL can trigger your workflow.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-form-trigger', 'node-http-request'],
+    keywords: ['webhook', 'trigger', 'http', 'api', 'integration', 'external'],
+  },
+
+  'node-schedule-trigger': {
+    id: 'node-schedule-trigger',
+    title: 'Schedule Trigger Node',
+    description: 'Run workflows on a time-based schedule using cron expressions. Automate recurring tasks like reports, cleanups, and syncs.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Schedule Trigger runs your workflow automatically at specified times. Use cron expressions for flexible scheduling from every minute to once a year.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Cron Expression: Standard cron format (minute hour day month weekday)',
+          'Timezone: Timezone for schedule interpretation (default: UTC)',
+          'Enabled: Toggle to pause/resume the schedule',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Cron Expression Format',
+      },
+      {
+        type: 'code',
+        content: [
+          '┌───────────── minute (0 - 59)',
+          '│ ┌─────────── hour (0 - 23)',
+          '│ │ ┌───────── day of month (1 - 31)',
+          '│ │ │ ┌─────── month (1 - 12)',
+          '│ │ │ │ ┌───── day of week (0 - 6, Sunday = 0)',
+          '│ │ │ │ │',
+          '* * * * *',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Common Cron Examples',
+      },
+      {
+        type: 'list',
+        content: [
+          '0 9 * * 1-5 → Every weekday at 9:00 AM',
+          '0 0 * * * → Every day at midnight',
+          '*/15 * * * * → Every 15 minutes',
+          '0 8 1 * * → First day of every month at 8:00 AM',
+          '0 0 * * 0 → Every Sunday at midnight',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'scheduledTime: ISO timestamp of when the workflow was scheduled to run',
+          'executionTime: ISO timestamp of actual execution',
+          'cronExpression: The cron expression that triggered this run',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Daily report workflow: Schedule Trigger (0 8 * * *) → MongoDB Query (get yesterday\'s data) → Transform (format report) → Send Email',
+      },
+      {
+        type: 'tip',
+        content: 'Test scheduled workflows manually first using the Manual Trigger before enabling the schedule.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-manual-trigger'],
+    keywords: ['schedule', 'cron', 'timer', 'recurring', 'automated', 'daily', 'weekly'],
+  },
+
+  'node-manual-trigger': {
+    id: 'node-manual-trigger',
+    title: 'Manual Trigger Node',
+    description: 'Start a workflow with a button click. Perfect for testing, on-demand tasks, and admin operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Manual Trigger lets you start a workflow by clicking a button in the workflow editor. Essential for testing workflows and running on-demand operations.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Input Data: Optional JSON object to pass as trigger payload',
+          'This simulates data that would come from other trigger types',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'triggeredAt: ISO timestamp of when the workflow was triggered',
+          'triggeredBy: User ID of who triggered the workflow',
+          'payload: Any input data provided in configuration',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Use Cases',
+      },
+      {
+        type: 'list',
+        content: [
+          'Testing workflows before connecting to real triggers',
+          'Running data migration or cleanup tasks',
+          'Admin operations like sending batch notifications',
+          'Development and debugging',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Add test data in the Input Data field to simulate form submissions or webhook payloads during development.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-form-trigger', 'node-webhook-trigger'],
+    keywords: ['manual', 'trigger', 'test', 'button', 'start', 'debug'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Logic
+  // ============================================
+
+  'node-conditional': {
+    id: 'node-conditional',
+    title: 'Conditional (If/Else) Node',
+    description: 'Branch your workflow based on conditions. Route data down different paths depending on field values.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Conditional node evaluates conditions and routes your workflow down a "true" or "false" branch. Use it to create different paths for different scenarios.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Conditions: One or more conditions to evaluate',
+          'Combine With: "AND" (all must be true) or "OR" (any can be true)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Condition Operators',
+      },
+      {
+        type: 'list',
+        content: [
+          'equals / not_equals: Exact value matching',
+          'contains / not_contains: Partial text matching (case-insensitive)',
+          'starts_with / ends_with: Text prefix/suffix matching',
+          'gt / gte / lt / lte: Numeric comparisons (>, >=, <, <=)',
+          'is_empty / is_not_empty: Check for null, undefined, or empty string',
+          'is_true / is_false: Boolean checks',
+          'exists / not_exists: Check if field is defined',
+          'regex: Regular expression matching',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Conditions',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Check if priority is high',
+          'field: "nodes.formTrigger.data.priority"',
+          'operator: "equals"',
+          'value: "high"',
+          '',
+          '// Check if amount is over $1000',
+          'field: "nodes.formTrigger.data.amount"',
+          'operator: "gt"',
+          'value: 1000',
+          '',
+          '// Check if email is from company domain',
+          'field: "nodes.formTrigger.data.email"',
+          'operator: "ends_with"',
+          'value: "@company.com"',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'result: Boolean - the final evaluation result',
+          'branch: "true" or "false" - which path was taken',
+          'data: Pass-through of input data',
+          'evaluatedConditions: Array with details of each condition evaluation',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Route support tickets: If priority equals "urgent" → Send Slack alert, Else → Add to queue',
+      },
+      {
+        type: 'tip',
+        content: 'Use dot notation to access nested fields: "nodes.formTrigger.data.address.country"',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-switch', 'workflow-variables'],
+    keywords: ['conditional', 'if', 'else', 'branch', 'condition', 'logic', 'route'],
+  },
+
+  'node-switch': {
+    id: 'node-switch',
+    title: 'Switch Node',
+    description: 'Route data to multiple paths based on a field value. More flexible than conditional for multi-branch logic.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Switch node evaluates a field and routes to different outputs based on matching cases. Unlike Conditional (binary true/false), Switch supports many named output branches.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Field: The field path to evaluate (supports dot notation)',
+          'Cases: Array of value → output branch mappings',
+          'Default Output: Branch name when no case matches (default: "default")',
+          'Match Mode: How to compare values (exact, contains, regex, range)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Match Modes',
+      },
+      {
+        type: 'list',
+        content: [
+          'exact: Value must match exactly (or string comparison)',
+          'contains: Field value contains the case value (for strings/arrays)',
+          'regex: Case value is treated as a regular expression',
+          'range: Use min/max values for numeric ranges',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Configuration',
+      },
+      {
+        type: 'code',
+        content: [
+          'field: "nodes.formTrigger.data.department"',
+          'matchMode: "exact"',
+          'cases: [',
+          '  { value: "sales", output: "sales-team" },',
+          '  { value: "support", output: "support-team" },',
+          '  { value: "engineering", output: "eng-team" }',
+          ']',
+          'defaultOutput: "general"',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'output: Name of the matched output branch',
+          'matchedCase: The value that matched (or "default")',
+          'matchedIndex: Index of the matched case (-1 for default)',
+          'isDefault: Boolean indicating if default was used',
+          'fieldValue: The actual value that was evaluated',
+          'data: Pass-through of input data',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Route by region: Switch on country → separate branches for US, EU, APAC processing with different compliance rules.',
+      },
+      {
+        type: 'tip',
+        content: 'Use range mode for numeric tiers: 0-100 → "bronze", 100-500 → "silver", 500+ → "gold"',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-conditional', 'workflow-variables'],
+    keywords: ['switch', 'route', 'multiple', 'branch', 'case', 'match'],
+  },
+
+  'node-delay': {
+    id: 'node-delay',
+    title: 'Delay Node',
+    description: 'Pause workflow execution for a specified duration. Useful for rate limiting, scheduling, and timed sequences.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Delay node pauses your workflow for a specified amount of time before continuing to the next node. Data passes through unchanged after the delay.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Duration: Number of time units to wait',
+          'Unit: Time unit - milliseconds, seconds, minutes, or hours',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Examples',
+      },
+      {
+        type: 'list',
+        content: [
+          '5 seconds: Rate limiting between API calls',
+          '1 minute: Cool-down period before retry',
+          '1 hour: Delayed follow-up email',
+          'Maximum delay: 10 minutes (capped for safety)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'delayed: Always true',
+          'requestedMs: The delay duration that was requested',
+          'actualMs: The actual duration waited',
+          'Plus all input data passed through',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Use Cases',
+      },
+      {
+        type: 'list',
+        content: [
+          'Rate limiting: Add delays between API calls to avoid rate limits',
+          'Staged emails: Send welcome email, delay 1 day, send follow-up',
+          'Retry backoff: Delay before retrying failed operations',
+          'Scheduled actions: Wait before performing time-sensitive operations',
+        ],
+      },
+      {
+        type: 'warning',
+        content: 'Delays longer than 10 minutes are automatically capped. For longer delays, use the Schedule Trigger to start a new workflow at a specific time.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-conditional', 'node-schedule-trigger'],
+    keywords: ['delay', 'wait', 'pause', 'timer', 'rate', 'limit'],
+  },
+
+  'node-loop': {
+    id: 'node-loop',
+    title: 'Loop Node',
+    description: 'Iterate over arrays and process each item. Execute a sequence of nodes for every item in a list.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Loop node iterates over an array and executes connected nodes for each item. Perfect for processing lists of records, sending batch notifications, or performing bulk operations.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Array Field: Path to the array to iterate over',
+          'Item Variable: Name for the current item (default: "item")',
+          'Index Variable: Name for the current index (default: "index")',
+          'Batch Size: Process items in batches (optional)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data (per iteration)',
+      },
+      {
+        type: 'list',
+        content: [
+          'item: The current array item being processed',
+          'index: Current index (0-based)',
+          'total: Total number of items in the array',
+          'isFirst: Boolean - true for first item',
+          'isLast: Boolean - true for last item',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Array field: "nodes.mongodbQuery.documents"',
+          '',
+          '// In downstream nodes, access:',
+          '{{loop.item.email}}',
+          '{{loop.index}}',
+          '{{loop.total}}',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Send personalized emails: MongoDB Query (get users) → Loop → Send Email (using {{loop.item.email}} and {{loop.item.name}})',
+      },
+      {
+        type: 'warning',
+        content: 'Be careful with large arrays. Consider using batch processing or filtering to limit the number of iterations.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-filter', 'node-mongodb-query'],
+    keywords: ['loop', 'iterate', 'array', 'batch', 'foreach', 'process'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Integrations
+  // ============================================
+
+  'node-http-request': {
+    id: 'node-http-request',
+    title: 'HTTP Request Node',
+    description: 'Make HTTP API calls to external services. Supports all methods, authentication, headers, and body formats.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The HTTP Request node makes HTTP calls to external APIs. Use it to integrate with any REST API, send webhooks, or fetch data from external services.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'URL: The endpoint URL (supports {{variables}})',
+          'Method: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS',
+          'Headers: Custom HTTP headers as key-value pairs',
+          'Query Parameters: URL query parameters',
+          'Body: Request body for POST/PUT/PATCH',
+          'Body Type: json, form, text, or binary',
+          'Authentication: none, basic, bearer, or api_key',
+          'Timeout: Request timeout in milliseconds (default: 30000)',
+          'Follow Redirects: Whether to follow HTTP redirects',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Authentication Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'None: No authentication',
+          'Basic: Username/password (Basic Auth header)',
+          'Bearer: Token-based authentication (Bearer token)',
+          'API Key: Custom header with API key',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'status: HTTP status code (200, 404, etc.)',
+          'statusText: HTTP status text (OK, Not Found, etc.)',
+          'headers: Response headers object',
+          'data: Response body (auto-parsed if JSON)',
+          'ok: Boolean - true if status is 2xx',
+          'url: Final URL after redirects',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example: POST with JSON Body',
+      },
+      {
+        type: 'code',
+        content: [
+          'URL: https://api.example.com/users',
+          'Method: POST',
+          'Headers: { "X-API-Key": "{{variables.apiKey}}" }',
+          'Body Type: json',
+          'Body: {',
+          '  "email": "{{nodes.formTrigger.data.email}}",',
+          '  "name": "{{nodes.formTrigger.data.name}}"',
+          '}',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Use the Conditional node after HTTP Request to handle different status codes - route errors to a notification node.',
+      },
+      {
+        type: 'warning',
+        content: 'Store API keys and secrets in workflow variables, not directly in node configuration.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-webhook-trigger', 'workflow-variables'],
+    keywords: ['http', 'request', 'api', 'rest', 'fetch', 'post', 'get', 'integration'],
+  },
+
+  'node-mongodb-query': {
+    id: 'node-mongodb-query',
+    title: 'MongoDB Query Node',
+    description: 'Query documents from MongoDB. Supports find, findOne, aggregate, count, and distinct operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The MongoDB Query node retrieves data from your MongoDB collections. Use it to fetch records, run aggregations, count documents, or get distinct values.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Connection: Select a MongoDB connection from your vault',
+          'Collection: Name of the collection to query',
+          'Operation: find, findOne, aggregate, count, or distinct',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Operations',
+      },
+      {
+        type: 'list',
+        content: [
+          'find: Return multiple matching documents (with limit)',
+          'findOne: Return first matching document',
+          'aggregate: Run aggregation pipeline',
+          'count: Count matching documents',
+          'distinct: Get unique values for a field',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Find/FindOne Options',
+      },
+      {
+        type: 'list',
+        content: [
+          'Query: MongoDB filter object { field: value }',
+          'Projection: Fields to include/exclude',
+          'Sort: Sort order { field: 1 or -1 }',
+          'Limit: Maximum documents to return (default: 100)',
+          'Skip: Number of documents to skip (for pagination)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Query',
+      },
+      {
+        type: 'code',
+        content: [
+          'Operation: find',
+          'Collection: orders',
+          'Query: {',
+          '  "status": "pending",',
+          '  "createdAt": { "$gte": "{{variables.startDate}}" }',
+          '}',
+          'Sort: { "createdAt": -1 }',
+          'Limit: 50',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'documents: Array of matched documents (for find/aggregate)',
+          'document: Single document (for findOne)',
+          'count: Number of documents (for count, or result count)',
+          'values: Distinct values (for distinct)',
+          'found: Boolean - whether findOne found a document',
+          'metadata: { collection, database, operation, executionTimeMs }',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Use aggregation pipelines for complex queries. The Pipeline Builder in NetPad can help you create them visually.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-mongodb-write', 'mongodb-connection'],
+    keywords: ['mongodb', 'query', 'find', 'aggregate', 'database', 'collection'],
+  },
+
+  'node-mongodb-write': {
+    id: 'node-mongodb-write',
+    title: 'MongoDB Write Node',
+    description: 'Insert, update, or delete documents in MongoDB. Supports single and bulk operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The MongoDB Write node modifies data in your MongoDB collections. Use it to insert new documents, update existing ones, or delete records.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Connection: Select a MongoDB connection from your vault',
+          'Collection: Name of the collection to modify',
+          'Operation: insertOne, insertMany, updateOne, updateMany, deleteOne, deleteMany, replaceOne',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Insert Operations',
+      },
+      {
+        type: 'list',
+        content: [
+          'insertOne: Insert a single document',
+          'insertMany: Insert multiple documents',
+          'Document(s): The document(s) to insert',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Update Operations',
+      },
+      {
+        type: 'list',
+        content: [
+          'updateOne: Update first matching document',
+          'updateMany: Update all matching documents',
+          'Filter: Query to match documents',
+          'Update: Update operations ($set, $inc, $push, etc.)',
+          'Upsert: Create document if none match (optional)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example: Insert Document',
+      },
+      {
+        type: 'code',
+        content: [
+          'Operation: insertOne',
+          'Collection: submissions',
+          'Document: {',
+          '  "email": "{{nodes.formTrigger.data.email}}",',
+          '  "name": "{{nodes.formTrigger.data.name}}",',
+          '  "createdAt": "{{variables.now}}",',
+          '  "status": "pending"',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example: Update Document',
+      },
+      {
+        type: 'code',
+        content: [
+          'Operation: updateOne',
+          'Filter: { "_id": "{{nodes.formTrigger.data.userId}}" }',
+          'Update: {',
+          '  "$set": { "lastLogin": "{{variables.now}}" },',
+          '  "$inc": { "loginCount": 1 }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'acknowledged: Boolean - operation was acknowledged by MongoDB',
+          'insertedId: ID of inserted document (for insertOne)',
+          'insertedIds: Array of IDs (for insertMany)',
+          'matchedCount: Number of documents matched (for update)',
+          'modifiedCount: Number of documents modified (for update)',
+          'deletedCount: Number of documents deleted (for delete)',
+        ],
+      },
+      {
+        type: 'warning',
+        content: 'Be careful with deleteMany and updateMany operations. Always test with restrictive filters first.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-mongodb-query', 'mongodb-connection'],
+    keywords: ['mongodb', 'write', 'insert', 'update', 'delete', 'database', 'collection'],
+  },
+
+  'node-google-sheets': {
+    id: 'node-google-sheets',
+    title: 'Google Sheets Node',
+    description: 'Read and write data to Google Sheets. Sync form submissions, create reports, or import data.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Google Sheets node integrates with Google Sheets for reading and writing spreadsheet data. Perfect for creating reports, syncing submissions, or importing data.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Spreadsheet ID: The ID from the Google Sheets URL',
+          'Sheet Name: Name of the specific sheet/tab',
+          'Operation: read, append, update, or clear',
+          'Range: Cell range in A1 notation (e.g., "A1:D100")',
+          'Data: Values to write (for append/update)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Operations',
+      },
+      {
+        type: 'list',
+        content: [
+          'read: Read data from a range',
+          'append: Add new rows to the end of data',
+          'update: Update specific cells',
+          'clear: Clear values from a range',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data (Read)',
+      },
+      {
+        type: 'list',
+        content: [
+          'values: 2D array of cell values',
+          'rows: Array of objects (if first row contains headers)',
+          'rowCount: Number of rows returned',
+          'columnCount: Number of columns',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Form to Sheet: Form Trigger → Transform (format data) → Google Sheets (append row with {{nodes.transform.name}}, {{nodes.transform.email}})',
+      },
+      {
+        type: 'tip',
+        content: 'The Spreadsheet ID is found in the URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-http-request', 'node-transform'],
+    keywords: ['google', 'sheets', 'spreadsheet', 'excel', 'read', 'write', 'append'],
+  },
+
+  'node-atlas-cluster': {
+    id: 'node-atlas-cluster',
+    title: 'Atlas Cluster Node',
+    description: 'Manage MongoDB Atlas clusters. Get cluster status, pause/resume, or scale operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Atlas Cluster node interacts with the MongoDB Atlas Admin API to manage clusters. Use it for monitoring, cost optimization, or automated scaling.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Atlas Credentials: API key pair from your Atlas project',
+          'Project ID: Atlas project ID',
+          'Cluster Name: Name of the cluster to manage',
+          'Operation: getStatus, pause, resume, or scale',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Operations',
+      },
+      {
+        type: 'list',
+        content: [
+          'getStatus: Get current cluster status and configuration',
+          'pause: Pause the cluster (saves cost when not in use)',
+          'resume: Resume a paused cluster',
+          'scale: Modify cluster tier (requires tier specification)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'clusterName: Name of the cluster',
+          'stateName: Current state (IDLE, CREATING, UPDATING, etc.)',
+          'mongoDBVersion: MongoDB version',
+          'clusterType: REPLICASET or SHARDED',
+          'providerSettings: Cloud provider details',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Cost optimization: Schedule Trigger (end of business day) → Atlas Cluster (pause) → Send Email (confirm paused)',
+      },
+      {
+        type: 'warning',
+        content: 'Pausing and resuming clusters takes several minutes. Plan for downtime in your workflows.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-atlas-data-api', 'mongodb-connection'],
+    keywords: ['atlas', 'cluster', 'mongodb', 'cloud', 'scale', 'pause', 'manage'],
+  },
+
+  'node-atlas-data-api': {
+    id: 'node-atlas-data-api',
+    title: 'Atlas Data API Node',
+    description: 'Query MongoDB Atlas via the Data API. Serverless database access without connection management.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Atlas Data API node uses MongoDB Atlas\'s REST-based Data API for database operations. Unlike direct connections, it\'s serverless and doesn\'t require connection management.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Data API Key: API key from Atlas Data API settings',
+          'App ID: Atlas App Services App ID',
+          'Cluster: Name of the cluster',
+          'Database: Database name',
+          'Collection: Collection name',
+          'Operation: find, findOne, insertOne, updateOne, deleteOne, aggregate',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'When to Use Data API vs Direct Connection',
+      },
+      {
+        type: 'list',
+        content: [
+          'Data API: Serverless functions, edge deployments, simple queries',
+          'Direct Connection: High-performance needs, complex transactions, bulk operations',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'text',
+        content: 'Same as MongoDB Query/Write nodes, depending on the operation.',
+      },
+      {
+        type: 'tip',
+        content: 'Enable the Data API in Atlas under App Services > Data API. Create an API key with appropriate permissions.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-mongodb-query', 'node-atlas-cluster'],
+    keywords: ['atlas', 'data', 'api', 'serverless', 'rest', 'mongodb'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Actions
+  // ============================================
+
+  'node-email-send': {
+    id: 'node-email-send',
+    title: 'Send Email Node',
+    description: 'Send emails via SMTP or SendGrid. Supports HTML templates, attachments, and dynamic content.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Send Email node sends emails using your configured email credentials (SMTP or SendGrid). Perfect for notifications, confirmations, and automated communications.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Email Credential: REQUIRED - Select from your configured SMTP or SendGrid integrations',
+          'To: Recipient email address(es) - comma-separated for multiple',
+          'Subject: Email subject line (supports {{variables}})',
+          'Body: Email content - plain text or HTML',
+          'From: Optional sender address (overrides credential default)',
+          'Reply-To: Optional reply-to address',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Setting Up Email Credentials',
+      },
+      {
+        type: 'text',
+        content: 'Before using this node, configure email credentials in Settings > Integrations:',
+      },
+      {
+        type: 'list',
+        content: [
+          'SMTP: Your email server (Gmail, Outlook, custom SMTP)',
+          'SendGrid: API key from your SendGrid account',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'HTML Email Example',
+      },
+      {
+        type: 'code',
+        content: [
+          'To: {{nodes.formTrigger.data.email}}',
+          'Subject: Welcome to our platform, {{nodes.formTrigger.data.name}}!',
+          'Body: <html>',
+          '  <body>',
+          '    <h1>Welcome, {{nodes.formTrigger.data.name}}!</h1>',
+          '    <p>Thank you for signing up on {{variables.date}}.</p>',
+          '    <p>Your account ID is: {{nodes.formTrigger.submissionId}}</p>',
+          '  </body>',
+          '</html>',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'sent: Boolean - whether email was sent successfully',
+          'messageId: Unique message ID from the email provider',
+          'recipients: Array of recipient addresses',
+          'accepted: Addresses that accepted the email',
+          'rejected: Addresses that rejected the email',
+          'provider: "smtp" or "sendgrid"',
+          'timestamp: ISO timestamp of when email was sent',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Test emails with your own address first. Check spam folders if emails don\'t arrive.',
+      },
+      {
+        type: 'warning',
+        content: 'Email credentials are required. System SMTP (used for authentication emails) cannot be used in workflows.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-notification', 'workflow-variables'],
+    keywords: ['email', 'send', 'smtp', 'sendgrid', 'notification', 'message'],
+  },
+
+  'node-notification': {
+    id: 'node-notification',
+    title: 'Notification Node',
+    description: 'Send push notifications and in-app alerts. Notify users about important events.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Notification node sends in-app notifications to users. Use it to alert team members about form submissions, workflow completions, or important events.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Title: Notification title',
+          'Message: Notification body text',
+          'Type: info, success, warning, or error',
+          'Recipients: User IDs or "all" for broadcast',
+          'Link: Optional URL to navigate when clicked',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'sent: Boolean - notification was queued successfully',
+          'notificationId: Unique notification ID',
+          'recipientCount: Number of recipients',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Alert on high-priority ticket: Form Trigger → Conditional (priority = "high") → Notification (alert support team)',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-email-send'],
+    keywords: ['notification', 'alert', 'push', 'message', 'user'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Data
+  // ============================================
+
+  'node-transform': {
+    id: 'node-transform',
+    title: 'Transform Node',
+    description: 'Transform and reshape data between nodes. Map fields, apply expressions, or restructure objects.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Transform node modifies data structure between nodes. Use it to rename fields, combine values, format data, or prepare payloads for APIs.',
+      },
+      {
+        type: 'heading',
+        content: 'Modes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Template: Define output object with {{variable}} substitution',
+          'Expression: JavaScript expression that returns transformed data',
+          'Mapping: Map source fields to target fields with optional transforms',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Mode (Recommended)',
+      },
+      {
+        type: 'text',
+        content: 'Define your output structure with variable placeholders:',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "fullName": "{{nodes.formTrigger.data.firstName}} {{nodes.formTrigger.data.lastName}}",',
+          '  "email": "{{nodes.formTrigger.data.email}}",',
+          '  "submittedAt": "{{nodes.formTrigger.submittedAt}}",',
+          '  "metadata": {',
+          '    "source": "web-form",',
+          '    "formId": "{{nodes.formTrigger.formId}}"',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Expression Mode',
+      },
+      {
+        type: 'text',
+        content: 'Write JavaScript that returns the transformed object:',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Access data from previous nodes',
+          'const items = inputs.documents || [];',
+          '',
+          '// Transform each item',
+          'const processed = items.map(item => ({',
+          '  id: item._id,',
+          '  name: item.name.toUpperCase(),',
+          '  value: item.price * item.quantity',
+          '}));',
+          '',
+          'return { items: processed, count: processed.length };',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Available in Expressions',
+      },
+      {
+        type: 'list',
+        content: [
+          'inputs: Data from the previous node',
+          'nodes: Outputs from all previous nodes',
+          'variables: Workflow variables',
+          'trigger: Original trigger data',
+          'JSON, Math, Date, Array, Object, String, Number: Standard JS objects',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'text',
+        content: 'The node outputs whatever you return from template/expression/mapping.',
+      },
+      {
+        type: 'tip',
+        content: 'Use Template mode for simple restructuring, Expression mode for complex logic or array processing.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-filter', 'workflow-variables'],
+    keywords: ['transform', 'map', 'reshape', 'convert', 'format', 'data'],
+  },
+
+  'node-filter': {
+    id: 'node-filter',
+    title: 'Filter Node',
+    description: 'Filter arrays based on conditions. Remove items that don\'t match your criteria.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Filter node removes items from an array that don\'t match specified conditions. Use it to narrow down query results, remove invalid entries, or select specific records.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Array Field: Path to the array to filter',
+          'Conditions: Criteria each item must match (same operators as Conditional node)',
+          'Combine With: AND or OR for multiple conditions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example',
+      },
+      {
+        type: 'code',
+        content: [
+          'Array Field: "nodes.mongodbQuery.documents"',
+          'Conditions:',
+          '  - field: "status", operator: "equals", value: "active"',
+          '  - field: "score", operator: "gte", value: 80',
+          'Combine With: AND',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'items: Filtered array of items that matched',
+          'count: Number of items that passed the filter',
+          'removed: Number of items that were filtered out',
+          'originalCount: Original array length',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Combine with MongoDB Query\'s filter for best performance - filter at the database level when possible.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-transform', 'node-loop'],
+    keywords: ['filter', 'array', 'condition', 'remove', 'select'],
+  },
+
+  'node-merge': {
+    id: 'node-merge',
+    title: 'Merge Node',
+    description: 'Combine data from multiple sources. Merge objects, concatenate arrays, or join datasets.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Merge node combines data from multiple upstream nodes. Use it to consolidate results from parallel branches or combine related data.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Mode: object (merge objects), array (concatenate arrays), or join (join by key)',
+          'Sources: Paths to the data to merge',
+          'Join Key: Field to match on (for join mode)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Merge Modes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Object: Combine multiple objects into one (later values override)',
+          'Array: Concatenate multiple arrays into a single array',
+          'Join: Match records from two arrays by a common key',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'result: The merged data (object or array depending on mode)',
+          'sourceCount: Number of sources merged',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Enrich user data: MongoDB Query (users) + HTTP Request (external profiles) → Merge (join by email) → Send Email',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-transform', 'node-filter'],
+    keywords: ['merge', 'combine', 'join', 'concatenate', 'union'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - AI
+  // ============================================
+
+  'node-ai-prompt': {
+    id: 'node-ai-prompt',
+    title: 'AI Prompt Node',
+    description: 'Send prompts to AI language models. Generate text, analyze content, or answer questions.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The AI Prompt node sends text to an AI language model and returns the generated response. Use it for text generation, summarization, analysis, and more.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Prompt: The text prompt to send (supports {{variables}})',
+          'System Message: Optional system instruction to guide the AI',
+          'Model: AI model to use (auto-selected based on provider)',
+          'Temperature: Creativity level (0 = deterministic, 1 = creative)',
+          'Max Tokens: Maximum response length',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Prompt',
+      },
+      {
+        type: 'code',
+        content: [
+          'System: You are a customer support assistant. Be helpful and professional.',
+          '',
+          'Prompt: Please summarize this customer feedback:',
+          '{{nodes.formTrigger.data.feedback}}',
+          '',
+          'Include: key points, sentiment, and suggested action.',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'response: The AI-generated text response',
+          'model: Model that was used',
+          'usage: Token usage statistics',
+          'finishReason: Why generation stopped (stop, length, etc.)',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Auto-respond: Form Trigger (support request) → AI Prompt (generate response) → Send Email (to customer)',
+      },
+      {
+        type: 'tip',
+        content: 'Be specific in your prompts. Include context, format requirements, and examples for best results.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-ai-classify', 'node-ai-extract'],
+    keywords: ['ai', 'prompt', 'llm', 'generate', 'text', 'gpt', 'language'],
+  },
+
+  'node-ai-classify': {
+    id: 'node-ai-classify',
+    title: 'AI Classify Node',
+    description: 'Classify text into predefined categories using AI. Auto-route tickets, categorize feedback, or tag content.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The AI Classify node uses AI to categorize text into predefined categories. Perfect for ticket routing, sentiment analysis, and content tagging.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Text: The text to classify (supports {{variables}})',
+          'Categories: List of possible categories',
+          'Allow Multiple: Whether multiple categories can be selected',
+          'Include Confidence: Include confidence scores in output',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example',
+      },
+      {
+        type: 'code',
+        content: [
+          'Text: {{nodes.formTrigger.data.message}}',
+          'Categories:',
+          '  - billing',
+          '  - technical-support',
+          '  - feature-request',
+          '  - general-inquiry',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'category: The selected category (or array if multiple)',
+          'confidence: Confidence score (0-1)',
+          'allScores: Scores for all categories',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Support routing: Form Trigger → AI Classify → Switch (by category) → different notification channels',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-ai-prompt', 'node-switch'],
+    keywords: ['ai', 'classify', 'category', 'route', 'tag', 'sentiment'],
+  },
+
+  'node-ai-extract': {
+    id: 'node-ai-extract',
+    title: 'AI Extract Node',
+    description: 'Extract structured data from unstructured text using AI. Pull out names, dates, addresses, and custom fields.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The AI Extract node uses AI to pull structured data from unstructured text. Extract entities like names, emails, dates, amounts, or any custom fields you define.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Text: The text to extract from (supports {{variables}})',
+          'Fields: List of fields to extract with types and descriptions',
+          'Strict Mode: Fail if required fields not found',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Field Configuration',
+      },
+      {
+        type: 'code',
+        content: [
+          'Fields:',
+          '  - name: "customerName"',
+          '    type: "string"',
+          '    description: "The customer\'s full name"',
+          '    required: true',
+          '  - name: "amount"',
+          '    type: "number"',
+          '    description: "Dollar amount mentioned"',
+          '  - name: "productNames"',
+          '    type: "array"',
+          '    description: "List of products mentioned"',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'Each configured field becomes an output property',
+          'extracted: Object containing all extracted values',
+          'confidence: Confidence scores per field',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Email parsing: Webhook (incoming email) → AI Extract (customer name, order number) → MongoDB Query (find order)',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-ai-prompt', 'node-transform'],
+    keywords: ['ai', 'extract', 'parse', 'entity', 'structured', 'data'],
+  },
+
+  'node-ai-embed': {
+    id: 'node-ai-embed',
+    title: 'Generate Embeddings Node',
+    description: 'Generate vector embeddings for text using Voyage AI, Atlas AI Services, or OpenAI. Enable semantic search and RAG applications.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Generate Embeddings node creates vector embeddings from text. Embeddings are numerical representations that capture semantic meaning, enabling similarity search and RAG (Retrieval Augmented Generation) applications.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Provider: auto (recommended), atlas-ai, voyage, or openai',
+          'Model: Embedding model to use',
+          'Text: The text content to embed (supports {{variables}})',
+          'Input Type: document (for indexing) or query (for searching)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Embedding Providers',
+      },
+      {
+        type: 'list',
+        content: [
+          'Auto-detect: Uses best available provider (Atlas AI → Voyage → OpenAI)',
+          'Atlas AI Services: MongoDB\'s managed Voyage AI integration',
+          'Voyage AI Direct: Direct API access to Voyage models',
+          'OpenAI: OpenAI\'s embedding models',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Voyage AI Models',
+      },
+      {
+        type: 'list',
+        content: [
+          'voyage-3: General purpose, 1024 dimensions ($0.06/M tokens)',
+          'voyage-3-lite: Cost-optimized, 512 dimensions ($0.02/M tokens)',
+          'voyage-code-3: Code/technical, 1536 dimensions ($0.06/M tokens)',
+          'voyage-3-large: High accuracy, 1024 dimensions ($0.18/M tokens)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Document vs Query Input Types',
+      },
+      {
+        type: 'text',
+        content: 'Voyage AI uses asymmetric embeddings - documents and queries are embedded differently for better search:',
+      },
+      {
+        type: 'list',
+        content: [
+          'document: Use when embedding content to store in a database',
+          'query: Use when embedding a search query to find similar content',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'embedding: Vector array of numbers (e.g., 1024 floats)',
+          'dimensions: Number of dimensions in the embedding',
+          'model: Model that was used',
+          'provider: Provider that was used',
+          'cost: Estimated cost in USD',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'RAG workflow: Form Trigger (question) → Generate Embeddings (query type) → Vector Search → AI Prompt (answer with context)',
+      },
+      {
+        type: 'tip',
+        content: 'Store document embeddings in MongoDB with a Vector Search index. Use the Vector Search node to find similar documents.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-vector-search', 'node-semantic-search', 'rag-document-management'],
+    keywords: ['embedding', 'vector', 'voyage', 'atlas', 'openai', 'semantic', 'ai'],
+  },
+
+  'node-vector-search': {
+    id: 'node-vector-search',
+    title: 'Vector Search Node',
+    description: 'Search MongoDB Atlas Vector Search index. Find semantically similar documents using vector embeddings.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Vector Search node queries a MongoDB Atlas Vector Search index to find documents similar to a given embedding vector. Use it after generating query embeddings to find relevant content.',
+      },
+      {
+        type: 'heading',
+        content: 'Prerequisites',
+      },
+      {
+        type: 'list',
+        content: [
+          'MongoDB Atlas M10+ cluster (or Atlas Local for self-hosted)',
+          'Vector Search index created on your collection',
+          'Documents with stored embedding vectors',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Connection: MongoDB connection from your vault',
+          'Collection: Collection containing embedded documents',
+          'Index Name: Name of your Vector Search index',
+          'Embedding Field: Field containing the vectors (default: "embedding")',
+          'Query Vector: The embedding to search for (use {{previous.embedding}})',
+          'Number of Candidates: Pre-filter candidates (default: 100)',
+          'Limit: Maximum results to return (default: 10)',
+          'Minimum Score: Threshold for similarity (0-1, default: 0)',
+          'Pre-Filter: Optional MongoDB filter before vector search',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Configuration',
+      },
+      {
+        type: 'code',
+        content: [
+          'Collection: knowledge_base',
+          'Index Name: vector_index',
+          'Embedding Field: embedding',
+          'Query Vector: {{nodes.aiEmbed.embedding}}',
+          'Number of Candidates: 200',
+          'Limit: 5',
+          'Minimum Score: 0.7',
+          'Pre-Filter: { "category": "technical" }',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'results: Array of matching documents with similarity scores',
+          'count: Number of results returned',
+          'latencyMs: Search execution time',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Result Document Structure',
+      },
+      {
+        type: 'code',
+        content: [
+          '{',
+          '  "_id": "...",',
+          '  "title": "Document Title",',
+          '  "content": "Document content...",',
+          '  "vectorSearchScore": 0.92  // Similarity score',
+          '}',
+        ],
+      },
+      {
+        type: 'tip',
+        content: 'Use pre-filtering to narrow results by metadata (category, date, etc.) before vector similarity is calculated.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-ai-embed', 'node-semantic-search'],
+    keywords: ['vector', 'search', 'atlas', 'similarity', 'semantic', 'embedding'],
+  },
+
+  'node-semantic-search': {
+    id: 'node-semantic-search',
+    title: 'Semantic Search Node',
+    description: 'Combined embedding + vector search in one step. Simplify RAG workflows by handling both operations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Semantic Search node combines embedding generation and vector search into a single step. Provide a text query, and it generates the embedding and searches in one operation.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Provider: Embedding provider (auto, atlas-ai, voyage, openai)',
+          'Model: Embedding model to use',
+          'Query: Natural language search query (supports {{variables}})',
+          'Connection: MongoDB connection from your vault',
+          'Collection: Collection containing embedded documents',
+          'Index Name: Name of your Vector Search index',
+          'Embedding Field: Field containing the vectors',
+          'Limit: Maximum results to return',
+          'Minimum Score: Similarity threshold (0-1)',
+          'Pre-Filter: Optional MongoDB filter',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Semantic Search vs Separate Nodes',
+      },
+      {
+        type: 'list',
+        content: [
+          'Semantic Search: Simpler, single node for common use cases',
+          'Separate Embed + Vector Search: More control, reusable embeddings',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'results: Array of matching documents with scores',
+          'count: Number of results',
+          'queryEmbedding: The generated embedding (for debugging)',
+          'embeddingCost: Cost of embedding generation',
+          'latencyMs: Total operation time',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Knowledge base Q&A: Form Trigger (question) → Semantic Search (find relevant docs) → AI Prompt (answer using {{results}})',
+      },
+      {
+        type: 'tip',
+        content: 'The Semantic Search node automatically uses "query" input type for optimal search embeddings.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-ai-embed', 'node-vector-search', 'node-ai-prompt'],
+    keywords: ['semantic', 'search', 'rag', 'embedding', 'vector', 'query'],
+  },
+
+  // ============================================
+  // Workflow Node Documentation - Custom
+  // ============================================
+
+  'node-code': {
+    id: 'node-code',
+    title: 'Code Node',
+    description: 'Execute custom JavaScript code. Full control for complex transformations, calculations, and logic.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The Code node executes custom JavaScript in a sandboxed environment. Use it when built-in nodes don\'t cover your specific requirements.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Code: JavaScript code to execute',
+          'Timeout: Execution timeout (default: 5000ms, max: 30000ms)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Available Variables',
+      },
+      {
+        type: 'list',
+        content: [
+          'input: Data from the previous node',
+          'outputs: All previous node outputs by node ID',
+          'variables: Workflow variables',
+          'trigger: Original trigger data',
+          'console: { log, warn, error } for logging',
+          'helpers: Utility functions (see below)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Helper Functions',
+      },
+      {
+        type: 'list',
+        content: [
+          'Date: now(), formatDate(), parseDate(), addDays(), addHours()',
+          'String: slugify(), truncate(), capitalize(), camelCase(), snakeCase()',
+          'Array: unique(), flatten(), chunk(), groupBy(), sortBy(), sum(), avg()',
+          'Object: pick(), omit(), get(), set(), merge(), deepMerge()',
+          'Encoding: base64Encode(), base64Decode(), urlEncode(), urlDecode()',
+          'Utility: uuid(), round(), clamp(), random()',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Code',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Process order data',
+          'const items = input.items || [];',
+          '',
+          '// Calculate totals using helpers',
+          'const subtotal = helpers.sum(items.map(i => i.price * i.quantity));',
+          'const tax = helpers.round(subtotal * 0.08, 2);',
+          'const total = subtotal + tax;',
+          '',
+          '// Group items by category',
+          'const byCategory = helpers.groupBy(items, \'category\');',
+          '',
+          '// Return the result',
+          'return {',
+          '  orderId: helpers.uuid(),',
+          '  items,',
+          '  subtotal,',
+          '  tax,',
+          '  total,',
+          '  byCategory,',
+          '  processedAt: helpers.now().toISOString()',
+          '};',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'text',
+        content: 'Whatever your code returns becomes the node output. If returning an object, its properties are accessible to downstream nodes.',
+      },
+      {
+        type: 'tip',
+        content: 'Use console.log() for debugging - logs appear in the workflow execution details.',
+      },
+      {
+        type: 'warning',
+        content: 'Code runs in a sandbox without network access or file system. For external calls, use the HTTP Request node.',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-transform', 'workflow-variables'],
+    keywords: ['code', 'javascript', 'custom', 'script', 'function', 'logic'],
+  },
+
+  'node-html-output': {
+    id: 'node-html-output',
+    title: 'HTML Output Node',
+    description: 'Render data as HTML using templates. Create formatted reports, emails, or web content.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content: 'The HTML Output node renders data into HTML using a template. Use it to create formatted emails, reports, or any HTML content with dynamic data.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Template: HTML template with {{variable}} placeholders',
+          'Data: Data object to use in the template',
+          'Include Styles: Whether to include default styling',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Template Example',
+      },
+      {
+        type: 'code',
+        content: [
+          '<html>',
+          '<head><style>',
+          '  body { font-family: Arial; }',
+          '  .header { background: #4CAF50; color: white; padding: 20px; }',
+          '</style></head>',
+          '<body>',
+          '  <div class="header">',
+          '    <h1>Order Confirmation</h1>',
+          '  </div>',
+          '  <p>Thank you, {{data.customerName}}!</p>',
+          '  <table>',
+          '    {{#each data.items}}',
+          '    <tr>',
+          '      <td>{{this.name}}</td>',
+          '      <td>${{this.price}}</td>',
+          '    </tr>',
+          '    {{/each}}',
+          '  </table>',
+          '  <p><strong>Total: ${{data.total}}</strong></p>',
+          '</body>',
+          '</html>',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'html: The rendered HTML string',
+          'plainText: Plain text version (HTML stripped)',
+        ],
+      },
+      {
+        type: 'example',
+        content: 'Email report: MongoDB Query → Transform → HTML Output → Send Email (using {{html}} as body)',
+      },
+    ],
+    relatedTopics: ['workflow-nodes', 'node-email-send', 'node-transform'],
+    keywords: ['html', 'template', 'render', 'output', 'report', 'email'],
   },
 
   // ============================================
@@ -5360,6 +7456,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Waitlist - Review and approve pending waitlist applications',
           'AI Analytics - Monitor AI usage, token consumption, and costs across all organizations',
           'Marketplace Review - Review and approve marketplace template submissions',
+          'Referrals - Manage referral codes, track referrals, and process commission payouts',
         ],
       },
       {
@@ -5377,7 +7474,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'All admin actions are logged for security and compliance. Treat admin access as a privileged role with full visibility into platform operations.',
       },
     ],
-    relatedTopics: ['admin-user-management', 'admin-waitlist', 'admin-ai-analytics', 'admin-marketplace-review'],
+    relatedTopics: ['admin-user-management', 'admin-waitlist', 'admin-ai-analytics', 'admin-marketplace-review', 'admin-referrals'],
     keywords: ['admin', 'dashboard', 'administration', 'management', 'platform', 'settings'],
   },
 
@@ -5968,5 +8065,741 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'package',
       'configuration',
     ],
+  },
+
+  'admin-referrals': {
+    id: 'admin-referrals',
+    title: 'Referral Management',
+    description:
+      'Manage referral codes, track referrals, configure benefits for referred users, and process commission payouts.',
+    adminOnly: true,
+    content: [
+      {
+        type: 'heading',
+        content: 'Referral Program Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Referral Management system allows platform administrators to create and manage referral codes, track referral performance, configure incentives for both referrers and referred users, and process commission payouts. Access this feature at /admin/referrals.',
+      },
+      {
+        type: 'heading',
+        content: 'Referral Code Types',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad supports multiple referral code types with different commission structures. Each type has default commission rates that apply to the referrer (the person sharing the code):',
+      },
+      {
+        type: 'list',
+        content: [
+          'Standard - Auto-generated for organizations: 20% / 15% / 10% / 10% (Year 1/2/3/N)',
+          'Partner - For strategic partners: 30% / 25% / 20% / 15% (Year 1/2/3/N)',
+          'Influencer - For content creators: 25% / 20% / 15% / 10% (Year 1/2/3/N)',
+          'Campaign - For marketing campaigns: 20% / 15% / 10% / 10% (Year 1/2/3/N)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Commission Structure',
+      },
+      {
+        type: 'text',
+        content:
+          'Commissions are calculated as a percentage of each invoice amount paid by the referred organization. The rate decreases over the lifetime of the referral based on how long ago the referral was attributed:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Year 1 - Highest commission rate (first 12 months)',
+          'Year 2 - Reduced rate (months 13-24)',
+          'Year 3 - Further reduced rate (months 25-36)',
+          'Year N - Ongoing rate for all subsequent years',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Referrals must be "qualified" before earning commissions. Qualification requires 2 paid invoices from the referred organization.',
+      },
+      {
+        type: 'heading',
+        content: 'Referred User Benefits',
+      },
+      {
+        type: 'text',
+        content:
+          'In addition to referrer commissions, you can configure incentives for the referred user (the person using the code to sign up):',
+      },
+      {
+        type: 'list',
+        content: [
+          'Discount Percentage - X% off their first N payments (e.g., 10% off first 3 payments)',
+          'Account Credit - Flat dollar amount credited to their account (e.g., $20 credit)',
+          'Trial Extension - Extra days added to the standard trial period (e.g., +14 days)',
+          'Feature Unlocks - Temporary access to premium features (future enhancement)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating Referral Codes',
+      },
+      {
+        type: 'text',
+        content:
+          'To create a new referral code, navigate to /admin/referrals and click "Create Code" in the Referral Codes tab:',
+      },
+      {
+        type: 'list',
+        content: [
+          '1. Enter a unique code (4-20 alphanumeric characters, automatically uppercased)',
+          '2. Select the code type (Partner, Influencer, or Campaign)',
+          '3. Optionally enable benefits for referred users and configure discount/credit/trial options',
+          '4. Optionally assign to an organization (search by name, slug, or owner email)',
+          '5. Click "Create" to generate the code',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Unassigned vs Assigned Codes',
+      },
+      {
+        type: 'text',
+        content:
+          'Codes can be created without an organization assignment. This is useful for pre-generating codes for marketing campaigns or partnerships:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Unassigned Codes - Created but not linked to any organization. Commission earnings go nowhere until assigned.',
+          'Assigned Codes - Linked to a specific organization. That organization earns commissions when their code is used.',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use the "Assign to Organization" feature to link an unassigned code to an organization after creation. Search by organization name, slug, or owner email.',
+      },
+      {
+        type: 'heading',
+        content: 'Managing Payouts',
+      },
+      {
+        type: 'text',
+        content:
+          'When referrers accumulate available earnings (after the 30-day hold period), they can request payouts. Admins must review and approve payout requests:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Pending Payouts - Review requested payouts in the first tab',
+          'Minimum Payout - $50 USD minimum for payout requests',
+          'Payment Methods - PayPal, Wise, bank transfer, or other',
+          'Approve - Marks the payout as approved for processing',
+          'Reject - Denies the payout request (requires reason)',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'Approved payouts require manual processing outside of NetPad. After approving, coordinate with finance to send the payment via the specified method.',
+      },
+      {
+        type: 'heading',
+        content: 'Referral Lifecycle',
+      },
+      {
+        type: 'list',
+        content: [
+          '1. User shares their referral code URL: netpad.io/signup?ref=CODE',
+          '2. New user clicks the link - code is stored in a 30-day cookie',
+          '3. New user signs up and creates an organization - referral is "attributed"',
+          '4. New user makes payments - referral status progresses to "qualifying"',
+          '5. After 2 payments - referral becomes "qualified" and commissions start accruing',
+          '6. Referrer sees earnings in their dashboard with 30-day hold',
+          '7. After hold period, earnings become "available" for payout',
+          '8. Referrer requests payout - admin approves/rejects',
+          '9. If referred org cancels - referral status changes to "churned" (no more commissions)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Tracking Performance',
+      },
+      {
+        type: 'text',
+        content:
+          'The admin dashboard provides visibility into referral program performance:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Pending Payouts - Number of payout requests awaiting approval',
+          'Active Codes - Total number of active referral codes',
+          'Unassigned Codes - Codes not yet linked to an organization',
+          'Qualified Referrals - Referrals that have reached qualification threshold',
+        ],
+      },
+    ],
+    relatedTopics: ['admin-dashboard', 'admin-user-management', 'billing'],
+    keywords: [
+      'referrals',
+      'referral',
+      'codes',
+      'commission',
+      'payout',
+      'affiliate',
+      'partner',
+      'influencer',
+      'campaign',
+      'discount',
+      'benefits',
+      'admin',
+    ],
+  },
+
+  // ============================================
+  // Form Reactions
+  // ============================================
+
+  'form-reactions': {
+    id: 'form-reactions',
+    title: 'Form Reactions',
+    description:
+      'Trigger workflows in response to form field events and update form fields with workflow outputs in real-time.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What are Form Reactions?',
+      },
+      {
+        type: 'text',
+        content:
+          'Form Reactions connect form field events (like blur, change, or focus) to workflows, enabling real-time field updates based on workflow outputs. For example, when a user enters a company domain, a reaction can fetch company data from an API and auto-fill related fields.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Concepts',
+      },
+      {
+        type: 'list',
+        content: [
+          'Trigger: The form field event that starts the reaction (change, blur, focus, validate, clear)',
+          'Workflow: The workflow that processes the trigger data and returns field updates',
+          'Field Updates: Mappings from workflow output data to form fields',
+          'Execution: Synchronous execution with configurable timeout and cascade protection',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Creating a Reaction',
+      },
+      {
+        type: 'list',
+        content: [
+          '1. Build a workflow with a "Field Event Trigger" node as the entry point',
+          '2. Add processing nodes (HTTP Request, Transform, AI, etc.)',
+          '3. Add a "Form Field Update" node to map outputs to form fields',
+          '4. Create a reaction on your form linking to this workflow',
+          '5. Configure trigger fields, events, and debounce settings',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Reaction Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Name: Descriptive name for the reaction',
+          'Workflow: The workflow to execute when triggered',
+          'Trigger Fields: Which form fields trigger this reaction',
+          'Trigger Event: The event type (change, blur, focus)',
+          'Debounce: Delay in milliseconds to prevent rapid firing (0-30000ms)',
+          'Timeout: Maximum execution time (1000-30000ms, default 10000ms)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Example Use Cases',
+      },
+      {
+        type: 'list',
+        content: [
+          'Company lookup: Enter domain → fetch company info → auto-fill name, industry, size',
+          'Address validation: Enter postal code → validate → auto-fill city, state',
+          'Price calculation: Select products → calculate → update total price field',
+          'AI suggestions: Enter description → AI categorizes → suggest tags',
+          'Real-time validation: Enter email → check against database → show availability',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use debounce (e.g., 500ms) for text fields to avoid triggering on every keystroke. For select/checkbox fields, 0ms debounce is usually appropriate.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Reactions have cascade protection (max depth of 3) to prevent infinite loops when field updates trigger other reactions.',
+      },
+    ],
+    relatedTopics: [
+      'node-field-event-trigger',
+      'node-form-field-update',
+      'reactions-api',
+      'use-form-reactions-hook',
+      'workflow-nodes',
+    ],
+    keywords: [
+      'reaction',
+      'reactions',
+      'form',
+      'trigger',
+      'field',
+      'event',
+      'update',
+      'real-time',
+      'auto-fill',
+      'workflow',
+    ],
+  },
+
+  'node-field-event-trigger': {
+    id: 'node-field-event-trigger',
+    title: 'Field Event Trigger Node',
+    description:
+      'Workflow trigger node that fires when a form field event occurs. Entry point for form reaction workflows.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Field Event Trigger node is the entry point for form reaction workflows. It receives data when a configured form field event occurs (change, blur, focus, etc.) and provides form context to downstream nodes.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form ID: Optional - Usually set automatically by the reaction system',
+          'Trigger Mode: "any" fires when any field triggers; "all" requires all specified fields to have values',
+          'Debounce (ms): Delay before executing to prevent rapid firing (0-30000ms)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'triggerField: Name of the field that triggered the event',
+          'triggerEvent: Event type (change, blur, focus, validate, clear)',
+          'fieldValue: Current value of the triggering field',
+          'formData: Complete form data object with all field values',
+          'formId: ID of the form',
+          'reactionId: ID of the reaction being executed',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Accessing Data in Downstream Nodes',
+      },
+      {
+        type: 'text',
+        content: 'Use template expressions to access trigger data in subsequent nodes:',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Access the triggering field value',
+          '{{nodes.fieldEventTrigger.fieldValue}}',
+          '',
+          '// Access a specific form field',
+          '{{nodes.fieldEventTrigger.formData.companyDomain}}',
+          '',
+          '// Access the trigger event type',
+          '{{nodes.fieldEventTrigger.triggerEvent}}',
+        ],
+      },
+      {
+        type: 'example',
+        content:
+          'Domain lookup workflow: Field Event Trigger (domain field blur) → HTTP Request (company API) → Form Field Update (company name, industry)',
+      },
+      {
+        type: 'tip',
+        content:
+          'The trigger mode "any" is best for single-field reactions. Use "all" when you need multiple fields to have values before processing.',
+      },
+    ],
+    relatedTopics: ['form-reactions', 'node-form-field-update', 'workflow-nodes', 'node-form-trigger'],
+    keywords: ['field', 'event', 'trigger', 'form', 'reaction', 'blur', 'change', 'focus'],
+  },
+
+  'node-form-field-update': {
+    id: 'node-form-field-update',
+    title: 'Form Field Update Node',
+    description:
+      'Update form fields with data from workflow execution. Maps workflow outputs to specific form fields.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Form Field Update node sends computed values back to form fields. Configure field mappings to specify which form fields receive which workflow data. This is typically the final node in a form reaction workflow.',
+      },
+      {
+        type: 'heading',
+        content: 'Configuration',
+      },
+      {
+        type: 'list',
+        content: [
+          'Feedback Mode: How to notify users when fields are updated (silent, subtle, toast)',
+          'Validate After Update: Whether to run form validation after applying updates',
+          'Field Mappings: Array of source-to-field mappings (see below)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Field Mapping Configuration',
+      },
+      {
+        type: 'text',
+        content: 'Each mapping specifies how workflow data flows to a form field:',
+      },
+      {
+        type: 'list',
+        content: [
+          'Form Field Path: The target form field (e.g., "companyName", "address.city")',
+          'Source Data Path: Path to value in workflow data (e.g., "httpRequest.data.company.name")',
+          'Null Behavior: What to do if source value is null/undefined:',
+          '  - skip: Don\'t update the field (default)',
+          '  - clear: Set the field to null/empty',
+          '  - default: Use a specified default value',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Source Path Examples',
+      },
+      {
+        type: 'code',
+        content: [
+          '// From HTTP Request node output',
+          'httpRequest.data.company.name',
+          'httpRequest.data.employees[0].email',
+          '',
+          '// From Transform node output',
+          'transform.processedData.category',
+          '',
+          '// From original form data',
+          'fieldEventTrigger.formData.existingField',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Output Data',
+      },
+      {
+        type: 'list',
+        content: [
+          'success: Whether updates were applied successfully',
+          'updates: Object containing the field updates that were sent',
+          'updatedFields: Array of field names that were updated',
+          'skippedFields: Array of field names skipped due to null values',
+        ],
+      },
+      {
+        type: 'example',
+        content:
+          'Company auto-fill: Source "httpRequest.data.name" → Field "companyName", Source "httpRequest.data.industry" → Field "industry"',
+      },
+      {
+        type: 'tip',
+        content:
+          'Use dot notation for nested paths. Reference upstream node outputs using their node ID as the prefix (e.g., httpRequest.data.result).',
+      },
+    ],
+    relatedTopics: ['form-reactions', 'node-field-event-trigger', 'workflow-nodes'],
+    keywords: ['update', 'field', 'form', 'mapping', 'output', 'reaction'],
+  },
+
+  'reactions-api': {
+    id: 'reactions-api',
+    title: 'Form Reactions API',
+    description:
+      'REST API endpoints for managing and executing form reactions programmatically.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The Reactions API provides programmatic access to create, manage, and execute form reactions. All endpoints require authentication and an orgId query parameter.',
+      },
+      {
+        type: 'heading',
+        content: 'List Reactions',
+      },
+      {
+        type: 'code',
+        content: [
+          'GET /api/forms/{formId}/reactions?orgId={orgId}',
+          '',
+          'Response:',
+          '{',
+          '  "success": true,',
+          '  "reactions": [...],',
+          '  "total": 3',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Create Reaction',
+      },
+      {
+        type: 'code',
+        content: [
+          'POST /api/forms/{formId}/reactions?orgId={orgId}',
+          '',
+          'Body:',
+          '{',
+          '  "name": "Company Lookup",',
+          '  "description": "Fetch company data on domain blur",',
+          '  "workflowId": "wf_abc123",',
+          '  "trigger": {',
+          '    "fields": ["companyDomain"],',
+          '    "event": "blur",',
+          '    "debounceMs": 500',
+          '  },',
+          '  "execution": {',
+          '    "mode": "sync",',
+          '    "timeoutMs": 10000',
+          '  },',
+          '  "feedback": {',
+          '    "showLoading": true,',
+          '    "loadingText": "Looking up company..."',
+          '  }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Get Single Reaction',
+      },
+      {
+        type: 'code',
+        content: ['GET /api/forms/{formId}/reactions/{reactionId}?orgId={orgId}'],
+      },
+      {
+        type: 'heading',
+        content: 'Update Reaction',
+      },
+      {
+        type: 'code',
+        content: [
+          'PUT /api/forms/{formId}/reactions/{reactionId}?orgId={orgId}',
+          '',
+          'Body: (partial update)',
+          '{',
+          '  "enabled": false,',
+          '  "trigger": { "debounceMs": 1000 }',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Delete Reaction',
+      },
+      {
+        type: 'code',
+        content: [
+          'DELETE /api/forms/{formId}/reactions/{reactionId}?orgId={orgId}',
+          '',
+          'Response:',
+          '{',
+          '  "success": true,',
+          '  "deletedId": "reaction_abc123"',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Execute Reaction',
+      },
+      {
+        type: 'code',
+        content: [
+          'POST /api/forms/{formId}/reactions/execute?orgId={orgId}',
+          '',
+          'Body:',
+          '{',
+          '  "reactionId": "reaction_abc123",',
+          '  "triggerField": "companyDomain",',
+          '  "triggerEvent": "blur",',
+          '  "fieldValue": "mongodb.com",',
+          '  "formData": {',
+          '    "companyDomain": "mongodb.com",',
+          '    "companyName": ""',
+          '  }',
+          '}',
+          '',
+          'Response:',
+          '{',
+          '  "success": true,',
+          '  "status": "completed",',
+          '  "updates": {',
+          '    "companyName": "MongoDB, Inc.",',
+          '    "industry": "Technology"',
+          '  },',
+          '  "durationMs": 850',
+          '}',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'The execute endpoint is typically called by the useFormReactions hook, not directly. Use it for testing or custom integrations.',
+      },
+    ],
+    relatedTopics: ['form-reactions', 'api-overview', 'api-authentication'],
+    keywords: ['api', 'reactions', 'endpoint', 'rest', 'execute', 'crud'],
+  },
+
+  'use-form-reactions-hook': {
+    id: 'use-form-reactions-hook',
+    title: 'useFormReactions Hook',
+    description:
+      'React hook for integrating form reactions into custom form implementations.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'The useFormReactions hook provides a React interface for triggering reactions, managing state, and receiving field updates. Use it when building custom form implementations or integrating reactions with existing forms.',
+      },
+      {
+        type: 'heading',
+        content: 'Basic Usage',
+      },
+      {
+        type: 'code',
+        content: [
+          "import { useFormReactions } from '@/hooks/useFormReactions';",
+          '',
+          'function MyForm({ formId, orgId, reactions }) {',
+          '  const {',
+          '    triggerReaction,',
+          '    cancelReaction,',
+          '    reactionStates,',
+          '    pendingFields,',
+          '    recentlyUpdatedFields,',
+          '  } = useFormReactions({',
+          '    formId,',
+          '    orgId,',
+          '    reactions,',
+          '    onFieldUpdate: (fieldPath, value) => {',
+          "      // Update your form state with the new value",
+          '      setFormData(prev => ({ ...prev, [fieldPath]: value }));',
+          '    },',
+          '    onReactionError: (reactionId, error) => {',
+          "      console.error('Reaction failed:', error);",
+          '    },',
+          '  });',
+          '',
+          '  // Trigger a reaction manually',
+          '  const handleBlur = (fieldName, value) => {',
+          '    triggerReaction(reactionId, {',
+          '      triggerField: fieldName,',
+          "      triggerEvent: 'blur',",
+          '      fieldValue: value,',
+          '      formData: currentFormData,',
+          '    });',
+          '  };',
+          '}',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Hook Options',
+      },
+      {
+        type: 'list',
+        content: [
+          'formId: ID of the form',
+          'orgId: Organization ID',
+          'reactions: Array of FormReaction objects',
+          'onFieldUpdate: Callback when a field should be updated (fieldPath, value)',
+          'onReactionStart: Called when a reaction starts executing',
+          'onReactionComplete: Called when a reaction completes successfully',
+          'onReactionError: Called when a reaction fails',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Return Values',
+      },
+      {
+        type: 'list',
+        content: [
+          'triggerReaction(reactionId, context): Manually trigger a reaction with debounce support',
+          'cancelReaction(reactionId): Cancel a pending reaction (uses AbortController)',
+          'hasReaction(fieldPath): Check if a field has any associated reactions',
+          'getFieldReactions(fieldPath): Get all reactions for a specific field',
+          'reactionStates: Map of reaction states (pending, loading, success, error)',
+          'pendingFields: Set of field paths with pending reactions',
+          'recentlyUpdatedFields: Set of fields recently updated by reactions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Reaction States',
+      },
+      {
+        type: 'code',
+        content: [
+          '// Check if a specific reaction is loading',
+          "if (reactionStates[reactionId]?.status === 'loading') {",
+          '  // Show loading indicator',
+          '}',
+          '',
+          '// Check if a reaction had an error',
+          "if (reactionStates[reactionId]?.status === 'error') {",
+          '  const errorMessage = reactionStates[reactionId].error;',
+          '}',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'The hook handles debouncing internally based on reaction configuration. Multiple rapid calls to triggerReaction will be debounced.',
+      },
+      {
+        type: 'warning',
+        content:
+          'Phase 1 supports manual triggering only. Automatic field event attachment will be available in Phase 3.',
+      },
+    ],
+    relatedTopics: ['form-reactions', 'node-field-event-trigger', 'node-form-field-update'],
+    keywords: ['hook', 'react', 'useFormReactions', 'trigger', 'state', 'callback'],
   },
 };

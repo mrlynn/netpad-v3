@@ -82,7 +82,7 @@ function TriggerNodeComponent({ data, selected, isConnectable }: NodeProps<Trigg
       <Box
         sx={{
           position: 'absolute',
-          top: -8,
+          top: -14,
           left: '50%',
           transform: 'translateX(-50%)',
           px: 1,

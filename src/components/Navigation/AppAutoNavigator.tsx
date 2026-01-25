@@ -5,10 +5,13 @@ import { Box, Typography, Button, alpha, Divider } from '@mui/material';
 import { Apps, RocketLaunch, Store, Description } from '@mui/icons-material';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAutoNavigateToApp } from '@/hooks/useAutoNavigateToApp';
 import { ApplicationSwitcher } from './ApplicationSwitcher';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { getOrgProjectUrl } from '@/lib/routing';
 
 /**
  * Component that handles auto-navigation for authenticated users
@@ -32,12 +35,26 @@ export function AppAutoNavigator({
   showSwitcherOnMultipleApps = true,
   onNavigate,
 }: AppAutoNavigatorProps) {
+  const router = useRouter();
   const { isNavigating, isResolving, shouldShowAppSelection, navigateToLastApp } =
     useAutoNavigateToApp({ onNavigate });
   const applicationContext = useApplicationSafe();
   const applications = applicationContext?.applications ?? [];
   const hasApplications = applicationContext?.hasApplications ?? false;
+  const { currentOrgId } = useOrganization();
+  const currentProjectId = applicationContext?.currentApplication?.projectId;
   const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  // Handle create new application from switcher
+  const handleCreateApp = () => {
+    if (currentOrgId && currentProjectId) {
+      router.push(getOrgProjectUrl(currentOrgId, currentProjectId, 'applications') + '?action=create');
+    } else if (currentOrgId) {
+      router.push(`/orgs/${currentOrgId}/projects`);
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
   // Show loading while resolving
   if (isResolving || isNavigating) {
@@ -158,6 +175,7 @@ export function AppAutoNavigator({
         <ApplicationSwitcher
           open={switcherOpen}
           onClose={() => setSwitcherOpen(false)}
+          onCreateApp={handleCreateApp}
         />
       </>
     );
@@ -349,6 +367,7 @@ export function AppAutoNavigator({
         <ApplicationSwitcher
           open={switcherOpen}
           onClose={() => setSwitcherOpen(false)}
+          onCreateApp={handleCreateApp}
         />
       </>
     );

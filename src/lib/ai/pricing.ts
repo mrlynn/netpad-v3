@@ -1,18 +1,28 @@
 /**
- * LLM Model Pricing Configuration
+ * LLM and Embedding Model Pricing Configuration
  *
  * Pricing data for cost estimation across different providers and models.
  * Prices are per 1 million tokens as of January 2025.
  */
 
 /**
- * Pricing structure for a model
+ * Pricing structure for an LLM model
  */
 export interface ModelPricing {
   /** Cost per 1 million prompt/input tokens in USD */
   promptCostPer1MTokens: number;
   /** Cost per 1 million completion/output tokens in USD */
   completionCostPer1MTokens: number;
+}
+
+/**
+ * Pricing structure for an embedding model
+ */
+export interface EmbeddingPricing {
+  /** Cost per 1 million tokens in USD */
+  costPer1MTokens: number;
+  /** Provider name */
+  provider: string;
 }
 
 /**
@@ -155,6 +165,61 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   },
 };
 
+// ============================================
+// Embedding Model Pricing
+// ============================================
+
+/**
+ * Embedding model pricing lookup table
+ * Updated pricing as of January 2025
+ */
+export const EMBEDDING_PRICING: Record<string, EmbeddingPricing> = {
+  // OpenAI Embedding Models
+  'text-embedding-3-small': {
+    costPer1MTokens: 0.02, // $0.02 per 1M tokens
+    provider: 'openai',
+  },
+  'text-embedding-3-large': {
+    costPer1MTokens: 0.13, // $0.13 per 1M tokens
+    provider: 'openai',
+  },
+  'text-embedding-ada-002': {
+    costPer1MTokens: 0.1, // $0.10 per 1M tokens (legacy)
+    provider: 'openai',
+  },
+
+  // Voyage AI Embedding Models
+  'voyage-3': {
+    costPer1MTokens: 0.06, // $0.06 per 1M tokens
+    provider: 'voyage',
+  },
+  'voyage-3-lite': {
+    costPer1MTokens: 0.02, // $0.02 per 1M tokens
+    provider: 'voyage',
+  },
+  'voyage-code-3': {
+    costPer1MTokens: 0.06, // $0.06 per 1M tokens
+    provider: 'voyage',
+  },
+  'voyage-3-large': {
+    costPer1MTokens: 0.06, // $0.06 per 1M tokens
+    provider: 'voyage',
+  },
+
+  // Atlas AI Services (uses Voyage, pricing included in Atlas billing)
+  // Listed here for reference, actual billing through MongoDB Atlas
+  'atlas-ai-default': {
+    costPer1MTokens: 0.06, // Equivalent to voyage-3
+    provider: 'atlas-ai',
+  },
+
+  // Default fallback (uses text-embedding-3-small pricing)
+  'embedding-default': {
+    costPer1MTokens: 0.02,
+    provider: 'default',
+  },
+};
+
 /**
  * Get pricing for a model
  *
@@ -263,4 +328,55 @@ export function formatTokens(tokens: number): string {
     return `${(tokens / 1_000).toFixed(1)}K`;
   }
   return tokens.toString();
+}
+
+// ============================================
+// Embedding Cost Functions
+// ============================================
+
+/**
+ * Get pricing for an embedding model
+ *
+ * @param model - Embedding model identifier
+ * @returns Pricing for the model, or default pricing if not found
+ */
+export function getEmbeddingPricing(model: string): EmbeddingPricing {
+  if (EMBEDDING_PRICING[model]) {
+    return EMBEDDING_PRICING[model];
+  }
+
+  // Try to match by prefix (e.g., "voyage-3" matches "voyage-3")
+  for (const [key, pricing] of Object.entries(EMBEDDING_PRICING)) {
+    if (model.startsWith(key)) {
+      return pricing;
+    }
+  }
+
+  // Return default embedding pricing
+  return EMBEDDING_PRICING['embedding-default'];
+}
+
+/**
+ * Calculate embedding cost based on token count
+ *
+ * @param model - Embedding model identifier
+ * @param tokens - Number of tokens to embed
+ * @returns Estimated cost in USD
+ */
+export function calculateEmbeddingCost(model: string, tokens: number): number {
+  const pricing = getEmbeddingPricing(model);
+  const cost = (tokens / 1_000_000) * pricing.costPer1MTokens;
+  // Round to 6 decimal places to avoid floating point issues
+  return Math.round(cost * 1_000_000) / 1_000_000;
+}
+
+/**
+ * Check if an embedding model is free (e.g., Atlas AI with billing through Atlas)
+ *
+ * @param model - Embedding model identifier
+ * @returns True if the model is effectively free (billed separately)
+ */
+export function isEmbeddingIncludedInPlatform(model: string): boolean {
+  const pricing = getEmbeddingPricing(model);
+  return pricing.provider === 'atlas-ai';
 }

@@ -1,32 +1,51 @@
 /**
  * RAG Embeddings Generation
  *
- * OpenAI embeddings API integration for document chunks
+ * Centralized embeddings API for document chunks and query embedding.
+ * Supports multiple providers: OpenAI, Voyage AI, MongoDB Atlas AI Services.
+ *
+ * This module maintains backward compatibility with the original API
+ * while using the new embedding provider abstraction.
  */
 
-import OpenAI from 'openai';
+import {
+  createDefaultEmbeddingProvider,
+  getCurrentEmbeddingProviderInfo,
+  EmbeddingProvider,
+  EmbeddingError,
+} from '@/lib/ai/embeddings';
 import { EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from '@/types/rag';
 
 // ============================================
-// OpenAI Client
+// Provider Management
 // ============================================
 
-let openaiClient: OpenAI | null = null;
+/**
+ * Cached embedding provider instance
+ */
+let embeddingProvider: EmbeddingProvider | null = null;
 
 /**
- * Get or create OpenAI client
+ * Get or create the embedding provider
+ * Uses factory to create provider based on environment configuration
  */
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is not set');
+function getEmbeddingProvider(): EmbeddingProvider {
+  if (!embeddingProvider) {
+    embeddingProvider = createDefaultEmbeddingProvider();
+    if (!embeddingProvider) {
+      throw new Error(
+        'No embedding provider configured. Set OPENAI_API_KEY or VOYAGE_API_KEY environment variable.'
+      );
     }
-
-    openaiClient = new OpenAI({ apiKey });
   }
+  return embeddingProvider;
+}
 
-  return openaiClient;
+/**
+ * Reset the cached provider (useful for testing or reconfiguration)
+ */
+export function resetEmbeddingProvider(): void {
+  embeddingProvider = null;
 }
 
 // ============================================
@@ -34,15 +53,10 @@ function getOpenAIClient(): OpenAI {
 // ============================================
 
 /**
- * Maximum batch size for OpenAI embeddings API
- * OpenAI supports up to 2048 inputs per request, we use conservative batch size
- */
-const EMBEDDING_BATCH_SIZE = 100;
-
-/**
  * Generate embeddings for text chunks
  *
- * Batches requests for efficiency when processing multiple chunks
+ * Batches requests for efficiency when processing multiple chunks.
+ * Uses the configured embedding provider (OpenAI, Voyage AI, or Atlas AI).
  *
  * @param chunks - Array of text chunks to embed
  * @returns Array of embeddings (each embedding is an array of numbers)
@@ -50,67 +64,63 @@ const EMBEDDING_BATCH_SIZE = 100;
 export async function generateEmbeddings(
   chunks: Array<{ text: string }>
 ): Promise<number[][]> {
-  const client = getOpenAIClient();
-  const allEmbeddings: number[][] = [];
+  if (chunks.length === 0) {
+    return [];
+  }
 
-  // Process in batches
-  for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
-    const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const texts = batch.map((chunk) => chunk.text);
+  const provider = getEmbeddingProvider();
+  const texts = chunks.map((chunk) => chunk.text);
 
-    try {
-      const response = await client.embeddings.create({
-        model: EMBEDDING_MODEL,
-        input: texts,
-      });
+  try {
+    const embeddings = await provider.generateEmbeddings(texts);
+    return embeddings;
+  } catch (error) {
+    // Log and re-throw with context
+    const providerInfo = provider.getModelInfo();
+    console.error(
+      `[RAG] Embedding generation failed with ${providerInfo.provider}/${providerInfo.model}:`,
+      error
+    );
 
-      // Extract embeddings in order
-      const batchEmbeddings = response.data
-        .sort((a, b) => a.index - b.index)
-        .map((item) => item.embedding);
-
-      allEmbeddings.push(...batchEmbeddings);
-    } catch (error) {
-      console.error(`[RAG] Embedding batch ${i / EMBEDDING_BATCH_SIZE + 1} failed:`, error);
+    if (error instanceof EmbeddingError) {
       throw error;
     }
-  }
 
-  // Validate embedding dimensions
-  for (const embedding of allEmbeddings) {
-    if (embedding.length !== EMBEDDING_DIMENSIONS) {
-      throw new Error(
-        `Unexpected embedding dimensions: expected ${EMBEDDING_DIMENSIONS}, got ${embedding.length}`
-      );
-    }
+    throw new Error(
+      `Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
-
-  return allEmbeddings;
 }
 
 /**
  * Generate a single embedding for a query
  *
+ * Some providers optimize query embeddings differently than document embeddings.
+ *
  * @param query - Text to embed
  * @returns Embedding vector
  */
 export async function generateQueryEmbedding(query: string): Promise<number[]> {
-  const client = getOpenAIClient();
+  const provider = getEmbeddingProvider();
 
-  const response = await client.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: query,
-  });
+  try {
+    const embedding = await provider.generateQueryEmbedding(query);
+    return embedding;
+  } catch (error) {
+    const providerInfo = provider.getModelInfo();
+    console.error(
+      `[RAG] Query embedding failed with ${providerInfo.provider}/${providerInfo.model}:`,
+      error
+    );
 
-  const embedding = response.data[0].embedding;
+    if (error instanceof EmbeddingError) {
+      throw error;
+    }
 
-  if (embedding.length !== EMBEDDING_DIMENSIONS) {
     throw new Error(
-      `Unexpected embedding dimensions: expected ${EMBEDDING_DIMENSIONS}, got ${embedding.length}`
+      `Query embedding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
-
-  return embedding;
 }
 
 // ============================================
@@ -118,26 +128,16 @@ export async function generateQueryEmbedding(query: string): Promise<number[]> {
 // ============================================
 
 /**
- * Pricing for text-embedding-3-small (as of Jan 2025)
- * $0.020 per 1M tokens
- */
-const EMBEDDING_COST_PER_TOKEN = 0.02 / 1_000_000;
-
-/**
- * Estimate average tokens per character
- * OpenAI tokenizer averages ~4 characters per token for English text
- */
-const CHARS_PER_TOKEN = 4;
-
-/**
  * Estimate embedding cost for text
+ *
+ * Uses the configured provider's pricing information.
  *
  * @param text - Text to estimate cost for
  * @returns Estimated cost in USD
  */
 export function estimateEmbeddingCost(text: string): number {
-  const estimatedTokens = Math.ceil(text.length / CHARS_PER_TOKEN);
-  return estimatedTokens * EMBEDDING_COST_PER_TOKEN;
+  const provider = getEmbeddingProvider();
+  return provider.estimateCost([text]);
 }
 
 /**
@@ -147,8 +147,9 @@ export function estimateEmbeddingCost(text: string): number {
  * @returns Estimated cost in USD
  */
 export function estimateChunksCost(chunks: Array<{ text: string }>): number {
-  const totalText = chunks.map((c) => c.text).join('');
-  return estimateEmbeddingCost(totalText);
+  const provider = getEmbeddingProvider();
+  const texts = chunks.map((c) => c.text);
+  return provider.estimateCost(texts);
 }
 
 // ============================================
@@ -156,22 +157,33 @@ export function estimateChunksCost(chunks: Array<{ text: string }>): number {
 // ============================================
 
 /**
- * Check if OpenAI API is configured and accessible
+ * Check if embedding provider is configured and accessible
  */
 export async function checkEmbeddingsAvailable(): Promise<{
   available: boolean;
   error?: string;
+  provider?: string;
+  model?: string;
 }> {
   try {
-    const client = getOpenAIClient();
+    const provider = getEmbeddingProvider();
+    const isAvailable = await provider.isAvailable();
+    const modelInfo = provider.getModelInfo();
 
-    // Test with minimal input
-    await client.embeddings.create({
-      model: EMBEDDING_MODEL,
-      input: 'test',
-    });
+    if (isAvailable) {
+      return {
+        available: true,
+        provider: modelInfo.provider,
+        model: modelInfo.model,
+      };
+    }
 
-    return { available: true };
+    return {
+      available: false,
+      error: `Provider ${modelInfo.provider} is not available`,
+      provider: modelInfo.provider,
+      model: modelInfo.model,
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return { available: false, error: errorMessage };
@@ -180,15 +192,68 @@ export async function checkEmbeddingsAvailable(): Promise<{
 
 /**
  * Get embedding model info
+ *
+ * Returns information about the currently configured embedding provider.
  */
 export function getEmbeddingModelInfo(): {
   model: string;
   dimensions: number;
   batchSize: number;
+  provider: string;
 } {
+  try {
+    const provider = getEmbeddingProvider();
+    const modelInfo = provider.getModelInfo();
+    return {
+      model: modelInfo.model,
+      dimensions: modelInfo.dimensions,
+      batchSize: modelInfo.maxBatchSize,
+      provider: modelInfo.provider,
+    };
+  } catch {
+    // Fallback to defaults if no provider configured
+    return {
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+      batchSize: 100,
+      provider: 'unknown',
+    };
+  }
+}
+
+/**
+ * Get current embedding provider info without throwing
+ *
+ * Safe version that returns null if no provider is configured.
+ */
+export function getCurrentProviderInfo(): {
+  provider: string;
+  model: string;
+  dimensions: number;
+} | null {
+  const info = getCurrentEmbeddingProviderInfo();
+  if (!info.provider) {
+    return null;
+  }
   return {
-    model: EMBEDDING_MODEL,
-    dimensions: EMBEDDING_DIMENSIONS,
-    batchSize: EMBEDDING_BATCH_SIZE,
+    provider: info.provider,
+    model: info.model || EMBEDDING_MODEL,
+    dimensions: info.dimensions || EMBEDDING_DIMENSIONS,
   };
+}
+
+/**
+ * Get the current embedding dimensions
+ *
+ * Returns the dimensions of the currently configured embedding provider.
+ * This is useful for validation and vector index configuration.
+ */
+export function getCurrentEmbeddingDimensions(): number {
+  try {
+    const provider = getEmbeddingProvider();
+    return provider.dimensions;
+  } catch {
+    // Fallback to default dimensions
+    return EMBEDDING_DIMENSIONS;
+  }
 }

@@ -34,9 +34,29 @@ import {
 } from '@/types/observability';
 import { Application, ApplicationContract, ApplicationRelease, ConfigSchema, WorkflowTemplate } from '@/types/application';
 
-// Connection pool
-let platformClient: MongoClient | null = null;
-const orgClients: Map<string, MongoClient> = new Map();
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __mongoDbState: {
+    platformClient: MongoClient | null;
+    orgClients: Map<string, MongoClient>;
+    platformIndexesCreated: boolean;
+    orgIndexesCreated: Set<string>;
+  } | undefined;
+}
+
+// Initialize global state (survives HMR)
+if (!global.__mongoDbState) {
+  global.__mongoDbState = {
+    platformClient: null,
+    orgClients: new Map(),
+    platformIndexesCreated: false,
+    orgIndexesCreated: new Set(),
+  };
+}
+
+// Connection pool (from global state)
+const dbState = global.__mongoDbState;
 
 // Database names
 const PLATFORM_DB_NAME = process.env.PLATFORM_DB_NAME || 'form_builder_platform';
@@ -56,18 +76,18 @@ function getPlatformUri(): string {
  * Get or create platform database connection
  */
 export async function getPlatformDb(): Promise<Db> {
-  if (!platformClient) {
+  if (!dbState.platformClient) {
     const uri = getPlatformUri();
-    platformClient = new MongoClient(uri);
-    await platformClient.connect();
+    dbState.platformClient = new MongoClient(uri);
+    await dbState.platformClient.connect();
     console.log('[Platform DB] Connected to platform database');
 
     // Create indexes on first connection
-    const db = platformClient.db(PLATFORM_DB_NAME);
+    const db = dbState.platformClient.db(PLATFORM_DB_NAME);
     await createPlatformIndexes(db);
   }
 
-  return platformClient.db(PLATFORM_DB_NAME);
+  return dbState.platformClient.db(PLATFORM_DB_NAME);
 }
 
 /**
@@ -83,42 +103,21 @@ export async function getOrgDb(orgId: string): Promise<Db> {
   const dbName = orgId; // org_abc123 -> database name
 
   // Check if we have an existing client
-  let client = orgClients.get(orgId);
+  let client = dbState.orgClients.get(orgId);
 
   if (!client) {
     const uri = getPlatformUri();
     client = new MongoClient(uri);
     await client.connect();
-    orgClients.set(orgId, client);
+    dbState.orgClients.set(orgId, client);
     console.log(`[Org DB] Connected to organization database: ${dbName}`);
 
     // Create indexes on first connection
     const db = client.db(dbName);
     await createOrgIndexes(db);
-  } else {
-    // Verify connection is still alive
-    try {
-      await client.db().admin().ping();
-    } catch (error) {
-      // Connection is dead, create a new one
-      console.log(`[Org DB] Connection dead for ${orgId}, reconnecting...`);
-      try {
-        await client.close();
-      } catch {
-        // Ignore close errors
-      }
-      orgClients.delete(orgId);
-      
-      const uri = getPlatformUri();
-      client = new MongoClient(uri);
-      await client.connect();
-      orgClients.set(orgId, client);
-      console.log(`[Org DB] Reconnected to organization database: ${dbName}`);
-      
-      const db = client.db(dbName);
-      await createOrgIndexes(db);
-    }
   }
+  // Note: Removed per-request ping check - MongoDB driver handles reconnection automatically
+  // The ping was adding 100-500ms latency per request
 
   return client.db(dbName);
 }
@@ -127,6 +126,11 @@ export async function getOrgDb(orgId: string): Promise<Db> {
  * Create indexes for platform database
  */
 async function createPlatformIndexes(db: Db): Promise<void> {
+  // Skip if already created
+  if (dbState.platformIndexesCreated) {
+    return;
+  }
+
   try {
     // Users collection
     const users = db.collection('users');
@@ -340,9 +344,52 @@ async function createPlatformIndexes(db: Db): Promise<void> {
     await dismissals.createIndex({ broadcastId: 1, userId: 1 }, { unique: true });
     await dismissals.createIndex({ userId: 1 });
 
+    // ============================================
+    // Referral Collections (Cloud-only)
+    // ============================================
+
+    // Referral codes collection
+    const referralCodes = db.collection('referral_codes');
+    await referralCodes.createIndex({ code: 1 }, { unique: true });
+    await referralCodes.createIndex({ organizationId: 1 });
+    await referralCodes.createIndex({ isActive: 1 });
+
+    // Referrals collection (tracks attributed signups)
+    const referrals = db.collection('referrals');
+    await referrals.createIndex({ referralId: 1 }, { unique: true });
+    await referrals.createIndex({ referrerOrgId: 1 });
+    await referrals.createIndex({ referredOrgId: 1 }, { unique: true });
+    await referrals.createIndex({ status: 1 });
+    await referrals.createIndex({ referralCodeId: 1 });
+
+    // Referral earnings collection
+    const referralEarnings = db.collection('referral_earnings');
+    await referralEarnings.createIndex({ earningId: 1 }, { unique: true });
+    await referralEarnings.createIndex({ referrerOrgId: 1, status: 1 });
+    await referralEarnings.createIndex({ stripeInvoiceId: 1 }, { unique: true });
+    await referralEarnings.createIndex({ status: 1, availableAt: 1 });
+    await referralEarnings.createIndex({ referralId: 1 });
+
+    // Referral payouts collection
+    const referralPayouts = db.collection('referral_payouts');
+    await referralPayouts.createIndex({ payoutId: 1 }, { unique: true });
+    await referralPayouts.createIndex({ organizationId: 1 });
+    await referralPayouts.createIndex({ status: 1 });
+    await referralPayouts.createIndex({ requestedAt: -1 });
+
+    // Referral events collection (audit log with 2-year TTL)
+    const referralEvents = db.collection('referral_events');
+    await referralEvents.createIndex({ eventId: 1 }, { unique: true });
+    await referralEvents.createIndex({ eventType: 1 });
+    await referralEvents.createIndex({ organizationId: 1, createdAt: -1 });
+    await referralEvents.createIndex({ referralId: 1 });
+    await referralEvents.createIndex({ createdAt: 1 }, { expireAfterSeconds: 63072000 }); // 2 years TTL
+
+    dbState.platformIndexesCreated = true;
     console.log('[Platform DB] Indexes created successfully');
   } catch (error) {
     // Indexes may already exist
+    dbState.platformIndexesCreated = true;
     console.log('[Platform DB] Index creation completed (some may already exist)');
   }
 }
@@ -351,6 +398,13 @@ async function createPlatformIndexes(db: Db): Promise<void> {
  * Create indexes for organization database
  */
 async function createOrgIndexes(db: Db): Promise<void> {
+  const orgId = db.databaseName;
+
+  // Skip if already created for this org
+  if (dbState.orgIndexesCreated.has(orgId)) {
+    return;
+  }
+
   try {
     // Connection vault collection
     const vault = db.collection('connection_vault');
@@ -482,8 +536,10 @@ async function createOrgIndexes(db: Db): Promise<void> {
     await applicationPermissions.createIndex({ organizationId: 1, applicationId: 1 });
     await applicationPermissions.createIndex({ userId: 1, organizationId: 1 });
 
+    dbState.orgIndexesCreated.add(orgId);
     console.log(`[Org DB] Indexes created for ${db.databaseName}`);
   } catch (error) {
+    dbState.orgIndexesCreated.add(orgId);
     console.log(`[Org DB] Index creation completed for ${db.databaseName}`);
   }
 }
@@ -698,6 +754,43 @@ export async function getBroadcastDismissalsCollection(): Promise<Collection<Bro
 }
 
 // ============================================
+// Referral Collection Accessors (Cloud-only)
+// ============================================
+
+import {
+  ReferralCode,
+  Referral,
+  ReferralEarning,
+  ReferralPayout,
+  ReferralEvent,
+} from '@/types/referrals';
+
+export async function getReferralCodesCollection(): Promise<Collection<ReferralCode>> {
+  const db = await getPlatformDb();
+  return db.collection<ReferralCode>('referral_codes');
+}
+
+export async function getReferralsCollection(): Promise<Collection<Referral>> {
+  const db = await getPlatformDb();
+  return db.collection<Referral>('referrals');
+}
+
+export async function getReferralEarningsCollection(): Promise<Collection<ReferralEarning>> {
+  const db = await getPlatformDb();
+  return db.collection<ReferralEarning>('referral_earnings');
+}
+
+export async function getReferralPayoutsCollection(): Promise<Collection<ReferralPayout>> {
+  const db = await getPlatformDb();
+  return db.collection<ReferralPayout>('referral_payouts');
+}
+
+export async function getReferralEventsCollection(): Promise<Collection<ReferralEvent>> {
+  const db = await getPlatformDb();
+  return db.collection<ReferralEvent>('referral_events');
+}
+
+// ============================================
 // Cleanup
 // ============================================
 
@@ -706,14 +799,14 @@ export async function getBroadcastDismissalsCollection(): Promise<Collection<Bro
  * Call this on application shutdown
  */
 export async function closeAllConnections(): Promise<void> {
-  if (platformClient) {
-    await platformClient.close();
-    platformClient = null;
+  if (dbState.platformClient) {
+    await dbState.platformClient.close();
+    dbState.platformClient = null;
   }
 
-  for (const [orgId, client] of orgClients) {
+  for (const [orgId, client] of dbState.orgClients) {
     await client.close();
-    orgClients.delete(orgId);
+    dbState.orgClients.delete(orgId);
   }
 
   console.log('[DB] All connections closed');

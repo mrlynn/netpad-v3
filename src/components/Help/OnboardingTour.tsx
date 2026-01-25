@@ -50,6 +50,7 @@ export function OnboardingTour({
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [tooltipHeight, setTooltipHeight] = useState(280); // Default estimate
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const step = steps[currentStep];
@@ -95,6 +96,23 @@ export function OnboardingTour({
       };
     }
   }, [isOpen, currentStep, updateTargetPosition]);
+
+  // Measure actual tooltip height after render
+  useEffect(() => {
+    if (isOpen && tooltipRef.current) {
+      const measureHeight = () => {
+        if (tooltipRef.current) {
+          const rect = tooltipRef.current.getBoundingClientRect();
+          if (rect.height > 0) {
+            setTooltipHeight(rect.height);
+          }
+        }
+      };
+      // Measure after a short delay to ensure content is rendered
+      const timer = setTimeout(measureHeight, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, currentStep]);
 
   // Reset step when tour opens and manage focus
   useEffect(() => {
@@ -235,7 +253,7 @@ export function OnboardingTour({
 
     const padding = step.spotlightPadding ?? 8;
     const tooltipWidth = 360;
-    const tooltipHeight = 200;
+    const actualTooltipHeight = tooltipHeight; // Use measured height
     const margin = 16;
 
     let top = 0;
@@ -243,7 +261,7 @@ export function OnboardingTour({
 
     switch (step.placement || 'bottom') {
       case 'top':
-        top = targetRect.top - tooltipHeight - margin;
+        top = targetRect.top - actualTooltipHeight - margin;
         left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
         break;
       case 'bottom':
@@ -251,11 +269,11 @@ export function OnboardingTour({
         left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
         break;
       case 'left':
-        top = targetRect.top + targetRect.height / 2 - tooltipHeight / 2;
+        top = targetRect.top + targetRect.height / 2 - actualTooltipHeight / 2;
         left = targetRect.left - tooltipWidth - margin;
         break;
       case 'right':
-        top = targetRect.top + targetRect.height / 2 - tooltipHeight / 2;
+        top = targetRect.top + targetRect.height / 2 - actualTooltipHeight / 2;
         left = targetRect.right + margin;
         break;
     }
@@ -269,8 +287,8 @@ export function OnboardingTour({
       left = viewportWidth - tooltipWidth - margin;
     }
     if (top < margin) top = margin;
-    if (top + tooltipHeight > viewportHeight - margin) {
-      top = viewportHeight - tooltipHeight - margin;
+    if (top + actualTooltipHeight > viewportHeight - margin) {
+      top = viewportHeight - actualTooltipHeight - margin;
     }
 
     return {

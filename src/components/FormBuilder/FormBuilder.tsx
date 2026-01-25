@@ -37,6 +37,7 @@ import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { ConnectionStatusChip } from './ConnectionStatusChip';
 import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings, FormConfiguration } from '@/types/form';
+import { FormReaction } from '@/types/reactions';
 import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
 import { useChat } from '@/contexts/ChatContext';
@@ -106,6 +107,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   const [botProtection, setBotProtection] = useState<BotProtectionConfig | undefined>(undefined);
   const [draftSettings, setDraftSettings] = useState<DraftSettings | undefined>(undefined);
   const [hooksConfig, setHooksConfig] = useState<FormHooksConfig | undefined>(undefined);
+  const [reactions, setReactions] = useState<FormReaction[]>([]);
   const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
@@ -390,6 +392,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         lifecycle: lifecycleConfig,
         theme: themeConfig,
         hooks: hooksConfig,
+        reactions,
         formType,
         searchConfig,
         conversationalConfig,
@@ -442,7 +445,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   }, [
     currentFormId, currentFormName, currentFormDescription, currentFormSlug,
     currentFormIsPublished, collection, databaseName, fieldConfigs, variables,
-    multiPageConfig, lifecycleConfig, themeConfig, hooksConfig, formType,
+    multiPageConfig, lifecycleConfig, themeConfig, hooksConfig, reactions, formType,
     searchConfig, conversationalConfig, dataSource, accessControl,
     organizationId, projectId, propApplicationId, botProtection, draftSettings, markClean
   ]);
@@ -606,6 +609,8 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
       setCurrentFormDescription(initialFormConfig.description || '');
       setFormType(initialFormConfig.formType || 'conversational');
       setConversationalConfig(initialFormConfig.conversationalConfig);
+      setHooksConfig(initialFormConfig.hooks);
+      setReactions(initialFormConfig.reactions || []);
       setOrganizationId(initialFormConfig.organizationId);
       setProjectId(initialFormConfig.projectId);
       setFormData({});
@@ -638,6 +643,8 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
         setMultiPageConfig(config.multiPage);
         setLifecycleConfig(config.lifecycle);
         setThemeConfig(config.theme);
+        setHooksConfig(config.hooks);
+        setReactions(config.reactions || []);
         setCurrentFormId(config.id);
         setCurrentFormName(config.name || '');
         setCurrentFormDescription(config.description || '');
@@ -1367,6 +1374,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            minHeight: 'calc(100vh - 200px)',
             bgcolor: 'background.default'
           }}
         >

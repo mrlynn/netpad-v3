@@ -20,8 +20,22 @@ async function getConsentCollection(): Promise<Collection<ConsentRecord>> {
   return db.collection<ConsentRecord>('cookie_consent');
 }
 
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __consentIndexesCreated: boolean | undefined;
+}
+
+if (global.__consentIndexesCreated === undefined) {
+  global.__consentIndexesCreated = false;
+}
+
 // Create indexes for consent collection
 export async function createConsentIndexes(): Promise<void> {
+  if (global.__consentIndexesCreated) {
+    return;
+  }
+
   try {
     const collection = await getConsentCollection();
 
@@ -40,8 +54,10 @@ export async function createConsentIndexes(): Promise<void> {
     // Index for audit/compliance queries
     await collection.createIndex({ consentedAt: -1 });
 
+    global.__consentIndexesCreated = true;
     console.log('[Consent DB] Indexes created');
   } catch (error) {
+    global.__consentIndexesCreated = true;
     console.log('[Consent DB] Index creation completed (may already exist)');
   }
 }

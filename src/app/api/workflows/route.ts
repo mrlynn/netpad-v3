@@ -10,7 +10,6 @@ import { getSession } from '@/lib/auth/session';
 import {
   createWorkflow,
   listWorkflows,
-  createOrgWorkflowIndexes,
 } from '@/lib/workflow/db';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
@@ -50,9 +49,6 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       );
     }
-
-    // Ensure indexes exist
-    await createOrgWorkflowIndexes(orgId);
 
     // Fetch workflows
     const { workflows, total } = await listWorkflows(orgId, {
@@ -148,9 +144,6 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-
-    // Ensure indexes exist
-    await createOrgWorkflowIndexes(orgId);
 
     // Create workflow
     const workflow = await createWorkflow(orgId, session.userId!, {

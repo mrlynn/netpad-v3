@@ -21,6 +21,7 @@ import {
   WaitlistService,
   UsageService,
   AdminService,
+  ReferralService,
   RouteDefinition,
   ExtensionMiddleware,
 } from './types';
@@ -302,6 +303,18 @@ export function getAdminService(): AdminService | null {
   for (const extension of registeredExtensions.values()) {
     if (extension.services?.admin) {
       return extension.services.admin;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the referral service (if available)
+ */
+export function getReferralService(): ReferralService | null {
+  for (const extension of registeredExtensions.values()) {
+    if (extension.services?.referrals) {
+      return extension.services.referrals;
     }
   }
   return null;

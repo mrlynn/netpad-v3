@@ -123,16 +123,38 @@ import {
   type AggregationPipelineOptions,
 } from './data-browser-tools.js';
 import {
+  NODE_CATEGORIES,
+  CONFIG_FIELD_TYPES,
+  COMMON_ICONS,
+  SUGGESTED_COLORS,
+  generateExtensionPackage,
+  generateExtensionId,
+  type GenerateExtensionOptions,
+  type NodeCategory,
+  type ConfigFieldType,
+} from './extension-tools.js';
+import {
   createToolOutput,
   formatToolOutput,
   generateSelfContainedCode,
   STANDARD_ENV_VARS,
 } from './validation.js';
 
-const server = new McpServer({
-  name: '@netpad/mcp-server',
-  version: '2.0.0',
-});
+/**
+ * Create a configured NetPad MCP server instance.
+ * This factory function can be used by both the CLI (stdio) and remote (HTTP) servers.
+ *
+ * @param options - Optional configuration for the server
+ * @returns A configured McpServer instance
+ */
+export function createNetPadMcpServer(options?: {
+  name?: string;
+  version?: string;
+}): McpServer {
+  const server = new McpServer({
+    name: options?.name ?? '@netpad/mcp-server',
+    version: options?.version ?? '2.3.0',
+  });
 
 // ============================================================================
 // RESOURCES - Documentation and reference materials
@@ -4407,6 +4429,214 @@ server.resource(
 );
 
 // ============================================================================
+// EXTENSION TOOLS - Create custom NetPad extensions
+// ============================================================================
+
+// Tool: Generate a complete NetPad extension
+server.tool(
+  'generate_extension',
+  'Generate a complete NetPad extension with custom workflow nodes. Returns all files needed to create an extension package that can be installed in NetPad.',
+  {
+    name: z.string().describe('Name of the extension (e.g., "My Custom Extension")'),
+    description: z.string().optional().describe('Description of what the extension does'),
+    author: z.string().optional().describe('Extension author name'),
+    version: z.string().optional().default('1.0.0').describe('Semantic version'),
+    workflowNodes: z.array(z.object({
+      label: z.string().describe('Display name for the node (e.g., "Send SMS")'),
+      description: z.string().describe('What the node does'),
+      category: z.enum(['triggers', 'logic', 'integrations', 'actions', 'data', 'ai', 'forms', 'custom', 'annotations'])
+        .optional()
+        .default('custom')
+        .describe('Node palette category'),
+      icon: z.string().optional().default('Extension').describe('MUI icon name (e.g., "Terminal", "Email", "Code")'),
+      color: z.string().optional().default('#FF6B35').describe('Hex color for the node'),
+      configFields: z.array(z.object({
+        name: z.string().describe('Field key in config object'),
+        label: z.string().describe('Display label'),
+        type: z.enum(['text', 'textarea', 'number', 'boolean', 'select', 'json', 'expression', 'connection'])
+          .describe('Input type'),
+        required: z.boolean().optional().describe('Whether field is required'),
+        defaultValue: z.unknown().optional().describe('Default value'),
+        placeholder: z.string().optional().describe('Placeholder text'),
+        helpText: z.string().optional().describe('Help text shown below field'),
+        options: z.array(z.object({
+          label: z.string(),
+          value: z.string(),
+        })).optional().describe('Options for select fields'),
+      })).optional().describe('Configuration fields for the node'),
+      outputs: z.array(z.object({
+        id: z.string().describe('Output handle ID'),
+        label: z.string().describe('Display label'),
+        primary: z.boolean().optional().describe('Whether this is the primary output'),
+      })).optional().describe('Output handles for the node'),
+      handlerDescription: z.string().optional().describe('Description of what the handler should do'),
+    })).optional().describe('Workflow nodes to include in the extension'),
+    includeRoutes: z.boolean().optional().default(false).describe('Include scaffolding for API routes'),
+    includeServices: z.boolean().optional().default(false).describe('Include scaffolding for services'),
+  },
+  async ({ name, description, author, version, workflowNodes, includeRoutes, includeServices }) => {
+    const options: GenerateExtensionOptions = {
+      metadata: {
+        id: generateExtensionId(name),
+        name,
+        version: version || '1.0.0',
+        description,
+        author,
+      },
+      workflowNodes: workflowNodes?.map(node => ({
+        definition: {
+          label: node.label,
+          description: node.description,
+          category: (node.category || 'custom') as NodeCategory,
+          icon: node.icon || 'Extension',
+          color: node.color || '#FF6B35',
+          version: '1.0.0',
+          configFields: node.configFields?.map(field => ({
+            name: field.name,
+            label: field.label,
+            type: field.type as ConfigFieldType,
+            required: field.required,
+            defaultValue: field.defaultValue,
+            placeholder: field.placeholder,
+            helpText: field.helpText,
+            options: field.options,
+          })),
+          outputs: node.outputs,
+        },
+        handlerDescription: node.handlerDescription,
+      })),
+      includeRoutes,
+      includeServices,
+    };
+
+    const pkg = generateExtensionPackage(options);
+
+    // Format the output
+    let output = `# Generated Extension: ${name}\n\n`;
+    output += `Extension ID: \`${pkg.metadata.id}\`\n\n`;
+
+    output += `## Setup Instructions\n\n`;
+    output += `1. Create a new directory for your extension:\n`;
+    output += `\`\`\`bash\nmkdir -p packages/${pkg.metadata.id}/src\ncd packages/${pkg.metadata.id}\n\`\`\`\n\n`;
+    output += `2. Create the files below\n`;
+    output += `3. Install dependencies: \`npm install\`\n`;
+    output += `4. Build: \`npm run build\`\n`;
+    output += `5. Enable in .env.local: \`NETPAD_EXTENSIONS=@netpad/${pkg.metadata.id}\`\n`;
+    output += `6. Restart NetPad\n\n`;
+
+    // Add each file
+    for (const file of pkg.files) {
+      const lang = file.path.endsWith('.json') ? 'json' : file.path.endsWith('.md') ? 'markdown' : 'typescript';
+      output += `## ${file.path}\n\n`;
+      output += `\`\`\`${lang}\n${file.content}\n\`\`\`\n\n`;
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: output,
+      }],
+    };
+  }
+);
+
+// Tool: List available node categories
+server.tool(
+  'list_node_categories',
+  'List all available workflow node categories with descriptions. Use this to understand where custom nodes should be placed in the palette.',
+  {},
+  async () => {
+    const categories = Object.entries(NODE_CATEGORIES).map(([key, value]) => ({
+      category: key,
+      ...value,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: `# Workflow Node Categories\n\n${categories.map(c =>
+          `## ${c.label} (\`${c.category}\`)\n${c.description}`
+        ).join('\n\n')}`,
+      }],
+    };
+  }
+);
+
+// Tool: List available config field types
+server.tool(
+  'list_config_field_types',
+  'List all available configuration field types for workflow node editors.',
+  {},
+  async () => {
+    const types = Object.entries(CONFIG_FIELD_TYPES).map(([key, value]) => ({
+      type: key,
+      ...value,
+    }));
+
+    return {
+      content: [{
+        type: 'text',
+        text: `# Configuration Field Types\n\n${types.map(t =>
+          `- **${t.label}** (\`${t.type}\`): ${t.description}`
+        ).join('\n')}`,
+      }],
+    };
+  }
+);
+
+// Tool: List suggested icons for workflow nodes
+server.tool(
+  'list_workflow_icons',
+  'List commonly used MUI icons for workflow nodes.',
+  {},
+  async () => {
+    return {
+      content: [{
+        type: 'text',
+        text: `# Suggested Icons for Workflow Nodes\n\nThese are commonly used MUI icon names:\n\n${COMMON_ICONS.map(icon => `- ${icon}`).join('\n')}\n\nFor the full list, see: https://mui.com/material-ui/material-icons/`,
+      }],
+    };
+  }
+);
+
+// Tool: List suggested colors for workflow nodes
+server.tool(
+  'list_workflow_colors',
+  'List suggested colors for workflow nodes with their hex values.',
+  {},
+  async () => {
+    const colors = Object.entries(SUGGESTED_COLORS).map(([name, hex]) => `- **${name}**: \`${hex}\``);
+
+    return {
+      content: [{
+        type: 'text',
+        text: `# Suggested Colors for Workflow Nodes\n\n${colors.join('\n')}\n\nYou can use any valid hex color.`,
+      }],
+    };
+  }
+);
+
+// Resource: Extension reference
+server.resource(
+  'netpad-extension-reference',
+  'netpad://reference/extensions',
+  async () => ({
+    contents: [
+      {
+        uri: 'netpad://reference/extensions',
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          categories: NODE_CATEGORIES,
+          configFieldTypes: CONFIG_FIELD_TYPES,
+          commonIcons: COMMON_ICONS,
+          suggestedColors: SUGGESTED_COLORS,
+        }, null, 2),
+      },
+    ],
+  })
+);
+
+// ============================================================================
 // PROMPTS - Pre-built prompts for common tasks
 // ============================================================================
 
@@ -4539,14 +4769,122 @@ server.prompt(
   })
 );
 
+server.prompt(
+  'create-workflow-extension',
+  'Generate a custom NetPad extension with workflow nodes',
+  async () => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Create a NetPad extension with:
+
+1. Extension name: "My Custom Workflow Nodes"
+2. A custom workflow node called "Log Message" that:
+   - Logs a configurable message to the console
+   - Has a "message" textarea field
+   - Has a "log level" select field (info, warn, error)
+   - Has a "passthrough" boolean to include input data in output
+   - Uses the Terminal icon with an orange color
+   - Is in the "custom" category
+
+Include all necessary files (package.json, tsconfig.json, tsup.config.ts, src/index.ts, README.md) and explain how to install and use the extension.`,
+        },
+      },
+    ],
+  })
+);
+
+server.prompt(
+  'create-integration-extension',
+  'Generate a NetPad extension for external service integration',
+  async () => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Create a NetPad extension for integrating with an external service (like Slack, Twilio, or a webhook).
+
+The extension should include:
+1. A workflow node that sends data to the external service
+2. Configuration fields for API credentials, endpoint URL, and message template
+3. Proper error handling with retryable vs non-retryable errors
+4. API routes for configuration management
+5. A service layer for the integration logic
+
+Explain how to:
+- Configure the extension with API keys
+- Use the workflow node in automation
+- Handle rate limiting and errors`,
+        },
+      },
+    ],
+  })
+);
+
+  // Return the configured server
+  return server;
+}
+
 // ============================================================================
-// START THE SERVER
+// EXPORTS
+// ============================================================================
+
+// Re-export useful types and utilities for consumers
+export {
+  FIELD_TYPES,
+  OPERATORS,
+  FORMULA_FUNCTIONS,
+  VALIDATION_OPTIONS,
+  THEME_OPTIONS,
+} from './constants.js';
+
+export {
+  generateFormSchema,
+  generateFieldConfig,
+  generateConditionalLogic,
+  generateComputedField,
+  generateMultiPageConfig,
+  validateFormConfig,
+} from './generators.js';
+
+export {
+  DOCUMENTATION,
+  QUICK_START_GUIDE,
+  ARCHITECTURE_GUIDE,
+  EXAMPLES,
+} from './documentation.js';
+
+export {
+  NODE_CATEGORIES,
+  CONFIG_FIELD_TYPES,
+  COMMON_ICONS,
+  SUGGESTED_COLORS,
+  generateExtensionPackage,
+  generateExtensionId,
+} from './extension-tools.js';
+
+export type { GenerateExtensionOptions, NodeCategory, ConfigFieldType } from './extension-tools.js';
+
+// ============================================================================
+// START THE SERVER (CLI mode)
 // ============================================================================
 
 async function main() {
+  const server = createNetPadMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('@netpad/mcp-server started');
 }
 
-main().catch(console.error);
+// Only run main() if this file is executed directly (not imported)
+// Check if we're being run as the main module
+const isMainModule = import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith('netpad-mcp') ||
+  process.argv[1]?.endsWith('index.js');
+
+if (isMainModule) {
+  main().catch(console.error);
+}

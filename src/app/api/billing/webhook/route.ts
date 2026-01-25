@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getOrganizationsCollection, getBillingEventsCollection } from '@/lib/platform/db';
-import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
+import { getBillingService, getReferralService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
 import { generateSecureId } from '@/lib/encryption';
 import { BillingEvent, BillingEventType, SubscriptionTier, SubscriptionStatus, BillingInterval, Subscription } from '@/types/platform';
 
@@ -259,6 +259,18 @@ export async function POST(req: NextRequest) {
           await recordBillingEvent(event.id, 'subscription.canceled', orgId, {
             subscriptionId: subscription.id,
           });
+
+          // Process referral churn if this org was referred
+          try {
+            const referralService = getReferralService();
+            if (referralService) {
+              await referralService.processChurn(orgId);
+              console.log(`[Webhook] Referral churn processed for org ${orgId}`);
+            }
+          } catch (err) {
+            // Don't fail the webhook for referral errors
+            console.error('[Webhook] Referral churn processing error:', err);
+          }
         }
         break;
       }
@@ -296,6 +308,25 @@ export async function POST(req: NextRequest) {
             amountPaid: invoice.amount_paid,
             currency: invoice.currency,
           });
+
+          // Process referral commission if this org was referred
+          try {
+            const referralService = getReferralService();
+            if (referralService) {
+              const result = await referralService.processPaymentForCommission({
+                organizationId: org.orgId,
+                stripeInvoiceId: invoice.id,
+                amountPaid: invoice.amount_paid,
+                currency: invoice.currency,
+              });
+              if (result.commissionCreated) {
+                console.log(`[Webhook] Referral commission created: ${result.amount} cents for org ${org.orgId}`);
+              }
+            }
+          } catch (err) {
+            // Don't fail the webhook for referral errors
+            console.error('[Webhook] Referral commission processing error:', err);
+          }
         }
         break;
       }

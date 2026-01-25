@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         title: b.title,
         message: b.message,
         type: b.type,
+        customBadge: b.customBadge,
         placement: b.placement,
         dismissible: b.dismissible,
         linkUrl: b.linkUrl,

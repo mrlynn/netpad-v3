@@ -74,11 +74,33 @@ export async function getWorkflowVersionsCollection(orgId: string): Promise<Coll
 // INDEX CREATION
 // ============================================
 
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __workflowDbState: {
+    platformWorkflowIndexesCreated: boolean;
+    orgWorkflowIndexesCreated: Set<string>;
+  } | undefined;
+}
+
+if (!global.__workflowDbState) {
+  global.__workflowDbState = {
+    platformWorkflowIndexesCreated: false,
+    orgWorkflowIndexesCreated: new Set(),
+  };
+}
+
+const workflowDbState = global.__workflowDbState;
+
 /**
  * Create workflow-related indexes
  * Call this during application startup
  */
 export async function createWorkflowIndexes(): Promise<void> {
+  if (workflowDbState.platformWorkflowIndexesCreated) {
+    return;
+  }
+
   const platformDb = await getPlatformDb();
 
   try {
@@ -107,8 +129,10 @@ export async function createWorkflowIndexes(): Promise<void> {
     await nodeDefs.createIndex({ category: 1 });
     await nodeDefs.createIndex({ orgId: 1 }); // null for global
 
+    workflowDbState.platformWorkflowIndexesCreated = true;
     console.log('[Workflow DB] Platform indexes created successfully');
   } catch (error) {
+    workflowDbState.platformWorkflowIndexesCreated = true;
     console.log('[Workflow DB] Platform index creation completed (some may already exist)');
   }
 }
@@ -117,6 +141,11 @@ export async function createWorkflowIndexes(): Promise<void> {
  * Create workflow indexes for an organization database
  */
 export async function createOrgWorkflowIndexes(orgId: string): Promise<void> {
+  // Skip if already created for this org
+  if (workflowDbState.orgWorkflowIndexesCreated.has(orgId)) {
+    return;
+  }
+
   const db = await getOrgDb(orgId);
 
   try {
@@ -140,8 +169,10 @@ export async function createOrgWorkflowIndexes(orgId: string): Promise<void> {
     await versions.createIndex({ workflowId: 1, publishedAt: -1 });
     await versions.createIndex({ publishedBy: 1 });
 
+    workflowDbState.orgWorkflowIndexesCreated.add(orgId);
     console.log(`[Workflow DB] Org indexes created for ${orgId}`);
   } catch (error) {
+    workflowDbState.orgWorkflowIndexesCreated.add(orgId);
     console.log(`[Workflow DB] Org index creation completed for ${orgId}`);
   }
 }

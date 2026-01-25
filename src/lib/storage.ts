@@ -27,18 +27,33 @@ const COLLECTIONS = {
 // Database Access
 // ============================================
 
-let db: Db | null = null;
-let indexesCreated = false;
+// Use global to survive HMR in development
+declare global {
+  // eslint-disable-next-line no-var
+  var __storageDbState: {
+    db: Db | null;
+    indexesCreated: boolean;
+  } | undefined;
+}
+
+if (!global.__storageDbState) {
+  global.__storageDbState = {
+    db: null,
+    indexesCreated: false,
+  };
+}
+
+const storageState = global.__storageDbState;
 
 async function getDb(): Promise<Db> {
-  if (!db) {
-    db = await getPlatformDb();
-    if (!indexesCreated) {
-      await createStorageIndexes(db);
-      indexesCreated = true;
+  if (!storageState.db) {
+    storageState.db = await getPlatformDb();
+    if (!storageState.indexesCreated) {
+      await createStorageIndexes(storageState.db);
+      storageState.indexesCreated = true;
     }
   }
-  return db;
+  return storageState.db;
 }
 
 async function createStorageIndexes(db: Db): Promise<void> {

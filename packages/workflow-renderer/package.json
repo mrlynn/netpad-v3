@@ -2,7 +2,7 @@
   "name": "@netpad/workflow-renderer",
   "version": "1.0.0",
   "description": "React component library for rendering NetPad workflow definitions as interactive, read-only visualizations",
-  "author": "MongoDB",
+  "author": "Michael Lynn",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
