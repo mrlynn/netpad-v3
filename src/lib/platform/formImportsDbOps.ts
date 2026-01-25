@@ -134,11 +134,12 @@ function generateImportId(): string {
 
 /**
  * Get the base URL for import links
+ * Always use the production domain for import links
  */
 function getBaseUrl(): string {
-  return process.env.NEXTAUTH_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://netpad.io';
+  // Always use production URL for import links to ensure they work correctly
+  // NEXTAUTH_URL should be set to production domain in Vercel
+  return process.env.NEXTAUTH_URL || 'https://netpad.io';
 }
 
 // ============================================

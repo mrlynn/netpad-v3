@@ -85,10 +85,11 @@ function validateSource(source: unknown): FormImportSource {
 
 /**
  * Get base URL for redirects
+ * Always use production domain for import links
  */
 function getBaseUrl(): string {
-  return process.env.NEXTAUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://netpad.io');
+  // Always use production URL for import links to ensure they work correctly
+  return process.env.NEXTAUTH_URL || 'https://netpad.io';
 }
 
 // ============================================
