@@ -272,8 +272,7 @@ export async function executeReaction(
             }
           },
           getConnection: async (vaultId) => {
-            const connectionString = await getDecryptedConnectionString(orgId, vaultId);
-            return { connectionString };
+            return getDecryptedConnectionString(orgId, vaultId);
           },
           getEmailCredentials: async (credentialId) => {
             return getEmailCredentials(orgId, credentialId);

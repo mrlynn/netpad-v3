@@ -210,7 +210,8 @@ export const referralDatabaseOperations: ReferralDatabaseOperations = {
 export async function initializeReferralDbOps(): Promise<void> {
   try {
     // Dynamically import cloud-features to avoid build errors when not installed
-    const cloudFeatures = await import('@netpad/cloud-features');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cloudFeatures = (await import('@netpad/cloud-features')) as any;
 
     // Check if the function exists (may not if cloud-features hasn't been rebuilt)
     if (typeof cloudFeatures.setReferralDatabaseOperations === 'function') {
