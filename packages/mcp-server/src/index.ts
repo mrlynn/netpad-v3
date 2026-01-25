@@ -525,14 +525,150 @@ async function main() {
       envVars: STANDARD_ENV_VARS,
     });
 
+    // Generate import URL (base64-encoded config for direct import)
+    const importConfig = {
+      name: schema.name,
+      description: schema.description,
+      fieldConfigs: schema.fieldConfigs,
+      multiPage: schema.multiPage,
+      theme: schema.theme,
+    };
+    const base64Config = Buffer.from(JSON.stringify(importConfig)).toString('base64');
+    const baseUrl = process.env.NETPAD_URL || 'https://netpad.io';
+    const importUrl = `${baseUrl}/api/forms/import?config=${base64Config}&source=claude-mcp`;
+
+    // Add import URL to output
+    const outputWithImport = formatToolOutput(output) + `
+
+---
+
+## Quick Import (No Code Required!)
+
+Click this link to import the form directly into NetPad:
+**[Import to NetPad](${importUrl})**
+
+Or use the create_import_link tool for a shorter, more reliable link (recommended for complex forms).
+`;
+
     return {
       content: [
         {
           type: 'text',
-          text: formatToolOutput(output),
+          text: outputWithImport,
         },
       ],
     };
+  }
+);
+
+// Tool: Create an import link for a form configuration
+server.tool(
+  'create_import_link',
+  'Create a shareable import link for a NetPad form configuration. Use this to generate a short, reliable import URL that users can click to import the form directly into their NetPad account. Recommended for complex forms or when the base64 URL would be too long.',
+  {
+    config: z.object({
+      name: z.string().describe('Form name'),
+      description: z.string().optional().describe('Form description'),
+      fieldConfigs: z.array(z.object({
+        path: z.string(),
+        label: z.string(),
+        type: z.string(),
+        included: z.boolean(),
+        required: z.boolean().optional(),
+        placeholder: z.string().optional(),
+        options: z.array(z.any()).optional(),
+        validation: z.any().optional(),
+        conditionalLogic: z.any().optional(),
+      })).describe('Array of field configurations'),
+      multiPage: z.any().optional().describe('Multi-page configuration'),
+      theme: z.any().optional().describe('Theme configuration'),
+    }).describe('Form configuration object'),
+    projectId: z.string().optional().describe('Target project ID (user will pick if not specified)'),
+    expiresIn: z.number().optional().describe('Expiry time in seconds (default: 24 hours, max: 7 days)'),
+  },
+  async ({ config, projectId, expiresIn }) => {
+    const baseUrl = process.env.NETPAD_URL || 'https://netpad.io';
+
+    try {
+      // Call NetPad API to create import record
+      const response = await fetch(`${baseUrl}/api/forms/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          config,
+          projectId,
+          source: 'claude-mcp',
+          expiresIn: expiresIn || 86400, // Default 24 hours
+          mcpVersion: '2.3.0',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `❌ Failed to create import link: ${error.error || response.statusText}\n\nFallback: Use the generate_form tool with outputFormat: "json" and manually import the config.`,
+            },
+          ],
+        };
+      }
+
+      const result = await response.json() as { importId: string; importUrl: string; expiresAt: string };
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ **Import Link Created!**
+
+**Form:** ${config.name}
+**Fields:** ${config.fieldConfigs.length}
+**Expires:** ${new Date(result.expiresAt).toLocaleString()}
+
+---
+
+## Click to Import
+
+[**→ Import "${config.name}" to NetPad**](${result.importUrl})
+
+---
+
+**Import ID:** \`${result.importId}\`
+**Direct URL:** ${result.importUrl}
+
+The user will be prompted to log in (if needed) and select a project before importing.`,
+          },
+        ],
+      };
+    } catch (error) {
+      // Fallback to base64 URL if API call fails
+      const base64Config = Buffer.from(JSON.stringify(config)).toString('base64');
+      const fallbackUrl = `${baseUrl}/api/forms/import?config=${base64Config}&source=claude-mcp`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `⚠️ Could not create short import link (API unavailable). Using fallback URL.
+
+**Form:** ${config.name}
+**Fields:** ${config.fieldConfigs.length}
+
+---
+
+## Fallback Import Link
+
+[**→ Import "${config.name}" to NetPad**](${fallbackUrl})
+
+Note: This URL may be long. If it doesn't work, ask the user to use the NetPad form builder directly.`,
+          },
+        ],
+      };
+    }
   }
 );
 
