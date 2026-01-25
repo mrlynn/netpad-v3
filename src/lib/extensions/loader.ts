@@ -51,8 +51,10 @@ const knownExtensionLoaders: Record<string, () => Promise<unknown>> = {
     // Try require first (more reliable for workspace packages)
     const mod = tryRequire('@netpad/cloud-features');
     if (mod) return mod;
-    // Fall back to dynamic import
-    return import('@netpad/cloud-features').catch((e) => {
+    // Fall back to dynamic import - use variable to avoid TypeScript type checking
+    const pkgName = '@netpad/cloud-features';
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    return new Function('p', 'return import(p)')(pkgName).catch((e: Error) => {
       console.error('[Extensions] Failed to import @netpad/cloud-features:', e.message || e);
       return null;
     });
@@ -276,15 +278,9 @@ export async function loadExtensions(): Promise<void> {
         console.log('[Extensions] Could not initialize referral database operations:', error);
       }
 
-      // Initialize MCP analytics database operations for cloud-features
-      try {
-        const { createMCPAnalyticsDatabaseOperations } = await import('@/lib/platform/mcpAnalyticsDbOps');
-        const { configureMCPAnalyticsService } = await import('@netpad/cloud-features');
-        configureMCPAnalyticsService(createMCPAnalyticsDatabaseOperations());
-        console.log('[Extensions] MCP analytics database operations configured');
-      } catch (error) {
-        console.log('[Extensions] Could not initialize MCP analytics database operations:', error);
-      }
+      // MCP analytics is handled locally via mcpAnalyticsDbOps.ts
+      // No cloud-features dependency needed - the API endpoint uses the local implementation directly
+      console.log('[Extensions] MCP analytics available via local implementation');
     }
 
     // Load additional extensions from environment variable
