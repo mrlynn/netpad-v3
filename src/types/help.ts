@@ -120,6 +120,7 @@ export type HelpTopicId =
   | 'admin-waitlist'
   | 'admin-ai-analytics'
   | 'admin-marketplace-review'
+  | 'admin-referrals'
   // Open Core / Operations topics
   | 'open-core-architecture'
   | 'extension-system'
