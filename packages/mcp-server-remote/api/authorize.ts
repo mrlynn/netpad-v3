@@ -487,7 +487,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      const userData = await response.json();
+      const userData = await response.json() as { userId?: string; user?: { id?: string }; organizationId?: string; organization?: { id?: string } };
       const userId = userData.userId || userData.user?.id || 'unknown';
       const organizationId = userData.organizationId || userData.organization?.id || 'unknown';
 

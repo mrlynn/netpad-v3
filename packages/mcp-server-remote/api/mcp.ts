@@ -175,7 +175,7 @@ async function validateApiKey(apiKey: string): Promise<AuthResult> {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data = await response.json() as { userId?: string; organizationId?: string };
       // Cache the valid result
       apiKeyCache.set(apiKey, {
         valid: true,
@@ -196,7 +196,7 @@ async function validateApiKey(apiKey: string): Promise<AuthResult> {
     });
 
     // Parse error response
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string; code?: string } };
     return {
       valid: false,
       error: {
