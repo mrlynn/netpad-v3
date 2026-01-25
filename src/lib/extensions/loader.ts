@@ -275,6 +275,16 @@ export async function loadExtensions(): Promise<void> {
       } catch (error) {
         console.log('[Extensions] Could not initialize referral database operations:', error);
       }
+
+      // Initialize MCP analytics database operations for cloud-features
+      try {
+        const { createMCPAnalyticsDatabaseOperations } = await import('@/lib/platform/mcpAnalyticsDbOps');
+        const { configureMCPAnalyticsService } = await import('@netpad/cloud-features');
+        configureMCPAnalyticsService(createMCPAnalyticsDatabaseOperations());
+        console.log('[Extensions] MCP analytics database operations configured');
+      } catch (error) {
+        console.log('[Extensions] Could not initialize MCP analytics database operations:', error);
+      }
     }
 
     // Load additional extensions from environment variable

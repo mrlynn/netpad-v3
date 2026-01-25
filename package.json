@@ -107,6 +107,6 @@
     "typescript": "^5.7.0"
   },
   "optionalDependencies": {
-    "@netpad/cloud-features": "^1.0.0"
+    "@netpad/cloud-features": "file:../netpad-cloud"
   }
 }

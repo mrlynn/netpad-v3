@@ -1208,6 +1208,23 @@ export interface OrganizationUsage {
     failedExecutions: number;         // Count of failed executions
   };
 
+  // MCP server usage
+  mcp?: {
+    requests: number;                 // Total MCP requests this period
+    byTool: Record<string, number>;   // Requests per tool
+    byMethod: {
+      get: number;                    // SSE connections
+      post: number;                   // Tool calls
+    };
+    authMethods: {
+      oauth: number;                  // OAuth authenticated requests
+      apiKey: number;                 // API key authenticated requests
+    };
+    authFailures: number;             // Failed auth attempts
+    errors: number;                   // Error responses
+    totalDurationMs: number;          // Total request duration for avg calculation
+  };
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

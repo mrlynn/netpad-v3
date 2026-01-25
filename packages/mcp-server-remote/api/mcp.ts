@@ -3,6 +3,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { createNetPadMcpServer } from '@netpad/mcp-server';
 import { validateAccessToken } from './lib/oauth.js';
+import {
+  recordMetric,
+  startMetricsContext,
+  getDuration,
+  extractToolFromBody,
+  flushMetrics,
+} from './lib/metrics.js';
 
 // Store transports by session ID for reconnection
 const transports = new Map<string, StreamableHTTPServerTransport>();
@@ -17,9 +24,10 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get the NetPad API base URL from environment or default
+ * Note: Using www.netpad.io because netpad.io redirects to www with 307
  */
 function getNetPadApiUrl(): string {
-  return process.env.NETPAD_API_URL || 'https://netpad.io';
+  return process.env.NETPAD_API_URL || 'https://www.netpad.io';
 }
 
 /**
@@ -89,8 +97,10 @@ async function validateRequest(req: VercelRequest): Promise<AuthResult> {
   // Try OAuth token first (JWT-like format with dots)
   // ============================================================================
   if (token.includes('.')) {
+    console.log('[MCP] Attempting OAuth token validation...');
     const payload = validateAccessToken(token);
     if (payload) {
+      console.log('[MCP] OAuth token valid:', { userId: payload.sub, org: payload.org });
       return {
         valid: true,
         userId: payload.sub,
@@ -100,6 +110,7 @@ async function validateRequest(req: VercelRequest): Promise<AuthResult> {
     }
     // If it looks like a JWT but failed validation, return error
     // (don't fall through to API key validation)
+    console.log('[MCP] OAuth token validation failed');
     return {
       valid: false,
       error: {
@@ -207,6 +218,8 @@ async function validateApiKey(apiKey: string): Promise<AuthResult> {
 
 // Main handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const metricsContext = startMetricsContext();
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -218,6 +231,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ============================================================================
   const authResult = await validateRequest(req);
   if (!authResult.valid) {
+    // Record failed auth metric
+    recordMetric({
+      method: req.method as 'GET' | 'POST',
+      authMethod: 'none',
+      authSuccess: false,
+      durationMs: getDuration(metricsContext),
+      statusCode: authResult.error?.status || 401,
+      errorCode: authResult.error?.code,
+    });
+
+    // Flush metrics (serverless: memory is ephemeral)
+    flushMetrics().catch(() => {});
+
+    // Per MCP spec and RFC 9728, include WWW-Authenticate header with resource_metadata
+    // This tells OAuth clients where to find the authorization server
+    const resourceMetadataUrl = 'https://mcp.netpad.io/.well-known/oauth-protected-resource';
+    res.setHeader(
+      'WWW-Authenticate',
+      `Bearer resource_metadata="${resourceMetadataUrl}", scope="mcp read write"`
+    );
     res.status(authResult.error?.status || 401).json({
       error: authResult.error?.error || 'Authentication failed',
       code: authResult.error?.code || 'AUTH_FAILED',
@@ -225,6 +258,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     return;
   }
+
+  // Determine auth method for metrics
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.split(' ')[1] || '';
+  const authMethod: 'oauth' | 'api_key' = token.includes('.') ? 'oauth' : 'api_key';
 
   // Get session ID from headers
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
@@ -248,6 +286,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       transports.set(transport.sessionId, transport);
     }
 
+    // Record successful SSE connection metric
+    recordMetric({
+      method: 'GET',
+      organizationId: authResult.organizationId,
+      userId: authResult.userId,
+      authMethod,
+      authSuccess: true,
+      durationMs: getDuration(metricsContext),
+      statusCode: 200,
+      sessionId: transport.sessionId,
+    });
+
+    // Flush metrics (serverless: memory is ephemeral)
+    flushMetrics().catch(() => {});
+
     await transport.handleRequest(
       req as unknown as IncomingMessage,
       res as unknown as ServerResponse
@@ -257,6 +310,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Handle POST requests
   if (req.method === 'POST') {
+    // Extract tool name from request body for metrics
+    const tool = extractToolFromBody(req.body);
+
     // Try to reuse existing transport for this session
     let transport = sessionId ? transports.get(sessionId) : undefined;
 
@@ -283,9 +339,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res as unknown as ServerResponse,
       req.body
     );
+
+    // Record POST request metric
+    recordMetric({
+      method: 'POST',
+      organizationId: authResult.organizationId,
+      userId: authResult.userId,
+      tool,
+      authMethod,
+      authSuccess: true,
+      durationMs: getDuration(metricsContext),
+      statusCode: 200,
+      sessionId: sessionId || transport.sessionId,
+    });
+
+    // Opportunistically flush metrics (non-blocking)
+    flushMetrics().catch(() => {});
     return;
   }
 
   // Method not allowed
+  recordMetric({
+    method: req.method as 'GET' | 'POST',
+    authMethod,
+    authSuccess: true,
+    durationMs: getDuration(metricsContext),
+    statusCode: 405,
+    errorCode: 'METHOD_NOT_ALLOWED',
+  });
+  flushMetrics().catch(() => {});
   res.status(405).json({ error: 'Method not allowed' });
 }

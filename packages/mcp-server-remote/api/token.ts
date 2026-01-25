@@ -18,8 +18,11 @@ import {
   generateRefreshToken,
   exchangeRefreshToken,
 } from './lib/oauth.js';
+import { recordMetric, startMetricsContext, getDuration } from './lib/metrics.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const metricsContext = startMetricsContext();
+
   // Set CORS headers for token endpoint
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -35,6 +38,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Only POST is allowed
   if (req.method !== 'POST') {
+    recordMetric({
+      method: req.method as 'GET' | 'POST',
+      tool: 'oauth/token',
+      authMethod: 'none',
+      authSuccess: false,
+      durationMs: getDuration(metricsContext),
+      statusCode: 405,
+      errorCode: 'METHOD_NOT_ALLOWED',
+    });
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
@@ -51,6 +63,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { grant_type, code, redirect_uri, code_verifier, refresh_token, client_id } = body;
+
+  console.log('[Token] Request received:', {
+    grant_type,
+    code: code ? `${code.substring(0, 30)}...` : undefined,
+    redirect_uri,
+    code_verifier: code_verifier ? `${code_verifier.substring(0, 20)}...` : undefined,
+    client_id,
+  });
 
   // ============================================================================
   // Authorization Code Grant
@@ -82,9 +102,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Consume the authorization code (one-time use)
+    console.log('[Token] Attempting to consume auth code...');
     const authCode = consumeAuthorizationCode(code);
 
     if (!authCode) {
+      console.log('[Token] Auth code validation failed');
       res.status(400).json({
         error: 'invalid_grant',
         error_description: 'Authorization code is invalid, expired, or already used',
@@ -92,8 +114,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    console.log('[Token] Auth code valid:', {
+      clientId: authCode.clientId,
+      userId: authCode.userId,
+      scope: authCode.scope,
+    });
+
     // Validate redirect_uri matches
     if (authCode.redirectUri !== redirect_uri) {
+      console.log('[Token] redirect_uri mismatch:', {
+        expected: authCode.redirectUri,
+        received: redirect_uri,
+      });
       res.status(400).json({
         error: 'invalid_grant',
         error_description: 'redirect_uri does not match',
@@ -101,7 +133,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    console.log('[Token] redirect_uri validated OK');
+
     // Verify PKCE
+    console.log('[Token] Verifying PKCE...');
     const pkceValid = verifyPkceChallenge(
       code_verifier,
       authCode.codeChallenge,
@@ -109,12 +144,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
 
     if (!pkceValid) {
+      console.log('[Token] PKCE verification failed:', {
+        verifier: code_verifier?.substring(0, 20) + '...',
+        challenge: authCode.codeChallenge?.substring(0, 20) + '...',
+        method: authCode.codeChallengeMethod,
+      });
       res.status(400).json({
         error: 'invalid_grant',
         error_description: 'PKCE verification failed',
       });
       return;
     }
+
+    console.log('[Token] PKCE verified OK, generating tokens...');
 
     // Generate tokens
     const accessToken = generateAccessToken({
@@ -129,7 +171,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scope: authCode.scope,
     });
 
+    // Record successful token exchange
+    recordMetric({
+      method: 'POST',
+      organizationId: authCode.organizationId,
+      userId: authCode.userId,
+      tool: 'oauth/token/authorization_code',
+      authMethod: 'oauth',
+      authSuccess: true,
+      durationMs: getDuration(metricsContext),
+      statusCode: 200,
+    });
+
     // Return token response
+    console.log('[Token] SUCCESS - returning tokens');
     res.status(200).json({
       access_token: accessToken,
       token_type: 'Bearer',
@@ -162,6 +217,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    // Record successful refresh token exchange
+    recordMetric({
+      method: 'POST',
+      tool: 'oauth/token/refresh',
+      authMethod: 'oauth',
+      authSuccess: true,
+      durationMs: getDuration(metricsContext),
+      statusCode: 200,
+    });
+
     res.status(200).json({
       access_token: newTokens.accessToken,
       token_type: 'Bearer',
@@ -175,6 +240,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ============================================================================
   // Unsupported Grant Type
   // ============================================================================
+  recordMetric({
+    method: 'POST',
+    tool: 'oauth/token',
+    authMethod: 'none',
+    authSuccess: false,
+    durationMs: getDuration(metricsContext),
+    statusCode: 400,
+    errorCode: 'UNSUPPORTED_GRANT_TYPE',
+  });
   res.status(400).json({
     error: 'unsupported_grant_type',
     error_description: 'Only authorization_code and refresh_token grants are supported',

@@ -35,6 +35,7 @@ import {
   Campaign,
   Rocket,
   Share,
+  SmartToy,
 } from '@mui/icons-material';
 import { CommandPalette, useCommandPalette } from '@/components/Admin/CommandPalette';
 import Link from 'next/link';
@@ -84,6 +85,14 @@ const adminFeatures: AdminFeature[] = [
     icon: <Psychology sx={{ fontSize: 32 }} />,
     color: '#00ED64',
     statsKey: 'ai',
+  },
+  {
+    title: 'MCP Analytics',
+    description: 'Monitor MCP server usage, tool calls, and authentication metrics',
+    href: '/admin/mcp-analytics',
+    icon: <SmartToy sx={{ fontSize: 32 }} />,
+    color: '#7C4DFF',
+    statsKey: 'mcp',
   },
   {
     title: 'Marketplace Review',
@@ -205,6 +214,10 @@ export default function AdminDashboardPage() {
     user?.platformRole === 'admin' ? '/api/admin/referrals/payouts?status=pending&limit=1' : null,
     fetcher
   );
+  const { data: mcpStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/mcp-analytics' : null,
+    fetcher
+  );
 
   // Redirect non-admins
   useEffect(() => {
@@ -265,6 +278,9 @@ export default function AdminDashboardPage() {
     if (feature.statsKey === 'referrals' && referralStats) {
       const pending = referralStats.total || 0;
       return pending > 0 ? `${pending} pending` : 'No pending';
+    }
+    if (feature.statsKey === 'mcp' && mcpStats?.stats) {
+      return `${formatTokens(mcpStats.stats.totalRequests)} requests`;
     }
     return null;
   };

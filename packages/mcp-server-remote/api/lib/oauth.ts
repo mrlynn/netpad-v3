@@ -147,7 +147,11 @@ function base64UrlEncode(buffer: Buffer): string {
 // ============================================================================
 
 /**
- * Generate and store an authorization code
+ * Generate a self-contained authorization code (stateless)
+ *
+ * Since Vercel serverless functions don't share memory between invocations,
+ * we encode all the authorization data directly into the code itself.
+ * The code is signed with HMAC to prevent tampering.
  */
 export function generateAuthorizationCode(params: {
   clientId: string;
@@ -158,42 +162,83 @@ export function generateAuthorizationCode(params: {
   userId: string;
   organizationId: string;
 }): string {
-  const code = crypto.randomBytes(32).toString('hex');
-
-  authorizationCodes.set(code, {
-    code,
-    clientId: params.clientId,
-    redirectUri: params.redirectUri,
+  const payload = {
+    cid: params.clientId,
+    ruri: params.redirectUri,
     scope: params.scope,
-    codeChallenge: params.codeChallenge,
-    codeChallengeMethod: params.codeChallengeMethod,
-    userId: params.userId,
-    organizationId: params.organizationId,
-    expiresAt: Date.now() + OAUTH_CONFIG.authCodeTtlSeconds * 1000,
-  });
+    cc: params.codeChallenge,
+    ccm: params.codeChallengeMethod,
+    uid: params.userId,
+    oid: params.organizationId,
+    exp: Date.now() + OAUTH_CONFIG.authCodeTtlSeconds * 1000,
+    nonce: crypto.randomBytes(8).toString('hex'), // Prevent replay
+  };
 
-  return code;
+  const payloadStr = JSON.stringify(payload);
+  const payloadB64 = Buffer.from(payloadStr).toString('base64url');
+
+  // Sign the payload
+  const secret = process.env.OAUTH_SECRET || 'netpad-mcp-oauth-secret-change-in-production';
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(payloadB64)
+    .digest('base64url');
+
+  return `${payloadB64}.${signature}`;
 }
 
 /**
- * Consume an authorization code (one-time use)
+ * Consume an authorization code (stateless verification)
  */
 export function consumeAuthorizationCode(code: string): AuthorizationCode | null {
-  const data = authorizationCodes.get(code);
+  try {
+    const parts = code.split('.');
+    if (parts.length !== 2) {
+      return null;
+    }
 
-  if (!data) {
+    const [payloadB64, signature] = parts;
+
+    // Verify signature
+    const secret = process.env.OAUTH_SECRET || 'netpad-mcp-oauth-secret-change-in-production';
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(payloadB64)
+      .digest('base64url');
+
+    if (signature !== expectedSig) {
+      console.log('[OAuth] Authorization code signature mismatch');
+      return null;
+    }
+
+    // Decode payload
+    const payloadStr = Buffer.from(payloadB64, 'base64url').toString();
+    const payload = JSON.parse(payloadStr);
+
+    // Check expiration
+    if (payload.exp < Date.now()) {
+      console.log('[OAuth] Authorization code expired');
+      return null;
+    }
+
+    // Note: In a stateless system, we can't truly enforce one-time use
+    // without external storage. The short expiration (10 min) mitigates this.
+
+    return {
+      code,
+      clientId: payload.cid,
+      redirectUri: payload.ruri,
+      scope: payload.scope,
+      codeChallenge: payload.cc,
+      codeChallengeMethod: payload.ccm,
+      userId: payload.uid,
+      organizationId: payload.oid,
+      expiresAt: payload.exp,
+    };
+  } catch (error) {
+    console.error('[OAuth] Failed to decode authorization code:', error);
     return null;
   }
-
-  // Delete immediately (one-time use)
-  authorizationCodes.delete(code);
-
-  // Check expiration
-  if (data.expiresAt < Date.now()) {
-    return null;
-  }
-
-  return data;
 }
 
 // ============================================================================
@@ -332,35 +377,99 @@ export function exchangeRefreshToken(refreshToken: string): {
 // ============================================================================
 
 /**
+ * Check if a string is a valid HTTPS URL (for Client ID Metadata Documents)
+ */
+function isHttpsUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Validate OAuth client and redirect URI
+ *
+ * Supports:
+ * 1. Pre-registered clients (e.g., 'netpad')
+ * 2. Client ID Metadata Documents (HTTPS URLs as client_id per MCP spec)
  */
 export function validateClient(
   clientId: string,
   redirectUri: string
-): { valid: boolean; error?: string } {
+): { valid: boolean; error?: string; isMetadataDocument?: boolean } {
+  // First check pre-registered clients
   const client = OAUTH_CONFIG.allowedClients[clientId as keyof typeof OAUTH_CONFIG.allowedClients];
 
-  if (!client) {
-    return { valid: false, error: 'invalid_client' };
+  if (client) {
+    if (!client.redirectUris.includes(redirectUri)) {
+      return { valid: false, error: 'invalid_redirect_uri' };
+    }
+    return { valid: true, isMetadataDocument: false };
   }
 
-  if (!client.redirectUris.includes(redirectUri)) {
-    return { valid: false, error: 'invalid_redirect_uri' };
+  // Check if client_id is a URL (Client ID Metadata Document)
+  // Per MCP spec, we accept HTTPS URLs as client_id
+  if (isHttpsUrl(clientId)) {
+    // For Client ID Metadata Documents, we validate:
+    // 1. The redirect_uri should be localhost or HTTPS
+    // 2. The client_id URL must have a path component
+
+    try {
+      const clientUrl = new URL(clientId);
+      // Per spec: client_id URL MUST contain a path component
+      if (!clientUrl.pathname || clientUrl.pathname === '/') {
+        console.log('[OAuth] Client ID Metadata Document URL must have a path component');
+        return { valid: false, error: 'invalid_client' };
+      }
+
+      const redirectUrl = new URL(redirectUri);
+      const isLocalhost = redirectUrl.hostname === 'localhost' ||
+                          redirectUrl.hostname === '127.0.0.1' ||
+                          redirectUrl.hostname === '[::1]';
+      const isHttps = redirectUrl.protocol === 'https:';
+
+      if (!isLocalhost && !isHttps) {
+        console.log('[OAuth] Redirect URI must be localhost or HTTPS');
+        return { valid: false, error: 'invalid_redirect_uri' };
+      }
+
+      // Accept the client - full validation of redirect_uri against the
+      // metadata document would require fetching it (async), which we'll do
+      // in the authorize endpoint if needed
+      console.log('[OAuth] Accepting Client ID Metadata Document:', clientId);
+      return { valid: true, isMetadataDocument: true };
+    } catch {
+      return { valid: false, error: 'invalid_redirect_uri' };
+    }
   }
 
-  return { valid: true };
+  return { valid: false, error: 'invalid_client' };
 }
 
 /**
  * Validate requested scopes
+ *
+ * For Client ID Metadata Documents, we accept all supported scopes
  */
 export function validateScopes(requestedScopes: string, clientId: string): string[] {
   const client = OAUTH_CONFIG.allowedClients[clientId as keyof typeof OAUTH_CONFIG.allowedClients];
-  if (!client) return [];
 
-  const requested = requestedScopes.split(' ').filter(Boolean);
-  const allowed = requested.filter(scope => client.scopes.includes(scope));
+  // For pre-registered clients, filter to allowed scopes
+  if (client) {
+    const requested = requestedScopes.split(' ').filter(Boolean);
+    const allowed = requested.filter(scope => client.scopes.includes(scope));
+    return allowed.length > 0 ? allowed : ['mcp'];
+  }
 
-  // Default to 'mcp' if no valid scopes
-  return allowed.length > 0 ? allowed : ['mcp'];
+  // For Client ID Metadata Documents (URL-based client_id), accept all supported scopes
+  if (isHttpsUrl(clientId)) {
+    const requested = requestedScopes.split(' ').filter(Boolean);
+    const allScopes = Object.keys(OAUTH_CONFIG.scopes);
+    const allowed = requested.filter(scope => allScopes.includes(scope));
+    return allowed.length > 0 ? allowed : ['mcp'];
+  }
+
+  return ['mcp'];
 }
