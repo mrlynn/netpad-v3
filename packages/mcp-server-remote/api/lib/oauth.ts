@@ -16,7 +16,8 @@ export const OAUTH_CONFIG = {
   issuer: process.env.OAUTH_ISSUER || 'https://mcp.netpad.io',
 
   // NetPad API URL for user authentication
-  netpadApiUrl: process.env.NETPAD_API_URL || 'https://netpad.io',
+  // Note: Using www.netpad.io because netpad.io redirects to www with 307
+  netpadApiUrl: process.env.NETPAD_API_URL || 'https://www.netpad.io',
 
   // Token settings
   accessTokenTtlSeconds: 3600, // 1 hour

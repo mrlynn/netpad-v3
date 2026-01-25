@@ -119,7 +119,7 @@ function generateAuthorizationPage(params: {
       font-size: 13px;
       color: #666;
       margin-top: 2px;
-    }f
+    }
     .permissions {
       margin-bottom: 24px;
     }
