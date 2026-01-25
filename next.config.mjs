@@ -1,3 +1,12 @@
+// Check if cloud-features is available (it's optional)
+let hasCloudFeatures = false;
+try {
+  require.resolve('@netpad/cloud-features');
+  hasCloudFeatures = true;
+} catch {
+  // Package not available, that's okay
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -6,9 +15,23 @@ const nextConfig = {
   transpilePackages: [
     '@netpad/collaborate',
     '@netpad/demo-node',
-    '@netpad/cloud-features',
     '@netpad/workflow-renderer',
+    // Only include cloud-features if it's available
+    ...(hasCloudFeatures ? ['@netpad/cloud-features'] : []),
   ],
+
+  // Handle optional cloud-features package
+  webpack: (config, { isServer }) => {
+    if (!hasCloudFeatures) {
+      // Mark cloud-features as external when not available
+      // This prevents webpack from trying to resolve it
+      config.externals = config.externals || [];
+      if (isServer) {
+        config.externals.push('@netpad/cloud-features');
+      }
+    }
+    return config;
+  },
 
   // Enable subdomain routing for local development
   // For production, this is handled by Vercel's rewrites in vercel.json
