@@ -68,9 +68,9 @@ function generateAuthorizationPage(params: {
       text-align: center;
     }
     .logo {
-      width: 160px;
-      height: 160px;
-      margin: 0 auto 16px;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 12px;
     }
     .logo img {
       width: 100%;
@@ -119,7 +119,7 @@ function generateAuthorizationPage(params: {
       font-size: 13px;
       color: #666;
       margin-top: 2px;
-    }
+    }f
     .permissions {
       margin-bottom: 24px;
     }
@@ -226,7 +226,7 @@ function generateAuthorizationPage(params: {
   <div class="container">
     <div class="header">
       <div class="logo">
-        <img src="${netpadUrl}/netpad-auth.png" alt="NetPad" onerror="this.parentElement.innerHTML='NP'">
+        <img src="${netpadUrl}/micro-mark-black-trans.png" alt="NetPad" onerror="this.parentElement.innerHTML='NP'">
       </div>
       <h1>Connect to NetPad</h1>
       <p>Authorize Claude.ai to access your NetPad workspace</p>
@@ -445,6 +445,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validate the API key against NetPad API
     try {
       const netpadUrl = OAUTH_CONFIG.netpadApiUrl;
+      console.log(`[OAuth] Validating API key against ${netpadUrl}/api/v1/auth/validate`);
+      console.log(`[OAuth] Key prefix: ${api_key.substring(0, 16)}...`);
+
       const response = await fetch(`${netpadUrl}/api/v1/auth/validate`, {
         method: 'POST',
         headers: {
@@ -454,7 +457,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({ source: 'mcp-server-remote-oauth' }),
       });
 
+      console.log(`[OAuth] Validation response status: ${response.status}`);
+
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.log(`[OAuth] Validation error response: ${errorBody}`);
+
+        let errorMessage = 'Invalid or expired API key. Please check your key and try again.';
+        try {
+          const errorJson = JSON.parse(errorBody);
+          if (errorJson.error?.message) {
+            errorMessage = errorJson.error.message;
+          }
+        } catch {
+          // Keep default error message
+        }
+
         const html = generateAuthorizationPage({
           clientId: client_id,
           redirectUri: redirect_uri,
@@ -462,7 +480,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           state: state || '',
           codeChallenge: code_challenge,
           codeChallengeMethod: code_challenge_method || 'S256',
-          error: 'Invalid or expired API key. Please check your key and try again.',
+          error: errorMessage,
         });
         res.setHeader('Content-Type', 'text/html');
         res.status(400).send(html);

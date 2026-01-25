@@ -89,6 +89,7 @@ const PUBLIC_API_ROUTES = [
   '/api/marketplace/applications', // Marketplace browsing (read-only for waitlist users)
   '/api/landing/', // Landing page form generator (guest access with rate limiting)
   '/api/cron/', // Cron jobs (verified via Vercel headers or CRON_SECRET)
+  '/api/v1/', // Public API v1 endpoints (use API key authentication)
 ];
 
 /**
