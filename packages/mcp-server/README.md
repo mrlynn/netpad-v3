@@ -1,6 +1,40 @@
 # @netpad/mcp-server
 
-An MCP (Model Context Protocol) server for AI-assisted NetPad application development. This comprehensive toolkit provides **75 tools** for building forms, workflows, applications, and data-driven experiences with the NetPad platform.
+An MCP (Model Context Protocol) server for AI-assisted NetPad application development. This comprehensive toolkit provides **80+ tools** for building forms, workflows, applications, and data-driven experiences with the NetPad platform.
+
+> **Build forms in minutes, not hours.** Describe what you need to Claude, get a working form with one click.
+>
+> Learn more at [netpad.io/mcp](https://netpad.io/mcp)
+
+## Build from Claude
+
+The most powerful way to use NetPad is through conversational building with Claude:
+
+```
+You: "I need a customer feedback form with rating, comments, and contact info"
+
+Claude: I've generated your feedback form with:
+- Star rating field (1-5)
+- Comments textarea with 500 character limit
+- Email and phone fields with validation
+
+Click to import: https://netpad.io/import/imp_abc123
+```
+
+**That's it.** One conversation, one click, working form.
+
+### How It Works
+
+1. **Describe** - Tell Claude what form you need in plain English
+2. **Generate** - Claude uses `generate_form` to create the configuration
+3. **Import** - Click the link or use `create_import_link` for a shareable URL
+4. **Customize** - Fine-tune in NetPad's visual builder if needed
+
+## What's New in v2.4.0
+
+- **One-Click Import Links**: `create_import_link` tool generates shareable URLs for instant form import
+- **Import URLs in Output**: `generate_form` now includes a direct import link in the response
+- **Deep Link Integration**: Forms created in Claude can be imported to NetPad Cloud with one click
 
 ## What's New in v2.0.0
 
@@ -97,7 +131,13 @@ Add to `~/.cursor/mcp.json`:
 }
 ```
 
-## Available Tools (75 total)
+## Available Tools (80+ total)
+
+### Import & Sharing Tools (1) - NEW
+
+| Tool | Description |
+|------|-------------|
+| `create_import_link` | Generate a shareable one-click import URL for any form configuration |
 
 ### Form Building Tools (6)
 
@@ -298,6 +338,44 @@ The server exposes documentation as MCP resources:
 
 ## Example Interactions
 
+### Build a Form with One Click
+
+```
+User: I need a job application form with resume upload, experience level,
+      and availability
+
+Claude: [Uses generate_form tool]
+I've generated your job application form with:
+- Resume file upload (PDF, DOC, DOCX - max 10MB)
+- Experience level dropdown (Entry, Mid, Senior, Executive)
+- Availability date picker
+- Cover letter textarea
+- Contact information section
+
+Click to import: https://netpad.io/import/imp_xyz789
+
+The form is ready to use - just click the link to add it to your NetPad workspace.
+```
+
+### Generate and Share an Import Link
+
+```
+User: Can you create a patient intake form and give me a link I can share
+      with my team?
+
+Claude: [Uses generate_form, then create_import_link]
+Here's your patient intake form with:
+- Personal information section
+- Medical history fields
+- Insurance details
+- Emergency contact
+
+Shareable import link: https://netpad.io/import/imp_abc123
+
+This link expires in 7 days. Anyone with a NetPad account can click it
+to import this form into their workspace.
+```
+
 ### Create an Application
 
 ```
@@ -386,9 +464,11 @@ echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_form_
 
 ## Related Packages
 
+- [@netpad/mcp-server-remote](https://www.npmjs.com/package/@netpad/mcp-server-remote) - Remote HTTP MCP server for Claude custom connectors
 - [@netpad/forms](https://www.npmjs.com/package/@netpad/forms) - React form renderer library
 - [@netpad/workflows](https://www.npmjs.com/package/@netpad/workflows) - Workflow automation client
 - [NetPad Platform](https://netpad.io) - Full form builder platform with database integration
+- [NetPad MCP Guide](https://netpad.io/mcp) - Learn more about building with Claude
 
 ## License
 

@@ -2,14 +2,36 @@
 
 Remote MCP server for NetPad, deployable to Vercel for use with Claude Custom Connectors.
 
+> **Build forms in minutes, not hours.** Describe what you need to Claude, get a working form with one click.
+>
+> Learn more at [netpad.io/mcp](https://netpad.io/mcp)
+
 ## Overview
 
 This package provides a remote HTTP-based MCP server that can be used as a **Claude Custom Connector**. Unlike the stdio-based `@netpad/mcp-server` (for Claude Desktop), this server runs as a web service that Claude can connect to over the internet.
 
 **Features:**
 - **All 80+ tools** from `@netpad/mcp-server` - forms, workflows, extensions, templates, data browser, and more
+- **One-click import links** - Generate shareable URLs that import forms directly into NetPad
 - **API key authentication** using your existing NetPad API keys (`np_live_xxx` or `np_test_xxx`)
 - **Ready to deploy** to Vercel
+
+## Build from Claude
+
+The most powerful way to use NetPad is through conversational building:
+
+```
+You: "I need a customer feedback form with rating, comments, and contact info"
+
+Claude: I've generated your feedback form with:
+- Star rating field (1-5)
+- Comments textarea with 500 character limit
+- Email and phone fields with validation
+
+Click to import: https://netpad.io/import/imp_abc123
+```
+
+**That's it.** One conversation, one click, working form.
 
 ## Quick Start
 
@@ -103,8 +125,11 @@ Manage your API keys at [netpad.io/settings](https://netpad.io/settings):
 
 The remote server includes **all tools from `@netpad/mcp-server`**:
 
+### 0. Import & Sharing (1 tool) - KEY FEATURE
+- `create_import_link` - **Generate shareable one-click import URLs** for any form configuration
+
 ### 1. Form Building (6 tools)
-- `generate_form` - Generate complete form configurations
+- `generate_form` - Generate complete form configurations (includes import URL in output)
 - `generate_field` - Create individual field configurations
 - `generate_conditional_logic` - Create show/hide logic
 - `generate_computed_field` - Create formula-based fields
@@ -254,16 +279,36 @@ The remote server imports `createNetPadMcpServer()` from `@netpad/mcp-server`, e
 - **HTTPS:** Always use HTTPS in production (Vercel provides this automatically)
 - **Permissions:** Keys can be scoped to specific permissions
 
+## Example: Build and Share a Form
+
+```
+User: Create a job application form with resume upload and let me share it with HR
+
+Claude: [Uses generate_form, then create_import_link]
+I've created your job application form with:
+- Resume upload (PDF, DOC, DOCX - max 10MB)
+- Experience level dropdown
+- Availability date picker
+- Contact information
+
+Shareable import link: https://netpad.io/import/imp_xyz789
+
+Share this link with your HR team - they can click it to instantly
+import the form into their NetPad workspace. The link expires in 7 days.
+```
+
 ## Related Packages
 
 - [@netpad/mcp-server](../mcp-server) - Local stdio MCP server for Claude Desktop (no auth required)
 - [NetPad Platform](https://netpad.io) - Full form builder platform
+- [NetPad MCP Guide](https://netpad.io/mcp) - Learn about building with Claude
 - [Documentation](https://docs.netpad.io/docs/developer/mcp-server) - MCP server documentation
 
 ## Version History
 
 | Version | Changes |
 |---------|---------|
+| **1.5.0** | One-click import links via `create_import_link` tool, import URLs in `generate_form` output |
 | **1.1.0** | Full parity with @netpad/mcp-server (80+ tools), imports shared server factory |
 | **1.0.1** | Initial release with subset of tools |
 

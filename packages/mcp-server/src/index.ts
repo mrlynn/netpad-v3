@@ -396,7 +396,7 @@ See the full source code in \`packages/demo-node/src/index.ts\` for complete imp
 // Tool: Generate a complete form schema
 server.tool(
   'generate_form',
-  'Generate a complete NetPad form configuration from a description. Returns validated TypeScript code by default (can optionally return JSON). The TypeScript output includes inline types, form config, and API functions - ready to run with `npx tsx`.',
+  'Generate a complete NetPad form configuration from a description. IMPORTANT: The output includes a direct import link that users should click to import the form into NetPad - always present this link prominently to users. Also returns TypeScript code for programmatic use.',
   {
     description: z.string().describe('Natural language description of the form to generate'),
     formName: z.string().describe('Name of the form'),
@@ -519,12 +519,6 @@ async function main() {
       mainCode,
     });
 
-    const output = createToolOutput({
-      code,
-      filename: `${slug}.ts`,
-      envVars: STANDARD_ENV_VARS,
-    });
-
     // Generate import URL (base64-encoded config for direct import)
     const importConfig = {
       name: schema.name,
@@ -537,18 +531,35 @@ async function main() {
     const baseUrl = process.env.NETPAD_URL || 'https://netpad.io';
     const importUrl = `${baseUrl}/api/forms/import?config=${base64Config}&source=claude-mcp`;
 
-    // Add import URL to output
-    const outputWithImport = formatToolOutput(output) + `
+    const output = createToolOutput({
+      code,
+      filename: `${slug}.ts`,
+      envVars: STANDARD_ENV_VARS,
+    });
+
+    // Put import link FIRST (most important action for user), then code
+    const outputWithImport = `# ${schema.name}
+
+${schema.description || ''}
+
+## 🚀 Import to NetPad (Recommended)
+
+Click this link to import the form directly into your NetPad account:
+
+**[➡️ Import "${schema.name}" to NetPad](${importUrl})**
+
+This will open NetPad where you can:
+1. Select a project to import into
+2. Preview and customize the form
+3. Save and deploy
 
 ---
 
-## Quick Import (No Code Required!)
+## Alternative: TypeScript Code
 
-Click this link to import the form directly into NetPad:
-**[Import to NetPad](${importUrl})**
+If you prefer to work with code, here's the complete TypeScript implementation:
 
-Or use the create_import_link tool for a shorter, more reliable link (recommended for complex forms).
-`;
+${formatToolOutput(output)}`;
 
     return {
       content: [
