@@ -68,8 +68,8 @@ function generateAuthorizationPage(params: {
       text-align: center;
     }
     .logo {
-      width: 80px;
-      height: 80px;
+      width: 160px;
+      height: 160px;
       margin: 0 auto 16px;
     }
     .logo img {
