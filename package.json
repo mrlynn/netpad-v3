@@ -63,7 +63,7 @@
     "mongodb": "^6.5.0",
     "mongodb-client-encryption": "^6.5.0",
     "nanoid": "^5.1.6",
-    "next": "14.2.5",
+    "next": "14.2.35",
     "nodemailer": "^7.0.11",
     "npm-registry-fetch": "^19.1.1",
     "openai": "^6.15.0",
