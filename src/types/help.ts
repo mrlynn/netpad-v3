@@ -109,6 +109,7 @@ export type HelpTopicId =
   | 'organizations'
   | 'connection-vault'
   | 'template-gallery'
+  | 'google-forms-import'
   | 'applications'
   | 'application-releases'
   | 'application-contracts'

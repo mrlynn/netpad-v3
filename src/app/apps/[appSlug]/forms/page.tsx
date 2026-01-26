@@ -42,6 +42,8 @@ import {
   CalendarToday,
   People,
   OpenInNew,
+  FileUpload,
+  Google,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
@@ -52,6 +54,7 @@ import { OrphanedFormsBanner } from '@/components/Migration/OrphanedFormsBanner'
 import { FeaturedTemplatesSection } from '@/components/Templates/FeaturedTemplatesSection';
 import { ClusterSetupBanner } from '@/components/Cluster/ClusterSetupBanner';
 import { useClusterStatus } from '@/hooks/useClusterStatus';
+import { GoogleFormsImportWizard } from '@/components/GoogleFormsImport';
 
 interface SavedForm {
   id: string;
@@ -333,6 +336,8 @@ export default function AppFormsPage() {
     message: '',
     severity: 'success',
   });
+  const [importMenuAnchor, setImportMenuAnchor] = useState<HTMLElement | null>(null);
+  const [googleFormsImportOpen, setGoogleFormsImportOpen] = useState(false);
 
   const appSlug = currentApplication?.slug || '';
   const applicationId = currentApplication?.applicationId;
@@ -478,24 +483,54 @@ export default function AppFormsPage() {
                 Forms in {currentApplication.name}
               </Typography>
             </Box>
-            <Button
-              component={Link}
-              href={`${getAppUrl(appSlug, 'forms')}/new`}
-              variant="contained"
-              startIcon={<Add />}
-              fullWidth={false}
-              data-testid="new-form-button"
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { bgcolor: theme.palette.primary.dark },
-              }}
-            >
-              Create Form
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<FileUpload />}
+                onClick={(e) => setImportMenuAnchor(e.currentTarget)}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Import
+              </Button>
+              <Menu
+                anchorEl={importMenuAnchor}
+                open={Boolean(importMenuAnchor)}
+                onClose={() => setImportMenuAnchor(null)}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setImportMenuAnchor(null);
+                    setGoogleFormsImportOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Google />
+                  </ListItemIcon>
+                  <ListItemText>Import from Google Forms</ListItemText>
+                </MenuItem>
+              </Menu>
+              <Button
+                component={Link}
+                href={`${getAppUrl(appSlug, 'forms')}/new`}
+                variant="contained"
+                startIcon={<Add />}
+                fullWidth={false}
+                data-testid="new-form-button"
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
+                }}
+              >
+                Create Form
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -794,6 +829,26 @@ export default function AppFormsPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Google Forms Import Wizard */}
+      {currentOrgId && projectId && (
+        <GoogleFormsImportWizard
+          open={googleFormsImportOpen}
+          onClose={() => setGoogleFormsImportOpen(false)}
+          onComplete={(formId, formName) => {
+            setGoogleFormsImportOpen(false);
+            setSnackbar({
+              open: true,
+              message: `Successfully imported "${formName}"`,
+              severity: 'success',
+            });
+            loadForms();
+          }}
+          organizationId={currentOrgId}
+          projectId={projectId}
+          applicationId={applicationId}
+        />
+      )}
     </Box>
   );
 }

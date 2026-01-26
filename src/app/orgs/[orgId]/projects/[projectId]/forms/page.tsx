@@ -42,11 +42,14 @@ import {
   CalendarToday,
   People,
   OpenInNew,
+  FileUpload,
+  Google,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { getOrgProjectUrl } from '@/lib/routing';
+import { GoogleFormsImportWizard } from '@/components/GoogleFormsImport';
 
 interface SavedForm {
   id: string;
@@ -322,6 +325,8 @@ export default function FormsPage() {
     message: '',
     severity: 'success',
   });
+  const [importMenuAnchor, setImportMenuAnchor] = useState<HTMLElement | null>(null);
+  const [googleFormsImportOpen, setGoogleFormsImportOpen] = useState(false);
 
   useEffect(() => {
     if (orgId && projectId) {
@@ -459,23 +464,53 @@ export default function FormsPage() {
                 Manage and access your saved forms
               </Typography>
             </Box>
-            <Button
-              component={Link}
-              href={getOrgProjectUrl(orgId, projectId, 'builder')}
-              variant="contained"
-              startIcon={<Add />}
-              fullWidth={false}
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { bgcolor: theme.palette.primary.dark },
-              }}
-            >
-              Create Form
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<FileUpload />}
+                onClick={(e) => setImportMenuAnchor(e.currentTarget)}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Import
+              </Button>
+              <Menu
+                anchorEl={importMenuAnchor}
+                open={Boolean(importMenuAnchor)}
+                onClose={() => setImportMenuAnchor(null)}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setImportMenuAnchor(null);
+                    setGoogleFormsImportOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Google />
+                  </ListItemIcon>
+                  <ListItemText>Import from Google Forms</ListItemText>
+                </MenuItem>
+              </Menu>
+              <Button
+                component={Link}
+                href={getOrgProjectUrl(orgId, projectId, 'builder')}
+                variant="contained"
+                startIcon={<Add />}
+                fullWidth={false}
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  '&:hover': { bgcolor: theme.palette.primary.dark },
+                }}
+              >
+                Create Form
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -774,6 +809,23 @@ export default function FormsPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Google Forms Import Wizard */}
+      <GoogleFormsImportWizard
+        open={googleFormsImportOpen}
+        onClose={() => setGoogleFormsImportOpen(false)}
+        onComplete={(formId, formName) => {
+          setGoogleFormsImportOpen(false);
+          setSnackbar({
+            open: true,
+            message: `Successfully imported "${formName}"`,
+            severity: 'success',
+          });
+          loadForms(); // Refresh the forms list
+        }}
+        organizationId={orgId}
+        projectId={projectId}
+      />
     </Box>
   );
 }

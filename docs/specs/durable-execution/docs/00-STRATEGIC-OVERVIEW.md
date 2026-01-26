@@ -1,10 +1,10 @@
 # NetPad Durable Workflow Execution
 ## Strategic Overview & Sprint Kickoff Package
 
-**Version:** 1.0.0  
-**Status:** Sprint Ready  
-**Author:** Michael (Founder) with AI Strategic Assistance  
-**Date:** January 26, 2025  
+**Version:** 1.1.0
+**Status:** Sprint Ready
+**Author:** Michael (Founder) with AI Strategic Assistance
+**Date:** January 26, 2025
 **Classification:** Internal Engineering Documentation
 
 ---
@@ -13,7 +13,121 @@
 
 This document package establishes the strategic foundation and technical specifications for implementing **Durable Workflow Execution** as a premium, cloud-only feature for NetPad. This capability represents NetPad's most significant competitive differentiator in the enterprise workflow automation market.
 
-### What We're Building
+---
+
+## Two Execution Modes: The Core Architecture Decision
+
+NetPad supports **two distinct workflow execution modes**, each serving different use cases and deployment scenarios. This is a fundamental architectural decision that shapes the entire platform.
+
+### Execution Mode Comparison
+
+| Aspect | Synchronous Execution | Durable Execution |
+|--------|----------------------|-------------------|
+| **Availability** | Open Source (MIT) | Cloud Premium (Team+) |
+| **Repository** | `netpad-3` | `netpad-cloud` |
+| **Execution Model** | Fire-and-forget, in-memory | Persistent, resumable |
+| **State Persistence** | None (runs to completion) | After every node |
+| **Crash Recovery** | Lost on restart | Automatic resume |
+| **Human Approval** | Not supported | Full support |
+| **Long Delays** | Short only (< 1 hour) | Days/weeks/months |
+| **Audit Trail** | Basic logging | Immutable event log |
+| **Horizontal Scaling** | Single process | Multi-worker |
+| **Use Cases** | Simple automations, webhooks | Enterprise workflows, compliance |
+
+### Mode 1: Synchronous Execution (Open Source)
+
+**Location:** `netpad-3/src/lib/workflow/`
+
+The open source execution mode is designed for:
+- **Simple automations**: Form submission triggers, data transformations
+- **Webhook handling**: Process incoming data immediately
+- **Quick tasks**: Operations that complete in seconds/minutes
+- **Self-hosted deployments**: Full functionality without cloud dependency
+
+**Characteristics:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 SYNCHRONOUS EXECUTION                        │
+│                                                              │
+│  Trigger → Node A → Node B → Node C → Complete              │
+│                                                              │
+│  • Runs in single request/process                           │
+│  • State held in memory only                                │
+│  • If server restarts, execution is lost                    │
+│  • Simple, fast, no overhead                                │
+│  • Perfect for 90% of workflow use cases                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**What's Included:**
+- Full workflow definition schema
+- Visual workflow editor with all node types
+- All 25+ node type UI components
+- Basic execution engine
+- Form integration and triggers
+- API endpoints for workflow management
+
+### Mode 2: Durable Execution (Cloud Premium)
+
+**Location:** `netpad-cloud/src/durable-execution/`
+
+The premium durable execution mode is designed for:
+- **Enterprise workflows**: Multi-day/week processes
+- **Human-in-the-loop**: Approval chains, manual reviews
+- **Compliance requirements**: Full audit trails
+- **Mission-critical processes**: Cannot lose execution state
+
+**Characteristics:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   DURABLE EXECUTION                          │
+│                                                              │
+│  Trigger → Node A → [PERSIST] → Node B → [PERSIST] →        │
+│            ↓                      ↓                          │
+│      [MongoDB]              [MongoDB]                        │
+│                                                              │
+│  • State persisted after EVERY node                         │
+│  • Server restart? Resume exactly where left off            │
+│  • Wait days for human approval? No problem                 │
+│  • Full audit trail of every action                         │
+│  • Multiple workers can process in parallel                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**What's Included (Cloud Only):**
+- Durable execution engine with state persistence
+- Optimistic concurrency control
+- Worker lock management with crash recovery
+- Approval nodes with notifications
+- Long delays (days/weeks/months)
+- Timer service for scheduled wake-ups
+- Immutable event log for audit trails
+- Execution recovery and retry logic
+
+---
+
+## Repository Structure (Critical)
+
+```
+netpad-3/                     (PUBLIC - MIT License)
+├── src/lib/workflow/         ← Synchronous execution engine
+├── src/types/workflow.ts     ← Shared workflow types
+├── src/components/           ← All workflow UI components
+└── docs/specs/               ← Specifications (including this)
+
+netpad-cloud/                 (PRIVATE - Premium Features)
+└── src/durable-execution/    ← Durable execution engine
+    ├── ExecutionEngine.ts
+    ├── types.ts
+    ├── services/
+    └── interfaces/
+```
+
+**The separation is absolute:** Premium execution code NEVER goes in the open source repo.
+
+---
+
+## What We're Building (Durable Mode)
 
 A production-grade durable execution engine that:
 - **Survives failures**: Workflows resume exactly where they left off after server restarts
@@ -22,14 +136,15 @@ A production-grade durable execution engine that:
 - **Scales horizontally**: Multiple workers can process executions in parallel
 - **Integrates natively with MongoDB**: No external orchestration dependencies
 
-### Why This Matters
+### Why Durable Execution Matters
 
-| Capability | Without Durable Execution | With Durable Execution |
+| Capability | Synchronous (Open Source) | Durable (Cloud Premium) |
 |------------|---------------------------|------------------------|
 | Expense approval workflow | ❌ Cannot wait for manager response | ✅ Pauses for days, resumes on approval |
 | Patient intake process | ❌ Must complete in single session | ✅ Spans multiple interactions over weeks |
 | Vendor onboarding | ❌ No visibility into progress | ✅ Full audit trail, SLA tracking |
 | Server restart during execution | ❌ Workflow lost forever | ✅ Automatic recovery and continuation |
+| Compliance/audit requirements | ❌ Basic logging only | ✅ Immutable event history |
 
 ### Business Model Alignment
 
@@ -38,7 +153,7 @@ A production-grade durable execution engine that:
 | Workflow Definition Schema | ✅ | ✅ |
 | Visual Workflow Editor | ✅ | ✅ |
 | All 25+ Node Types (UI) | ✅ | ✅ |
-| Fire-and-Forget Execution | ✅ | ✅ |
+| Synchronous Execution | ✅ | ✅ |
 | **Durable Execution Engine** | ❌ | ✅ Team+ |
 | **Approval Nodes (Backend)** | ❌ | ✅ Team+ |
 | **Long Delays (days/weeks)** | ❌ | ✅ Team+ |

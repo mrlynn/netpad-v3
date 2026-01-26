@@ -82,6 +82,53 @@ export interface WorkflowSettings {
   errorHandling: 'stop' | 'continue' | 'rollback';
   timezone: string;              // For scheduled triggers
   embedSettings?: WorkflowEmbedSettings;  // Embedding configuration
+  durableExecution?: DurableExecutionSettings; // Cloud premium durable execution
+}
+
+/**
+ * Durable Execution Settings (Cloud Premium Feature)
+ *
+ * When enabled, workflows use the durable execution engine which provides:
+ * - State persistence across failures
+ * - Human-in-the-loop approvals
+ * - Long-running delays and timers
+ * - Signal-based waiting
+ * - Comprehensive audit trails
+ *
+ * Note: Some workflows automatically require durable execution
+ * based on their node types (approval, wait_for_signal, etc.)
+ */
+export interface DurableExecutionSettings {
+  /**
+   * Force durable execution mode
+   * When 'auto' (default), durable mode is used only when required
+   * When 'always', durable mode is always used
+   * When 'never', standard mode is always used (may fail for some node types)
+   */
+  mode: 'auto' | 'always' | 'never';
+
+  /**
+   * Default timeout for approval nodes (ISO 8601 duration)
+   * e.g., 'P7D' for 7 days, 'PT24H' for 24 hours
+   */
+  defaultApprovalTimeout?: string;
+
+  /**
+   * Default timeout action when approvals expire
+   */
+  defaultApprovalTimeoutAction?: 'reject' | 'approve' | 'escalate' | 'fail';
+
+  /**
+   * Enable audit logging for this workflow
+   * Default: true when using durable execution
+   */
+  auditLogging?: boolean;
+
+  /**
+   * How long to retain execution history (days)
+   * Default: 30 days
+   */
+  retentionDays?: number;
 }
 
 export interface WorkflowEmbedSettings {
@@ -766,6 +813,11 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   },
   errorHandling: 'stop',
   timezone: 'UTC',
+  durableExecution: {
+    mode: 'auto',                // Use durable when required
+    auditLogging: true,
+    retentionDays: 30,
+  },
 };
 
 /**

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 16px;
+      background: #fafafa;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .header img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: #1a1a1a;
+    }
+
+    .form-info {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .form-info h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      color: #1a1a1a;
+    }
+
+    .form-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .form-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .form-info-label {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .form-info-value {
+      font-weight: 500;
+      color: #1a1a1a;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      color: #1a1a1a;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+      color: #1a1a1a;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #0d9488;
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+
+    select:disabled, input:disabled {
+      background: #f5f5f5;
+      color: #999;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: #0d9488;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0f766e;
+    }
+
+    .btn-primary:disabled {
+      background: #a0a0a0;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #444;
+      border: 1px solid #d0d0d0;
+    }
+
+    .btn-secondary:hover {
+      background: #f5f5f5;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #0d9488;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .message.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .message.info {
+      background: #e0f2fe;
+      color: #075985;
+      border: 1px solid #bae6fd;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .preview-section {
+      margin-top: 16px;
+    }
+
+    .preview-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 12px;
+    }
+
+    .preview-item:last-child {
+      border-bottom: none;
+    }
+
+    .preview-type {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .preview-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      font-weight: 400;
+    }
+
+    .help-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .setup-required {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .setup-required p {
+      margin: 0 0 16px 0;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="https://netpad.io/logo-icon.png" alt="NetPad">
+    <h1>Export to NetPad</h1>
+  </div>
+
+  <div id="setup-required" class="setup-required hidden">
+    <p>Please configure your NetPad API key to export forms.</p>
+    <button class="btn btn-primary" onclick="openSettings()">Configure Settings</button>
+  </div>
+
+  <div id="main-content">
+    <div id="form-info" class="form-info">
+      <h2>Form Details</h2>
+      <div class="form-info-row">
+        <span class="form-info-label">Title</span>
+        <span class="form-info-value" id="form-title">Loading...</span>
+      </div>
+      <div class="form-info-row">
+        <span class="form-info-label">Questions</span>
+        <span class="form-info-value" id="form-questions">-</span>
+      </div>
+      <div class="form-info-row">
+        <span class="form-info-label">Responses</span>
+        <span class="form-info-value" id="form-responses">-</span>
+      </div>
+    </div>
+
+    <div id="message" class="message hidden"></div>
+
+    <div class="section">
+      <h3>Export Destination</h3>
+      <div class="form-group">
+        <label for="organization">Organization</label>
+        <select id="organization" onchange="loadProjects()">
+          <option value="">Select organization...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="project">Project</label>
+        <select id="project" disabled>
+          <option value="">Select project...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="form-name">Form Name (optional)</label>
+        <input type="text" id="form-name" placeholder="Use original name">
+        <div class="help-text">Leave blank to use the Google Form title</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Options</h3>
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="include-responses" checked>
+        <label for="include-responses">Also import existing responses</label>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="export-btn" onclick="exportForm()" disabled>
+      Export to NetPad
+    </button>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Exporting form...</div>
+  </div>
+
+  <div id="success" class="section hidden">
+    <h3>Export Complete!</h3>
+    <p id="success-message">Your form has been exported to NetPad.</p>
+    <a id="success-link" href="#" target="_blank" class="btn btn-primary">Open in NetPad</a>
+    <button class="btn btn-secondary" style="margin-top: 8px;" onclick="resetForm()">Export Another</button>
+  </div>
+
+  <script>
+    let formSummary = null;
+    let organizations = [];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      loadFormSummary();
+      checkSettings();
+    });
+
+    function loadFormSummary() {
+      google.script.run
+        .withSuccessHandler(function(summary) {
+          formSummary = summary;
+          if (summary) {
+            document.getElementById('form-title').textContent = summary.title || 'Untitled Form';
+            document.getElementById('form-questions').textContent = summary.questionCount;
+            document.getElementById('form-responses').textContent = summary.responseCount;
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('error', 'Failed to load form information');
+        })
+        .getFormSummary();
+    }
+
+    function checkSettings() {
+      google.script.run
+        .withSuccessHandler(function(settings) {
+          if (!settings.apiKey) {
+            document.getElementById('setup-required').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+          } else {
+            document.getElementById('setup-required').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            loadOrganizations();
+          }
+        })
+        .getSettings();
+    }
+
+    function loadOrganizations() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            organizations = result.organizations;
+            const select = document.getElementById('organization');
+            select.innerHTML = '<option value="">Select organization...</option>';
+            organizations.forEach(function(org) {
+              const option = document.createElement('option');
+              option.value = org.id;
+              option.textContent = org.name;
+              select.appendChild(option);
+            });
+          } else {
+            showMessage('error', result.error || 'Failed to load organizations');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('error', 'Failed to load organizations');
+        })
+        .getOrganizations();
+    }
+
+    function loadProjects() {
+      const orgId = document.getElementById('organization').value;
+      const projectSelect = document.getElementById('project');
+
+      if (!orgId) {
+        projectSelect.disabled = true;
+        projectSelect.innerHTML = '<option value="">Select project...</option>';
+        updateExportButton();
+        return;
+      }
+
+      projectSelect.disabled = true;
+      projectSelect.innerHTML = '<option value="">Loading...</option>';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          projectSelect.innerHTML = '<option value="">Select project...</option>';
+          if (result.success) {
+            result.projects.forEach(function(project) {
+              const option = document.createElement('option');
+              option.value = project.id;
+              option.textContent = project.name;
+              projectSelect.appendChild(option);
+            });
+            projectSelect.disabled = false;
+          } else {
+            showMessage('error', result.error || 'Failed to load projects');
+          }
+          updateExportButton();
+        })
+        .withFailureHandler(function(error) {
+          projectSelect.innerHTML = '<option value="">Select project...</option>';
+          showMessage('error', 'Failed to load projects');
+          updateExportButton();
+        })
+        .getProjects(orgId);
+    }
+
+    function updateExportButton() {
+      const orgId = document.getElementById('organization').value;
+      const projectId = document.getElementById('project').value;
+      document.getElementById('export-btn').disabled = !orgId || !projectId;
+    }
+
+    document.getElementById('project').addEventListener('change', updateExportButton);
+
+    function exportForm() {
+      const orgId = document.getElementById('organization').value;
+      const projectId = document.getElementById('project').value;
+      const formName = document.getElementById('form-name').value;
+      const includeResponses = document.getElementById('include-responses').checked;
+
+      if (!orgId || !projectId) {
+        showMessage('error', 'Please select an organization and project');
+        return;
+      }
+
+      document.getElementById('main-content').classList.add('hidden');
+      document.getElementById('loading').classList.add('active');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('loading').classList.remove('active');
+
+          if (result.success) {
+            // If we should also import responses
+            if (includeResponses && formSummary && formSummary.responseCount > 0) {
+              exportResponses(orgId, projectId, result.formId, result.formUrl);
+            } else {
+              showSuccess(result.formUrl, 'Form exported successfully!');
+            }
+          } else {
+            document.getElementById('main-content').classList.remove('hidden');
+            showMessage('error', result.error || 'Export failed');
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('loading').classList.remove('active');
+          document.getElementById('main-content').classList.remove('hidden');
+          showMessage('error', 'Export failed: ' + error.message);
+        })
+        .exportFormFromSidebar({
+          organizationId: orgId,
+          projectId: projectId,
+          formName: formName,
+          createNewForm: true
+        });
+    }
+
+    function exportResponses(orgId, projectId, netpadFormId, formUrl) {
+      document.getElementById('loading').querySelector('div:last-child').textContent = 'Importing responses...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('loading').classList.remove('active');
+
+          if (result.success) {
+            showSuccess(formUrl, 'Form and ' + result.importedCount + ' responses exported successfully!');
+          } else {
+            showSuccess(formUrl, 'Form exported, but response import failed: ' + result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('loading').classList.remove('active');
+          showSuccess(formUrl, 'Form exported, but response import failed.');
+        })
+        .exportResponsesFromSidebar({
+          organizationId: orgId,
+          projectId: projectId,
+          netpadFormId: netpadFormId
+        });
+    }
+
+    function showSuccess(url, message) {
+      document.getElementById('success').classList.remove('hidden');
+      document.getElementById('success-message').textContent = message;
+      document.getElementById('success-link').href = url;
+    }
+
+    function showMessage(type, text) {
+      const messageEl = document.getElementById('message');
+      messageEl.className = 'message ' + type;
+      messageEl.textContent = text;
+      messageEl.classList.remove('hidden');
+
+      if (type !== 'error') {
+        setTimeout(function() {
+          messageEl.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('success').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('hidden');
+      document.getElementById('organization').value = '';
+      document.getElementById('project').value = '';
+      document.getElementById('project').disabled = true;
+      document.getElementById('form-name').value = '';
+      document.getElementById('message').classList.add('hidden');
+      updateExportButton();
+    }
+
+    function openSettings() {
+      google.script.run.showSettingsSidebar();
+    }
+  </script>
+</body>
+</html>

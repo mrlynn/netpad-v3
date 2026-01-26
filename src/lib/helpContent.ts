@@ -6648,7 +6648,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'After applying a template, you\'ll be prompted to name your form and configure the target MongoDB collection. The template fields will be ready to customize.',
       },
     ],
-    relatedTopics: ['form-builder', 'workflow-nodes', 'field-configuration'],
+    relatedTopics: ['form-builder', 'workflow-nodes', 'field-configuration', 'google-forms-import'],
     keywords: [
       'template',
       'gallery',
@@ -6659,6 +6659,162 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       'preview',
       'customize',
       'quick start',
+    ],
+  },
+
+  'google-forms-import': {
+    id: 'google-forms-import',
+    title: 'Google Forms Import',
+    description:
+      'Import existing Google Forms into NetPad with intelligent field mapping, preserving structure, validation rules, and multi-page layouts.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Overview',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad can import forms directly from Google Forms, automatically mapping field types, validation rules, and form structure. This allows you to migrate existing forms or leverage Google Forms as a quick design tool before customizing in NetPad.',
+      },
+      {
+        type: 'heading',
+        content: 'Two Import Methods',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad offers two ways to import Google Forms, depending on whether your form is public or private:',
+      },
+      {
+        type: 'list',
+        content: [
+          'URL Import (No Auth): Paste a public Google Form URL directly. No Google account connection required.',
+          'OAuth Import: Connect your Google account to access all your forms, including private ones.',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'URL Import (Public Forms)',
+      },
+      {
+        type: 'text',
+        content:
+          'For publicly accessible Google Forms, simply paste the form URL. NetPad parses the form structure directly from the page without requiring authentication. This works with both full URLs (docs.google.com/forms/...) and short URLs (forms.gle/...).',
+      },
+      {
+        type: 'tip',
+        content:
+          'URL import is the fastest way to import a form. Make sure your Google Form is set to "Anyone with the link can view" for this to work.',
+      },
+      {
+        type: 'heading',
+        content: 'OAuth Import (Private Forms)',
+      },
+      {
+        type: 'text',
+        content:
+          'Connect your Google account to browse and import any form you have access to, including private forms. OAuth import provides better field type detection and access to all your Google Forms in one place.',
+      },
+      {
+        type: 'heading',
+        content: 'Supported Field Types',
+      },
+      {
+        type: 'list',
+        content: [
+          'Short Answer → Text field',
+          'Paragraph → Long Text field',
+          'Multiple Choice → Radio buttons',
+          'Checkboxes → Checkbox group',
+          'Dropdown → Dropdown select',
+          'Linear Scale → Rating field',
+          'Date → Date picker',
+          'Time → Time picker',
+          'File Upload → File upload field',
+          'Multiple Choice Grid → Matrix field (approximate)',
+          'Checkbox Grid → Matrix field (approximate)',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Preserved Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Required/optional field status',
+          'Field descriptions and help text',
+          'Options for choice fields (radio, checkbox, dropdown)',
+          'Scale ranges and labels for rating fields',
+          'File upload constraints (max files, file size, allowed types)',
+          'Form title and description',
+          'Multi-page structure with page breaks',
+          'Number, email, and URL validation',
+          'Min/max length constraints',
+          'Regular expression patterns',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Import Wizard Steps',
+      },
+      {
+        type: 'list',
+        content: [
+          '1. Choose Method: Select URL import or OAuth import',
+          '2. Enter Source: Paste URL or select from your Google Forms',
+          '3. Preview: Review field mappings with confidence indicators',
+          '4. Import: Execute the import with progress tracking',
+          '5. Complete: Open the imported form in the editor',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Mapping Confidence',
+      },
+      {
+        type: 'text',
+        content:
+          'Each field mapping shows a confidence level: "exact" means a perfect 1:1 mapping, while "approximate" means the field type was mapped to the closest equivalent (e.g., grid questions become matrix fields).',
+      },
+      {
+        type: 'warning',
+        content:
+          'Some Google Forms features cannot be imported: go-to section logic, image/video items, and certain validation types like "text contains". These limitations are shown in the preview.',
+      },
+      {
+        type: 'heading',
+        content: 'How to Import',
+      },
+      {
+        type: 'list',
+        content: [
+          'Navigate to the Forms page within an application',
+          'Click the "Import" dropdown button',
+          'Select "Import from Google Forms"',
+          'Follow the import wizard steps',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'After importing, you can fully customize the form in the NetPad Form Builder. Add conditional logic, computed fields, and other advanced features that Google Forms doesn\'t support.',
+      },
+    ],
+    relatedTopics: ['form-builder', 'template-gallery', 'field-configuration'],
+    keywords: [
+      'google forms',
+      'import',
+      'migrate',
+      'conversion',
+      'google',
+      'oauth',
+      'url',
+      'transfer',
+      'copy',
+      'external',
+      'integration',
     ],
   },
 

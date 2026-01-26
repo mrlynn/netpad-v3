@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 16px;
+      background: #fafafa;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .header img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: #1a1a1a;
+    }
+
+    .form-info {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .form-info h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      color: #1a1a1a;
+    }
+
+    .form-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .form-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .form-info-label {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .form-info-value {
+      font-weight: 500;
+      color: #1a1a1a;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      color: #1a1a1a;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+      color: #1a1a1a;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus, input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #0d9488;
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+
+    select:disabled, input:disabled {
+      background: #f5f5f5;
+      color: #999;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: #0d9488;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0f766e;
+    }
+
+    .btn-primary:disabled {
+      background: #a0a0a0;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #444;
+      border: 1px solid #d0d0d0;
+    }
+
+    .btn-secondary:hover {
+      background: #f5f5f5;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #0d9488;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .message.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .message.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .help-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .setup-required {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .setup-required p {
+      margin: 0 0 16px 0;
+      color: #666;
+    }
+
+    .no-responses {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+    }
+
+    .no-responses svg {
+      width: 48px;
+      height: 48px;
+      color: #d0d0d0;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="https://netpad.io/logo-icon.png" alt="NetPad">
+    <h1>Export Responses</h1>
+  </div>
+
+  <div id="setup-required" class="setup-required hidden">
+    <p>Please configure your NetPad API key to export responses.</p>
+    <button class="btn btn-primary" onclick="openSettings()">Configure Settings</button>
+  </div>
+
+  <div id="no-responses" class="no-responses hidden">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    <p>This form has no responses yet.</p>
+  </div>
+
+  <div id="main-content">
+    <div id="form-info" class="form-info">
+      <h2>Response Summary</h2>
+      <div class="form-info-row">
+        <span class="form-info-label">Form</span>
+        <span class="form-info-value" id="form-title">Loading...</span>
+      </div>
+      <div class="form-info-row">
+        <span class="form-info-label">Total Responses</span>
+        <span class="form-info-value" id="response-count">-</span>
+      </div>
+    </div>
+
+    <div id="message" class="message hidden"></div>
+
+    <div class="section">
+      <h3>Export Destination</h3>
+      <div class="form-group">
+        <label for="organization">Organization</label>
+        <select id="organization" onchange="loadProjects()">
+          <option value="">Select organization...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="project">Project</label>
+        <select id="project" onchange="loadForms()" disabled>
+          <option value="">Select project...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="netpad-form">NetPad Form</label>
+        <select id="netpad-form" disabled>
+          <option value="">Select form...</option>
+        </select>
+        <div class="help-text">Select the NetPad form to import responses into.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Export Options</h3>
+      <div class="form-group">
+        <label for="response-limit">Maximum Responses</label>
+        <input type="number" id="response-limit" value="1000" min="1" max="10000">
+        <div class="help-text">Limit the number of responses to export (max 10,000)</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="export-btn" onclick="exportResponses()" disabled>
+      Export Responses
+    </button>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Exporting responses...</div>
+  </div>
+
+  <div id="success" class="section hidden">
+    <h3>Export Complete!</h3>
+    <p id="success-message">Responses have been exported to NetPad.</p>
+    <a id="success-link" href="#" target="_blank" class="btn btn-primary">View in NetPad</a>
+    <button class="btn btn-secondary" style="margin-top: 8px;" onclick="resetForm()">Export More</button>
+  </div>
+
+  <script>
+    let formSummary = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      loadFormSummary();
+      checkSettings();
+    });
+
+    function loadFormSummary() {
+      google.script.run
+        .withSuccessHandler(function(summary) {
+          formSummary = summary;
+          if (summary) {
+            document.getElementById('form-title').textContent = summary.title || 'Untitled Form';
+            document.getElementById('response-count').textContent = summary.responseCount;
+
+            if (summary.responseCount === 0) {
+              document.getElementById('main-content').classList.add('hidden');
+              document.getElementById('no-responses').classList.remove('hidden');
+            }
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('error', 'Failed to load form information');
+        })
+        .getFormSummary();
+    }
+
+    function checkSettings() {
+      google.script.run
+        .withSuccessHandler(function(settings) {
+          if (!settings.apiKey) {
+            document.getElementById('setup-required').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+          } else {
+            loadOrganizations();
+          }
+        })
+        .getSettings();
+    }
+
+    function loadOrganizations() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            const select = document.getElementById('organization');
+            select.innerHTML = '<option value="">Select organization...</option>';
+            result.organizations.forEach(function(org) {
+              const option = document.createElement('option');
+              option.value = org.id;
+              option.textContent = org.name;
+              select.appendChild(option);
+            });
+          } else {
+            showMessage('error', result.error || 'Failed to load organizations');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('error', 'Failed to load organizations');
+        })
+        .getOrganizations();
+    }
+
+    function loadProjects() {
+      const orgId = document.getElementById('organization').value;
+      const projectSelect = document.getElementById('project');
+      const formSelect = document.getElementById('netpad-form');
+
+      formSelect.disabled = true;
+      formSelect.innerHTML = '<option value="">Select form...</option>';
+
+      if (!orgId) {
+        projectSelect.disabled = true;
+        projectSelect.innerHTML = '<option value="">Select project...</option>';
+        updateExportButton();
+        return;
+      }
+
+      projectSelect.disabled = true;
+      projectSelect.innerHTML = '<option value="">Loading...</option>';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          projectSelect.innerHTML = '<option value="">Select project...</option>';
+          if (result.success) {
+            result.projects.forEach(function(project) {
+              const option = document.createElement('option');
+              option.value = project.id;
+              option.textContent = project.name;
+              projectSelect.appendChild(option);
+            });
+            projectSelect.disabled = false;
+          } else {
+            showMessage('error', result.error || 'Failed to load projects');
+          }
+          updateExportButton();
+        })
+        .withFailureHandler(function(error) {
+          projectSelect.innerHTML = '<option value="">Select project...</option>';
+          showMessage('error', 'Failed to load projects');
+          updateExportButton();
+        })
+        .getProjects(orgId);
+    }
+
+    function loadForms() {
+      const orgId = document.getElementById('organization').value;
+      const projectId = document.getElementById('project').value;
+      const formSelect = document.getElementById('netpad-form');
+
+      if (!projectId) {
+        formSelect.disabled = true;
+        formSelect.innerHTML = '<option value="">Select form...</option>';
+        updateExportButton();
+        return;
+      }
+
+      formSelect.disabled = true;
+      formSelect.innerHTML = '<option value="">Loading...</option>';
+
+      // For now, we'll require the form to already exist in NetPad
+      // This would need an API endpoint to list forms
+      google.script.run
+        .withSuccessHandler(function(result) {
+          formSelect.innerHTML = '<option value="">Select form...</option>';
+          if (result.success && result.forms) {
+            result.forms.forEach(function(form) {
+              const option = document.createElement('option');
+              option.value = form.id;
+              option.textContent = form.name;
+              formSelect.appendChild(option);
+            });
+            formSelect.disabled = false;
+          } else {
+            // If no forms endpoint, show option to create new
+            const option = document.createElement('option');
+            option.value = '__new__';
+            option.textContent = 'Create new form from responses';
+            formSelect.appendChild(option);
+            formSelect.disabled = false;
+          }
+          updateExportButton();
+        })
+        .withFailureHandler(function(error) {
+          formSelect.innerHTML = '<option value="">Select form...</option>';
+          const option = document.createElement('option');
+          option.value = '__new__';
+          option.textContent = 'Create new form from responses';
+          formSelect.appendChild(option);
+          formSelect.disabled = false;
+          updateExportButton();
+        })
+        .getProjectForms ? google.script.run.getProjectForms(orgId, projectId) : { success: false };
+    }
+
+    function updateExportButton() {
+      const orgId = document.getElementById('organization').value;
+      const projectId = document.getElementById('project').value;
+      const formId = document.getElementById('netpad-form').value;
+      document.getElementById('export-btn').disabled = !orgId || !projectId || !formId;
+    }
+
+    document.getElementById('netpad-form').addEventListener('change', updateExportButton);
+
+    function exportResponses() {
+      const orgId = document.getElementById('organization').value;
+      const projectId = document.getElementById('project').value;
+      const netpadFormId = document.getElementById('netpad-form').value;
+      const limit = parseInt(document.getElementById('response-limit').value) || 1000;
+
+      if (!orgId || !projectId || !netpadFormId) {
+        showMessage('error', 'Please select an organization, project, and form');
+        return;
+      }
+
+      document.getElementById('main-content').classList.add('hidden');
+      document.getElementById('loading').classList.add('active');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('loading').classList.remove('active');
+
+          if (result.success) {
+            showSuccess(result.submissionsUrl, result.message || (result.importedCount + ' responses exported successfully!'));
+          } else {
+            document.getElementById('main-content').classList.remove('hidden');
+            showMessage('error', result.error || 'Export failed');
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('loading').classList.remove('active');
+          document.getElementById('main-content').classList.remove('hidden');
+          showMessage('error', 'Export failed: ' + error.message);
+        })
+        .exportResponsesFromSidebar({
+          organizationId: orgId,
+          projectId: projectId,
+          netpadFormId: netpadFormId === '__new__' ? null : netpadFormId,
+          limit: limit
+        });
+    }
+
+    function showSuccess(url, message) {
+      document.getElementById('success').classList.remove('hidden');
+      document.getElementById('success-message').textContent = message;
+      if (url) {
+        document.getElementById('success-link').href = url;
+        document.getElementById('success-link').classList.remove('hidden');
+      } else {
+        document.getElementById('success-link').classList.add('hidden');
+      }
+    }
+
+    function showMessage(type, text) {
+      const messageEl = document.getElementById('message');
+      messageEl.className = 'message ' + type;
+      messageEl.textContent = text;
+      messageEl.classList.remove('hidden');
+
+      if (type !== 'error') {
+        setTimeout(function() {
+          messageEl.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('success').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('hidden');
+      document.getElementById('message').classList.add('hidden');
+    }
+
+    function openSettings() {
+      google.script.run.showSettingsSidebar();
+    }
+  </script>
+</body>
+</html>

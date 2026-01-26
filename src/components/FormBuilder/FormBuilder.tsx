@@ -93,6 +93,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     open: boolean;
     savedForm: SavedFormInfo | null;
   }>({ open: false, savedForm: null });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
   const [formType, setFormType] = useState<FormType>(initialFormConfig?.formType || 'data-entry');
@@ -1138,10 +1139,45 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             onSaveAs={() => setSaveDialogOpen(true)}
             onExport={handleExportForm}
             onImport={() => importInputRef.current?.click()}
-            onDelete={currentFormId ? () => {
-              // TODO: Implement delete confirmation dialog
-              if (window.confirm(`Are you sure you want to delete "${currentFormName}"?`)) {
-                // Delete logic will be added
+            onDelete={currentFormId ? async () => {
+              if (window.confirm(`Are you sure you want to delete "${currentFormName}"? This action cannot be undone.`)) {
+                try {
+                  const orgIdParam = effectiveOrgId ? `?orgId=${effectiveOrgId}` : '';
+                  const response = await fetch(`/api/forms/${currentFormId}${orgIdParam}`, {
+                    method: 'DELETE',
+                  });
+
+                  if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to delete form');
+                  }
+
+                  // Reset form state after successful deletion
+                  setCurrentFormId(undefined);
+                  setCurrentFormName('');
+                  setCurrentFormDescription('');
+                  setCurrentFormSlug(undefined);
+                  setCurrentFormIsPublished(false);
+                  setFieldConfigs([]);
+                  setVariables([]);
+                  setMultiPageConfig(undefined);
+                  setLifecycleConfig(undefined);
+                  setThemeConfig(undefined);
+                  setDataSource(undefined);
+                  setAccessControl(undefined);
+                  setFormData({});
+                  markClean();
+
+                  setError(null);
+                  setSuccessMessage('Form deleted successfully');
+
+                  // Notify sidebar to refresh its forms list
+                  window.dispatchEvent(new CustomEvent('netpad:form-changed', {
+                    detail: { applicationId: propApplicationId }
+                  }));
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to delete form');
+                }
               }
             } : undefined}
           />
@@ -1632,6 +1668,22 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
               </Box>
             )}
           </Box>
+        </Alert>
+      </Snackbar>
+
+      {/* Success Message Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSuccessMessage(null)}
+          severity="success"
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
         </Alert>
       </Snackbar>
 

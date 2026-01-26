@@ -4763,6 +4763,264 @@ server.tool(
   }
 );
 
+// ============================================================================
+// GOOGLE FORMS IMPORT TOOLS
+// ============================================================================
+
+server.tool(
+  'import_google_form',
+  `Import a Google Form into NetPad. This tool generates the API call and mapping preview for importing a Google Form.
+
+IMPORTANT: Before using this tool, the user must have:
+1. Connected their Google account via the NetPad UI (Settings > Integrations > Google Forms)
+2. Obtained a credentialId for their Google Forms connection
+
+The tool returns:
+- Instructions for completing the import via the NetPad API
+- A preview of how the Google Form fields will be mapped to NetPad field types
+- Any warnings about fields that may need manual adjustment`,
+  {
+    formId: z.string().describe('The Google Form ID to import. Can be found in the form URL: https://docs.google.com/forms/d/{FORM_ID}/edit'),
+    organizationId: z.string().describe('The NetPad organization ID'),
+    projectId: z.string().describe('The NetPad project ID where the form will be created'),
+    credentialId: z.string().optional().describe('The credential ID for the Google Forms connection. If not provided, the user must set it up via the UI first.'),
+    preview: z.boolean().optional().describe('If true, only return the mapping preview without creating the form (default: true)'),
+  },
+  async ({ formId, organizationId, projectId, credentialId, preview = true }) => {
+    const baseUrl = 'https://netpad.io'; // Or user's instance URL
+
+    // Build the field type mapping reference
+    const fieldTypeMapping = \`
+## Google Forms to NetPad Field Type Mapping
+
+| Google Forms Type | NetPad Type | Confidence |
+|-------------------|-------------|------------|
+| SHORT_ANSWER | short_text | Exact |
+| PARAGRAPH_TEXT | long_text | Exact |
+| MULTIPLE_CHOICE | radio | Exact |
+| CHECKBOXES | checkbox_group | Exact |
+| DROPDOWN | dropdown | Exact |
+| LINEAR_SCALE | rating | Exact |
+| MULTIPLE_CHOICE_GRID | matrix | Approximate |
+| CHECKBOX_GRID | matrix | Approximate |
+| DATE | date | Exact |
+| TIME | time | Exact |
+| FILE_UPLOAD | file | Exact |
+\`;
+
+    if (!credentialId) {
+      return {
+        content: [{
+          type: 'text',
+          text: \`# Google Forms Import
+
+## Setup Required
+
+Before importing Google Forms, you need to connect your Google account:
+
+1. Go to **Settings > Integrations** in NetPad
+2. Click **Connect Google Account** under Google Forms
+3. Authorize NetPad to read your forms
+4. Copy the credential ID from the connection details
+
+Or use this URL to start the OAuth flow:
+\`\`\`
+\${baseUrl}/api/auth/google?provider=google_forms&orgId=\${organizationId}
+\`\`\`
+
+## Once Connected
+
+Call this tool again with the \`credentialId\` parameter to preview or import the form.
+
+\${fieldTypeMapping}\`,
+        }],
+      };
+    }
+
+    // Generate the API calls for preview and import
+    const previewApiCall = \`
+## Preview Import
+
+To see how the Google Form will be mapped to NetPad fields:
+
+\`\`\`bash
+curl "\${baseUrl}/api/integrations/google-forms/preview?\\
+orgId=\${organizationId}&\\
+credentialId=\${credentialId}&\\
+formId=\${formId}"
+\`\`\`
+
+Or using fetch:
+
+\`\`\`typescript
+const response = await fetch(
+  '\${baseUrl}/api/integrations/google-forms/preview?' + new URLSearchParams({
+    orgId: '\${organizationId}',
+    credentialId: '\${credentialId}',
+    formId: '\${formId}',
+  })
+);
+const preview = await response.json();
+console.log('Fields:', preview.previewConfig.fieldConfigs);
+console.log('Warnings:', preview.mappingResult.warnings);
+\`\`\`
+\`;
+
+    const importApiCall = \`
+## Execute Import
+
+To create the NetPad form from the Google Form:
+
+\`\`\`bash
+curl -X POST "\${baseUrl}/api/integrations/google-forms/import" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "orgId": "\${organizationId}",
+    "credentialId": "\${credentialId}",
+    "formId": "\${formId}",
+    "projectId": "\${projectId}"
+  }'
+\`\`\`
+
+Or using fetch:
+
+\`\`\`typescript
+const response = await fetch('\${baseUrl}/api/integrations/google-forms/import', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    orgId: '\${organizationId}',
+    credentialId: '\${credentialId}',
+    formId: '\${formId}',
+    projectId: '\${projectId}',
+    // Optional customizations:
+    customizations: {
+      name: 'Custom Form Name',  // Override the form name
+      fieldOverrides: {          // Modify specific field mappings
+        'field_path': { type: 'dropdown' }
+      },
+      excludeFields: ['unwanted_field']  // Skip certain fields
+    }
+  })
+});
+
+const result = await response.json();
+if (result.success) {
+  console.log('Form created:', result.form.id);
+  console.log('Edit URL:', result.importReport.viewUrl);
+}
+\`\`\`
+\`;
+
+    return {
+      content: [{
+        type: 'text',
+        text: \`# Google Forms Import
+
+**Form ID:** \${formId}
+**Organization:** \${organizationId}
+**Project:** \${projectId}
+**Credential:** \${credentialId}
+
+\${previewApiCall}
+
+\${preview ? '' : importApiCall}
+
+\${fieldTypeMapping}
+
+## Using the Import Wizard UI
+
+Alternatively, users can import Google Forms through the NetPad UI:
+
+1. Go to **Forms** in your project
+2. Click **Import** > **Import from Google Forms**
+3. Select the Google account and form
+4. Review the field mappings
+5. Click **Import**
+
+## Notes
+
+- Only form structure is imported, not responses/submissions
+- Some field types may be approximated (see mapping table)
+- Validation rules are preserved where possible
+- Section/page breaks become multi-page form pages
+- Images and videos in the form are not imported\`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  'list_google_forms',
+  'List Google Forms available for import. Requires a connected Google account.',
+  {
+    organizationId: z.string().describe('The NetPad organization ID'),
+    credentialId: z.string().describe('The credential ID for the Google Forms connection'),
+    searchQuery: z.string().optional().describe('Search query to filter forms by name'),
+  },
+  async ({ organizationId, credentialId, searchQuery }) => {
+    const baseUrl = 'https://netpad.io';
+
+    const params = new URLSearchParams({
+      orgId: organizationId,
+      credentialId,
+    });
+    if (searchQuery) {
+      params.set('q', searchQuery);
+    }
+
+    return {
+      content: [{
+        type: 'text',
+        text: \`# List Google Forms
+
+To list forms available for import, make this API call:
+
+\`\`\`bash
+curl "\${baseUrl}/api/integrations/google-forms?\${params.toString()}"
+\`\`\`
+
+Or using fetch:
+
+\`\`\`typescript
+const response = await fetch(
+  '\${baseUrl}/api/integrations/google-forms?\${params.toString()}'
+);
+const data = await response.json();
+
+// data.forms contains:
+// - id: Form ID for importing
+// - name: Form title
+// - modifiedTime: Last modified date
+// - webViewLink: Link to edit form in Google
+
+for (const form of data.forms) {
+  console.log(\\\`\\\${form.name} (ID: \\\${form.id})\\\`);
+}
+\`\`\`
+
+## Response Format
+
+\`\`\`json
+{
+  "forms": [
+    {
+      "id": "1BxiMVs0XRA5nFMdkkxYYfYpHm5PZ-abc123",
+      "name": "Customer Feedback Survey",
+      "modifiedTime": "2024-01-15T10:30:00Z",
+      "webViewLink": "https://docs.google.com/forms/d/.../edit"
+    }
+  ],
+  "nextPageToken": "..." // For pagination
+}
+\`\`\`
+
+Use the \`import_google_form\` tool with the form ID to import a specific form.\`,
+      }],
+    };
+  }
+);
+
 // Resource: Extension reference
 server.resource(
   'netpad-extension-reference',

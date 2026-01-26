@@ -910,7 +910,7 @@ export function WorkflowEditorCanvas({
           animated: true,
           style: {
             stroke: theme.palette.primary.main,
-            strokeWidth: 2,
+            strokeWidth: .5,
           },
         }}
         connectionLineStyle={{

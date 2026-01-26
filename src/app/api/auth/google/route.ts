@@ -32,6 +32,11 @@ const GOOGLE_SCOPES: Record<string, string[]> = {
     'https://www.googleapis.com/auth/calendar.events',
     'https://www.googleapis.com/auth/userinfo.email',
   ],
+  google_forms: [
+    'https://www.googleapis.com/auth/forms.body.readonly',
+    'https://www.googleapis.com/auth/drive.metadata.readonly',
+    'https://www.googleapis.com/auth/userinfo.email',
+  ],
 };
 
 export async function GET(request: NextRequest) {

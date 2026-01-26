@@ -1327,6 +1327,7 @@ export type IntegrationProvider =
   | 'google_sheets'
   | 'google_drive'
   | 'google_calendar'
+  | 'google_forms'
   | 'slack'
   | 'notion'
   | 'airtable'

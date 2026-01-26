@@ -763,6 +763,24 @@ export function AppSidebar() {
     }
   }, [currentApplication?.applicationId]);
 
+  // Listen for form changes (create, delete, update) to refresh sidebar
+  useEffect(() => {
+    const handleFormChange = (e: CustomEvent<{ applicationId?: string }>) => {
+      const appId = e.detail?.applicationId || currentApplication?.applicationId;
+      if (appId) {
+        // Force reload by marking as not loaded, then load
+        setAppContents((prev) => ({
+          ...prev,
+          [appId]: { ...prev[appId], loaded: false },
+        }));
+        loadAppContent(appId);
+      }
+    };
+
+    window.addEventListener('netpad:form-changed', handleFormChange as EventListener);
+    return () => window.removeEventListener('netpad:form-changed', handleFormChange as EventListener);
+  }, [currentApplication?.applicationId, currentOrgId]);
+
   const currentAppSlug = currentApplication?.slug || pathname?.match(/^\/apps\/([^/]+)/)?.[1];
 
   const handleNewApp = () => {

@@ -1,0 +1,43 @@
+{
+  "timeZone": "America/New_York",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/forms.currentonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ],
+  "addOns": {
+    "common": {
+      "name": "NetPad Forms Exporter",
+      "logoUrl": "https://netpad.io/logo-icon.png",
+      "useLocaleFromApp": true,
+      "homepageTrigger": {
+        "runFunction": "onHomepage",
+        "enabled": true
+      },
+      "universalActions": [
+        {
+          "label": "Settings",
+          "runFunction": "showSettings"
+        },
+        {
+          "label": "Help",
+          "openLink": {
+            "url": "https://docs.netpad.io/integrations/google-forms"
+          }
+        }
+      ]
+    },
+    "forms": {
+      "homepageTrigger": {
+        "runFunction": "onFormsHomepage",
+        "enabled": true
+      },
+      "onOpenTrigger": {
+        "runFunction": "onOpen"
+      }
+    }
+  }
+}

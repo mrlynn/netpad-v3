@@ -12,12 +12,26 @@
  * - Manually for testing
  * - By a cron job (e.g., Vercel Cron)
  * - By a webhook after form submission
+ *
+ * Execution Modes:
+ * - Standard: Single-pass execution (open-core, default)
+ * - Durable: State-persistent execution with approvals/timers (cloud premium)
+ *
+ * The processor automatically detects which mode to use based on:
+ * 1. Workflow node types (approval, signal nodes require durable)
+ * 2. Workflow settings (explicit executionMode configuration)
+ * 3. Cloud features availability (@netpad/cloud-features package)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
-import { claimJob } from '@/lib/workflow/db';
+import { claimJob, getWorkflowById } from '@/lib/workflow/db';
 import { executeWorkflowJob } from '@/lib/workflow/executor';
+import {
+  getExecutionMode,
+  executeDurableWorkflowJob,
+  isDurableExecutionAvailable,
+} from '@/lib/workflow/durableExecution';
 
 // Maximum jobs to process in one request
 const MAX_JOBS_PER_REQUEST = 10;
@@ -66,6 +80,9 @@ export async function POST(request: NextRequest) {
       error?: string;
     }> = [];
 
+    // Check if durable execution is available (do this once, not per-job)
+    const durableAvailable = await isDurableExecutionAvailable();
+
     for (let i = 0; i < count; i++) {
       // Claim a job
       const job = await claimJob(workerId);
@@ -79,8 +96,59 @@ export async function POST(request: NextRequest) {
       console.log(`[WorkflowProcessor] Claimed job ${job._id} for workflow ${job.workflowId}`);
 
       try {
-        // Execute the workflow
-        const success = await executeWorkflowJob(job);
+        // Load the workflow to determine execution mode
+        const workflow = await getWorkflowById(job.orgId, job.workflowId);
+
+        if (!workflow) {
+          console.error(`[WorkflowProcessor] Workflow not found: ${job.workflowId}`);
+          results.push({
+            jobId: job._id!.toString(),
+            workflowId: job.workflowId,
+            executionId: job.executionId,
+            success: false,
+            durationMs: Date.now() - jobStartTime,
+            error: 'Workflow not found',
+          });
+          continue;
+        }
+
+        // Determine execution mode
+        const executionMode = durableAvailable
+          ? await getExecutionMode(workflow, job.orgId)
+          : 'standard';
+
+        let success: boolean;
+
+        if (executionMode === 'durable') {
+          // Use durable execution engine (cloud premium)
+          console.log(`[WorkflowProcessor] Using DURABLE execution for workflow ${job.workflowId}`);
+
+          const durableResult = await executeDurableWorkflowJob(
+            job,
+            workflow,
+            null, // DB will be obtained from services
+            null, // Services will be created internally
+            { _id: job.orgId, orgId: job.orgId, name: 'org' }, // Basic org context
+          );
+
+          // Handle durable execution result
+          if (durableResult.status === 'completed') {
+            success = true;
+          } else if (durableResult.status === 'waiting') {
+            // Job is waiting for approval/timer - this is not a failure
+            // The job should be left in a waiting state, not marked complete
+            console.log(
+              `[WorkflowProcessor] Execution ${job.executionId} is waiting for: ${durableResult.waitingFor?.type}`,
+            );
+            success = true; // Job processed successfully, execution is paused
+          } else {
+            success = false;
+          }
+        } else {
+          // Use standard execution (open-core)
+          console.log(`[WorkflowProcessor] Using STANDARD execution for workflow ${job.workflowId}`);
+          success = await executeWorkflowJob(job);
+        }
 
         results.push({
           jobId: job._id!.toString(),
