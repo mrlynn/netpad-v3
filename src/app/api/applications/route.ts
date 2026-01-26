@@ -16,8 +16,9 @@ import {
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { getProject } from '@/lib/platform/projects';
 import { getUserApplications } from '@/lib/platform/applicationPermissions';
+import { withTiming } from '@/lib/performance';
 
-export async function GET(request: NextRequest) {
+export const GET = withTiming(async function GET(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -135,9 +136,9 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withTiming(async function POST(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -256,4 +257,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

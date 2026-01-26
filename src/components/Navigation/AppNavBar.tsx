@@ -961,6 +961,7 @@ export function AppNavBar() {
                     component={Link}
                     href={item.href}
                     onClick={handleMobileMenuClose}
+                    data-testid={`nav-${itemKey || item.label.toLowerCase()}`}
                     sx={{
                       color: isActive ? item.color : 'text.secondary',
                       bgcolor: isActive ? alpha(item.color, 0.1) : 'transparent',

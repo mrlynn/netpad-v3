@@ -12,8 +12,9 @@ import {
   listProjects,
 } from '@/lib/platform/projects';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { withTiming } from '@/lib/performance/withTiming';
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -159,3 +160,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Export with timing instrumentation
+export const GET = withTiming(handleGET);
+export const POST = withTiming(handlePOST);

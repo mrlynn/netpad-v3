@@ -28,7 +28,9 @@
     "migrate:backfill-application-ids": "tsx scripts/migrate-backfill-application-ids.ts",
     "seed:workflow-templates": "tsx scripts/seed-workflow-templates.ts",
     "seed:collaborator-form": "tsx scripts/seed-collaborator-form.ts",
-    "publish:it-helpdesk": "tsx scripts/publish-it-helpdesk-marketplace.ts"
+    "publish:it-helpdesk": "tsx scripts/publish-it-helpdesk-marketplace.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "benchmark:headed": "tsx scripts/benchmark.ts --headed"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.3",

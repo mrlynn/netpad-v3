@@ -165,7 +165,7 @@ export function TemplatesView({ onUseTemplate }: TemplatesViewProps) {
   }, [router]);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }} data-testid="templates-gallery">
       {/* Waitlist Banner */}
       {isWaitlistUser && (
         <Alert

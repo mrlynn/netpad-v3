@@ -12,12 +12,13 @@ import {
   listWorkflows,
 } from '@/lib/workflow/db';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { withTiming } from '@/lib/performance';
 
 /**
  * GET /api/workflows
  * List workflows for an organization
  */
-export async function GET(request: NextRequest) {
+export const GET = withTiming(async function GET(request: NextRequest) {
   try {
     // Check authentication
     const session = await getSession();
@@ -77,13 +78,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/workflows
  * Create a new workflow
  */
-export async function POST(request: NextRequest) {
+export const POST = withTiming(async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await getSession();
@@ -176,4 +177,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient, Document } from 'mongodb';
+import { Document } from 'mongodb';
+import { getUserClient } from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,8 +63,6 @@ function mergeFieldTypes(existing: FieldInfo, newInfo: FieldInfo): FieldInfo {
 }
 
 export async function POST(request: NextRequest) {
-  let client: MongoClient | null = null;
-
   try {
     const { connectionString, databaseName, collectionName, sampleSize = 10 } = await request.json();
 
@@ -88,20 +87,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    client = new MongoClient(connectionString);
-    await client.connect();
-
+    // Use pooled connection instead of creating new one each request
+    const client = await getUserClient(connectionString);
     const db = client.db(databaseName);
     const collection = db.collection(collectionName);
 
-    // Get document count
-    const totalCount = await collection.countDocuments();
-
-    // Fetch sample documents
-    const sampleDocuments = await collection
-      .find({})
-      .limit(Math.min(sampleSize, 20))
-      .toArray();
+    // Run count and sample fetch in parallel, use estimatedDocumentCount for speed
+    const [totalCount, sampleDocuments] = await Promise.all([
+      collection.estimatedDocumentCount(),
+      collection.find({}).limit(Math.min(sampleSize, 20)).toArray(),
+    ]);
 
     // Infer schema from sample documents
     const allFields = new Map<string, FieldInfo>();
@@ -125,9 +120,7 @@ export async function POST(request: NextRequest) {
       nestedFields: field.nestedFields,
     }));
 
-    await client.close();
-    client = null;
-
+    // Note: Don't close the client - it's pooled and will be reused
     return NextResponse.json({
       success: true,
       data: {
@@ -140,10 +133,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Sample data fetch error:', error);
-
-    if (client) {
-      await client.close().catch(() => {});
-    }
 
     return NextResponse.json(
       {

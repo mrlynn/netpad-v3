@@ -592,7 +592,7 @@ function WorkflowEditorInner({
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }} data-testid="workflow-editor">
       {/* Toolbar - structural bar under the global navbar, should be square at the top */}
       <Paper
         square

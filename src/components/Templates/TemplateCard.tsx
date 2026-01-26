@@ -87,6 +87,7 @@ export function TemplateCard({ template, onClick, variant = 'default' }: Templat
       <Paper
         elevation={0}
         onClick={handleClick}
+        data-testid="template-card"
         sx={{
           p: 2.5,
           height: '100%',
@@ -264,6 +265,7 @@ export function TemplateCard({ template, onClick, variant = 'default' }: Templat
     <Paper
       elevation={0}
       onClick={handleClick}
+      data-testid="template-card"
       sx={{
         flex: variant === 'compact' ? '1 1 calc(50% - 6px)' : '1 1 280px',
         minWidth: variant === 'compact' ? 180 : 240,

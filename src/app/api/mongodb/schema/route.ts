@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { getUserClient } from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -29,48 +29,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = new MongoClient(connectionString);
-    
-    try {
-      await client.connect();
-      const db = client.db(databaseName);
-      const collections = await db.listCollections().toArray();
-      
-      const collectionInfos: CollectionInfo[] = [];
+    // Use pooled connection instead of creating new one each request
+    const client = await getUserClient(connectionString);
+    const db = client.db(databaseName);
+    const collections = await db.listCollections().toArray();
 
-      // Sample documents from each collection to infer schema
-      for (const collInfo of collections) {
+    // Parallelize all collection queries instead of sequential loop
+    const collectionInfos = await Promise.all(
+      collections.map(async (collInfo): Promise<CollectionInfo> => {
         const coll = db.collection(collInfo.name);
-        const count = await coll.countDocuments();
-        
-        // Get a sample document
-        const sampleDoc = await coll.findOne({});
-        
+
+        // Run count and sample in parallel
+        const [count, sampleDoc] = await Promise.all([
+          coll.estimatedDocumentCount(), // Much faster than countDocuments() for large collections
+          coll.findOne({}),
+        ]);
+
         // Extract field names from sample document
         const fields = sampleDoc ? Object.keys(sampleDoc) : [];
-        
-        collectionInfos.push({
+
+        return {
           name: collInfo.name,
           fields,
           sampleDoc: sampleDoc || undefined,
-          count
-        });
-      }
-      
-      await client.close();
+          count,
+        };
+      })
+    );
 
-      return NextResponse.json({
-        collections: collectionInfos
-      });
-    } catch (error: any) {
-      await client.close().catch(() => {});
-      throw error;
-    }
+    // Note: Don't close the client - it's pooled and will be reused
+    return NextResponse.json({
+      collections: collectionInfos,
+    });
   } catch (error: any) {
     console.error('Schema fetch error:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Failed to fetch database schema'
+        error: error.message || 'Failed to fetch database schema',
       },
       { status: 500 }
     );

@@ -130,11 +130,19 @@ const adminFeatures: AdminFeature[] = [
 
 const observabilityFeatures: AdminFeature[] = [
   {
+    title: 'Performance Dashboard',
+    description: 'Real-time API latency, navigation timing, and slow query analysis',
+    href: '/admin/performance',
+    icon: <Speed sx={{ fontSize: 32 }} />,
+    color: '#00ED64',
+    statsKey: 'performance',
+  },
+  {
     title: 'System Status',
     description: 'Monitor service health, uptime, and latency across all platform services',
     href: '/admin/system-status',
     icon: <CloudQueue sx={{ fontSize: 32 }} />,
-    color: '#00ED64',
+    color: '#00BCD4',
   },
   {
     title: 'Error Tracking',
@@ -161,7 +169,7 @@ const observabilityFeatures: AdminFeature[] = [
     title: 'API Metrics',
     description: 'Monitor API performance, latency percentiles, and error rates',
     href: '/admin/api-metrics',
-    icon: <Speed sx={{ fontSize: 32 }} />,
+    icon: <Analytics sx={{ fontSize: 32 }} />,
     color: '#9C27B0',
   },
   {
@@ -169,7 +177,7 @@ const observabilityFeatures: AdminFeature[] = [
     description: 'Create and manage system-wide announcements and notifications',
     href: '/admin/broadcasts',
     icon: <Campaign sx={{ fontSize: 32 }} />,
-    color: '#00BCD4',
+    color: '#E91E63',
   },
   {
     title: 'Deployments',
@@ -217,6 +225,11 @@ export default function AdminDashboardPage() {
   const { data: mcpStats } = useSWR(
     user?.platformRole === 'admin' ? '/api/admin/mcp-analytics' : null,
     fetcher
+  );
+  const { data: performanceStats } = useSWR(
+    user?.platformRole === 'admin' ? '/api/admin/performance?minutes=60' : null,
+    fetcher,
+    { refreshInterval: 30000 } // Refresh every 30 seconds
   );
 
   // Redirect non-admins
@@ -281,6 +294,13 @@ export default function AdminDashboardPage() {
     }
     if (feature.statsKey === 'mcp' && mcpStats?.stats) {
       return `${formatTokens(mcpStats.stats.totalRequests)} requests`;
+    }
+    if (feature.statsKey === 'performance' && performanceStats?.stats?.api) {
+      const { totalRequests, avgDuration } = performanceStats.stats.api;
+      if (totalRequests > 0) {
+        return `${avgDuration}ms avg`;
+      }
+      return 'No data';
     }
     return null;
   };
@@ -434,72 +454,85 @@ export default function AdminDashboardPage() {
 
       {/* Observability Feature Cards */}
       <Grid container spacing={3}>
-        {observabilityFeatures.map((feature) => (
-          <Grid item xs={12} sm={6} md={4} key={feature.href}>
-            <Card
-              elevation={0}
-              sx={{
-                height: '100%',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  borderColor: feature.color,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 20px ${alpha(feature.color, 0.15)}`,
-                },
-              }}
-            >
-              <CardActionArea
-                component={Link}
-                href={feature.href}
-                sx={{ height: '100%' }}
+        {observabilityFeatures.map((feature) => {
+          const statLabel = getStatLabel(feature);
+          const statColor = getStatColor(feature);
+
+          return (
+            <Grid item xs={12} sm={6} md={4} key={feature.href}>
+              <Card
+                elevation={0}
+                sx={{
+                  height: '100%',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: feature.color,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 4px 20px ${alpha(feature.color, 0.15)}`,
+                  },
+                }}
               >
-                <CardContent sx={{ p: 3 }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      mb: 2,
-                    }}
-                  >
+                <CardActionArea
+                  component={Link}
+                  href={feature.href}
+                  sx={{ height: '100%' }}
+                >
+                  <CardContent sx={{ p: 3 }}>
                     <Box
                       sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        bgcolor: alpha(feature.color, 0.1),
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        mb: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: alpha(feature.color, 0.1),
+                          color: feature.color,
+                        }}
+                      >
+                        {feature.icon}
+                      </Box>
+                      {statLabel && (
+                        <Chip
+                          label={statLabel}
+                          size="small"
+                          color={statColor}
+                          sx={{ fontWeight: 500 }}
+                        />
+                      )}
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      {feature.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {feature.description}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: 2,
                         color: feature.color,
                       }}
                     >
-                      {feature.icon}
+                      <Typography variant="body2" sx={{ fontWeight: 500, mr: 0.5 }}>
+                        View
+                      </Typography>
+                      <ArrowForward sx={{ fontSize: 16 }} />
                     </Box>
-                  </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                    {feature.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {feature.description}
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      mt: 2,
-                      color: feature.color,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 500, mr: 0.5 }}>
-                      View
-                    </Typography>
-                    <ArrowForward sx={{ fontSize: 16 }} />
-                  </Box>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
       {/* Additional Info */}

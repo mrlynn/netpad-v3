@@ -18,6 +18,7 @@ import {
   AuditLogEntry,
 } from '@/types/platform';
 import { PasskeyCredential, TrustedDevice } from '@/types/auth';
+import { timedQuery } from '../performance/timedQuery';
 
 // ============================================
 // User CRUD
@@ -80,7 +81,10 @@ export async function createUser(
  */
 export async function findUserByEmail(email: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  return collection.findOne({ email: email.toLowerCase() });
+  return timedQuery(
+    { operation: 'findOne', collection: 'users', filter: { email: email.toLowerCase() } },
+    () => collection.findOne({ email: email.toLowerCase() })
+  );
 }
 
 /**
@@ -88,7 +92,10 @@ export async function findUserByEmail(email: string): Promise<PlatformUser | nul
  */
 export async function findUserById(userId: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  return collection.findOne({ userId });
+  return timedQuery(
+    { operation: 'findOne', collection: 'users', filter: { userId } },
+    () => collection.findOne({ userId })
+  );
 }
 
 /**
@@ -97,7 +104,10 @@ export async function findUserById(userId: string): Promise<PlatformUser | null>
 export async function findUserByObjectId(id: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
   try {
-    return collection.findOne({ _id: new ObjectId(id) });
+    return timedQuery(
+      { operation: 'findOne', collection: 'users', filter: { _id: id } },
+      () => collection.findOne({ _id: new ObjectId(id) })
+    );
   } catch {
     return null;
   }

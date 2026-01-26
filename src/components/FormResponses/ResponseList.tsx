@@ -242,7 +242,7 @@ export function ResponseList({ formId, connectionString }: ResponseListProps) {
           )}
 
           {/* Response Table */}
-          <TableContainer component={Paper}>
+          <TableContainer component={Paper} data-testid="submissions-table">
             <Table>
               <TableHead>
                 <TableRow>

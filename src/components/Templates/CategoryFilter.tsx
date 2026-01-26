@@ -28,6 +28,7 @@ export function CategoryFilter({ selectedCategory, onCategoryChange }: CategoryF
         return (
           <Chip
             key={cat.id}
+            data-testid={`category-filter-${cat.id}`}
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <span>{cat.icon}</span>

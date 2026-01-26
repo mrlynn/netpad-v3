@@ -1110,7 +1110,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   const hasConnection = Boolean(connectionString && databaseName && collection);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }} data-testid="form-builder">
       {/* Simplified Toolbar - Calm UI */}
       <Box
         sx={{

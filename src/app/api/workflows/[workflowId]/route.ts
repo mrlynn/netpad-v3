@@ -15,6 +15,7 @@ import {
 } from '@/lib/workflow/db';
 import { WorkflowCanvas, WorkflowSettings, WorkflowVariable } from '@/types/workflow';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { withTiming } from '@/lib/performance';
 
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
@@ -24,7 +25,7 @@ interface RouteParams {
  * GET /api/workflows/[workflowId]
  * Get workflow by ID
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withTiming(async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // Check authentication
     const session = await getSession();
@@ -63,13 +64,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/workflows/[workflowId]
  * Update workflow
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withTiming(async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     // Check authentication
     const session = await getSession();
@@ -167,13 +168,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/workflows/[workflowId]
  * Delete workflow
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withTiming(async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // Check authentication
     const session = await getSession();
@@ -227,4 +228,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

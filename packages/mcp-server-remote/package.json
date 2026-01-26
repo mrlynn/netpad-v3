@@ -13,6 +13,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@netpad/mcp-server": "^2.4.0",
+    "@sentry/nextjs": "^10.36.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

@@ -163,7 +163,7 @@ export default function AppWorkflowsPage() {
   }
 
   return (
-    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }}>
+    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }} data-testid="workflows-list">
       <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.5) }}>
         <Container maxWidth="lg">
           <Box sx={{ py: { xs: 2, sm: 3 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 2, sm: 0 } }}>
@@ -179,6 +179,7 @@ export default function AppWorkflowsPage() {
               variant="contained"
               startIcon={<Add />}
               onClick={() => setCreateDialogOpen(true)}
+              data-testid="new-workflow-button"
               sx={{ bgcolor: theme.palette.primary.main, color: theme.palette.primary.contrastText, textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: theme.palette.primary.dark } }}
             >
               Create Workflow

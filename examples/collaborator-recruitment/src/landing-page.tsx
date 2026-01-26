@@ -402,7 +402,7 @@ function CollaborateContent() {
               lineHeight: 1.6,
             }}
           >
-            I'm looking for 1-2 people who want to shape what this project becomes.
+            I'm looking for several people to shape what this project becomes.
           </Typography>
 
           <Box

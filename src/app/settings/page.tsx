@@ -279,7 +279,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }} data-testid="settings-page">
       <AppNavBar />
       <Suspense
         fallback={

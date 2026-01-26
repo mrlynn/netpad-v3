@@ -167,7 +167,7 @@ export default function AppOverviewPage() {
   ];
 
   return (
-    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }}>
+    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }} data-testid="dashboard-loaded">
       {/* Header */}
       <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.5) }}>
         <Container maxWidth="lg">

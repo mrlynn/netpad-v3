@@ -316,7 +316,7 @@ export function ConnectionVaultSettings({ organizationId: propOrgId, projectId }
           </Button>
         </Card>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={3} data-testid="connections-list">
           {connections.map((conn) => (
             <Grid item xs={12} key={conn.vaultId}>
               <Card

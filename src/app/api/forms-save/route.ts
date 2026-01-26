@@ -9,6 +9,7 @@ import { checkFieldLimit } from '@/lib/platform/usageService';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { ensureDefaultApplication } from '@/lib/platform/applications';
 import { getProjectDefaultVault } from '@/lib/platform/projects';
+import { withTiming } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -66,7 +67,7 @@ async function ensureDataSource(
   return dataSource;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withTiming(async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const formConfig: FormConfiguration = body.formConfig;
@@ -416,4 +417,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

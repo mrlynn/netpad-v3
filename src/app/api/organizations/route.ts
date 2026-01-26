@@ -14,8 +14,9 @@ import {
   autoScaffoldForUser,
 } from '@/lib/platform/organizations';
 import { findUserById } from '@/lib/platform/users';
+import { withTiming } from '@/lib/performance';
 
-export async function GET() {
+export const GET = withTiming(async function GET() {
   try {
     const session = await getSession();
 
@@ -88,9 +89,9 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withTiming(async function POST(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -156,4 +157,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

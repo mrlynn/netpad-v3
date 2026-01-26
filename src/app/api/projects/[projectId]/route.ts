@@ -14,8 +14,9 @@ import {
   deleteProject,
 } from '@/lib/platform/projects';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
+import { withTiming } from '@/lib/performance/withTiming';
 
-export async function GET(
+async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
@@ -74,7 +75,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
@@ -165,7 +166,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
@@ -225,3 +226,8 @@ export async function DELETE(
     );
   }
 }
+
+// Export with timing instrumentation
+export const GET = withTiming(handleGET);
+export const PATCH = withTiming(handlePATCH);
+export const DELETE = withTiming(handleDELETE);

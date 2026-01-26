@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-01-26T07:46:03.772Z",
+  "config": {
+    "baseUrl": "http://localhost:3000",
+    "warmupRuns": 1,
+    "measurementRuns": 3,
+    "outputFile": "benchmark-results.json"
+  },
+  "journeys": [
+    {
+      "name": "Dashboard to Form Builder",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/dashboard\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Dashboard to Workflow Editor",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/dashboard\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Application Navigation",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/applications\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Form Submission Flow",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/forms\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Settings Navigation",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/dashboard\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Template Gallery",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/templates\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "name": "Initial Page Loads",
+      "steps": [],
+      "totalMean": 0,
+      "status": "failed",
+      "error": "browserContext.newPage: Target page, context or browser has been closed"
+    }
+  ],
+  "summary": {
+    "totalJourneys": 7,
+    "successfulJourneys": 0,
+    "failedJourneys": 7,
+    "totalSteps": 0,
+    "slowestStep": null,
+    "fastestStep": null
+  }
+}

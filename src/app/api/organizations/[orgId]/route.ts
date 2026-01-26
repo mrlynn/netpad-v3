@@ -15,8 +15,9 @@ import {
   getOrgMembers,
 } from '@/lib/platform/organizations';
 import { assertOrgPermission, getUserOrgPermissions } from '@/lib/platform/permissions';
+import { withTiming } from '@/lib/performance';
 
-export async function GET(
+export const GET = withTiming(async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
@@ -84,9 +85,9 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withTiming(async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
@@ -142,9 +143,9 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withTiming(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
@@ -186,4 +187,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

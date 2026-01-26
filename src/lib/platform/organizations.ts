@@ -27,6 +27,7 @@ import {
 } from '@/types/platform';
 import crypto from 'crypto';
 import { isAutoProvisioningAvailable, queueClusterProvisioning, deleteProvisionedCluster } from '../atlas';
+import { timedQuery } from '../performance/timedQuery';
 
 // ============================================
 // Organization CRUD
@@ -140,7 +141,10 @@ export async function createOrganization(input: CreateOrgInput): Promise<Organiz
  */
 export async function getOrganization(orgId: string): Promise<Organization | null> {
   const collection = await getOrganizationsCollection();
-  return collection.findOne({ orgId });
+  return timedQuery(
+    { operation: 'findOne', collection: 'organizations', filter: { orgId } },
+    () => collection.findOne({ orgId })
+  );
 }
 
 /**
@@ -148,7 +152,10 @@ export async function getOrganization(orgId: string): Promise<Organization | nul
  */
 export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
   const collection = await getOrganizationsCollection();
-  return collection.findOne({ slug });
+  return timedQuery(
+    { operation: 'findOne', collection: 'organizations', filter: { slug } },
+    () => collection.findOne({ slug })
+  );
 }
 
 /**

@@ -15,11 +15,12 @@ import {
 import { getSession } from '@/lib/auth/session';
 import { checkFormAccess, describeAccessRequirements } from '@/lib/platform/formAccess';
 import { getOrgFormsCollection } from '@/lib/platform/db';
+import { withTiming } from '@/lib/performance/withTiming';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Retrieve a specific form by ID or slug
-export async function GET(
+async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ formId: string }> }
 ) {
@@ -247,7 +248,7 @@ export async function GET(
 }
 
 // DELETE - Delete a form
-export async function DELETE(
+async function handleDELETE(
   request: NextRequest,
   { params }: { params: Promise<{ formId: string }> }
 ) {
@@ -344,7 +345,7 @@ export async function DELETE(
 }
 
 // PATCH - Update form (publish/unpublish)
-export async function PATCH(
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ formId: string }> }
 ) {
@@ -411,3 +412,8 @@ export async function PATCH(
     );
   }
 }
+
+// Export with timing instrumentation
+export const GET = withTiming(handleGET);
+export const DELETE = withTiming(handleDELETE);
+export const PATCH = withTiming(handlePATCH);

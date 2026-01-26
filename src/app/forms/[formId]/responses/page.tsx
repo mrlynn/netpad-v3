@@ -81,6 +81,7 @@ export default function FormResponsesPage() {
             icon={<ListAlt sx={{ fontSize: 18 }} />}
             iconPosition="start"
             label="Responses"
+            data-testid="submissions-tab"
           />
           <Tab
             icon={<Chat sx={{ fontSize: 18 }} />}

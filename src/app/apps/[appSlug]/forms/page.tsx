@@ -89,6 +89,7 @@ const FormCard = memo(function FormCard({
 }: FormCardProps) {
   return (
     <Card
+      data-testid="form-row"
       sx={{
         height: '100%',
         display: 'flex',
@@ -441,7 +442,7 @@ export default function AppFormsPage() {
   }
 
   return (
-    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }}>
+    <Box sx={{ flex: 1, bgcolor: 'background.default', overflow: 'auto' }} data-testid="forms-list">
       <Box
         sx={{
           borderBottom: '1px solid',
@@ -483,6 +484,7 @@ export default function AppFormsPage() {
               variant="contained"
               startIcon={<Add />}
               fullWidth={false}
+              data-testid="new-form-button"
               sx={{
                 bgcolor: theme.palette.primary.main,
                 color: theme.palette.primary.contrastText,

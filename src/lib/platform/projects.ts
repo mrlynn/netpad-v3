@@ -15,6 +15,7 @@ import {
   ProjectStats,
 } from '@/types/platform';
 import { ensureDefaultApplication } from './applications';
+import { timedQuery } from '../performance/timedQuery';
 
 // ============================================
 // Helper Functions
@@ -138,7 +139,10 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
  */
 export async function getProject(projectId: string): Promise<Project | null> {
   const projectsCollection = await getProjectsCollection();
-  return projectsCollection.findOne({ projectId });
+  return timedQuery(
+    { operation: 'findOne', collection: 'projects', filter: { projectId } },
+    () => projectsCollection.findOne({ projectId })
+  );
 }
 
 /**
@@ -149,7 +153,10 @@ export async function getProjectBySlug(
   slug: string
 ): Promise<Project | null> {
   const projectsCollection = await getProjectsCollection();
-  return projectsCollection.findOne({ organizationId, slug });
+  return timedQuery(
+    { operation: 'findOne', collection: 'projects', filter: { organizationId, slug } },
+    () => projectsCollection.findOne({ organizationId, slug })
+  );
 }
 
 /**
@@ -199,7 +206,10 @@ export async function listProjects(
   }
 
   // Get total count
-  const total = await projectsCollection.countDocuments(query);
+  const total = await timedQuery(
+    { operation: 'countDocuments', collection: 'projects', filter: query },
+    () => projectsCollection.countDocuments(query)
+  );
 
   // Build sort
   const sort: Record<string, 1 | -1> = {};
@@ -210,12 +220,15 @@ export async function listProjects(
   }
 
   // Get paginated results
-  const projects = await projectsCollection
-    .find(query)
-    .sort(sort)
-    .skip((page - 1) * pageSize)
-    .limit(pageSize)
-    .toArray();
+  const projects = await timedQuery(
+    { operation: 'find', collection: 'projects', filter: query },
+    () => projectsCollection
+      .find(query)
+      .sort(sort)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .toArray()
+  );
 
   return {
     projects,

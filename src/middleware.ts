@@ -92,30 +92,34 @@ const PUBLIC_API_ROUTES = [
   '/api/v1/', // Public API v1 endpoints (use API key authentication)
 ];
 
+// Pre-compile regex patterns for faster route matching (runs once at module load)
+const PUBLIC_ROUTES_REGEX = new RegExp(
+  `^(${PUBLIC_ROUTES.map(r => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(\\/|$)`
+);
+const PUBLIC_API_ROUTES_REGEX = new RegExp(
+  `^(${PUBLIC_API_ROUTES.map(r => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`
+);
+const PROTECTED_ROUTES_REGEX = new RegExp(
+  `^(${PROTECTED_ROUTES.map(r => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(\\/|$)`
+);
+
 /**
  * Check if a path requires authentication
+ * Uses pre-compiled regex for O(1) matching instead of O(n) array iteration
  */
 function isProtectedRoute(pathname: string): boolean {
-  // Check if it's a public route first
-  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+  // Check if it's a public route first (fast regex test)
+  if (PUBLIC_ROUTES_REGEX.test(pathname)) {
     return false;
   }
 
   // Check if it's a public API route
-  if (PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))) {
+  if (PUBLIC_API_ROUTES_REGEX.test(pathname)) {
     return false;
   }
 
   // Check if it matches any protected route pattern
-  return PROTECTED_ROUTES.some(route => {
-    if (route.startsWith('/api/')) {
-      // For API routes, check exact match or starts with
-      return pathname === route || pathname.startsWith(route + '/');
-    } else {
-      // For page routes, check if pathname starts with the route
-      return pathname.startsWith(route + '/') || pathname === route;
-    }
-  });
+  return PROTECTED_ROUTES_REGEX.test(pathname);
 }
 
 /**
@@ -151,6 +155,38 @@ function isLegacyApplicationUrl(pathname: string): {
     applicationId: match[3],
     subPath: match[4] || '',
   };
+}
+
+// ============================================
+// Legacy URL Redirect Cache
+// ============================================
+// Cache appId -> appSlug mappings to avoid database lookups on every request
+// Note: Edge runtime doesn't have access to Node globals, so we use a Map
+// This cache is per-worker and will reset on redeployment (which is fine)
+
+const legacyRedirectCache = new Map<string, { appSlug: string; cachedAt: number }>();
+const LEGACY_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function getCachedLegacyRedirect(applicationId: string): string | null {
+  const cached = legacyRedirectCache.get(applicationId);
+  if (!cached) return null;
+
+  // Check if cache entry has expired
+  if (Date.now() - cached.cachedAt > LEGACY_CACHE_TTL_MS) {
+    legacyRedirectCache.delete(applicationId);
+    return null;
+  }
+
+  return cached.appSlug;
+}
+
+function setCachedLegacyRedirect(applicationId: string, appSlug: string): void {
+  // Limit cache size to prevent memory issues
+  if (legacyRedirectCache.size > 1000) {
+    // Clear oldest entries (simple strategy: clear all)
+    legacyRedirectCache.clear();
+  }
+  legacyRedirectCache.set(applicationId, { appSlug, cachedAt: Date.now() });
 }
 
 export async function middleware(request: NextRequest) {
@@ -229,11 +265,23 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       }
 
-      // User is authenticated - proceed with redirect lookup
+      // Check cache first to avoid database lookup
+      const cachedSlug = getCachedLegacyRedirect(legacyCheck.applicationId);
+      if (cachedSlug) {
+        // Build new URL from cached slug
+        const newPath = `/apps/${cachedSlug}${legacyCheck.subPath || '/forms'}`;
+        const newUrl = new URL(newPath, request.url);
+        searchParams.forEach((value, key) => {
+          newUrl.searchParams.set(key, value);
+        });
+        return NextResponse.redirect(newUrl, { status: 301 });
+      }
+
+      // User is authenticated and cache miss - proceed with redirect lookup
       const baseUrl = new URL(request.url);
       baseUrl.pathname = '/api/redirect/legacy-app';
       baseUrl.search = '';
-      
+
       const redirectParams = new URLSearchParams();
       redirectParams.set('orgId', legacyCheck.orgId);
       if (legacyCheck.projectId) {
@@ -243,7 +291,7 @@ export async function middleware(request: NextRequest) {
       if (legacyCheck.subPath) {
         redirectParams.set('path', legacyCheck.subPath);
       }
-      
+
       baseUrl.search = redirectParams.toString();
 
       // Make internal API call to get redirect URL
@@ -257,6 +305,13 @@ export async function middleware(request: NextRequest) {
       if (redirectResponse.ok) {
         const data = await redirectResponse.json();
         if (data.success && data.newPath) {
+          // Cache the appSlug for future requests
+          // Extract appSlug from newPath (format: /apps/{appSlug}/...)
+          const slugMatch = data.newPath.match(/^\/apps\/([^/]+)/);
+          if (slugMatch) {
+            setCachedLegacyRedirect(legacyCheck.applicationId, slugMatch[1]);
+          }
+
           // Build new URL with query params preserved
           const newUrl = new URL(data.newPath, request.url);
           // Preserve query parameters from original request

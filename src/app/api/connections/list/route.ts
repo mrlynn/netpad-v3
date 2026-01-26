@@ -3,10 +3,11 @@ import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { sessionOptions, ensureSessionId } from '@/lib/session';
 import { getConnections } from '@/lib/storage';
+import { withTiming } from '@/lib/performance/withTiming';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     // Get session ID
     const session = await getIronSession(await cookies(), sessionOptions);
@@ -37,3 +38,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Export with timing instrumentation
+export const GET = withTiming(handleGET);
