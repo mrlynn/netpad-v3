@@ -1,6 +1,6 @@
 {
   "name": "netpad",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "NetPad - Build and publish MongoDB-connected data forms and workflows",
   "private": true,
   "workspaces": [
