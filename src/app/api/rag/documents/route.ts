@@ -10,6 +10,8 @@ import { hasAIFeature } from '@/lib/platform/usageService';
 import { getFormDocuments } from '@/lib/rag/storage';
 import { RAGDocumentStatus } from '@/types/rag';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Validate authentication

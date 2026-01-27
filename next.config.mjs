@@ -11,6 +11,12 @@ try {
 const nextConfig = {
   reactStrictMode: true,
 
+  // Allow useSearchParams without Suspense boundary during static generation
+  // This is safe for client components that will hydrate properly
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+
   // Transpile local workspace packages (extensions)
   transpilePackages: [
     '@netpad/collaborate',
