@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
-import * as Sentry from '@sentry/nextjs';
 
 interface User {
   _id: string;
@@ -78,17 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/session');
       const data = await response.json();
 
-      // Set Sentry user context for error tracking
-      if (data.authenticated && data.user) {
-        Sentry.setUser({
-          id: data.user.userId || data.user._id,
-          email: data.user.email,
-          username: data.user.displayName,
-        });
-      } else {
-        Sentry.setUser(null);
-      }
-
       setState({
         user: data.user,
         session: data.session,
@@ -98,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error('Failed to fetch session:', error);
-      Sentry.setUser(null);
       setState({
         user: null,
         session: null,
@@ -272,9 +259,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear Sentry user context
-      Sentry.setUser(null);
-
       // Clear auth state
       setState({
         user: null,
@@ -283,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         isAuthenticated: false,
       });
-
+      
       // Clear any cached data in localStorage that might contain user-specific data
       // Note: We don't clear everything, just user-specific items
       const keysToRemove: string[] = [];
