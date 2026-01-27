@@ -8,9 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
-import { getDb } from '@/lib/platform/db';
+import { getPlatformDb } from '@/lib/platform/db';
 import { ObjectId } from 'mongodb';
 import { FieldConfig } from '@/types/form';
 import {
@@ -167,7 +165,7 @@ async function authenticateApiKey(request: NextRequest): Promise<{
   }
 
   // Look up the API key
-  const db = await getDb();
+  const db = await getPlatformDb();
   const apiKeyDoc = await db.collection('apiKeys').findOne({
     key: apiKey,
     isActive: true,
@@ -366,7 +364,7 @@ function applyTypeSpecificMapping(
 // ============================================
 
 async function createFormFromDefinition(
-  db: ReturnType<typeof getDb> extends Promise<infer T> ? T : never,
+  db: ReturnType<typeof getPlatformDb> extends Promise<infer T> ? T : never,
   organizationId: string,
   projectId: string,
   userId: string,
@@ -483,7 +481,7 @@ async function createFormFromDefinition(
 // ============================================
 
 async function importResponses(
-  db: ReturnType<typeof getDb> extends Promise<infer T> ? T : never,
+  db: ReturnType<typeof getPlatformDb> extends Promise<infer T> ? T : never,
   organizationId: string,
   formId: string,
   responses: AddonFormResponses
@@ -576,7 +574,7 @@ export async function POST(request: NextRequest) {
     // Validate organization access
     if (body.organizationId !== auth.organizationId) {
       // Check if user has access to the organization
-      const db = await getDb();
+      const db = await getPlatformDb();
       const membership = await db.collection('organizationMembers').findOne({
         organizationId: new ObjectId(body.organizationId),
         userId: new ObjectId(auth.userId),
@@ -590,7 +588,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const db = await getDb();
+    const db = await getPlatformDb();
 
     // Handle form definition import
     if (body.importType === 'definition' && body.formDefinition) {

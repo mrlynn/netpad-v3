@@ -18,20 +18,20 @@ export const runtime = 'nodejs';
  * List projects accessible by the API key
  */
 export async function GET(request: NextRequest) {
+  // Authenticate with API key
+  const authResult = await authenticateAPIRequest(request);
+
+  if (!authResult.success) {
+    return authResult.response;
+  }
+
+  const { context } = authResult;
+
   try {
-    // Authenticate with API key
-    const authResult = await authenticateAPIRequest(request);
-
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { organizationId, requestId } = authResult.context;
-
     // Get projects for this organization
     const projectsCollection = await getProjectsCollection();
     const projects = await projectsCollection
-      .find({ organizationId })
+      .find({ organizationId: context.organizationId })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -45,14 +45,15 @@ export async function GET(request: NextRequest) {
         organizationId: project.organizationId,
         createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
       })),
-      requestId,
+      requestId: context.requestId,
     });
   } catch (error: unknown) {
     console.error('[Projects API v1] Error:', error);
     return createAPIErrorResponse(
       'INTERNAL_ERROR',
       error instanceof Error ? error.message : 'Failed to list projects',
-      500
+      500,
+      context
     );
   }
 }

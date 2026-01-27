@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/platform/db';
+import { getPlatformDb } from '@/lib/platform/db';
 import { ObjectId } from 'mongodb';
 
 interface ValidateRequest {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDb();
+    const db = await getPlatformDb();
 
     // Look up the API key
     const apiKeyDoc = await db.collection('apiKeys').findOne({
