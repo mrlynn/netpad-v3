@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import {
   Box,
   Container,
@@ -21,6 +21,8 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Tooltip,
+  Theme,
 } from '@mui/material';
 import {
   Add,
@@ -29,24 +31,336 @@ import {
   AccountTree,
   PlayArrow,
   Pause,
+  OpenInNew,
+  CalendarToday,
+  CheckCircle,
+  Error as ErrorIcon,
+  Schedule,
+  Webhook,
+  Description,
+  TouchApp,
+  BubbleChart,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { getOrgProjectUrl } from '@/lib/routing';
+import { getAppUrl } from '@/lib/routing';
+
+interface WorkflowStats {
+  totalExecutions: number;
+  successfulExecutions: number;
+  failedExecutions: number;
+  avgExecutionTimeMs: number;
+  lastExecutedAt?: string;
+}
+
+interface WorkflowCanvas {
+  nodes: Array<{ id: string; type: string; data?: { triggerType?: string } }>;
+  edges: Array<{ id: string }>;
+}
 
 interface Workflow {
   id: string;
   name: string;
   description?: string;
-  status: 'active' | 'inactive' | 'draft';
+  status: 'active' | 'inactive' | 'draft' | 'paused';
   trigger?: { type: string };
+  canvas?: WorkflowCanvas;
+  stats?: WorkflowStats;
+  version?: number;
   createdAt?: string;
   updatedAt?: string;
   applicationId?: string;
+  thumbnailUrl?: string;
 }
+
+interface WorkflowCardProps {
+  workflow: Workflow;
+  theme: Theme;
+  appSlug: string;
+  formatDate: (dateString?: string) => string;
+}
+
+const WorkflowCard = memo(function WorkflowCard({
+  workflow,
+  theme,
+  appSlug,
+  formatDate,
+}: WorkflowCardProps) {
+  // Count nodes (excluding edges)
+  const nodeCount = workflow.canvas?.nodes?.length || 0;
+
+  // Find trigger type from nodes
+  const triggerNode = workflow.canvas?.nodes?.find(n =>
+    n.type === 'trigger' || n.type?.includes('trigger') || n.data?.triggerType
+  );
+  const triggerType = triggerNode?.data?.triggerType || triggerNode?.type || workflow.trigger?.type;
+
+  // Calculate success rate
+  const stats = workflow.stats;
+  const hasExecutions = stats && stats.totalExecutions > 0;
+  const successRate = hasExecutions
+    ? Math.round((stats.successfulExecutions / stats.totalExecutions) * 100)
+    : null;
+
+  // Get trigger icon based on type
+  const getTriggerIcon = (type?: string) => {
+    switch (type?.toLowerCase()) {
+      case 'form':
+      case 'form-submission':
+        return <Description sx={{ fontSize: 14 }} />;
+      case 'webhook':
+        return <Webhook sx={{ fontSize: 14 }} />;
+      case 'schedule':
+      case 'scheduled':
+        return <Schedule sx={{ fontSize: 14 }} />;
+      case 'manual':
+        return <TouchApp sx={{ fontSize: 14 }} />;
+      default:
+        return <PlayArrow sx={{ fontSize: 14 }} />;
+    }
+  };
+
+  // Format trigger type for display
+  const formatTriggerType = (type?: string) => {
+    if (!type) return null;
+    return type
+      .replace(/-/g, ' ')
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .trim();
+  };
+
+  return (
+    <Card
+      data-testid="workflow-row"
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: workflow.status === 'active' ? alpha(theme.palette.success.main, 0.3) : 'divider',
+        borderRadius: 2,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          borderColor: workflow.status === 'active' ? theme.palette.success.main : theme.palette.primary.main,
+          boxShadow: `0 4px 20px ${alpha(workflow.status === 'active' ? theme.palette.success.main : theme.palette.primary.main, 0.15)}`,
+          transform: 'translateY(-2px)',
+        },
+      }}
+    >
+      {/* Thumbnail/Preview Area */}
+      <Box
+        sx={{
+          height: 120,
+          bgcolor: alpha(theme.palette.primary.main, 0.02),
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {workflow.thumbnailUrl ? (
+          <Box
+            component="img"
+            src={workflow.thumbnailUrl}
+            alt={`${workflow.name || 'Workflow'} preview`}
+            sx={{
+              width: '100%',
+              height: 'auto',
+              minHeight: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: 0.5,
+              color: 'text.disabled',
+            }}
+          >
+            <BubbleChart sx={{ fontSize: 36, opacity: 0.3, color: theme.palette.primary.main }} />
+            {nodeCount > 0 && (
+              <Typography variant="caption" sx={{ opacity: 0.7, color: 'text.secondary' }}>
+                {nodeCount} node{nodeCount !== 1 ? 's' : ''}
+              </Typography>
+            )}
+          </Box>
+        )}
+        {/* Status badge overlay */}
+        <Chip
+          icon={workflow.status === 'active' ? <PlayArrow sx={{ fontSize: 12 }} /> : <Pause sx={{ fontSize: 12 }} />}
+          label={workflow.status}
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            height: 22,
+            fontSize: '0.65rem',
+            bgcolor: workflow.status === 'active'
+              ? alpha(theme.palette.success.main, 0.9)
+              : alpha(theme.palette.grey[700], 0.9),
+            color: '#fff',
+            '& .MuiChip-icon': { color: '#fff' },
+          }}
+        />
+      </Box>
+
+      <CardContent sx={{ flex: 1, pb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+          <Box sx={{ flex: 1, mr: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mb: 0.5 }}>
+              {workflow.name || 'Untitled Workflow'}
+            </Typography>
+            {workflow.description && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {workflow.description}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        {/* Info chips */}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+          {triggerType && (
+            <Chip
+              icon={getTriggerIcon(triggerType)}
+              label={formatTriggerType(triggerType)}
+              size="small"
+              sx={{
+                height: 24,
+                fontSize: '0.7rem',
+                bgcolor: alpha(theme.palette.info.main, 0.1),
+                color: theme.palette.info.main,
+                '& .MuiChip-icon': { color: theme.palette.info.main },
+              }}
+            />
+          )}
+          {nodeCount > 0 && (
+            <Chip
+              icon={<AccountTree sx={{ fontSize: 14 }} />}
+              label={`${nodeCount} nodes`}
+              size="small"
+              sx={{
+                height: 24,
+                fontSize: '0.7rem',
+                bgcolor: alpha(theme.palette.text.primary, 0.05),
+              }}
+            />
+          )}
+          {hasExecutions && (
+            <Tooltip title={`${stats.successfulExecutions} succeeded, ${stats.failedExecutions} failed`}>
+              <Chip
+                icon={successRate && successRate >= 80 ? <CheckCircle sx={{ fontSize: 14 }} /> : <ErrorIcon sx={{ fontSize: 14 }} />}
+                label={`${successRate}% success`}
+                size="small"
+                sx={{
+                  height: 24,
+                  fontSize: '0.7rem',
+                  bgcolor: successRate && successRate >= 80
+                    ? alpha(theme.palette.success.main, 0.15)
+                    : alpha(theme.palette.warning.main, 0.15),
+                  color: successRate && successRate >= 80
+                    ? theme.palette.success.main
+                    : theme.palette.warning.main,
+                  '& .MuiChip-icon': {
+                    color: successRate && successRate >= 80
+                      ? theme.palette.success.main
+                      : theme.palette.warning.main,
+                  },
+                }}
+              />
+            </Tooltip>
+          )}
+        </Box>
+
+        {/* Stats row */}
+        <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <CalendarToday sx={{ fontSize: 12 }} />
+            {formatDate(workflow.updatedAt || workflow.createdAt)}
+          </Typography>
+          {hasExecutions && (
+            <Typography variant="caption" color="text.secondary">
+              {stats.totalExecutions} run{stats.totalExecutions !== 1 ? 's' : ''}
+            </Typography>
+          )}
+          {workflow.version && workflow.version > 1 && (
+            <Typography variant="caption" color="text.secondary">
+              v{workflow.version}
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, gap: 1 }}>
+        <Tooltip title="Edit workflow">
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<Edit sx={{ fontSize: 16 }} />}
+            component={Link}
+            href={`${getAppUrl(appSlug, 'workflows')}/${workflow.id}`}
+            sx={{
+              borderColor: alpha(theme.palette.info.main, 0.5),
+              color: theme.palette.info.main,
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: theme.palette.info.main,
+                bgcolor: alpha(theme.palette.info.main, 0.1),
+              },
+            }}
+          >
+            Edit
+          </Button>
+        </Tooltip>
+        {workflow.status === 'active' && (
+          <Tooltip title="Run workflow">
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<OpenInNew sx={{ fontSize: 16 }} />}
+              component={Link}
+              href={`${getAppUrl(appSlug, 'workflows')}/${workflow.id}?run=true`}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                color: '#fff',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': { bgcolor: theme.palette.success.dark },
+              }}
+            >
+              Run
+            </Button>
+          </Tooltip>
+        )}
+      </CardActions>
+    </Card>
+  );
+});
 
 /**
  * /apps/[appSlug]/workflows
@@ -115,6 +429,15 @@ export default function AppWorkflowsPage() {
     (wf.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   // Create workflow via API, then navigate to the editor
   const handleCreateWorkflow = async () => {
     if (!currentOrgId || !projectId || !newWorkflowName.trim()) {
@@ -141,8 +464,8 @@ export default function AppWorkflowsPage() {
         throw new Error(data.error || 'Failed to create workflow');
       }
 
-      // Navigate to the newly created workflow
-      const workflowUrl = `${getOrgProjectUrl(currentOrgId, projectId, 'workflows', data.workflow.id)}?applicationId=${applicationId}`;
+      // Navigate to the newly created workflow using app-centric URL
+      const workflowUrl = `${getAppUrl(appSlug, 'workflows')}/${data.workflow.id}`;
       router.push(workflowUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create workflow');
@@ -233,46 +556,12 @@ export default function AppWorkflowsPage() {
           <Grid container spacing={3}>
             {filteredWorkflows.map((workflow) => (
               <Grid item xs={12} sm={6} md={4} key={workflow.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', border: '1px solid', borderColor: workflow.status === 'active' ? alpha(theme.palette.success.main, 0.3) : 'divider', borderRadius: 2 }}>
-                  <CardContent sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                        {workflow.name || 'Untitled Workflow'}
-                      </Typography>
-                      <Chip
-                        icon={workflow.status === 'active' ? <PlayArrow sx={{ fontSize: 14 }} /> : <Pause sx={{ fontSize: 14 }} />}
-                        label={workflow.status}
-                        size="small"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.7rem',
-                          bgcolor: workflow.status === 'active' ? alpha(theme.palette.success.main, 0.15) : alpha(theme.palette.text.primary, 0.05),
-                          color: workflow.status === 'active' ? theme.palette.success.main : 'text.secondary',
-                        }}
-                      />
-                    </Box>
-                    {workflow.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {workflow.description}
-                      </Typography>
-                    )}
-                    {workflow.trigger && (
-                      <Chip label={`Trigger: ${workflow.trigger.type}`} size="small" sx={{ height: 20, fontSize: '0.65rem' }} />
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<Edit sx={{ fontSize: 16 }} />}
-                      component={Link}
-                      href={currentOrgId && projectId ? getOrgProjectUrl(currentOrgId, projectId, 'workflows') + `/${workflow.id}` : '#'}
-                      sx={{ textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Edit
-                    </Button>
-                  </CardActions>
-                </Card>
+                <WorkflowCard
+                  workflow={workflow}
+                  theme={theme}
+                  appSlug={appSlug}
+                  formatDate={formatDate}
+                />
               </Grid>
             ))}
           </Grid>

@@ -139,6 +139,39 @@ import {
   generateSelfContainedCode,
   STANDARD_ENV_VARS,
 } from './validation.js';
+import {
+  UI_RESOURCES,
+  type WorkflowViewerData,
+  type TemplateGalleryData,
+  type FormPreviewData,
+  type TemplateItem,
+} from '@netpad/mcp-apps';
+
+// ============================================================================
+// MCP APPS UI RESOURCE HELPERS
+// ============================================================================
+
+/**
+ * Create a response with UI metadata for MCP Apps.
+ * The text content is always included for non-UI clients.
+ * UI-capable clients will render the interactive UI instead.
+ */
+function withUIResource<T>(
+  textContent: string,
+  resourceId: 'workflow-viewer' | 'template-gallery' | 'form-preview',
+  data: T
+) {
+  const resource = UI_RESOURCES[resourceId];
+  return {
+    content: [{ type: 'text' as const, text: textContent }],
+    _meta: {
+      ui: {
+        resourceUri: resource.uri,
+        data,
+      },
+    },
+  };
+}
 
 /**
  * Create a configured NetPad MCP server instance.
@@ -561,14 +594,28 @@ If you prefer to work with code, here's the complete TypeScript implementation:
 
 ${formatToolOutput(output)}`;
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: outputWithImport,
-        },
-      ],
+    // Prepare form preview data for MCP Apps UI
+    const formPreviewData: FormPreviewData = {
+      form: {
+        name: schema.name,
+        description: schema.description,
+        fields: (schema.fieldConfigs || []).map((f: { path: string; label: string; type: string; placeholder?: string; required?: boolean; options?: Array<{ label: string; value: string | number }> }) => ({
+          id: f.path,
+          type: f.type,
+          label: f.label,
+          placeholder: f.placeholder,
+          required: f.required,
+          options: f.options,
+        })),
+        theme: schema.theme,
+        multiPage: schema.multiPage,
+      },
+      theme: 'dark',
+      mode: 'traditional',
+      readonly: true,
     };
+
+    return withUIResource(outputWithImport, 'form-preview', formPreviewData);
   }
 );
 
@@ -1026,17 +1073,32 @@ server.tool(
         const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
           tags: t.tags, icon: t.icon, fieldCount: t.fields.length, hasMultiPage: !!t.multiPage?.enabled,
         }));
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              templateType: 'form',
-              templates: summary,
-              total: summary.length,
-              categories: [...new Set(templates.map(t => t.category))],
-            }, null, 2),
-          }],
+
+        const textResponse = JSON.stringify({
+          templateType: 'form',
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(templates.map(t => t.category))],
+        }, null, 2);
+
+        // Return with MCP Apps UI for template gallery
+        const galleryItems: TemplateItem[] = templates.map(t => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          category: t.category,
+          tags: t.tags,
+          icon: t.icon || '📝',
+        }));
+
+        const galleryData: TemplateGalleryData = {
+          templates: galleryItems,
+          templateType: 'form',
+          theme: 'dark',
+          showCategories: true,
         };
+
+        return withUIResource(textResponse, 'template-gallery', galleryData);
       }
 
       case 'application': {
@@ -1126,7 +1188,36 @@ server.tool(
               edges: template.edges,
             },
           };
-          return { content: [{ type: 'text', text: JSON.stringify(workflowForUI, null, 2) }] };
+
+          // Return with MCP Apps UI for workflow visualization
+          const uiData: WorkflowViewerData = {
+            workflow: {
+              nodes: template.nodes.map(n => ({
+                id: n.id,
+                type: n.type,
+                position: n.position,
+                data: { label: n.label || n.type, ...n.config },
+              })),
+              edges: template.edges.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: e.sourceHandle,
+                targetHandle: e.targetHandle,
+                label: e.condition?.label,
+              })),
+            },
+            theme: 'dark',
+            fitView: true,
+            showMinimap: true,
+            autoLayout: true,
+          };
+
+          return withUIResource(
+            JSON.stringify(workflowForUI, null, 2),
+            'workflow-viewer',
+            uiData
+          );
         }
         // List workflow templates
         let templates = Object.values(WORKFLOW_TEMPLATES);
@@ -1136,17 +1227,32 @@ server.tool(
         const summary = templates.map(t => formatSummary(t.id, t.name, t.description, t.category, {
           tags: t.tags, nodesCount: t.nodes.length, edgesCount: t.edges.length,
         }));
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              templateType: 'workflow',
-              templates: summary,
-              total: summary.length,
-              categories: [...new Set(Object.values(WORKFLOW_TEMPLATES).map(t => t.category))],
-            }, null, 2),
-          }],
+
+        const textResponse = JSON.stringify({
+          templateType: 'workflow',
+          templates: summary,
+          total: summary.length,
+          categories: [...new Set(Object.values(WORKFLOW_TEMPLATES).map(t => t.category))],
+        }, null, 2);
+
+        // Return with MCP Apps UI for template gallery
+        const galleryItems: TemplateItem[] = templates.map(t => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          category: t.category,
+          tags: t.tags,
+          icon: '⚡',
+        }));
+
+        const galleryData: TemplateGalleryData = {
+          templates: galleryItems,
+          templateType: 'workflow',
+          theme: 'dark',
+          showCategories: true,
         };
+
+        return withUIResource(textResponse, 'template-gallery', galleryData);
       }
 
       case 'conversational': {
@@ -4790,7 +4896,7 @@ The tool returns:
     const baseUrl = 'https://netpad.io'; // Or user's instance URL
 
     // Build the field type mapping reference
-    const fieldTypeMapping = \`
+    const fieldTypeMapping = `
 ## Google Forms to NetPad Field Type Mapping
 
 | Google Forms Type | NetPad Type | Confidence |
@@ -4806,13 +4912,13 @@ The tool returns:
 | DATE | date | Exact |
 | TIME | time | Exact |
 | FILE_UPLOAD | file | Exact |
-\`;
+`;
 
     if (!credentialId) {
       return {
         content: [{
           type: 'text',
-          text: \`# Google Forms Import
+          text: `# Google Forms Import
 
 ## Setup Required
 
@@ -4825,74 +4931,74 @@ Before importing Google Forms, you need to connect your Google account:
 
 Or use this URL to start the OAuth flow:
 \`\`\`
-\${baseUrl}/api/auth/google?provider=google_forms&orgId=\${organizationId}
+${baseUrl}/api/auth/google?provider=google_forms&orgId=${organizationId}
 \`\`\`
 
 ## Once Connected
 
 Call this tool again with the \`credentialId\` parameter to preview or import the form.
 
-\${fieldTypeMapping}\`,
+${fieldTypeMapping}`,
         }],
       };
     }
 
     // Generate the API calls for preview and import
-    const previewApiCall = \`
+    const previewApiCall = `
 ## Preview Import
 
 To see how the Google Form will be mapped to NetPad fields:
 
 \`\`\`bash
-curl "\${baseUrl}/api/integrations/google-forms/preview?\\
-orgId=\${organizationId}&\\
-credentialId=\${credentialId}&\\
-formId=\${formId}"
+curl "${baseUrl}/api/integrations/google-forms/preview?\\
+orgId=${organizationId}&\\
+credentialId=${credentialId}&\\
+formId=${formId}"
 \`\`\`
 
 Or using fetch:
 
 \`\`\`typescript
 const response = await fetch(
-  '\${baseUrl}/api/integrations/google-forms/preview?' + new URLSearchParams({
-    orgId: '\${organizationId}',
-    credentialId: '\${credentialId}',
-    formId: '\${formId}',
+  '${baseUrl}/api/integrations/google-forms/preview?' + new URLSearchParams({
+    orgId: '${organizationId}',
+    credentialId: '${credentialId}',
+    formId: '${formId}',
   })
 );
 const preview = await response.json();
 console.log('Fields:', preview.previewConfig.fieldConfigs);
 console.log('Warnings:', preview.mappingResult.warnings);
 \`\`\`
-\`;
+`;
 
-    const importApiCall = \`
+    const importApiCall = `
 ## Execute Import
 
 To create the NetPad form from the Google Form:
 
 \`\`\`bash
-curl -X POST "\${baseUrl}/api/integrations/google-forms/import" \\
+curl -X POST "${baseUrl}/api/integrations/google-forms/import" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "orgId": "\${organizationId}",
-    "credentialId": "\${credentialId}",
-    "formId": "\${formId}",
-    "projectId": "\${projectId}"
+    "orgId": "${organizationId}",
+    "credentialId": "${credentialId}",
+    "formId": "${formId}",
+    "projectId": "${projectId}"
   }'
 \`\`\`
 
 Or using fetch:
 
 \`\`\`typescript
-const response = await fetch('\${baseUrl}/api/integrations/google-forms/import', {
+const response = await fetch('${baseUrl}/api/integrations/google-forms/import', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    orgId: '\${organizationId}',
-    credentialId: '\${credentialId}',
-    formId: '\${formId}',
-    projectId: '\${projectId}',
+    orgId: '${organizationId}',
+    credentialId: '${credentialId}',
+    formId: '${formId}',
+    projectId: '${projectId}',
     // Optional customizations:
     customizations: {
       name: 'Custom Form Name',  // Override the form name
@@ -4910,23 +5016,23 @@ if (result.success) {
   console.log('Edit URL:', result.importReport.viewUrl);
 }
 \`\`\`
-\`;
+`;
 
     return {
       content: [{
         type: 'text',
-        text: \`# Google Forms Import
+        text: `# Google Forms Import
 
-**Form ID:** \${formId}
-**Organization:** \${organizationId}
-**Project:** \${projectId}
-**Credential:** \${credentialId}
+**Form ID:** ${formId}
+**Organization:** ${organizationId}
+**Project:** ${projectId}
+**Credential:** ${credentialId}
 
-\${previewApiCall}
+${previewApiCall}
 
-\${preview ? '' : importApiCall}
+${preview ? '' : importApiCall}
 
-\${fieldTypeMapping}
+${fieldTypeMapping}
 
 ## Using the Import Wizard UI
 
@@ -4944,7 +5050,7 @@ Alternatively, users can import Google Forms through the NetPad UI:
 - Some field types may be approximated (see mapping table)
 - Validation rules are preserved where possible
 - Section/page breaks become multi-page form pages
-- Images and videos in the form are not imported\`,
+- Images and videos in the form are not imported`,
       }],
     };
   }
@@ -4972,19 +5078,19 @@ server.tool(
     return {
       content: [{
         type: 'text',
-        text: \`# List Google Forms
+        text: `# List Google Forms
 
 To list forms available for import, make this API call:
 
 \`\`\`bash
-curl "\${baseUrl}/api/integrations/google-forms?\${params.toString()}"
+curl "${baseUrl}/api/integrations/google-forms?${params.toString()}"
 \`\`\`
 
 Or using fetch:
 
 \`\`\`typescript
 const response = await fetch(
-  '\${baseUrl}/api/integrations/google-forms?\${params.toString()}'
+  '${baseUrl}/api/integrations/google-forms?${params.toString()}'
 );
 const data = await response.json();
 
@@ -4995,7 +5101,7 @@ const data = await response.json();
 // - webViewLink: Link to edit form in Google
 
 for (const form of data.forms) {
-  console.log(\\\`\\\${form.name} (ID: \\\${form.id})\\\`);
+  console.log(\`\${form.name} (ID: \${form.id})\`);
 }
 \`\`\`
 
@@ -5015,7 +5121,7 @@ for (const form of data.forms) {
 }
 \`\`\`
 
-Use the \`import_google_form\` tool with the form ID to import a specific form.\`,
+Use the \`import_google_form\` tool with the form ID to import a specific form.`,
       }],
     };
   }

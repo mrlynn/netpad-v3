@@ -1,0 +1,18 @@
+import { defineConfig } from 'tsup';
+
+export default defineConfig({
+  entry: [
+    'src/index.ts',
+    'src/ui-resources.ts',
+    'src/types.ts',
+  ],
+  format: ['cjs', 'esm'],
+  dts: true,
+  splitting: true,
+  sourcemap: true,
+  clean: true,
+  treeshake: true,
+  minify: false,
+  target: 'es2020',
+  external: ['react', 'react-dom'],
+});

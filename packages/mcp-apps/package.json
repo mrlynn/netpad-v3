@@ -1,0 +1,83 @@
+{
+  "name": "@netpad/mcp-apps",
+  "version": "1.0.1",
+  "description": "Interactive MCP App UIs for NetPad - workflow visualization, template gallery, and form preview",
+  "author": "Michael Lynn",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./ui-resources": {
+      "types": "./dist/ui-resources.d.ts",
+      "import": "./dist/ui-resources.mjs",
+      "require": "./dist/ui-resources.js"
+    },
+    "./workflow-viewer.html": "./dist/workflow-viewer.html",
+    "./template-gallery.html": "./dist/template-gallery.html",
+    "./form-preview.html": "./dist/form-preview.html"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "npm run build:lib && npm run build:apps",
+    "build:lib": "tsup",
+    "build:apps": "tsx scripts/build-apps.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run typecheck"
+  },
+  "dependencies": {
+    "@netpad/workflow-renderer": "^1.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "esbuild": "^0.20.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-apps",
+    "model-context-protocol",
+    "netpad",
+    "workflow",
+    "forms",
+    "templates",
+    "interactive-ui",
+    "claude",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrlynn/netpad-v3.git",
+    "directory": "packages/mcp-apps"
+  },
+  "bugs": {
+    "url": "https://github.com/mrlynn/netpad-v3/issues"
+  },
+  "homepage": "https://github.com/mrlynn/netpad-v3/tree/main/packages/mcp-apps#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

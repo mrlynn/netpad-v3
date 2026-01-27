@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPlatformDb } from '@/lib/platform/db';
+import { getOrgFormsCollection, getPlatformDb } from '@/lib/platform/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,11 +65,29 @@ export async function POST(request: NextRequest) {
       console.log('[Thumbnail API] Base64 generated, length:', thumbnailUrl.length);
     }
 
-    // Update the form document with the thumbnail URL
+    // Update the form document with the thumbnail URL in the organization's forms collection
+    // This is where /api/forms/list reads from
+    const orgFormsCollection = await getOrgFormsCollection(organizationId);
+    const orgUpdateResult = await orgFormsCollection.updateOne(
+      { formId: formId },
+      {
+        $set: {
+          thumbnailUrl: thumbnailUrl,
+          thumbnailUpdatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
+        },
+      }
+    );
+    console.log('[Thumbnail API] Updated org forms collection:', {
+      matchedCount: orgUpdateResult.matchedCount,
+      modifiedCount: orgUpdateResult.modifiedCount,
+    });
+
+    // Also update the platform user_forms collection for session-based storage
     // Forms are stored with nested structure: { form: { ...formData } }
     const db = await getPlatformDb();
-    const formsCollection = db.collection('user_forms');
-    await formsCollection.updateOne(
+    const userFormsCollection = db.collection('user_forms');
+    await userFormsCollection.updateOne(
       { 'form.id': formId },
       {
         $set: {
