@@ -16,6 +16,8 @@ import {
 import { getOrgDb } from '@/lib/platform/db';
 import { ApplicationPermission } from '@/types/application';
 
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ applicationId: string; permissionId: string }> }

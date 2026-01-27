@@ -12,6 +12,8 @@ import { getUserOrganizations } from '@/lib/platform/organizations';
 import crypto from 'crypto';
 import { getCLISessionToken } from '@/lib/auth/cli-sessions';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/auth/cli/session
  * Create a session token from a web session

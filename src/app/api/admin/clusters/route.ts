@@ -11,6 +11,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { getPlatformDb, getOrganizationsCollection } from '@/lib/platform/db';
 import { ProvisionedCluster } from '@/lib/atlas/types';
 
+export const dynamic = 'force-dynamic';
+
 export interface ClusterWithMetrics extends ProvisionedCluster {
   // Organization info
   organizationName?: string;

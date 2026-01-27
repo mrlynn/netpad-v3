@@ -12,6 +12,8 @@ import { createConnectionVault } from '@/lib/platform/connectionVault';
 import { listProjects, createProject } from '@/lib/platform/projects';
 import { getUserOrganizations } from '@/lib/platform/organizations';
 
+export const dynamic = 'force-dynamic';
+
 interface DatabaseSetupRequest {
   orgId: string;
   projectId?: string; // Optional - will create default project if not provided

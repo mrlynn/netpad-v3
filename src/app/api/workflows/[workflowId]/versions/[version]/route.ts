@@ -11,6 +11,8 @@ import {
   getWorkflowVersion,
 } from '@/lib/workflow/db';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string; version: string }>;
 }

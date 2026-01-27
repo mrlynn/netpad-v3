@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { testVaultConnection } from '@/lib/platform/connectionVault';
 import { assertConnectionPermission } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string; vaultId: string }> }

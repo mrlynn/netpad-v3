@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { listExecutions, getExecutionLogs, getJobByExecutionId } from '@/lib/workflow/db';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
 }

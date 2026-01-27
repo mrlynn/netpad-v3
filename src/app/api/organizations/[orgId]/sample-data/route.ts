@@ -5,6 +5,8 @@ import { getOrgDb } from '@/lib/platform/db';
 import { ObjectId } from 'mongodb';
 import { checkFormLimit } from '@/lib/platform/usageService';
 
+export const dynamic = 'force-dynamic';
+
 // Helper functions for generating realistic analytics data
 function randomDevice(): 'mobile' | 'desktop' | 'tablet' {
   const rand = Math.random();

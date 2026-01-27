@@ -10,6 +10,8 @@ import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
 import { PlatformUser } from '@/types/platform';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

@@ -22,6 +22,8 @@ import {
 } from '@/lib/atlas/invitations';
 import { findUserById } from '@/lib/platform/users';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/organizations/[orgId]/atlas-invite
  *

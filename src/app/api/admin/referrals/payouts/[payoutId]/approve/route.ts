@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 import { getReferralService, isFeatureAvailable } from '@/lib/extensions';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ payoutId: string }> }

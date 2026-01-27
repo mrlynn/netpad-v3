@@ -14,6 +14,8 @@ import {
   getReferralCodesCollection,
 } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     // Check authentication

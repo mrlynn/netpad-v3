@@ -20,6 +20,8 @@ import {
 } from '@/lib/workflow/db';
 import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string; executionId: string }>;
 }

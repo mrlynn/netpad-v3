@@ -22,6 +22,8 @@ import {
   TemplateScope,
 } from '@/types/conversational';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }

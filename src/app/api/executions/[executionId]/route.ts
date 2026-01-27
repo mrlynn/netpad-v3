@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { getExecutionById, getExecutionLogs } from '@/lib/workflow/db';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ executionId: string }>;
 }

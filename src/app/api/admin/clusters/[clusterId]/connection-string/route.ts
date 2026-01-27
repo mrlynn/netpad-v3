@@ -11,6 +11,8 @@ import { getPlatformDb } from '@/lib/platform/db';
 import { ProvisionedCluster } from '@/lib/atlas/types';
 import { getDecryptedConnectionString } from '@/lib/platform/connectionVault';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ clusterId: string }>;
 }

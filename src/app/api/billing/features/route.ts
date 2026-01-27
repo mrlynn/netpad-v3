@@ -26,6 +26,8 @@ import { getTierFeaturesForDeployment } from '@/types/platform';
 import { getUsageService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 import * as localUsageService from '@/lib/platform/usageService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     // Ensure extensions are loaded

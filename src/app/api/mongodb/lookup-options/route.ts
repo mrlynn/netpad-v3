@@ -6,6 +6,8 @@ import { MongoClient } from 'mongodb';
 import { getForms, getPublishedFormById, getPublishedFormBySlug } from '@/lib/storage';
 import { getDecryptedConnectionString } from '@/lib/platform/connectionVault';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

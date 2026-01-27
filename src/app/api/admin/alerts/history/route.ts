@@ -10,6 +10,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { getAlertHistory, getAlertStats } from '@/lib/platform/alertService';
 import { AlertHistoryStatus } from '@/types/observability';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check authentication

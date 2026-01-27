@@ -4,6 +4,8 @@ import { assertOrgPermission } from '@/lib/platform/permissions';
 import { getProvisionedClusterForOrg } from '@/lib/atlas/provisioning';
 import { getAtlasClient } from '@/lib/atlas/client';
 
+export const dynamic = 'force-dynamic';
+
 // GET - List database users
 export async function GET(
   request: NextRequest,

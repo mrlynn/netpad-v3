@@ -16,6 +16,8 @@ import {
   withMetrics,
 } from '@/lib/api/metricsMiddleware';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withMetrics(async function GET(request: NextRequest) {
   try {
     // Check authentication

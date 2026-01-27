@@ -13,6 +13,8 @@ import { listUserVaults } from '@/lib/platform/connectionVault';
 import { getProvisioningStatus } from '@/lib/atlas/provisioning';
 import { ConnectionVault } from '@/types/platform';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getSession();

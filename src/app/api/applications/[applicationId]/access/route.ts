@@ -11,6 +11,8 @@ import { recordApplicationAccess } from '@/lib/platform/userPreferences';
 import { getApplication } from '@/lib/platform/applications';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ applicationId: string }> }

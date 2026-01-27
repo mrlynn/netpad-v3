@@ -15,6 +15,8 @@ import { checkApplicationPermission } from '@/lib/platform/applicationPermission
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { inferApplicationSchema, FormForSchema } from '@/lib/schema/inferSchema';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ applicationId: string }> }

@@ -24,6 +24,8 @@ import { getOrgFormsCollection } from '@/lib/platform/db';
 import { ensureDefaultApplication } from '@/lib/platform/applications';
 import { getProjectDefaultVault } from '@/lib/platform/projects';
 
+export const dynamic = 'force-dynamic';
+
 // Generate a URL-friendly slug from a name
 function generateSlug(name: string): string {
   return name

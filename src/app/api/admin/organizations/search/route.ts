@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 import { getOrganizationsCollection, getUsersCollection } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     // Check authentication

@@ -4,6 +4,8 @@ import { getSession, destroySession } from '@/lib/auth/session';
 import { findUserById as findAuthUserById } from '@/lib/auth/db';
 import { findUserById as findPlatformUserById } from '@/lib/platform/users';
 
+export const dynamic = 'force-dynamic';
+
 // GET - Get current session/user
 export async function GET(req: NextRequest) {
   try {

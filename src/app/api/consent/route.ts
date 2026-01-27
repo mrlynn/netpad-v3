@@ -9,6 +9,8 @@ import {
 } from '@/lib/consent/db';
 import { SaveConsentRequest } from '@/types/consent';
 
+export const dynamic = 'force-dynamic';
+
 // GET - Retrieve current consent preferences
 export async function GET(req: NextRequest) {
   try {

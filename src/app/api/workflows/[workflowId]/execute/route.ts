@@ -22,6 +22,8 @@ import { incrementWorkflowExecutionAtQueue } from '@/lib/platform/usageService';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { nanoid } from 'nanoid';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
 }

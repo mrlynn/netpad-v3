@@ -14,6 +14,8 @@ import { ProvisionedCluster, ProvisioningStatus } from '@/lib/atlas/types';
 import { deleteProvisionedCluster, provisionM0Cluster } from '@/lib/atlas/provisioning';
 import { getAtlasClient } from '@/lib/atlas/client';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ clusterId: string }>;
 }

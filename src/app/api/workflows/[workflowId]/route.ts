@@ -17,6 +17,8 @@ import { WorkflowCanvas, WorkflowSettings, WorkflowVariable } from '@/types/work
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
 }

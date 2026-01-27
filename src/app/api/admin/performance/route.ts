@@ -18,6 +18,8 @@ import {
   type APIMetric,
 } from '@/lib/performance/metricsStore';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/performance
  * Returns aggregated performance metrics

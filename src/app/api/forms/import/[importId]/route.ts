@@ -15,6 +15,8 @@ import {
 } from '@/lib/platform/formImportsDbOps';
 import { getSession } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================
 // GET /api/forms/import/[importId]
 // ============================================

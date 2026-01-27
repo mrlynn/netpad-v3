@@ -13,6 +13,8 @@ import { getUserApplications } from '@/lib/platform/applicationPermissions';
 import { getProject, listProjects } from '@/lib/platform/projects';
 import { Application } from '@/types/application';
 
+export const dynamic = 'force-dynamic';
+
 interface ProjectGroup {
   project: {
     id: string;

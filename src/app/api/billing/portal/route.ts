@@ -12,6 +12,8 @@ import { getSession } from '@/lib/auth/session';
 import { checkOrgPermission } from '@/lib/platform/organizations';
 import { getBillingService, loadExtensions, extensionsLoaded, isFeatureAvailable } from '@/lib/extensions';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     // Ensure extensions are loaded

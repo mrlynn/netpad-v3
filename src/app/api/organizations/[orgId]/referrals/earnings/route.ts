@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { assertOrgPermission } from '@/lib/platform/permissions';
 import { getReferralService, isFeatureAvailable } from '@/lib/extensions';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }

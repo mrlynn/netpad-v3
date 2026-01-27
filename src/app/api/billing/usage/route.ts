@@ -14,6 +14,8 @@ import { getSession } from '@/lib/auth/session';
 import { getUsageService, loadExtensions, extensionsLoaded } from '@/lib/extensions';
 import * as localUsageService from '@/lib/platform/usageService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     // Ensure extensions are loaded

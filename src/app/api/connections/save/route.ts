@@ -5,6 +5,8 @@ import { sessionOptions, ensureSessionId, SavedConnection } from '@/lib/session'
 import { randomBytes } from 'crypto';
 import { getConnections, saveConnections } from '@/lib/storage';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

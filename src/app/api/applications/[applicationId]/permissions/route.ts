@@ -14,6 +14,8 @@ import {
 } from '@/lib/platform/applicationPermissions';
 import { findUserById } from '@/lib/platform/users';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ applicationId: string }> }

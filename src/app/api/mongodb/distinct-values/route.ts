@@ -6,6 +6,8 @@ import { getClient } from '@/lib/mongodb/clientCache';
 import { getForms, getPublishedFormById, getPublishedFormBySlug } from '@/lib/storage';
 import { getDecryptedConnectionString } from '@/lib/platform/connectionVault';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Distinct Values API
  *

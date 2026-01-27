@@ -13,6 +13,8 @@ import { getSession } from '@/lib/auth/session';
 import { listUserVaults } from '@/lib/platform/connectionVault';
 import { getUserOrganizations } from '@/lib/platform/organizations';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

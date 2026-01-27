@@ -16,6 +16,8 @@ import {
 } from '@/lib/integrations/googleForms';
 import { GoogleFormsPreviewResponse } from '@/types/googleFormsImport';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

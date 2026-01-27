@@ -4,6 +4,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { approveUser, rejectUser } from '@/lib/platform/waitlist';
 import { sendWaitlistApprovalEmail, sendWaitlistRejectionEmail } from '@/lib/auth/waitlist-emails';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ userId: string }>;
 }

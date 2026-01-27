@@ -5,6 +5,8 @@ import { findUserById as findPlatformUserById } from '@/lib/platform/users';
 import { getAuthDb } from '@/lib/auth/db';
 import { ObjectId } from 'mongodb';
 
+export const dynamic = 'force-dynamic';
+
 // DELETE - Remove all passkeys for current user (for debugging/reset)
 export async function DELETE(req: NextRequest) {
   try {

@@ -11,6 +11,8 @@ import { WorkflowStatus } from '@/types/workflow';
 import { checkActiveWorkflowLimit } from '@/lib/platform/usageService';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ workflowId: string }>;
 }

@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { getProject, getProjectDefaultVault } from '@/lib/platform/projects';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }

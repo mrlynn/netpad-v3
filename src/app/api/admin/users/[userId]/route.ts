@@ -13,6 +13,8 @@ import { approveUser, rejectUser } from '@/lib/platform/waitlist';
 import { getUsersCollection, getPlatformAuditCollection } from '@/lib/platform/db';
 import { PlatformRole } from '@/types/platform';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ userId: string }>;
 }

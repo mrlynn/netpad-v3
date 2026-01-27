@@ -12,6 +12,8 @@ import { getOrganizationsCollection } from '@/lib/platform/db';
 import { assertOrgPermission } from '@/lib/platform/permissions';
 import { validateSlug, canChangeSlug } from '@/lib/slugs';
 
+export const dynamic = 'force-dynamic';
+
 const SLUG_COOLDOWN_DAYS = 30;
 
 export async function GET(

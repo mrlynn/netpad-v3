@@ -14,6 +14,8 @@ import { spawn } from 'child_process';
 import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 
+export const dynamic = 'force-dynamic';
+
 // Flag to prevent multiple restart attempts
 let restartPending = false;
 

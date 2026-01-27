@@ -16,6 +16,8 @@ import {
 import { findUserById } from '@/lib/platform/users';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withTiming(async function GET() {
   try {
     const session = await getSession();

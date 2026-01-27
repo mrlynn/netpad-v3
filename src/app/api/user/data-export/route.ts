@@ -5,6 +5,8 @@ import { findUserById as findPlatformUserById } from '@/lib/platform/users';
 import { findConsentByUserId } from '@/lib/consent/db';
 import { getOrganizationsCollection } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/user/data-export
  *

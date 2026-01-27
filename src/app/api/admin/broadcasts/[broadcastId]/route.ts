@@ -15,6 +15,8 @@ import {
   deleteBroadcast,
 } from '@/lib/platform/broadcastService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ broadcastId: string }> }

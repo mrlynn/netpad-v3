@@ -17,6 +17,8 @@ import {
   getExtensionSettingsStats,
 } from '@/lib/platform/adminExtensionSettings';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Known extensions that can be managed via the admin UI
  * Cloud extension is controlled by environment variable and cannot be toggled

@@ -16,6 +16,8 @@ import {
   getCostProjection,
 } from '@/lib/ai/aiAnalytics';
 
+export const dynamic = 'force-dynamic';
+
 interface PlatformStats {
   users: {
     total: number;

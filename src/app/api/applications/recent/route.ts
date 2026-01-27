@@ -12,6 +12,8 @@ import { getApplication } from '@/lib/platform/applications';
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { Application } from '@/types/application';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

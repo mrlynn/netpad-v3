@@ -20,6 +20,8 @@ import {
 } from '@/lib/extensions';
 import type { HttpMethod } from '@/lib/extensions/types';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ path: string[] }>;
 }

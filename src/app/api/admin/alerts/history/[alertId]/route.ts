@@ -10,6 +10,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { updateAlertStatus } from '@/lib/platform/alertService';
 import { AlertHistoryStatus } from '@/types/observability';
 
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ alertId: string }> }

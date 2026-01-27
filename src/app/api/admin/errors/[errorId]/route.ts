@@ -15,6 +15,8 @@ import {
   reopenError,
 } from '@/lib/platform/errorTracker';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ errorId: string }> }

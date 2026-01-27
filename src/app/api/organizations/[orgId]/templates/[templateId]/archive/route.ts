@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { assertOrgPermission } from '@/lib/platform/permissions';
 import { archiveTemplate } from '@/lib/conversational/templateService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string; templateId: string }> }

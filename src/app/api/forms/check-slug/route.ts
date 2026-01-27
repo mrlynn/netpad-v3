@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { getOrgFormsCollection } from '@/lib/platform/db';
 import { validateSlug } from '@/lib/slugs';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

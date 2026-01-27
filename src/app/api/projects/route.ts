@@ -14,6 +14,8 @@ import {
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { withTiming } from '@/lib/performance/withTiming';
 
+export const dynamic = 'force-dynamic';
+
 async function handleGET(request: NextRequest) {
   try {
     const session = await getSession();

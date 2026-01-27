@@ -28,6 +28,8 @@ import {
   getDemoAnalytics,
 } from '@/lib/ai/aiAnalytics';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check authentication

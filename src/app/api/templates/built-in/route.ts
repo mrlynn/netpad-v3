@@ -15,6 +15,8 @@ import {
 } from '@/lib/conversational/templates';
 import { TemplateListItem, TemplateCategory } from '@/types/conversational';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();

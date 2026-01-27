@@ -17,6 +17,8 @@ import {
 } from '@/lib/platform/connectionVault';
 import { assertConnectionPermission, checkConnectionPermission } from '@/lib/platform/permissions';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string; vaultId: string }> }

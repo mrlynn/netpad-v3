@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { performTestReset, ResetOptions } from '@/lib/dev/test-reset';
 
+export const dynamic = 'force-dynamic';
+
 // Block in production
 function checkDevMode() {
   if (process.env.NODE_ENV === 'production') {

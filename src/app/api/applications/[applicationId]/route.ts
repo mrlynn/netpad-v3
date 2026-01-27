@@ -18,6 +18,8 @@ import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { checkApplicationPermission } from '@/lib/platform/applicationPermissions';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withTiming(async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ applicationId: string }> }

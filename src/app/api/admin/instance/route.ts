@@ -10,6 +10,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { getRegistryStatus } from '@/lib/extensions/registry';
 import { getDeploymentMode } from '@/lib/runtime/deploymentMode';
 
+export const dynamic = 'force-dynamic';
+
 // Track when the server started
 const serverStartTime = Date.now();
 

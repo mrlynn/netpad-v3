@@ -10,6 +10,8 @@ import { getSession, startImpersonation } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 import { getUsersCollection, getPlatformDb } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();

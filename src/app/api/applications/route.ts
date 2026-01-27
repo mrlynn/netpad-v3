@@ -18,6 +18,8 @@ import { getProject } from '@/lib/platform/projects';
 import { getUserApplications } from '@/lib/platform/applicationPermissions';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withTiming(async function GET(request: NextRequest) {
   try {
     const session = await getSession();

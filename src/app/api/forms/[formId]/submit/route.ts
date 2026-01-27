@@ -10,6 +10,8 @@ import { triggerFormWorkflowsAsync } from '@/lib/workflow/triggerWorkflow';
 import { getOrgFormsCollection, getPlatformDb } from '@/lib/platform/db';
 import { sendCollaboratorNotification } from '@/lib/auth/email';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Validate bot protection on server side
  * Checks honeypot field, timing constraints, and Turnstile token

@@ -14,6 +14,8 @@ import { getUserOrganizations } from '@/lib/platform/organizations';
 import { Organization } from '@/types/platform';
 import { getConversationDetails } from '@/lib/conversational/persistence';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }

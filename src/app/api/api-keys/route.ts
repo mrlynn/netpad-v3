@@ -11,6 +11,8 @@ import { findUserById } from '@/lib/platform/users';
 import { createAPIKey, listAPIKeys } from '@/lib/api/keys';
 import { CreateAPIKeyRequest, CreateAPIKeyResponse, APIKeyListItem } from '@/types/api';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/api-keys
  * List all API keys for the user's organization

@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth/session';
 import { findUserById, isPlatformAdmin } from '@/lib/platform/users';
 import { getWaitlistEntries, WaitlistQueryOptions } from '@/lib/platform/waitlist';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     // Check authentication

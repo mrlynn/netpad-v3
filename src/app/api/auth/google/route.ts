@@ -12,6 +12,8 @@ import { getSession } from '@/lib/auth/session';
 import { getOAuthStatesCollection } from '@/lib/platform/db';
 import { generateSecureId } from '@/lib/encryption';
 
+export const dynamic = 'force-dynamic';
+
 // Google OAuth2 configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || '';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';

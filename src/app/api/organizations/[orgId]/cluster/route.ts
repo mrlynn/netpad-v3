@@ -17,6 +17,8 @@ import {
 } from '@/lib/atlas';
 import { checkOrgPermission } from '@/lib/platform/organizations';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET - Get cluster provisioning status for an organization
  */

@@ -19,6 +19,8 @@ import { provisionM0Cluster, getProvisioningStatus, isAutoProvisioningAvailable 
 import { getPlatformDb } from '@/lib/platform/db';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 interface ProvisionRequest {
   installationId?: string;
   projectName?: string;

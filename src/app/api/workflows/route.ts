@@ -14,6 +14,8 @@ import {
 import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/workflows
  * List workflows for an organization

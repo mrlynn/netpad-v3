@@ -17,6 +17,8 @@ import {
 import { assertOrgPermission, getUserOrgPermissions } from '@/lib/platform/permissions';
 import { withTiming } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withTiming(async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }

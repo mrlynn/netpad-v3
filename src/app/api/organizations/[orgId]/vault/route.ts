@@ -19,6 +19,8 @@ import { repairOrgCreatorMembership } from '@/lib/platform/organizations';
 import { checkConnectionLimit } from '@/lib/platform/usageService';
 import { getProvisionedClusterForOrg } from '@/lib/atlas/provisioning';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orgId: string }> }

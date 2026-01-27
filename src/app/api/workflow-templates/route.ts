@@ -4,6 +4,8 @@ import { getUserOrgPermissions } from '@/lib/platform/permissions';
 import { getWorkflowTemplatesCollection } from '@/lib/platform/db';
 import { WorkflowTemplate } from '@/types/application';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

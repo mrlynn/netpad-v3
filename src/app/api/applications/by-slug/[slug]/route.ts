@@ -11,6 +11,8 @@ import { getUserOrganizations } from '@/lib/platform/organizations';
 import { listAllOrgApplications } from '@/lib/platform/applications';
 import { Application } from '@/types/application';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }

@@ -14,6 +14,8 @@ import {
 } from '@/lib/conversational/templates';
 import { TemplateCategory } from '@/types/conversational';
 
+export const dynamic = 'force-dynamic';
+
 interface CloneRequest {
   orgId: string;
   name?: string;

@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 import { getPlatformMCPStats } from '@/lib/platform/mcpAnalyticsDbOps';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check authentication

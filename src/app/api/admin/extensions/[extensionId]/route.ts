@@ -16,6 +16,8 @@ import {
   deleteExtensionSetting,
 } from '@/lib/platform/adminExtensionSettings';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * System-controlled extensions that cannot be toggled via admin UI
  */

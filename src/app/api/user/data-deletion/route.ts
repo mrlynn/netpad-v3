@@ -6,6 +6,8 @@ import { getAuthDb } from '@/lib/auth/db';
 import { deleteConsentRecord } from '@/lib/consent/db';
 import { ObjectId } from 'mongodb';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/user/data-deletion
  *

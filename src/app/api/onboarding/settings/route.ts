@@ -4,6 +4,8 @@ import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { OnboardingBrandingConfig, DEFAULT_BRANDING } from '@/types/onboarding';
 
+export const dynamic = 'force-dynamic';
+
 // Session configuration
 const sessionOptions = {
   password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long_for_development',

@@ -13,6 +13,8 @@ import {
   getOrganizationsCollection,
 } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }

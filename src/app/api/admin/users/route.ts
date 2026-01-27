@@ -11,6 +11,8 @@ import { isPlatformAdmin } from '@/lib/platform/users';
 import { getUsersCollection, getOrganizationsCollection, getPlatformDb } from '@/lib/platform/db';
 import { ProvisionedCluster } from '@/lib/atlas/types';
 
+export const dynamic = 'force-dynamic';
+
 interface OrgSummary {
   orgId: string;
   name: string;

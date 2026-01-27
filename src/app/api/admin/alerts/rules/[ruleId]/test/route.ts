@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { isPlatformAdmin } from '@/lib/platform/users';
 import { testAlertRule } from '@/lib/platform/alertService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ ruleId: string }> }

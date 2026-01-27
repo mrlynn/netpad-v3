@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getJobQueueStatus, getJobsCollection } from '@/lib/workflow/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/workflows/jobs
  * Get job queue status for an organization

@@ -20,6 +20,8 @@ import { getOrgFormsCollection } from '@/lib/platform/db';
 import { ensureDefaultApplication } from '@/lib/platform/applications';
 import { getProjectDefaultVault } from '@/lib/platform/projects';
 
+export const dynamic = 'force-dynamic';
+
 interface ImportUrlRequest {
   url: string;
   orgId: string;

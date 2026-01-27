@@ -11,6 +11,8 @@ import { getSession } from '@/lib/auth/session';
 import { findUserById } from '@/lib/platform/users';
 import { getAPIKeyById, updateAPIKey, revokeAPIKey, deleteAPIKey, formatAPIKeyToListItem } from '@/lib/api/keys';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ keyId: string }>;
 }

@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
 import { Organization, PlatformUser } from '@/types/platform';
 
+export const dynamic = 'force-dynamic';
+
 type DatabaseChoice = 'auto-provision' | 'byoc' | 'skip';
 
 interface DatabaseSetupRequest {

@@ -16,6 +16,8 @@ import { checkOrgPermission } from '@/lib/platform/organizations';
 import { getProvisionedClusterForOrg, initializeClusterDatabase } from '@/lib/atlas';
 import { getPlatformDb } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST - Initialize database for an existing cluster
  */

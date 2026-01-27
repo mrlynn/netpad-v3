@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession, endImpersonation } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();

@@ -14,6 +14,8 @@ import {
   formatUptime,
 } from '@/lib/platform/deploymentService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check authentication

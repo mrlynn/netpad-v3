@@ -14,6 +14,8 @@ import {
   mapParsedFormToNetPad,
 } from '@/lib/integrations/googleForms';
 
+export const dynamic = 'force-dynamic';
+
 interface ParseUrlRequest {
   url: string;
 }
