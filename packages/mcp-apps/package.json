@@ -1,23 +1,23 @@
 {
   "name": "@netpad/mcp-apps",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Interactive MCP App UIs for NetPad - workflow visualization, template gallery, and form preview",
   "author": "Michael Lynn",
   "license": "Apache-2.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./ui-resources": {
       "types": "./dist/ui-resources.d.ts",
-      "import": "./dist/ui-resources.mjs",
-      "require": "./dist/ui-resources.js"
+      "import": "./dist/ui-resources.js",
+      "require": "./dist/ui-resources.cjs"
     },
     "./workflow-viewer.html": "./dist/workflow-viewer.html",
     "./template-gallery.html": "./dist/template-gallery.html",

@@ -915,7 +915,7 @@ export function WorkflowEditorCanvas({
         }}
         connectionLineStyle={{
           stroke: theme.palette.primary.main,
-          strokeWidth: 2,
+          strokeWidth: 0.5,
         }}
         snapToGrid
         snapGrid={[15, 15]}

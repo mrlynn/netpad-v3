@@ -26,6 +26,10 @@
       "destination": "/api/oauth-protected-resource"
     },
     {
+      "source": "/.well-known/openai-apps-challenge",
+      "destination": "/api/.well-known/openai-apps-challenge"
+    },
+    {
       "source": "/oauth-metadata",
       "destination": "/api/oauth-metadata"
     },

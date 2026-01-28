@@ -49,7 +49,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
   const [animated, setAnimated] = useState(true);
   const [edgeType, setEdgeType] = useState<WorkflowEdgeType>('default');
   const [strokeColor, setStrokeColor] = useState('');
-  const [strokeWidth, setStrokeWidth] = useState<number>(2);
+  const [strokeWidth, setStrokeWidth] = useState<number>(0.5);
 
   // Sync local state with selected edge
   useEffect(() => {
@@ -59,7 +59,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
       setAnimated(selectedEdge.animated !== false);
       setEdgeType(selectedEdge.type || 'default');
       setStrokeColor(selectedEdge.style?.stroke || '');
-      setStrokeWidth(selectedEdge.style?.strokeWidth || 2);
+      setStrokeWidth(selectedEdge.style?.strokeWidth || 0.5);
     }
   }, [selectedEdge]);
 
@@ -77,7 +77,7 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
             ...(conditionLabel ? { label: conditionLabel } : {}),
           }
         : undefined,
-      style: strokeColor || strokeWidth !== 2
+      style: strokeColor || strokeWidth !== 0.5
         ? {
             stroke: strokeColor || undefined,
             strokeWidth: strokeWidth || undefined,
@@ -317,9 +317,19 @@ export function EdgeConfigPanel({ open, onClose }: EdgeConfigPanelProps) {
               label="Stroke Width"
               type="number"
               value={strokeWidth}
-              onChange={(e) => setStrokeWidth(Number(e.target.value))}
-              inputProps={{ min: 1, max: 10 }}
-              helperText="Line thickness (1-10)"
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val >= 0.1 && val <= 10) {
+                  setStrokeWidth(val);
+                }
+              }}
+              inputProps={{ 
+                min: 0.1, 
+                max: 10, 
+                step: 0.1,
+                inputMode: 'decimal'
+              }}
+              helperText="Line thickness (0.1-10, supports decimals)"
             />
           </AccordionDetails>
         </Accordion>

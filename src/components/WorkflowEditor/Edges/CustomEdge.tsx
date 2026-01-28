@@ -37,7 +37,7 @@ export function CustomEdge({
 
   // Use custom stroke color if provided, otherwise use default
   const strokeColor = style?.stroke || defaultStroke;
-  const strokeWidth = style?.strokeWidth || 2.5;
+  const strokeWidth = style?.strokeWidth || 0.5;
 
   // Get the path based on edge type (default is bezier)
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -108,7 +108,7 @@ export function CustomStraightEdge(props: EdgeProps) {
     : theme.palette.primary.main;
 
   const strokeColor = props.style?.stroke || defaultStroke;
-  const strokeWidth = props.style?.strokeWidth || 2.5;
+  const strokeWidth = props.style?.strokeWidth || 0.5;
 
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX: props.sourceX,
@@ -175,7 +175,7 @@ export function CustomStepEdge(props: EdgeProps) {
     : theme.palette.primary.main;
 
   const strokeColor = props.style?.stroke || defaultStroke;
-  const strokeWidth = props.style?.strokeWidth || 2.5;
+  const strokeWidth = props.style?.strokeWidth || 0.5;
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX: props.sourceX,
@@ -245,7 +245,7 @@ export function CustomSmoothStepEdge(props: EdgeProps) {
     : theme.palette.primary.main;
 
   const strokeColor = props.style?.stroke || defaultStroke;
-  const strokeWidth = props.style?.strokeWidth || 2.5;
+  const strokeWidth = props.style?.strokeWidth || 0.5;
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX: props.sourceX,

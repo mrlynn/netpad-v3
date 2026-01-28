@@ -1,7 +1,7 @@
 {
   "id": "contact",
   "name": "Contact Form",
-  "description": "Name, email, message",
+  "description": "Name, email, phone, message",
   "icon": "📧",
   "category": "business",
   "fields": [
@@ -20,8 +20,8 @@
       "required": true
     },
     {
-      "path": "subject",
-      "label": "Subject",
+      "path": "phone",
+      "label": "Phone",
       "type": "string",
       "included": true,
       "required": false
