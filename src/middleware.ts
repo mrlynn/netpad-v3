@@ -85,6 +85,7 @@ const PUBLIC_API_ROUTES = [
   '/api/waitlist/signup', // Waitlist signup endpoint
   '/api/workflows/process', // Workflow cron processor (has separate CRON_SECRET auth)
   '/api/workflows/public/', // Public workflow execution endpoints
+  '/api/workflows/import', // Workflow import from ChatGPT/Claude (rate limited, no auth)
   '/api/templates/import', // Template import (supports API key auth)
   '/api/marketplace/applications', // Marketplace browsing (read-only for waitlist users)
   '/api/landing/', // Landing page form generator (guest access with rate limiting)
