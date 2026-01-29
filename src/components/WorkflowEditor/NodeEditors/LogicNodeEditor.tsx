@@ -19,7 +19,7 @@ const LOGIC_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
     { key: 'cases', label: 'Cases', type: 'switch-cases', description: 'Define case values and their output branches' },
   ],
   'loop': [
-    { key: 'iterateOver', label: 'Iterate Over', type: 'text', description: 'Path to array to iterate (e.g., nodes.formTrigger.data.items)' },
+    { key: 'iterateOver', label: 'Iterate Over', type: 'text', description: 'Path to array to iterate (e.g., nodes.<nodeId>.data.items — use upstream node reference ID)' },
     { key: 'itemVariable', label: 'Item Variable Name', type: 'text', description: 'Variable name for current item (default: "item")' },
   ],
   'delay': [

@@ -133,7 +133,7 @@ export interface RAGDocumentChunk {
   endChar?: number;
 
   // Embedding
-  /** Vector embedding (1536 dims for text-embedding-3-small) */
+  /** Vector embedding (dimensions vary by model: 1024 for Voyage 4, 1536 for OpenAI) */
   embedding: number[];
 
   /** Embedding model used */
@@ -159,6 +159,16 @@ export interface RAGRetrievalConfig {
 
   /** Confidence threshold to trigger retrieval (default: 0.5) */
   retrievalThreshold: number;
+
+  /** Reranking configuration (optional, for two-stage retrieval) */
+  reranking?: {
+    /** Enable reranking (default: true if provider is available) */
+    enabled: boolean;
+    /** Number of candidates to retrieve before reranking (default: 20) */
+    initialK?: number;
+    /** Reranking model to use (e.g., 'rerank-2.5-lite') */
+    model?: string;
+  };
 }
 
 /**
@@ -193,8 +203,14 @@ export interface RetrievedChunk {
   /** Chunk text content */
   text: string;
 
-  /** Similarity score (0-1) */
+  /** Similarity score (0-1) - final score (rerank if used, otherwise vector) */
   score: number;
+
+  /** Original vector similarity score (preserved when reranking is used) */
+  vectorScore?: number;
+
+  /** Reranking relevance score (if reranking was used) */
+  rerankScore?: number;
 
   /** Chunk metadata */
   metadata: {
@@ -410,22 +426,11 @@ export const EMBEDDING_DIMENSIONS = 1536;
 
 /**
  * Model-to-dimensions mapping for all supported embedding models
+ *
+ * @deprecated Use getModelDimensions from '@/lib/ai/embeddings/base' instead.
+ * This is maintained for backward compatibility but imports from the canonical source.
  */
-export const EMBEDDING_MODEL_DIMENSIONS: Record<string, number> = {
-  // OpenAI models
-  'text-embedding-3-small': 1536,
-  'text-embedding-3-large': 3072,
-  'text-embedding-ada-002': 1536,
-
-  // Voyage AI models
-  'voyage-3': 1024,
-  'voyage-3-lite': 512,
-  'voyage-code-3': 1536,
-  'voyage-3-large': 1024,
-
-  // Atlas AI (uses Voyage)
-  'atlas-ai-default': 1024,
-};
+import { getModelDimensions as getModelDimensionsFromBase } from '@/lib/ai/embeddings/base';
 
 /**
  * Get dimensions for an embedding model
@@ -434,7 +439,7 @@ export const EMBEDDING_MODEL_DIMENSIONS: Record<string, number> = {
  * @returns Dimensions for the model, or default 1536 if unknown
  */
 export function getEmbeddingDimensions(model: string): number {
-  return EMBEDDING_MODEL_DIMENSIONS[model] ?? EMBEDDING_DIMENSIONS;
+  return getModelDimensionsFromBase(model) ?? EMBEDDING_DIMENSIONS;
 }
 
 /**
@@ -447,6 +452,7 @@ export const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024;
  */
 export const SUPPORTED_MIME_TYPES = [
   'text/plain',
+  'text/markdown',
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',

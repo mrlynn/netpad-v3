@@ -3473,6 +3473,10 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
         ],
       },
       {
+        type: 'tip',
+        content: 'Node reference IDs: Use the reference ID of an upstream node (e.g. Form Submission) in place of "formTrigger" below. Find it in Node Configuration > Node references, or hover over a node on the canvas to see its reference (e.g. nodes.form-trigger_abc123).',
+      },
+      {
         type: 'heading',
         content: 'HTML Email Example',
       },
@@ -3595,6 +3599,10 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Expression: JavaScript expression that returns transformed data',
           'Mapping: Map source fields to target fields with optional transforms',
         ],
+      },
+      {
+        type: 'tip',
+        content: 'Node reference IDs: Replace "formTrigger" in the example with your upstream node\'s reference ID. Find it in Node Configuration > Node references, or hover over a node on the canvas (e.g. nodes.form-trigger_abc123).',
       },
       {
         type: 'heading',
@@ -5857,9 +5865,9 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Start with high-quality documents like official policies, FAQs, and procedures. Well-structured documents with clear headings produce better retrieval results.',
       },
       {
-        type: 'warning',
+        type: 'tip',
         content:
-          'For cloud deployments (netpad.io), knowledge-guided forms require a Team tier subscription AND MongoDB Atlas M10+ cluster for vector search. Self-hosted deployments can use Atlas Local (Docker) to enable these features without an M10 upgrade.',
+          'Knowledge-guided forms require a PRO, TEAMS, or ENTERPRISE subscription and work with any Atlas cluster tier (including M0 free tier). For production workloads with high availability requirements, M10+ clusters are recommended.',
       },
       {
         type: 'example',
@@ -6086,7 +6094,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Automatic updates and security patches',
           'Built-in team collaboration features',
           'Premium features like advanced analytics',
-          'RAG/Vector Search features require Team tier subscription + M10+ Atlas cluster',
+          'Knowledge-guided forms (RAG) require PRO/TEAMS/ENTERPRISE subscription (any cluster tier)',
           'Data stored on our managed infrastructure',
           'Environment variable: NETPAD_DEPLOYMENT_MODE=cloud',
         ],
@@ -6284,8 +6292,8 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
-          'Cloud Mode: Running as hosted SaaS (e.g., netpad.io on Vercel). RAG features require Team tier subscription AND M10+ Atlas cluster for production reliability.',
-          'Self-Hosted Mode: Running privately or locally. RAG features available to ALL subscription tiers when using Atlas Local for Vector Search.',
+          'Cloud Mode: Running as hosted SaaS (e.g., netpad.io on Vercel). Knowledge-guided forms (RAG) require PRO/TEAMS/ENTERPRISE subscription and work with any Atlas cluster tier.',
+          'Self-Hosted Mode: Running privately or locally. Knowledge-guided forms available to ALL subscription tiers with any MongoDB instance (Atlas or Atlas Local).',
         ],
       },
       {

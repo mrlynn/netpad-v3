@@ -189,37 +189,61 @@ function getOverlapText(text: string, overlapSize: number): string {
 
 /**
  * Extract text from a document given its URL and MIME type
+ *
+ * @param blobUrl - URL to the document
+ * @param mimeType - MIME type (may be incorrect if from blob storage)
+ * @param fileName - Optional filename to use as fallback for type detection
  */
 export async function extractTextFromDocument(
   blobUrl: string,
-  mimeType: string
+  mimeType: string,
+  fileName?: string
 ): Promise<string> {
+  // Normalize MIME type using filename as fallback
+  // Blob storage may return application/octet-stream for unknown types
+  let normalizedMimeType = mimeType;
+
+  if ((!mimeType || mimeType === 'application/octet-stream') && fileName) {
+    const ext = fileName.toLowerCase();
+    if (ext.endsWith('.md') || ext.endsWith('.markdown')) {
+      normalizedMimeType = 'text/markdown';
+    } else if (ext.endsWith('.txt')) {
+      normalizedMimeType = 'text/plain';
+    } else if (ext.endsWith('.pdf')) {
+      normalizedMimeType = 'application/pdf';
+    } else if (ext.endsWith('.docx')) {
+      normalizedMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (ext.endsWith('.doc')) {
+      normalizedMimeType = 'application/msword';
+    }
+  }
+
   // Validate MIME type
-  if (!isSupportedMimeType(mimeType)) {
+  if (!isSupportedMimeType(normalizedMimeType)) {
     throw new Error(
-      `Unsupported MIME type: ${mimeType}. Supported types: ${SUPPORTED_MIME_TYPES.join(', ')}`
+      `Unsupported MIME type: ${normalizedMimeType}. Supported types: ${SUPPORTED_MIME_TYPES.join(', ')}`
     );
   }
 
-  // Plain text
-  if (mimeType === 'text/plain') {
+  // Plain text and markdown
+  if (normalizedMimeType === 'text/plain' || normalizedMimeType === 'text/markdown') {
     return extractPlainText(blobUrl);
   }
 
   // PDF
-  if (mimeType === 'application/pdf') {
+  if (normalizedMimeType === 'application/pdf') {
     return extractPdfText(blobUrl);
   }
 
   // Word documents
   if (
-    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    mimeType === 'application/msword'
+    normalizedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    normalizedMimeType === 'application/msword'
   ) {
     return extractDocxText(blobUrl);
   }
 
-  throw new Error(`Extraction not implemented for: ${mimeType}`);
+  throw new Error(`Extraction not implemented for: ${normalizedMimeType}`);
 }
 
 /**
@@ -246,7 +270,8 @@ async function extractPlainText(blobUrl: string): Promise<string> {
  * Extract text from PDF using pdf-parse
  */
 async function extractPdfText(blobUrl: string): Promise<string> {
-  const { PDFParse } = await import('pdf-parse');
+  // pdf-parse exports a default function, not a named export
+  const pdfParse = (await import('pdf-parse')).default;
 
   const response = await fetch(blobUrl);
   if (!response.ok) {
@@ -254,14 +279,12 @@ async function extractPdfText(blobUrl: string): Promise<string> {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const data = new Uint8Array(arrayBuffer);
+  const buffer = Buffer.from(arrayBuffer);
 
-  const parser = new PDFParse({ data });
-  const textResult = await parser.getText();
-  await parser.destroy();
+  // pdf-parse expects a Buffer and returns a promise with { text, numpages, info, metadata, version }
+  const data = await pdfParse(buffer);
 
-  // TextResult has a .text property with concatenated text from all pages
-  return textResult.text;
+  return data.text;
 }
 
 /**

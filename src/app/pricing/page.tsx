@@ -468,7 +468,7 @@ export default function PricingPage() {
                                       {highlight}
                                       {isRAGFeature && (
                                         <Tooltip
-                                          title="Requires MongoDB Atlas M10+ cluster for Vector Search"
+                                          title="Works with any Atlas cluster tier; M10+ recommended for production"
                                           arrow
                                         >
                                           <Typography
@@ -928,7 +928,7 @@ export default function PricingPage() {
               },
               {
                 q: 'What are Knowledge-Guided Conversational Forms (RAG)?',
-                a: 'RAG features allow conversational forms to answer questions using builder-supplied documents. This requires Team plan or higher and a MongoDB Atlas M10+ cluster (for Vector Search). You can upgrade your Atlas cluster directly in the MongoDB Atlas Console.',
+                a: 'Knowledge-Guided Conversational Forms allow your forms to answer questions using your own documents. Available with PRO, TEAMS, or ENTERPRISE subscription and works with any Atlas cluster tier (including M0 free tier). M10+ clusters are recommended for production workloads.',
               },
             ].map((faq, index) => (
               <Grid item xs={12} md={6} key={index}>

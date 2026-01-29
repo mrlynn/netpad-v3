@@ -64,10 +64,6 @@ export function TagsArrayInput({
     // Use Autocomplete for suggestions
     return (
       <Box>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-          {label}
-        </Typography>
-
         <Autocomplete
           multiple
           freeSolo={allowCustom}
@@ -122,10 +118,6 @@ export function TagsArrayInput({
   // Simple input without autocomplete
   return (
     <Box>
-      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-        {label}
-      </Typography>
-
       <Paper
         elevation={0}
         sx={{

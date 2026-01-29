@@ -73,13 +73,11 @@ export const POST = withTiming(async function POST(request: NextRequest) {
     const formConfig: FormConfiguration = body.formConfig;
     const publish = body.publish ?? false;
 
-    // Debug: Log what the API received (full body for debugging)
-    console.log('[API forms-save] Received body:', JSON.stringify(body, null, 2));
-    console.log('[API forms-save] Received formConfig theme:', {
-      hasTheme: !!formConfig?.theme,
-      theme: formConfig?.theme,
-      pageBackgroundColor: formConfig?.theme?.pageBackgroundColor,
-      pageBackgroundGradient: formConfig?.theme?.pageBackgroundGradient,
+    // Debug: Log what the API received
+    console.log('[API forms-save] Received formConfig conversationalConfig:', {
+      hasConversationalConfig: !!formConfig?.conversationalConfig,
+      conversationalConfig: JSON.stringify(formConfig?.conversationalConfig),
+      formType: formConfig?.formType,
     });
     console.log('[API forms-save] Received formConfig dataSource:', {
       hasDataSource: !!formConfig?.dataSource,
@@ -220,8 +218,15 @@ export const POST = withTiming(async function POST(request: NextRequest) {
         );
       }
 
-      // Build savedForm, explicitly handling dataSource, organizationId, projectId, and applicationId to preserve them
-      const { dataSource: formDataSource, organizationId: formOrgId, projectId: formProjectId, applicationId: formApplicationId, ...restFormConfig } = formConfig;
+      // Build savedForm, explicitly handling dataSource, organizationId, projectId, applicationId, and conversationalConfig to preserve them
+      const {
+        dataSource: formDataSource,
+        organizationId: formOrgId,
+        projectId: formProjectId,
+        applicationId: formApplicationId,
+        conversationalConfig: formConversationalConfig,
+        ...restFormConfig
+      } = formConfig;
 
       // Determine applicationId: use provided, existing, or ensure default app exists
       let finalApplicationId = formApplicationId || existing.applicationId;
@@ -245,6 +250,12 @@ export const POST = withTiming(async function POST(request: NextRequest) {
         finalDataSource = await ensureDataSource(finalDataSource, finalProjectId, formConfig.name);
       }
 
+      // Determine conversationalConfig: use provided or preserve existing
+      // IMPORTANT: Don't let undefined overwrite existing config
+      const finalConversationalConfig = formConversationalConfig !== undefined
+        ? formConversationalConfig
+        : existing.conversationalConfig;
+
       savedForm = {
         ...existing,
         ...restFormConfig,
@@ -253,11 +264,12 @@ export const POST = withTiming(async function POST(request: NextRequest) {
         updatedAt: now,
         isPublished: publish ? true : existing.isPublished,
         publishedAt: publish && !existing.publishedAt ? now : existing.publishedAt,
-        // Explicitly preserve dataSource, organizationId, projectId, and applicationId
+        // Explicitly preserve dataSource, organizationId, projectId, applicationId, and conversationalConfig
         dataSource: finalDataSource,
         organizationId: formOrgId !== undefined ? formOrgId : existing.organizationId,
         projectId: finalProjectId,
         applicationId: finalApplicationId,
+        conversationalConfig: finalConversationalConfig,
       };
     } else {
       // Create new form
@@ -310,6 +322,10 @@ export const POST = withTiming(async function POST(request: NextRequest) {
       collection: savedForm.dataSource?.collection,
       organizationId: savedForm.organizationId,
     });
+    console.log('[API forms-save] Saving form with conversationalConfig:', {
+      hasConversationalConfig: !!savedForm.conversationalConfig,
+      hasRAG: !!savedForm.conversationalConfig?.rag,
+    });
 
     // Save to file storage (platform database - session-based)
     await saveForm(sessionId, savedForm);
@@ -328,11 +344,17 @@ export const POST = withTiming(async function POST(request: NextRequest) {
           slug: savedForm.slug,
           organizationId: savedForm.organizationId,
           projectId: savedForm.projectId,
-          applicationId: savedForm.applicationId, // Phase 2: Include applicationId
+          applicationId: savedForm.applicationId,
           fieldConfigs: savedForm.fieldConfigs,
           variables: savedForm.variables,
+          multiPage: savedForm.multiPage,
+          lifecycle: savedForm.lifecycle,
           theme: savedForm.theme,
+          formType: savedForm.formType,
+          searchConfig: savedForm.searchConfig,
+          conversationalConfig: savedForm.conversationalConfig,
           dataSource: savedForm.dataSource,
+          accessControl: savedForm.accessControl,
           connectionString: savedForm.connectionString,
           database: savedForm.database,
           collection: savedForm.collection,
@@ -342,7 +364,6 @@ export const POST = withTiming(async function POST(request: NextRequest) {
           createdAt: savedForm.createdAt,
           updatedAt: savedForm.updatedAt,
           thumbnailUrl: savedForm.thumbnailUrl,
-          conversationalConfig: savedForm.conversationalConfig,
         };
 
         await orgFormsCollection.updateOne(

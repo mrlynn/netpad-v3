@@ -45,6 +45,7 @@ import { URLParamConfigEditor } from './URLParamConfigEditor';
 import { QuestionTypeAttributeEditor } from './QuestionTypeAttributeEditor';
 import { FieldEncryptionSettings } from './FieldEncryptionSettings';
 import { HelpButton } from '@/components/Help';
+import { RichTextEditor } from './RichTextEditor';
 
 // Layout field types
 const LAYOUT_FIELD_TYPES: LayoutFieldType[] = ['section-header', 'description', 'divider', 'image', 'spacer'];
@@ -220,41 +221,52 @@ export function FieldDetailPanel({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {config.layout?.type === 'section-header' && (
               <>
-                <TextField
-                  size="small"
-                  label="Section Title"
-                  value={config.layout.title || ''}
-                  onChange={(e) => onUpdateField(config.path, {
-                    layout: { ...config.layout!, title: e.target.value },
-                    label: e.target.value
-                  })}
-                  fullWidth
-                />
-                <TextField
-                  size="small"
-                  label="Subtitle"
-                  value={config.layout.subtitle || ''}
-                  onChange={(e) => onUpdateField(config.path, {
-                    layout: { ...config.layout!, subtitle: e.target.value }
-                  })}
-                  fullWidth
-                  multiline
-                  rows={2}
-                />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    Section Title
+                  </Typography>
+                  <RichTextEditor
+                    value={config.layout.title || ''}
+                    onChange={(html) => onUpdateField(config.path, {
+                      layout: { ...config.layout!, title: html, contentType: 'html' },
+                      label: html.replace(/<[^>]*>/g, '').substring(0, 50) // Plain text version for label
+                    })}
+                    placeholder="Enter section title..."
+                    variant="title"
+                    minHeight={36}
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    Subtitle / Description
+                  </Typography>
+                  <RichTextEditor
+                    value={config.layout.subtitle || ''}
+                    onChange={(html) => onUpdateField(config.path, {
+                      layout: { ...config.layout!, subtitle: html, contentType: 'html' }
+                    })}
+                    placeholder="Optional subtitle or description..."
+                    variant="description"
+                    minHeight={48}
+                  />
+                </Box>
               </>
             )}
             {config.layout?.type === 'description' && (
-              <TextField
-                size="small"
-                label="Text Content"
-                value={config.layout.content || ''}
-                onChange={(e) => onUpdateField(config.path, {
-                  layout: { ...config.layout!, content: e.target.value }
-                })}
-                fullWidth
-                multiline
-                rows={4}
-              />
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                  Description Content
+                </Typography>
+                <RichTextEditor
+                  value={config.layout.content || ''}
+                  onChange={(html) => onUpdateField(config.path, {
+                    layout: { ...config.layout!, content: html, contentType: 'html' }
+                  })}
+                  placeholder="Enter description or instructions..."
+                  variant="description"
+                  minHeight={80}
+                />
+              </Box>
             )}
             {config.layout?.type === 'image' && (
               <>

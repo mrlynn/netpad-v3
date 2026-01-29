@@ -23,6 +23,13 @@ import {
   Alert,
   Tooltip,
   Theme,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Snackbar,
 } from '@mui/material';
 import {
   Add,
@@ -40,6 +47,9 @@ import {
   Description,
   TouchApp,
   BubbleChart,
+  MoreVert,
+  Delete,
+  DriveFileMove,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -47,6 +57,7 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { getAppUrl } from '@/lib/routing';
+import { MoveToApplicationDialog } from '@/components/common/MoveToApplicationDialog';
 
 interface WorkflowStats {
   totalExecutions: number;
@@ -81,6 +92,7 @@ interface WorkflowCardProps {
   theme: Theme;
   appSlug: string;
   formatDate: (dateString?: string) => string;
+  onMenuOpen: (event: React.MouseEvent<HTMLElement>, workflowId: string) => void;
 }
 
 const WorkflowCard = memo(function WorkflowCard({
@@ -88,6 +100,7 @@ const WorkflowCard = memo(function WorkflowCard({
   theme,
   appSlug,
   formatDate,
+  onMenuOpen,
 }: WorkflowCardProps) {
   // Count nodes (excluding edges)
   const nodeCount = workflow.canvas?.nodes?.length || 0;
@@ -240,6 +253,9 @@ const WorkflowCard = memo(function WorkflowCard({
               </Typography>
             )}
           </Box>
+          <IconButton size="small" onClick={(e) => onMenuOpen(e, workflow.id)}>
+            <MoreVert fontSize="small" />
+          </IconButton>
         </Box>
 
         {/* Info chips */}
@@ -386,6 +402,19 @@ export default function AppWorkflowsPage() {
   const [newWorkflowDescription, setNewWorkflowDescription] = useState('');
   const [creating, setCreating] = useState(false);
 
+  // Menu state
+  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement | null; workflowId: string | null }>({
+    el: null,
+    workflowId: null,
+  });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [workflowToMove, setWorkflowToMove] = useState<Workflow | null>(null);
+
   const appSlug = currentApplication?.slug || '';
   const applicationId = currentApplication?.applicationId;
   const projectId = currentApplication?.projectId;
@@ -428,6 +457,92 @@ export default function AppWorkflowsPage() {
     (wf.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (wf.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, workflowId: string) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setMenuAnchor({ el: event.currentTarget, workflowId });
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor({ el: null, workflowId: null });
+  };
+
+  const handleMoveClick = (workflow: Workflow) => {
+    setWorkflowToMove(workflow);
+    setMoveDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleMoveWorkflow = async (targetApplicationId: string, targetApplicationName: string) => {
+    if (!workflowToMove || !currentOrgId) return;
+
+    try {
+      const response = await fetch(`/api/workflows/${workflowToMove.id}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: currentOrgId,
+          targetApplicationId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to move workflow');
+      }
+
+      setSnackbar({
+        open: true,
+        message: `Workflow moved to "${targetApplicationName}"`,
+        severity: 'success',
+      });
+
+      // Reload workflows to reflect the change
+      loadWorkflows();
+    } catch (error) {
+      console.error('Error moving workflow:', error);
+      setSnackbar({
+        open: true,
+        message: error instanceof Error ? error.message : 'Failed to move workflow',
+        severity: 'error',
+      });
+      throw error;
+    } finally {
+      setWorkflowToMove(null);
+    }
+  };
+
+  const handleDelete = async (workflowId: string) => {
+    if (!confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}?orgId=${currentOrgId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete workflow');
+      }
+
+      setSnackbar({ open: true, message: 'Workflow deleted successfully', severity: 'success' });
+      loadWorkflows();
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      setSnackbar({
+        open: true,
+        message: error instanceof Error ? error.message : 'Failed to delete workflow',
+        severity: 'error',
+      });
+    }
+
+    handleMenuClose();
+  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -561,6 +676,7 @@ export default function AppWorkflowsPage() {
                   theme={theme}
                   appSlug={appSlug}
                   formatDate={formatDate}
+                  onMenuOpen={handleMenuOpen}
                 />
               </Grid>
             ))}
@@ -604,6 +720,84 @@ export default function AppWorkflowsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Workflow Context Menu */}
+      <Menu
+        anchorEl={menuAnchor.el}
+        open={Boolean(menuAnchor.el)}
+        onClose={handleMenuClose}
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              minWidth: 180,
+            },
+          },
+        }}
+      >
+        <MenuItem
+          component={Link}
+          href={`${getAppUrl(appSlug, 'workflows')}/${menuAnchor.workflowId}`}
+          onClick={handleMenuClose}
+        >
+          <ListItemIcon>
+            <Edit fontSize="small" sx={{ color: theme.palette.info.main }} />
+          </ListItemIcon>
+          <ListItemText>Edit Workflow</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            const workflow = workflows.find((w) => w.id === menuAnchor.workflowId);
+            if (workflow) handleMoveClick(workflow);
+          }}
+        >
+          <ListItemIcon>
+            <DriveFileMove fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Move to Application</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => menuAnchor.workflowId && handleDelete(menuAnchor.workflowId)}
+          sx={{ color: 'error.main' }}
+        >
+          <ListItemIcon>
+            <Delete fontSize="small" sx={{ color: 'error.main' }} />
+          </ListItemIcon>
+          <ListItemText>Delete Workflow</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Move to Application Dialog */}
+      <MoveToApplicationDialog
+        open={moveDialogOpen}
+        onClose={() => {
+          setMoveDialogOpen(false);
+          setWorkflowToMove(null);
+        }}
+        onMove={handleMoveWorkflow}
+        currentApplicationId={applicationId}
+        itemType="workflow"
+        itemName={workflowToMove?.name || 'Untitled Workflow'}
+      />
     </Box>
   );
 }

@@ -30,7 +30,10 @@
     "seed:collaborator-form": "tsx scripts/seed-collaborator-form.ts",
     "publish:it-helpdesk": "tsx scripts/publish-it-helpdesk-marketplace.ts",
     "benchmark": "tsx scripts/benchmark.ts",
-    "benchmark:headed": "tsx scripts/benchmark.ts --headed"
+    "benchmark:headed": "tsx scripts/benchmark.ts --headed",
+    "setup-rag-index": "tsx scripts/rag/setup-vector-index.ts",
+    "setup-rag-db": "tsx scripts/rag/setup-database-only.ts",
+    "list-orgs": "tsx scripts/rag/list-organizations.ts"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.3",
@@ -69,7 +72,7 @@
     "nodemailer": "^7.0.11",
     "npm-registry-fetch": "^19.1.1",
     "openai": "^6.15.0",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "^1.1.4",
     "react": "^18.3.1",
     "react-confetti": "^6.4.0",
     "react-dom": "^18.3.1",
@@ -99,6 +102,8 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "archiver": "^7.0.1",
+    "axios": "^1.13.4",
+    "dotenv": "^17.2.3",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
     "jest": "^29.7.0",

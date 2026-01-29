@@ -25,11 +25,6 @@ jest.mock('@/lib/workflow/db', () => ({
   getActiveWorkflowVersion: jest.fn(),
 }));
 
-// Mock billing module
-jest.mock('@/lib/platform/billing', () => ({
-  updateWorkflowExecutionResult: jest.fn(),
-}));
-
 // Mock connection vault
 jest.mock('@/lib/platform/connectionVault', () => ({
   getDecryptedConnectionString: jest.fn(),

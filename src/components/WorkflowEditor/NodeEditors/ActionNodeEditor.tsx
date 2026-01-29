@@ -27,7 +27,7 @@ const ACTION_CONFIG_SCHEMAS: Record<string, ConfigField[]> = {
       key: 'to',
       label: 'To',
       type: 'text',
-      description: 'Recipient email (use {{nodes.formTrigger.data.email}} for form field)',
+      description: 'Recipient email — use variable picker or {{nodes.<nodeId>.data.email}} with an upstream node\'s reference ID',
       required: true,
       aiAssist: {
         enabled: true,

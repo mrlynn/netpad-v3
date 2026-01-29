@@ -3,6 +3,7 @@
 import React from 'react';
 import { Background, BackgroundVariant } from 'reactflow';
 import { Box, useTheme } from '@mui/material';
+import { CanvasVisualSettings } from '@/types/workflow';
 
 interface NetPadBrandedBackgroundProps {
   variant?: BackgroundVariant;
@@ -10,6 +11,24 @@ interface NetPadBrandedBackgroundProps {
   size?: number;
   color?: string;
   isEmbedded?: boolean;
+  showWatermark?: boolean;
+  watermarkOpacity?: number;
+  visualSettings?: CanvasVisualSettings;
+}
+
+/**
+ * Maps the visual settings pattern type to ReactFlow BackgroundVariant
+ */
+function getBackgroundVariant(pattern?: CanvasVisualSettings['backgroundPattern']): BackgroundVariant {
+  switch (pattern) {
+    case 'lines':
+      return BackgroundVariant.Lines;
+    case 'cross':
+      return BackgroundVariant.Cross;
+    case 'dots':
+    default:
+      return BackgroundVariant.Dots;
+  }
 }
 
 /**
@@ -17,16 +36,28 @@ interface NetPadBrandedBackgroundProps {
  * Enhances the default Background with NetPad-specific branding elements
  */
 export function NetPadBrandedBackground({
-  variant = BackgroundVariant.Dots,
-  gap = 20,
-  size = 1,
+  variant,
+  gap,
+  size,
   color,
+  showWatermark = true,
+  watermarkOpacity = 0.035,
+  visualSettings,
 }: NetPadBrandedBackgroundProps) {
   const theme = useTheme();
   const colorMode = theme.palette.mode;
 
-  // More visible NetPad-branded dot colors
-  const dotColor = color || (colorMode === 'dark'
+  // Use visual settings if provided, otherwise fall back to props
+  const effectiveVariant = visualSettings
+    ? getBackgroundVariant(visualSettings.backgroundPattern)
+    : (variant ?? BackgroundVariant.Dots);
+  const effectiveGap = visualSettings?.backgroundGap ?? gap ?? 20;
+  const effectiveSize = visualSettings?.backgroundSize ?? size ?? 1;
+  const effectiveShowWatermark = visualSettings?.showWatermark ?? showWatermark;
+  const effectiveWatermarkOpacity = visualSettings?.watermarkOpacity ?? watermarkOpacity;
+
+  // Determine pattern color - use custom color if set, otherwise theme-aware defaults
+  const patternColor = visualSettings?.backgroundPatternColor || color || (colorMode === 'dark'
     ? 'rgba(0, 237, 100, 0.15)' // More visible green dots in dark mode
     : 'rgba(0, 104, 74, 0.2)'   // More visible green dots in light mode
   );
@@ -34,40 +65,42 @@ export function NetPadBrandedBackground({
   return (
     <>
       <Background
-        variant={variant}
-        gap={gap}
-        size={size}
-        color={dotColor}
+        variant={effectiveVariant}
+        gap={effectiveGap}
+        size={effectiveSize}
+        color={patternColor}
       />
 
       {/* Large centered NetPad logo watermark */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          userSelect: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      {effectiveShowWatermark && (
         <Box
-          component="img"
-          src="/netpad-logo.svg"
-          alt=""
           sx={{
-            width: 200,
-            height: 200,
-            opacity: 0.035,
-            filter: colorMode === 'dark'
-              ? 'brightness(0) invert(1)'
-              : 'brightness(0)',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-        />
-      </Box>
+        >
+          <Box
+            component="img"
+            src="/netpad-logo.svg"
+            alt=""
+            sx={{
+              width: 200,
+              height: 200,
+              opacity: effectiveWatermarkOpacity,
+              filter: colorMode === 'dark'
+                ? 'brightness(0) invert(1)'
+                : 'brightness(0)',
+            }}
+          />
+        </Box>
+      )}
     </>
   );
 }

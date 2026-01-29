@@ -164,35 +164,49 @@ function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNode
     }
   };
 
+  const referenceId = `nodes.${data.id}`;
+
   return (
     <Box sx={{ position: 'relative' }}>
-      <Paper
-        elevation={selected ? 4 : 1}
-        sx={{
-          minWidth: 180,
-          maxWidth: 250,
-          borderRadius: 2,
-          overflow: 'hidden',
-          border: `2px solid ${selected ? nodeColor : 'transparent'}`,
-          opacity: data.enabled === false ? 0.5 : 1,
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            boxShadow: theme.shadows[4],
-          },
-        }}
+      <Tooltip
+        title={
+          <Box component="span" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            Reference: {referenceId}
+            <br />
+            Use in templates as {`{{${referenceId}.data.field}}`}
+          </Box>
+        }
+        placement="top"
+        arrow
+        enterDelay={400}
       >
-        {/* Header */}
-        <Box
+        <Paper
+          elevation={selected ? 4 : 1}
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 1.5,
-            py: 1,
-            bgcolor: alpha(nodeColor, 0.1),
-            borderBottom: `1px solid ${alpha(nodeColor, 0.2)}`,
+            minWidth: 180,
+            maxWidth: 250,
+            borderRadius: 2,
+            overflow: 'hidden',
+            border: `2px solid ${selected ? nodeColor : 'transparent'}`,
+            opacity: data.enabled === false ? 0.5 : 1,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              boxShadow: theme.shadows[4],
+            },
           }}
         >
+          {/* Header */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              py: 1,
+              bgcolor: alpha(nodeColor, 0.1),
+              borderBottom: `1px solid ${alpha(nodeColor, 0.2)}`,
+            }}
+          >
           <Typography sx={{ fontSize: 16 }}>{nodeIcon}</Typography>
           <Typography
             variant="subtitle2"
@@ -227,52 +241,53 @@ function BaseNodeComponent({ data, selected, isConnectable }: NodeProps<BaseNode
               </IconButton>
             </Tooltip>
           )}
-        </Box>
+          </Box>
 
-        {/* Body */}
-        <Box sx={{ px: 1.5, py: 1 }}>
-          {data.notes ? (
-            <Typography
-              variant="caption"
+          {/* Body */}
+          <Box sx={{ px: 1.5, py: 1 }}>
+            {data.notes ? (
+              <Typography
+                variant="caption"
+                sx={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  color: 'text.secondary',
+                }}
+              >
+                {data.notes}
+              </Typography>
+            ) : (
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                No description
+              </Typography>
+            )}
+          </Box>
+
+          {/* Disabled overlay */}
+          {data.enabled === false && (
+            <Box
               sx={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                color: 'text.secondary',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(0,0,0,0.1)',
+                borderRadius: 2,
               }}
             >
-              {data.notes}
-            </Typography>
-          ) : (
-            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-              No description
-            </Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                DISABLED
+              </Typography>
+            </Box>
           )}
-        </Box>
-
-        {/* Disabled overlay */}
-        {data.enabled === false && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'rgba(0,0,0,0.1)',
-              borderRadius: 2,
-            }}
-          >
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              DISABLED
-            </Typography>
-          </Box>
-        )}
-      </Paper>
+        </Paper>
+      </Tooltip>
 
       {/* Input Handle (left) - positioned after Paper so it renders on top */}
       <Handle

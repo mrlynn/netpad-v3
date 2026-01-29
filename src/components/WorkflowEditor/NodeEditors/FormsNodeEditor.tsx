@@ -269,10 +269,10 @@ export function FormsNodeEditor({
           {node.type === 'field-event-trigger' ? (
             <>
               • The trigger data is available to downstream nodes via{' '}
-              <code>{'{{nodes.fieldEventTrigger.formData.fieldName}}'}</code>
+              <code>{'{{nodes.<nodeId>.formData.fieldName}}'}</code> (use this node&apos;s reference ID from Node references)
               <br />
               • Access the trigger field value directly via{' '}
-              <code>{'{{nodes.fieldEventTrigger.fieldValue}}'}</code>
+              <code>{'{{nodes.<nodeId>.fieldValue}}'}</code>
             </>
           ) : (
             <>

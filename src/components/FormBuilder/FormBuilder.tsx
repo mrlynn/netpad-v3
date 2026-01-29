@@ -95,6 +95,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   }>({ open: false, savedForm: null });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const [settingsDrawerDefaultTab, setSettingsDrawerDefaultTab] = useState<number>(0);
   const [selectedFieldPath, setSelectedFieldPath] = useState<string | null>(null);
   const [formType, setFormType] = useState<FormType>(initialFormConfig?.formType || 'data-entry');
   const [searchConfig, setSearchConfig] = useState<SearchConfig | undefined>(undefined);
@@ -126,6 +127,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaveAs, setIsSaveAs] = useState(false);
 
   // File input ref for importing forms
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -897,6 +899,12 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     });
   };
 
+  // Open conversational config (Knowledge Base) in settings drawer
+  const handleOpenConversationalConfig = () => {
+    setSettingsDrawerDefaultTab(3); // Integrations tab
+    setSettingsDrawerOpen(true);
+  };
+
   const reorderFields = (newOrder: FieldConfig[]) => {
     setFieldConfigs(newOrder);
   };
@@ -1136,7 +1144,10 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             onNew={() => handleNewForm()}
             onOpen={() => setShowLibrary(true)}
             onSave={handleDirectSave}
-            onSaveAs={() => setSaveDialogOpen(true)}
+            onSaveAs={() => {
+              setIsSaveAs(true);
+              setSaveDialogOpen(true);
+            }}
             onExport={handleExportForm}
             onImport={() => importInputRef.current?.click()}
             onDelete={currentFormId ? async () => {
@@ -1474,6 +1485,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
             onFormDescriptionChange={setCurrentFormDescription}
             formType={formType}
             theme={themeConfig}
+            onOpenConversationalConfig={handleOpenConversationalConfig}
           />
 
           {/* Floating Action Toolbar - Google Forms Style */}
@@ -1540,7 +1552,10 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
       {/* Save Dialog */}
       <FormSaveDialog
         open={saveDialogOpen}
-        onClose={() => setSaveDialogOpen(false)}
+        onClose={() => {
+          setSaveDialogOpen(false);
+          setIsSaveAs(false);
+        }}
         onSave={(info) => {
           setCurrentFormId(info.id);
           setCurrentFormName(info.name);
@@ -1548,6 +1563,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           setCurrentFormIsPublished(info.isPublished);
           setShowLibrary(true);
           setNotification({ open: true, savedForm: info });
+          setIsSaveAs(false);
           // Reset dirty state and update initial state snapshot
           markClean();
           initialStateRef.current = JSON.stringify({
@@ -1560,11 +1576,12 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           });
         }}
         formConfig={{
-          id: currentFormId,
-          name: currentFormName,
+          // When doing Save As, omit the ID and slug so it creates a new form
+          id: isSaveAs ? undefined : currentFormId,
+          name: isSaveAs ? `${currentFormName} (Copy)` : currentFormName,
           description: currentFormDescription,
-          slug: currentFormSlug,
-          isPublished: currentFormIsPublished,
+          slug: isSaveAs ? undefined : currentFormSlug,
+          isPublished: isSaveAs ? false : currentFormIsPublished,
           collection: collection || '',
           database: databaseName || '',
           fieldConfigs,
@@ -1747,6 +1764,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
       <FormSettingsDrawer
         open={settingsDrawerOpen}
         onClose={() => setSettingsDrawerOpen(false)}
+        defaultTab={settingsDrawerDefaultTab}
         formName={currentFormName}
         onFormNameChange={setCurrentFormName}
         formDescription={currentFormDescription}

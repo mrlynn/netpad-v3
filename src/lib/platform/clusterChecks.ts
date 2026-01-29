@@ -345,39 +345,48 @@ export async function checkClusterTierRequirement(
 /**
  * Get the required cluster tier for a feature based on deployment mode
  *
- * In cloud mode: M10 required for RAG features
- * In self-hosted mode: LOCAL (Atlas Local) is sufficient
+ * IMPORTANT: As of the Knowledge-Guided Conversational Forms update,
+ * RAG features no longer require M10+ clusters. The only gate is the
+ * subscription tier (PRO, TEAMS, or ENTERPRISE).
+ *
+ * This function now returns undefined for RAG features, meaning no
+ * cluster tier check is performed.
  */
 function getFeatureClusterTier(feature: string): ClusterInstanceSize | undefined {
-  const ragFeatures = ['rag_conversational_forms', 'rag_document_upload', 'rag_vector_search'];
-
-  if (ragFeatures.includes(feature)) {
-    return getMinVectorSearchTier();
-  }
-
+  // RAG features no longer have cluster tier requirements
+  // Only subscription tier matters (handled in useFeatureGate hook)
   return undefined;
 }
 
 /**
  * Feature requirements map (static, for reference)
- * Actual tier requirement is computed dynamically based on deployment mode
+ *
+ * @deprecated RAG features no longer require cluster tier checks.
+ * This map is kept for backward compatibility but all cluster tier
+ * requirements have been removed. Only subscription tier gates apply.
  */
 export const FEATURE_REQUIREMENTS: Record<string, { clusterTier?: ClusterInstanceSize }> = {
-  rag_conversational_forms: { clusterTier: 'M10' },  // Or LOCAL in self-hosted mode
-  rag_document_upload: { clusterTier: 'M10' },       // Or LOCAL in self-hosted mode
-  rag_vector_search: { clusterTier: 'M10' },         // Or LOCAL in self-hosted mode
+  // Cluster tier requirements removed - only subscription tier matters
+  rag_conversational_forms: {},
+  rag_document_upload: {},
+  rag_vector_search: {},
 };
 
 /**
  * Check if organization has access to a feature considering cluster requirements
  * Returns detailed access information including current and required tiers
  *
- * Behavior depends on deployment mode:
- * - Cloud mode: RAG features require M10+ cluster
- * - Self-hosted mode: RAG features work with LOCAL tier (Atlas Local)
+ * IMPORTANT: As of the Knowledge-Guided Conversational Forms update,
+ * RAG features no longer require cluster tier checks. This function
+ * now grants access based solely on subscription tier (handled elsewhere).
+ *
+ * Behavior:
+ * - All features return hasAccess: true (no cluster tier gates)
+ * - Subscription tier gates are enforced in useFeatureGate hook
+ * - Cluster tier info is still returned for informational purposes
  *
  * @param organizationId - Organization ID
- * @param feature - Feature name (must be in FEATURE_REQUIREMENTS for cluster check)
+ * @param feature - Feature name
  * @returns Access check result with tier information
  */
 export async function checkFeatureAccess(
@@ -393,11 +402,13 @@ export async function checkFeatureAccess(
   const deploymentMode = getDeploymentMode();
   const requiredTier = getFeatureClusterTier(feature);
 
-  // If feature has no special cluster requirements, grant access
+  // RAG features no longer have cluster requirements
+  // Grant access - subscription tier is checked elsewhere
   if (!requiredTier) {
     return { hasAccess: true, deploymentMode };
   }
 
+  // For any remaining features with cluster requirements (future features)
   // Check cluster tier requirement
   const clusterCheck = await checkClusterTierRequirement(
     organizationId,

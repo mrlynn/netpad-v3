@@ -46,7 +46,6 @@ import {
 } from '@mui/icons-material';
 import { RAGDocument, RAGDocumentSourceType, RAGDocumentStatus } from '@/types/rag';
 import { MAX_DOCUMENT_SIZE, SUPPORTED_MIME_TYPES } from '@/types/rag';
-import { FeatureGate } from '@/components/common/FeatureGate';
 
 /**
  * Props for DocumentAttachmentPanel
@@ -69,7 +68,7 @@ export interface DocumentAttachmentPanelProps {
  *
  * Manages RAG documents for a conversational form:
  * - Lists all documents for the form
- * - Upload new documents (PDF, DOCX, TXT)
+ * - Upload new documents (PDF, DOCX, TXT, MD)
  * - Delete documents
  * - Select/deselect documents for RAG
  * - Shows document status and metadata
@@ -131,7 +130,12 @@ export function DocumentAttachmentPanel({
       }
 
       // Validate MIME type
-      if (!SUPPORTED_MIME_TYPES.includes(file.type as any)) {
+      // Note: Browsers may detect .md files as text/plain or empty string
+      // Also check file extension as fallback for markdown files
+      const isMarkdown = file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.markdown');
+      const isSupportedMimeType = SUPPORTED_MIME_TYPES.includes(file.type as any);
+
+      if (!isSupportedMimeType && !isMarkdown) {
         throw new Error(
           `Unsupported file type: ${file.type}. Supported types: ${SUPPORTED_MIME_TYPES.join(', ')}`
         );
@@ -232,7 +236,7 @@ export function DocumentAttachmentPanel({
     }
   };
 
-  // Show feature gate if RAG not enabled
+  // Show info message if RAG not enabled
   if (!ragEnabled) {
     return (
       <Paper sx={{ p: 2 }}>
@@ -243,14 +247,10 @@ export function DocumentAttachmentPanel({
     );
   }
 
+  // RAG feature gate removed - only subscription tier matters (checked at form level)
+  // Phase 1: Knowledge Foundation allows RAG on any cluster tier with PRO+ subscription
   return (
-    <FeatureGate
-      feature="rag_conversational_forms"
-      orgId={organizationId}
-      fallback="upgrade-prompt"
-      upgradeMessage="Knowledge-Guided Conversational Forms requires Team plan and M10+ Atlas cluster"
-    >
-      <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 2 }}>
         <Box
           sx={{
             display: 'flex',
@@ -264,7 +264,7 @@ export function DocumentAttachmentPanel({
               Knowledge Documents
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Attach documents to help the AI answer questions. Supported: PDF, DOCX, TXT (max 5MB)
+              Attach documents to help the AI answer questions. Supported: PDF, DOCX, TXT, MD (max 5MB)
             </Typography>
           </Box>
           <Button
@@ -401,7 +401,6 @@ export function DocumentAttachmentPanel({
           error={uploadError}
         />
       </Paper>
-    </FeatureGate>
   );
 }
 
@@ -490,7 +489,7 @@ function UploadDialog({ open, onClose, onUpload, uploading, error }: UploadDialo
               <input
                 type="file"
                 hidden
-                accept=".pdf,.docx,.doc,.txt"
+                accept=".pdf,.docx,.doc,.txt,.md,.markdown"
                 onChange={handleFileChange}
                 disabled={uploading}
               />

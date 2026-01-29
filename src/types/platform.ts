@@ -47,6 +47,9 @@ export interface Organization {
   stripeCustomerId?: string;
   paymentMethods?: PaymentMethod[];
 
+  // RAG Storage Configuration
+  ragConfig?: import('./rag-storage').RAGStorageConfig;
+
   // Usage tracking (legacy - see OrganizationUsage for detailed tracking)
   currentMonthSubmissions: number;
   usageResetDate: Date;
@@ -1025,6 +1028,10 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'ai_validation_patterns',
       'ai_node_config_assistant',
       'agent_response_insights',
+      // RAG features (no cluster tier requirement)
+      'rag_conversational_forms',
+      'rag_document_upload',
+      'rag_vector_search',
     ],
     platformFeatures: [
       'custom_branding',
@@ -1062,7 +1069,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'agent_response_processing',
       'agent_response_insights',
       'agent_auto_translation',
-      // RAG features (require M10+ cluster)
+      // RAG features (no cluster tier requirement)
       'rag_conversational_forms',
       'rag_document_upload',
       'rag_vector_search',
@@ -1108,7 +1115,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierFeatures> = {
       'agent_compliance_audit',
       'agent_response_insights',
       'agent_auto_translation',
-      // RAG features (require M10+ cluster)
+      // RAG features (no cluster tier requirement)
       'rag_conversational_forms',
       'rag_document_upload',
       'rag_vector_search',

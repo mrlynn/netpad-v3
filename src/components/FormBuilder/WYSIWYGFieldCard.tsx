@@ -37,6 +37,7 @@ import { RepeaterField } from './RepeaterField';
 import { KeyValueArrayInput } from './KeyValueArrayInput';
 import { TagsArrayInput } from './TagsArrayInput';
 import { LayoutFieldRenderer } from './LayoutFieldRenderer';
+import { RichTextEditor } from './RichTextEditor';
 import { evaluateFormula } from '@/utils/computedFields';
 
 const LAYOUT_FIELD_TYPES: LayoutFieldType[] = ['section-header', 'description', 'divider', 'image', 'spacer'];
@@ -179,6 +180,75 @@ export function WYSIWYGFieldCard({
   const renderFieldInput = () => {
     if (isLayout) {
       const layoutConfig = config.layout || { type: config.type as LayoutFieldType };
+      const layoutType = layoutConfig.type;
+
+      // Editable section header with rich text
+      if (layoutType === 'section-header') {
+        return (
+          <Box
+            sx={{
+              py: 1,
+              borderBottom: '2px solid',
+              borderColor: layoutConfig.borderColor || alpha('#00ED64', 0.3),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RichTextEditor
+              value={layoutConfig.title || ''}
+              onChange={(html) => {
+                onUpdateField(config.path, {
+                  layout: { ...layoutConfig, title: html, contentType: 'html' }
+                });
+              }}
+              placeholder="Section title..."
+              variant="title"
+              minHeight={32}
+            />
+            <RichTextEditor
+              value={layoutConfig.subtitle || ''}
+              onChange={(html) => {
+                onUpdateField(config.path, {
+                  layout: { ...layoutConfig, subtitle: html, contentType: 'html' }
+                });
+              }}
+              placeholder="Optional description..."
+              variant="description"
+              minHeight={24}
+            />
+          </Box>
+        );
+      }
+
+      // Editable description with rich text
+      if (layoutType === 'description') {
+        return (
+          <Box
+            sx={{
+              py: 1,
+              px: 1.5,
+              bgcolor: layoutConfig.backgroundColor || (isDarkMode ? alpha('#2196f3', 0.12) : alpha('#2196f3', 0.05)),
+              borderRadius: 1,
+              borderLeft: '3px solid',
+              borderColor: layoutConfig.borderColor || '#2196f3',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RichTextEditor
+              value={layoutConfig.content || ''}
+              onChange={(html) => {
+                onUpdateField(config.path, {
+                  layout: { ...layoutConfig, content: html, contentType: 'html' }
+                });
+              }}
+              placeholder="Enter description text..."
+              variant="description"
+              minHeight={60}
+            />
+          </Box>
+        );
+      }
+
+      // Other layout types (divider, image, spacer) - use existing renderer
       return <LayoutFieldRenderer layout={layoutConfig} editable />;
     }
 
@@ -191,7 +261,6 @@ export function WYSIWYGFieldCard({
       return (
         <TextField
           fullWidth
-          label={config.label}
           value={displayValue}
           placeholder="Computed value will appear here"
           variant={inputStyle as 'outlined' | 'filled' | 'standard'}
@@ -397,12 +466,10 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="date"
-            label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
             required={config.required}
-            InputLabelProps={{ shrink: true }}
             variant={inputStyle as 'outlined' | 'filled' | 'standard'}
             sx={{
               '& .MuiOutlinedInput-root': {
@@ -420,8 +487,7 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="email"
-            label={config.label}
-            placeholder={config.placeholder || 'email@example.com'}
+            placeholder={config.placeholder || 'you@example.com'}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
             required={config.required}
@@ -442,7 +508,6 @@ export function WYSIWYGFieldCard({
           <TextField
             fullWidth
             type="url"
-            label={config.label}
             placeholder={config.placeholder || 'https://'}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
@@ -674,16 +739,18 @@ export function WYSIWYGFieldCard({
         );
       }
 
-      default:
+      default: {
+        const isTextarea = config.type === 'textarea';
+        const isLongText = config.type === 'string' && (value?.length || 0) > 50;
+        const defaultPlaceholder = isTextarea ? 'Long answer text' : 'Short answer text';
         return (
           <TextField
             fullWidth
-            label={config.label}
-            placeholder={config.placeholder}
+            placeholder={config.placeholder || defaultPlaceholder}
             value={value || ''}
             onChange={(e) => onFormDataChange(config.path, e.target.value)}
-            multiline={config.type === 'textarea' || config.type === 'string' && (value?.length || 0) > 50}
-            rows={config.type === 'textarea' ? 3 : config.type === 'string' && (value?.length || 0) > 50 ? 4 : 1}
+            multiline={isTextarea || isLongText}
+            rows={isTextarea ? 3 : isLongText ? 4 : 1}
             required={config.required}
             inputProps={{
               maxLength: config.validation?.maxLength
@@ -699,6 +766,7 @@ export function WYSIWYGFieldCard({
             }}
           />
         );
+      }
     }
   };
 
@@ -915,13 +983,13 @@ export function WYSIWYGFieldCard({
 
       {/* Field content */}
       <Box>
-        {/* Show separate label only for non-TextField field types that don't have built-in labels */}
-        {!isLayout && !['string', 'text', 'textarea', 'email', 'url', 'phone', 'number', 'date', 'datetime', 'time'].includes(config.type || '') && !config.computed && (
+        {/* Google Forms-style: label always above the input for all field types */}
+        {!isLayout && !config.computed && config.label && (
           <Typography
             variant="body2"
             sx={{
               fontWeight: 500,
-              mb: 1,
+              mb: 0.75,
               color: textColor,
               display: 'flex',
               alignItems: 'center',
@@ -930,7 +998,7 @@ export function WYSIWYGFieldCard({
           >
             {config.label}
             {config.required && (
-              <Typography component="span" sx={{ color: errorColor, ml: 0.5 }}>*</Typography>
+              <Typography component="span" sx={{ color: errorColor, ml: 0.25, fontWeight: 400 }}>*</Typography>
             )}
           </Typography>
         )}

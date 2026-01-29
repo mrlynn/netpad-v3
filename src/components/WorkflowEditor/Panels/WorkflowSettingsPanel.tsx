@@ -29,9 +29,11 @@ import {
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  Palette as PaletteIcon,
+  GridOn as GridOnIcon,
 } from '@mui/icons-material';
 import { useWorkflow, useWorkflowEditor } from '@/contexts/WorkflowContext';
-import { WorkflowSettings, RetryPolicy, WorkflowEmbedSettings, DEFAULT_WORKFLOW_SETTINGS } from '@/types/workflow';
+import { WorkflowSettings, RetryPolicy, WorkflowEmbedSettings, CanvasVisualSettings, DEFAULT_WORKFLOW_SETTINGS, DEFAULT_CANVAS_VISUAL_SETTINGS } from '@/types/workflow';
 import { generateExecutionToken, hashExecutionToken, getTokenPrefix } from '@/lib/workflow/embedTokens';
 import { WorkflowEmbedCodeGenerator } from '../EmbedCodeGenerator';
 
@@ -68,6 +70,23 @@ const COMMON_TIMEZONES = [
   'Australia/Sydney',
 ];
 
+const BACKGROUND_PATTERNS = [
+  { value: 'dots', label: 'Dots', description: 'Classic dot grid pattern' },
+  { value: 'lines', label: 'Lines', description: 'Horizontal and vertical line grid' },
+  { value: 'cross', label: 'Cross', description: 'Cross pattern at grid intersections' },
+];
+
+const PRESET_COLORS = [
+  { value: '', label: 'Theme Default', color: undefined },
+  { value: 'rgba(0, 237, 100, 0.15)', label: 'NetPad Green', color: '#00ED64' },
+  { value: 'rgba(100, 149, 237, 0.2)', label: 'Cornflower Blue', color: '#6495ED' },
+  { value: 'rgba(147, 112, 219, 0.2)', label: 'Purple', color: '#9370DB' },
+  { value: 'rgba(255, 165, 0, 0.2)', label: 'Orange', color: '#FFA500' },
+  { value: 'rgba(220, 20, 60, 0.15)', label: 'Crimson', color: '#DC143C' },
+  { value: 'rgba(64, 224, 208, 0.2)', label: 'Turquoise', color: '#40E0D0' },
+  { value: 'rgba(128, 128, 128, 0.15)', label: 'Gray', color: '#808080' },
+];
+
 export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelProps) {
   const { updateWorkflowSettings } = useWorkflow();
   const { workflow } = useWorkflowEditor();
@@ -90,7 +109,7 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
   const [hasChanges, setHasChanges] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'settings' | 'embed'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'visual' | 'embed'>('settings');
 
   // Sync local state when workflow changes
   useEffect(() => {
@@ -191,6 +210,18 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
     handleSettingChange('embedSettings', embedSettings);
   };
 
+  const handleCanvasVisualChange = <K extends keyof CanvasVisualSettings>(
+    key: K,
+    value: CanvasVisualSettings[K]
+  ) => {
+    const canvasVisual: CanvasVisualSettings = {
+      ...DEFAULT_CANVAS_VISUAL_SETTINGS,
+      ...(settings.canvasVisual || {}),
+      [key]: value,
+    };
+    handleSettingChange('canvasVisual', canvasVisual);
+  };
+
   const formatTime = (ms: number): string => {
     if (ms < 60000) return `${ms / 1000}s`;
     return `${ms / 60000}m`;
@@ -237,6 +268,14 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
               size="small"
             >
               Settings
+            </Button>
+            <Button
+              variant={activeTab === 'visual' ? 'contained' : 'text'}
+              onClick={() => setActiveTab('visual')}
+              size="small"
+              startIcon={<PaletteIcon />}
+            >
+              Visual
             </Button>
             <Button
               variant={activeTab === 'embed' ? 'contained' : 'text'}
@@ -394,6 +433,225 @@ export function WorkflowSettingsPanel({ open, onClose }: WorkflowSettingsPanelPr
                   executionToken={newToken || (settings.embedSettings?.executionToken ? '***' : undefined)}
                 />
               )}
+            </>
+          ) : activeTab === 'visual' ? (
+            <>
+              {/* Canvas Visual Settings */}
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Background Pattern
+              </Typography>
+
+              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                <InputLabel>Pattern Type</InputLabel>
+                <Select
+                  value={settings.canvasVisual?.backgroundPattern || 'dots'}
+                  label="Pattern Type"
+                  onChange={(e) => handleCanvasVisualChange('backgroundPattern', e.target.value as CanvasVisualSettings['backgroundPattern'])}
+                >
+                  {BACKGROUND_PATTERNS.map((pattern) => (
+                    <MenuItem key={pattern.value} value={pattern.value}>
+                      <Box>
+                        <Typography variant="body2">{pattern.label}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {pattern.description}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Pattern Gap: {settings.canvasVisual?.backgroundGap || 20}px
+                </Typography>
+                <Slider
+                  value={settings.canvasVisual?.backgroundGap || 20}
+                  onChange={(_, value) => handleCanvasVisualChange('backgroundGap', value as number)}
+                  min={10}
+                  max={50}
+                  step={5}
+                  marks={[
+                    { value: 10, label: '10' },
+                    { value: 20, label: '20' },
+                    { value: 30, label: '30' },
+                    { value: 50, label: '50' },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
+                <FormHelperText>Distance between pattern elements</FormHelperText>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Pattern Size: {settings.canvasVisual?.backgroundSize || 1}px
+                </Typography>
+                <Slider
+                  value={settings.canvasVisual?.backgroundSize || 1}
+                  onChange={(_, value) => handleCanvasVisualChange('backgroundSize', value as number)}
+                  min={0.5}
+                  max={3}
+                  step={0.5}
+                  marks={[
+                    { value: 0.5, label: '0.5' },
+                    { value: 1, label: '1' },
+                    { value: 2, label: '2' },
+                    { value: 3, label: '3' },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
+                <FormHelperText>Size of dots or line thickness</FormHelperText>
+              </Box>
+
+              <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+                <InputLabel>Pattern Color</InputLabel>
+                <Select
+                  value={settings.canvasVisual?.backgroundPatternColor || ''}
+                  label="Pattern Color"
+                  onChange={(e) => handleCanvasVisualChange('backgroundPatternColor', e.target.value || undefined)}
+                >
+                  {PRESET_COLORS.map((color) => (
+                    <MenuItem key={color.value || 'default'} value={color.value}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {color.color && (
+                          <Box
+                            sx={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: '50%',
+                              bgcolor: color.color,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                            }}
+                          />
+                        )}
+                        <Typography variant="body2">{color.label}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>Leave as default for theme-aware colors</FormHelperText>
+              </FormControl>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Watermark
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.canvasVisual?.showWatermark ?? true}
+                    onChange={(e) => handleCanvasVisualChange('showWatermark', e.target.checked)}
+                  />
+                }
+                label="Show NetPad watermark"
+                sx={{ mb: 1 }}
+              />
+
+              {(settings.canvasVisual?.showWatermark ?? true) && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Watermark Opacity: {Math.round((settings.canvasVisual?.watermarkOpacity || 0.035) * 100)}%
+                  </Typography>
+                  <Slider
+                    value={settings.canvasVisual?.watermarkOpacity || 0.035}
+                    onChange={(_, value) => handleCanvasVisualChange('watermarkOpacity', value as number)}
+                    min={0.01}
+                    max={0.15}
+                    step={0.005}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Grid & Snapping
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.canvasVisual?.snapToGrid ?? true}
+                    onChange={(e) => handleCanvasVisualChange('snapToGrid', e.target.checked)}
+                  />
+                }
+                label="Snap nodes to grid"
+                sx={{ mb: 1 }}
+              />
+
+              {(settings.canvasVisual?.snapToGrid ?? true) && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Snap Grid Size: {settings.canvasVisual?.snapGridSize?.[0] || 15}px
+                  </Typography>
+                  <Slider
+                    value={settings.canvasVisual?.snapGridSize?.[0] || 15}
+                    onChange={(_, value) => handleCanvasVisualChange('snapGridSize', [value as number, value as number])}
+                    min={5}
+                    max={30}
+                    step={5}
+                    marks={[
+                      { value: 5, label: '5' },
+                      { value: 15, label: '15' },
+                      { value: 30, label: '30' },
+                    ]}
+                    valueLabelDisplay="auto"
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Edges
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.canvasVisual?.animatedEdges ?? true}
+                    onChange={(e) => handleCanvasVisualChange('animatedEdges', e.target.checked)}
+                  />
+                }
+                label="Animated edge connections"
+                sx={{ mb: 1 }}
+              />
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Edge Stroke Width: {settings.canvasVisual?.edgeStrokeWidth || 0.5}px
+                </Typography>
+                <Slider
+                  value={settings.canvasVisual?.edgeStrokeWidth || 0.5}
+                  onChange={(_, value) => handleCanvasVisualChange('edgeStrokeWidth', value as number)}
+                  min={0.5}
+                  max={3}
+                  step={0.5}
+                  marks={[
+                    { value: 0.5, label: '0.5' },
+                    { value: 1, label: '1' },
+                    { value: 2, label: '2' },
+                    { value: 3, label: '3' },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleSettingChange('canvasVisual', DEFAULT_CANVAS_VISUAL_SETTINGS)}
+                sx={{ mt: 1 }}
+              >
+                Reset to Defaults
+              </Button>
             </>
           ) : (
             <>

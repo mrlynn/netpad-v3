@@ -9,22 +9,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 import { hasAIFeature } from '@/lib/platform/usageService';
-import {
-  createDocumentMetadata,
-  updateDocumentStatus,
-  storeChunks,
-} from '@/lib/rag/storage';
+import { getRAGStorageProvider } from '@/lib/rag/storage/factory';
+import { enforceUploadLimits } from '@/lib/rag/middleware/limits';
+import { RAGUsageTrackingService } from '@/lib/rag/usage/tracking';
+import { getOrganizationRAGConfig } from '@/lib/rag/config';
 import {
   extractTextFromDocument,
   chunkText,
   isSupportedMimeType,
 } from '@/lib/rag/chunking';
-import { generateEmbeddings } from '@/lib/rag/embeddings';
+import { createDefaultEmbeddingProvider } from '@/lib/ai/embeddings/factory';
+import { createTrackedEmbeddingProvider } from '@/lib/ai/embeddings/tracked';
 import {
   MAX_DOCUMENT_SIZE,
   SUPPORTED_MIME_TYPES,
   RAGDocumentSourceType,
 } from '@/types/rag';
+import { RAGLimitError } from '@/lib/rag/middleware/limits';
 
 // Valid source types
 const VALID_SOURCE_TYPES: RAGDocumentSourceType[] = [
@@ -86,24 +87,43 @@ export async function POST(request: NextRequest) {
 
     // Check RAG feature access (includes subscription tier and cluster tier checks)
     const featureCheck = await hasAIFeature(organizationId, 'rag_conversational_forms');
-    
+
     if (!featureCheck.allowed) {
       // Return detailed error with tier/cluster information
       const errorResponse: Record<string, unknown> = {
         success: false,
         error: featureCheck.reason || 'RAG features are not available',
       };
-      
+
       if (featureCheck.requiredTier) {
         errorResponse.requiredTier = featureCheck.requiredTier;
       }
-      
+
       if (featureCheck.requiredClusterTier) {
         errorResponse.requiredClusterTier = featureCheck.requiredClusterTier;
         errorResponse.currentClusterTier = featureCheck.currentClusterTier;
       }
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
+    }
+
+    // Get RAG configuration and check upload limits
+    const config = await getOrganizationRAGConfig(organizationId);
+
+    try {
+      await enforceUploadLimits(organizationId, config);
+    } catch (error) {
+      if (error instanceof RAGLimitError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+            ...error.details,
+          },
+          { status: 429 } // Too Many Requests
+        );
+      }
+      throw error;
     }
 
     // Validate file size
@@ -116,7 +136,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate MIME type
-    if (!isSupportedMimeType(file.type)) {
+    // Note: Browsers may detect .md files as text/plain or empty string
+    // Also check file extension as fallback for markdown files
+    const isMarkdown = file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.markdown');
+    const hasSupportedMimeType = isSupportedMimeType(file.type);
+
+    if (!hasSupportedMimeType && !isMarkdown) {
       return NextResponse.json(
         {
           success: false,
@@ -126,39 +151,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize MIME type for markdown files if browser didn't detect it correctly
+    const normalizedMimeType = isMarkdown && (!file.type || file.type === 'text/plain')
+      ? 'text/markdown'
+      : file.type;
+
     // Validate source type
     const validSourceType = VALID_SOURCE_TYPES.includes(sourceType as RAGDocumentSourceType)
       ? (sourceType as RAGDocumentSourceType)
       : 'other';
 
-    // Upload to Vercel Blob
-    // Note: Using public access as Vercel Blob free tier only supports public
-    // Documents are protected at the API level through authentication
+    // Get storage provider for this organization
+    const storageProvider = await getRAGStorageProvider(organizationId);
+
+    // Upload file using storage provider
     const blob = await put(
       `rag-documents/${organizationId}/${formId}/${Date.now()}-${file.name}`,
       file,
       {
         access: 'public',
-        contentType: file.type,
+        contentType: normalizedMimeType,
       }
     );
 
-    // Create document metadata
-    const document = await createDocumentMetadata(formId, organizationId, {
-      blobUrl: blob.url,
-      blobPath: blob.pathname,
-      fileName: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
-      sourceType: validSourceType,
-      title: title || undefined,
-      description: description || undefined,
-      uploadedBy: guard.context.userId,
-      projectId: projectId || undefined,
+    // Create document metadata using storage provider
+    const document = await storageProvider.createDocument({
+      formId,
+      filename: file.name,
+      mimeType: normalizedMimeType,
+      sizeBytes: file.size,
+      metadata: {
+        sourceType: validSourceType,
+        title: title || undefined,
+        description: description || undefined,
+        uploadedBy: guard.context.userId,
+        projectId: projectId || undefined,
+        blobUrl: blob.url,
+        blobPath: blob.pathname,
+      },
     });
 
-    // Update status to processing
-    await updateDocumentStatus(document.documentId, organizationId, 'processing');
+    // Ensure vector search index exists (creates if needed)
+    storageProvider.ensureVectorIndex().catch((error) => {
+      console.error('[RAG] Error ensuring vector search index:', error);
+    });
+
+    // Record upload in usage tracking
+    const usageTracker = new RAGUsageTrackingService();
+    await usageTracker.recordDocumentUpload(organizationId, file.size);
 
     // Process document asynchronously
     // In production, this should be a background job
@@ -167,15 +207,16 @@ export async function POST(request: NextRequest) {
       formId,
       organizationId,
       blob.url,
-      file.type
-    ).catch((error) => {
+      normalizedMimeType,
+      file.name,
+      guard.context.userId // Pass userId for analytics tracking
+    ).catch(async (error) => {
       console.error(`[RAG] Error processing document ${document.documentId}:`, error);
-      updateDocumentStatus(
-        document.documentId,
-        organizationId,
-        'error',
-        { errorMessage: error instanceof Error ? error.message : 'Processing failed' }
-      );
+      const provider = await getRAGStorageProvider(organizationId);
+      await provider.updateDocument(document.documentId, {
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Processing failed',
+      });
     });
 
     return NextResponse.json({
@@ -210,17 +251,23 @@ async function processDocumentAsync(
   organizationId: string,
   blobUrl: string,
   mimeType: string,
+  fileName: string,
+  userId: string, // For analytics tracking
   maxRetries: number = 3
 ): Promise<void> {
   let attempt = 0;
+
+  // Get storage provider once at the start
+  const storageProvider = await getRAGStorageProvider(organizationId);
 
   while (attempt < maxRetries) {
     try {
       console.log(`[RAG] Processing document ${documentId} (attempt ${attempt + 1})`);
 
       // Extract text with timeout
+      // Pass fileName as fallback for MIME type detection
       const text = await Promise.race([
-        extractTextFromDocument(blobUrl, mimeType),
+        extractTextFromDocument(blobUrl, mimeType, fileName),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Text extraction timeout (30s)')), 30000)
         ),
@@ -245,9 +292,23 @@ async function processDocumentAsync(
 
       console.log(`[RAG] Created ${chunks.length} chunks for document ${documentId}`);
 
-      // Generate embeddings with timeout
+      // Create tracked embedding provider for analytics
+      const baseProvider = createDefaultEmbeddingProvider();
+      if (!baseProvider) {
+        throw new Error('No embedding provider configured');
+      }
+
+      const trackedProvider = createTrackedEmbeddingProvider(baseProvider, {
+        organizationId,
+        userId,
+        isGuest: false,
+        feature: 'rag_conversational_forms',
+        endpoint: '/api/rag/documents/upload',
+      });
+
+      // Generate embeddings with timeout (now tracked!)
       const embeddings = await Promise.race([
-        generateEmbeddings(chunks),
+        trackedProvider.generateEmbeddings(chunks.map(c => c.text)),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Embedding generation timeout (60s)')), 60000)
         ),
@@ -259,18 +320,21 @@ async function processDocumentAsync(
         );
       }
 
-      // Store chunks with embeddings
+      // Store chunks with embeddings using storage provider
       const chunksWithEmbeddings = chunks.map((chunk, index) => ({
         text: chunk.text,
         embedding: embeddings[index],
-        metadata: chunk.metadata,
+        metadata: chunk.metadata as unknown as Record<string, unknown>,
+        chunkIndex: index,
       }));
 
-      await storeChunks(documentId, formId, organizationId, chunksWithEmbeddings);
+      await storageProvider.createChunks(documentId, chunksWithEmbeddings);
 
       // Update document status to ready
-      await updateDocumentStatus(documentId, organizationId, 'ready', {
+      await storageProvider.updateDocument(documentId, {
+        status: 'ready',
         chunkCount: chunks.length,
+        processedAt: new Date(),
       });
 
       console.log(`[RAG] Document ${documentId} processed successfully`);
@@ -283,6 +347,11 @@ async function processDocumentAsync(
       );
 
       if (attempt >= maxRetries) {
+        // Update document status to error
+        await storageProvider.updateDocument(documentId, {
+          status: 'error',
+          errorMessage: error instanceof Error ? error.message : 'Processing failed after retries',
+        });
         throw error;
       }
 

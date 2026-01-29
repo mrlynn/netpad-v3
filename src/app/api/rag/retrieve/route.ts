@@ -8,6 +8,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 import { hasAIFeature } from '@/lib/platform/usageService';
+import { getRAGStorageProvider } from '@/lib/rag/storage/factory';
+import { enforceQueryLimits } from '@/lib/rag/middleware/limits';
+import { RAGUsageTrackingService } from '@/lib/rag/usage/tracking';
+import { getOrganizationRAGConfig } from '@/lib/rag/config';
 import {
   retrieveRelevantChunks,
   retrieveWithMetadata,
@@ -16,6 +20,7 @@ import {
 } from '@/lib/rag/retrieval';
 import { getReadyDocuments } from '@/lib/rag/storage';
 import { DEFAULT_RAG_RETRIEVAL_CONFIG } from '@/types/rag';
+import { RAGLimitError } from '@/lib/rag/middleware/limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,24 +75,43 @@ export async function POST(request: NextRequest) {
 
     // Check RAG feature access (includes subscription tier and cluster tier checks)
     const featureCheck = await hasAIFeature(organizationId, 'rag_conversational_forms');
-    
+
     if (!featureCheck.allowed) {
       // Return detailed error with tier/cluster information
       const errorResponse: Record<string, unknown> = {
         success: false,
         error: featureCheck.reason || 'RAG features are not available',
       };
-      
+
       if (featureCheck.requiredTier) {
         errorResponse.requiredTier = featureCheck.requiredTier;
       }
-      
+
       if (featureCheck.requiredClusterTier) {
         errorResponse.requiredClusterTier = featureCheck.requiredClusterTier;
         errorResponse.currentClusterTier = featureCheck.currentClusterTier;
       }
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
+    }
+
+    // Get RAG configuration and check query limits
+    const config = await getOrganizationRAGConfig(organizationId);
+
+    try {
+      await enforceQueryLimits(organizationId, config);
+    } catch (error) {
+      if (error instanceof RAGLimitError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+            ...error.details,
+          },
+          { status: 429 } // Too Many Requests
+        );
+      }
+      throw error;
     }
 
     // Validate query length
@@ -143,6 +167,10 @@ export async function POST(request: NextRequest) {
       response.citations = buildSourceCitations(result.chunks);
     }
 
+    // Record query in usage tracking
+    const usageTracker = new RAGUsageTrackingService();
+    await usageTracker.recordVectorSearchQuery(organizationId);
+
     return NextResponse.json(response);
   } catch (error) {
     console.error('[RAG] Retrieval error:', error);
@@ -158,7 +186,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            'Vector search is not available. Ensure MongoDB Atlas Vector Search is configured with an M10+ cluster.',
+            'Vector search is not available. Ensure MongoDB Atlas Vector Search is configured properly. For production use, an M10+ cluster is recommended.',
           details: error.message,
         },
         { status: 503 }

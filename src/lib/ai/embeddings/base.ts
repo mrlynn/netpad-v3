@@ -8,7 +8,7 @@
 /**
  * Embedding provider types
  */
-export type EmbeddingProviderType = 'openai' | 'voyage' | 'atlas-ai';
+export type EmbeddingProviderType = 'openai' | 'voyage' | 'atlas-ai' | 'atlas-embedding-api';
 
 /**
  * Embedding model dimensions mapping
@@ -19,11 +19,20 @@ export const MODEL_DIMENSIONS: Record<string, number> = {
   'text-embedding-3-large': 3072,
   'text-embedding-ada-002': 1536,
 
-  // Voyage AI models
+  // Voyage AI v4 models (latest, support configurable dimensions)
+  'voyage-4': 1024,
+  'voyage-4-lite': 1024,
+  'voyage-4-large': 1024,
+
+  // Voyage AI v3 models (legacy, keep for backward compatibility)
   'voyage-3': 1024,
   'voyage-3-lite': 512,
-  'voyage-code-3': 1536,
   'voyage-3-large': 1024,
+
+  // Voyage AI domain-specific models
+  'voyage-finance-2': 1024,
+  'voyage-law-2': 1024,
+  'voyage-code-3': 1536,
 
   // Atlas AI (uses Voyage under the hood)
   'atlas-ai-default': 1024,
@@ -37,6 +46,7 @@ export const BATCH_SIZES: Record<EmbeddingProviderType, number> = {
   openai: 100, // OpenAI supports up to 2048, use conservative limit
   voyage: 64, // Voyage supports up to 128, use conservative limit
   'atlas-ai': 64, // Same as Voyage (proxies to Voyage)
+  'atlas-embedding-api': 128, // Atlas Embedding API supports up to 128
 };
 
 /**
@@ -44,8 +54,9 @@ export const BATCH_SIZES: Record<EmbeddingProviderType, number> = {
  */
 export const DEFAULT_MODELS: Record<EmbeddingProviderType, string> = {
   openai: 'text-embedding-3-small',
-  voyage: 'voyage-3',
-  'atlas-ai': 'voyage-3',
+  voyage: 'voyage-4', // Updated to v4 from voyage-3
+  'atlas-ai': 'voyage-4', // Updated to v4 from voyage-3
+  'atlas-embedding-api': 'voyage-4', // Atlas Embedding API default
 };
 
 /**

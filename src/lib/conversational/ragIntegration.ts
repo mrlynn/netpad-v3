@@ -18,6 +18,7 @@ import {
 } from '@/types/rag';
 import {
   retrieveRelevantChunks,
+  retrieveWithReranking,
 } from '@/lib/rag/retrieval';
 import {
   enhancePromptWithContext,
@@ -126,18 +127,41 @@ export async function processWithRAG(
     // Build contextual query
     const query = buildContextualQuery(userMessage, state);
 
-    // Perform retrieval
+    // Perform retrieval with optional reranking
     const startTime = Date.now();
-    const chunks = await retrieveRelevantChunks(
-      query,
-      state.formId,
-      options.organizationId,
-      {
-        maxChunks: ragConfig.retrievalConfig?.maxChunks ?? 5,
-        minScore: ragConfig.retrievalConfig?.minScore ?? 0.7,
-        documentIds: ragConfig.documents,
-      }
-    );
+    const rerankingConfig = ragConfig.retrievalConfig?.reranking;
+    const rerankingEnabled = rerankingConfig?.enabled !== false; // Default to true
+
+    let chunks: RetrievedChunk[];
+
+    if (rerankingEnabled) {
+      // Two-stage retrieval: Vector Search + Reranking
+      chunks = await retrieveWithReranking(
+        query,
+        state.formId,
+        options.organizationId,
+        {
+          initialK: rerankingConfig?.initialK ?? 20,
+          finalK: ragConfig.retrievalConfig?.maxChunks ?? 5,
+          minScore: ragConfig.retrievalConfig?.minScore ?? 0.7,
+          documentIds: ragConfig.documents,
+          skipRerank: false,
+        }
+      );
+    } else {
+      // Vector-only retrieval (fallback)
+      chunks = await retrieveRelevantChunks(
+        query,
+        state.formId,
+        options.organizationId,
+        {
+          maxChunks: ragConfig.retrievalConfig?.maxChunks ?? 5,
+          minScore: ragConfig.retrievalConfig?.minScore ?? 0.7,
+          documentIds: ragConfig.documents,
+        }
+      );
+    }
+
     const latencyMs = Date.now() - startTime;
 
     // Create turn context
@@ -379,6 +403,11 @@ export function getRAGConfigWithDefaults(
       maxChunks: 5,
       minScore: 0.7,
       retrievalThreshold: 0.5,
+      reranking: {
+        enabled: true, // Default to enabled if provider is available
+        initialK: 20,
+        model: 'rerank-2.5-lite',
+      },
     },
   };
 
@@ -391,6 +420,11 @@ export function getRAGConfigWithDefaults(
       maxChunks: config.rag.retrievalConfig?.maxChunks ?? 5,
       minScore: config.rag.retrievalConfig?.minScore ?? 0.7,
       retrievalThreshold: config.rag.retrievalConfig?.retrievalThreshold ?? 0.5,
+      reranking: config.rag.retrievalConfig?.reranking ?? {
+        enabled: true,
+        initialK: 20,
+        model: 'rerank-2.5-lite',
+      },
     },
   };
 }

@@ -732,7 +732,7 @@ export function ClusterRequiredPrompt({
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>
-        Vector Search is a MongoDB Atlas feature that requires an M10+ dedicated cluster.
+        Vector Search works with any Atlas cluster tier. M10+ dedicated clusters are recommended for production workloads.
       </Typography>
 
       <Button

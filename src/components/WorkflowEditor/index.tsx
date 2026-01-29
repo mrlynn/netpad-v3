@@ -104,6 +104,7 @@ function WorkflowEditorInner({
     loadWorkflow,
     saveWorkflow,
     createWorkflow,
+    deleteWorkflow,
     executeWorkflow,
     updateStatus,
     publishWorkflow,
@@ -254,6 +255,9 @@ function WorkflowEditorInner({
 
   // Publish to marketplace dialog state
   const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
+
+  // Delete workflow confirmation dialog state
+  const [deleteWorkflowDialogOpen, setDeleteWorkflowDialogOpen] = useState(false);
 
   // Save status tracking for EntityStatusChip
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -475,6 +479,42 @@ function WorkflowEditorInner({
     });
   }, [clearCanvas]);
 
+  // Handle delete workflow
+  const handleDeleteWorkflow = useCallback(async () => {
+    if (!workflow) return;
+
+    const applicationId = workflow.applicationId;
+    setDeleteWorkflowDialogOpen(false);
+    const success = await deleteWorkflow(orgId, workflow.id);
+
+    if (success) {
+      // Dispatch event to refresh sidebar
+      window.dispatchEvent(
+        new CustomEvent('netpad:workflow-changed', {
+          detail: { applicationId },
+        })
+      );
+
+      setSnackbar({
+        open: true,
+        message: 'Workflow deleted successfully',
+        severity: 'success',
+      });
+      // Navigate back to workflows list
+      if (projectId) {
+        router.push(getOrgProjectUrl(orgId, projectId, 'workflows'));
+      } else if (onClose) {
+        onClose();
+      }
+    } else {
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete workflow',
+        severity: 'error',
+      });
+    }
+  }, [workflow, deleteWorkflow, orgId, projectId, router, onClose]);
+
   // Handle import workflow
   const handleImportWorkflow = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -591,6 +631,41 @@ function WorkflowEditorInner({
     );
   }
 
+  // Show error state when workflow failed to load (e.g., was deleted)
+  if (!isLoading && !workflow && error) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 1,
+          minHeight: 'calc(100vh - 200px)',
+          height: '100%',
+          width: '100%',
+          gap: 2,
+        }}
+      >
+        <Alert severity="error" sx={{ maxWidth: 400 }}>
+          {error}
+        </Alert>
+        <Button
+          variant="contained"
+          onClick={() => {
+            if (projectId) {
+              router.push(getOrgProjectUrl(orgId, projectId, 'workflows'));
+            } else if (onClose) {
+              onClose();
+            }
+          }}
+        >
+          Back to Workflows
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }} data-testid="workflow-editor">
       {/* Toolbar - structural bar under the global navbar, should be square at the top */}
@@ -661,6 +736,7 @@ function WorkflowEditorInner({
             }}
             onExport={() => setExportDialogOpen(true)}
             onImport={() => importInputRef.current?.click()}
+            onDelete={() => setDeleteWorkflowDialogOpen(true)}
             onClose={onClose}
           />
 
@@ -1092,6 +1168,28 @@ function WorkflowEditorInner({
           });
         }}
       />
+
+      {/* Delete Workflow Confirmation Dialog */}
+      <Dialog
+        open={deleteWorkflowDialogOpen}
+        onClose={() => setDeleteWorkflowDialogOpen(false)}
+      >
+        <DialogTitle>Delete Workflow?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete &quot;{workflow?.name || 'this workflow'}&quot;?
+            This action cannot be undone. All execution history will also be deleted.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteWorkflowDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteWorkflow} color="error" variant="contained">
+            Delete Workflow
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 import { hasAIFeature } from '@/lib/platform/usageService';
-import { getDocumentById, deleteDocument } from '@/lib/rag/storage';
+import { getRAGStorageProvider } from '@/lib/rag/storage/factory';
 
 interface RouteParams {
   params: Promise<{
@@ -46,28 +46,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Check RAG feature access (includes subscription tier and cluster tier checks)
     const featureCheck = await hasAIFeature(organizationId, 'rag_conversational_forms');
-    
+
     if (!featureCheck.allowed) {
       // Return detailed error with tier/cluster information
       const errorResponse: Record<string, unknown> = {
         success: false,
         error: featureCheck.reason || 'RAG features are not available',
       };
-      
+
       if (featureCheck.requiredTier) {
         errorResponse.requiredTier = featureCheck.requiredTier;
       }
-      
+
       if (featureCheck.requiredClusterTier) {
         errorResponse.requiredClusterTier = featureCheck.requiredClusterTier;
         errorResponse.currentClusterTier = featureCheck.currentClusterTier;
       }
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
-    // Get document
-    const document = await getDocumentById(documentId, organizationId);
+    // Get storage provider and fetch document
+    const storageProvider = await getRAGStorageProvider(organizationId);
+    const document = await storageProvider.getDocument(documentId);
 
     if (!document) {
       return NextResponse.json(
@@ -140,28 +141,43 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Check RAG feature access (includes subscription tier and cluster tier checks)
     const featureCheck = await hasAIFeature(organizationId, 'rag_conversational_forms');
-    
+
     if (!featureCheck.allowed) {
       // Return detailed error with tier/cluster information
       const errorResponse: Record<string, unknown> = {
         success: false,
         error: featureCheck.reason || 'RAG features are not available',
       };
-      
+
       if (featureCheck.requiredTier) {
         errorResponse.requiredTier = featureCheck.requiredTier;
       }
-      
+
       if (featureCheck.requiredClusterTier) {
         errorResponse.requiredClusterTier = featureCheck.requiredClusterTier;
         errorResponse.currentClusterTier = featureCheck.currentClusterTier;
       }
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
-    // Delete document (returns blob path for cleanup)
-    const { blobPath } = await deleteDocument(documentId, organizationId);
+    // Get storage provider
+    const storageProvider = await getRAGStorageProvider(organizationId);
+
+    // Get document first to retrieve blob path
+    const document = await storageProvider.getDocument(documentId);
+
+    if (!document) {
+      return NextResponse.json(
+        { success: false, error: 'Document not found' },
+        { status: 404 }
+      );
+    }
+
+    const blobPath = document.blobPath;
+
+    // Delete document and its chunks
+    await storageProvider.deleteDocument(documentId);
 
     // Delete blob from Vercel Blob storage
     if (blobPath) {

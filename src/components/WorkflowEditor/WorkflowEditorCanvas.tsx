@@ -28,7 +28,7 @@ import { Box, useTheme, Fab, Tooltip, alpha } from '@mui/material';
 import { HelpOutline } from '@mui/icons-material';
 import { nanoid } from 'nanoid';
 import { useWorkflowStore, useWorkflowEditor, useWorkflowActions } from '@/contexts/WorkflowContext';
-import { WorkflowNode, WorkflowEdge, NodeDefinition } from '@/types/workflow';
+import { WorkflowNode, WorkflowEdge, NodeDefinition, DEFAULT_CANVAS_VISUAL_SETTINGS } from '@/types/workflow';
 import { EmptyWorkflowState } from './Panels/EmptyWorkflowState';
 import { WorkflowTemplate } from '@/lib/templates/loader';
 import { GeneratedWorkflow } from '@/lib/ai/types';
@@ -157,6 +157,12 @@ export function WorkflowEditorCanvas({
     selectEdge,
     setViewport,
   } = useWorkflowActions();
+
+  // Get canvas visual settings from workflow, with defaults
+  const visualSettings = useMemo(() => ({
+    ...DEFAULT_CANVAS_VISUAL_SETTINGS,
+    ...(workflow?.settings?.canvasVisual || {}),
+  }), [workflow?.settings?.canvasVisual]);
 
   // Track the workflow ID to detect when we switch workflows
   const currentWorkflowIdRef = useRef<string | null>(null);
@@ -907,18 +913,18 @@ export function WorkflowEditorCanvas({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
-          animated: true,
+          animated: visualSettings.animatedEdges,
           style: {
             stroke: theme.palette.primary.main,
-            strokeWidth: .5,
+            strokeWidth: visualSettings.edgeStrokeWidth,
           },
         }}
         connectionLineStyle={{
           stroke: theme.palette.primary.main,
-          strokeWidth: 0.5,
+          strokeWidth: visualSettings.edgeStrokeWidth,
         }}
-        snapToGrid
-        snapGrid={[15, 15]}
+        snapToGrid={visualSettings.snapToGrid}
+        snapGrid={visualSettings.snapGridSize}
         deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
         multiSelectionKeyCode={['Meta', 'Control']}
         panOnScroll
@@ -926,10 +932,8 @@ export function WorkflowEditorCanvas({
         proOptions={{ hideAttribution: true }}
       >
         <NetPadBrandedBackground
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
           isEmbedded={isEmbedded}
+          visualSettings={visualSettings}
         />
         {!isEmbedded && (
           <Controls
@@ -970,8 +974,8 @@ export function WorkflowEditorCanvas({
         )}
       </ReactFlow>
 
-      {/* Empty State Dialog - show when workflow has no nodes and helper not dismissed */}
-      {workflowNodes.length === 0 && !readOnly && !helperDismissed && (
+      {/* Empty State Dialog - show when workflow exists but has no nodes and helper not dismissed */}
+      {workflow && workflowNodes.length === 0 && !readOnly && !helperDismissed && (
         <EmptyWorkflowState
           onAddNode={handleAddNodeFromEmpty}
           onLoadTemplate={handleLoadTemplate}
@@ -981,7 +985,7 @@ export function WorkflowEditorCanvas({
       )}
 
       {/* Help button to show the helper again when it's been dismissed */}
-      {workflowNodes.length === 0 && !readOnly && helperDismissed && (
+      {workflow && workflowNodes.length === 0 && !readOnly && helperDismissed && (
         <Tooltip title="Show workflow builder helper" placement="left">
           <Fab
             size="small"

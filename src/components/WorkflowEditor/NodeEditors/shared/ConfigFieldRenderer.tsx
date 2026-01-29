@@ -404,7 +404,7 @@ export function ConfigFieldRenderer({
               }
             }}
             helperText={field.description}
-            placeholder="Use {{nodes.nodeId.field}} to reference data from other nodes"
+            placeholder="Use {{nodes.<referenceId>.field}} — see Node references in config or use the variable picker"
             sx={{
               '& .MuiInputBase-input': {
                 fontFamily: 'monospace',

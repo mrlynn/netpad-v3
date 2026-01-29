@@ -73,6 +73,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 interface FormSettingsDrawerProps {
   open: boolean;
   onClose: () => void;
+  defaultTab?: number; // Optional: which tab to open by default
   // Form Details
   formName: string;
   onFormNameChange: (name: string) => void;
@@ -125,6 +126,7 @@ interface FormSettingsDrawerProps {
 export function FormSettingsDrawer({
   open,
   onClose,
+  defaultTab = 0,
   formName,
   onFormNameChange,
   formDescription,
@@ -162,7 +164,7 @@ export function FormSettingsDrawer({
   formSlug,
   isPublished,
 }: FormSettingsDrawerProps) {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   // Count configured items for badges
   const hasTheme = !!themeConfig?.preset || !!themeConfig?.primaryColor;

@@ -104,22 +104,17 @@ export function KeyValueArrayInput({
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {label}
-          </Typography>
-          <Chip
-            label="Key-Value"
-            size="small"
-            sx={{
-              height: 20,
-              fontSize: '0.65rem',
-              bgcolor: alpha('#9c27b0', 0.1),
-              color: '#9c27b0',
-            }}
-          />
-        </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Chip
+          label="Key-Value"
+          size="small"
+          sx={{
+            height: 20,
+            fontSize: '0.65rem',
+            bgcolor: alpha('#9c27b0', 0.1),
+            color: '#9c27b0',
+          }}
+        />
         <Typography variant="caption" color="text.secondary">
           {arrayValue.length} {arrayValue.length === 1 ? 'item' : 'items'}
         </Typography>

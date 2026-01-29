@@ -77,40 +77,22 @@ interface CachedSubscriptionData {
 }
 
 /**
- * RAG features that require cluster tier checks
+ * RAG features (cluster tier checks removed - only subscription tier required)
+ *
+ * IMPORTANT: As of the Knowledge-Guided Conversational Forms update,
+ * RAG features no longer require M10+ clusters. The only gate is the
+ * subscription tier (PRO, TEAMS, or ENTERPRISE).
+ *
+ * Cluster tier checks have been removed to enable:
+ * - M0 free tier users with PRO+ subscriptions
+ * - Self-hosted deployments with any cluster configuration
+ * - More accessible RAG features for all paying customers
  */
 const RAG_FEATURES: AIFeature[] = [
   'rag_conversational_forms',
   'rag_document_upload',
   'rag_vector_search',
 ];
-
-/**
- * Minimum cluster tier required for RAG features
- */
-const RAG_REQUIRED_CLUSTER_TIER: ClusterInstanceSize = 'M10';
-
-/**
- * Cluster tier ordering for comparison
- */
-const CLUSTER_TIER_ORDER: ClusterInstanceSize[] = ['M0', 'M2', 'M5', 'M10', 'M20', 'M30', 'M40', 'M50', 'M60'];
-
-/**
- * Check if a cluster tier meets the minimum requirement
- */
-function meetsClusterTierRequirement(
-  currentTier: ClusterInstanceSize | null | undefined,
-  requiredTier: ClusterInstanceSize
-): boolean {
-  if (!currentTier) return false;
-
-  const currentIndex = CLUSTER_TIER_ORDER.indexOf(currentTier);
-  const requiredIndex = CLUSTER_TIER_ORDER.indexOf(requiredTier);
-
-  if (currentIndex === -1 || requiredIndex === -1) return false;
-
-  return currentIndex >= requiredIndex;
-}
 
 let subscriptionCache: CachedSubscriptionData | null = null;
 const CACHE_TTL = 60 * 1000; // 1 minute
@@ -202,24 +184,9 @@ export function useFeatureGate(
         return;
       }
 
-      // For RAG features, also check cluster tier requirement
-      if (RAG_FEATURES.includes(feature as AIFeature)) {
-        const hasClusterAccess = meetsClusterTierRequirement(
-          data.clusterTier,
-          RAG_REQUIRED_CLUSTER_TIER
-        );
-
-        if (!hasClusterAccess) {
-          setResult({
-            hasAccess: false,
-            reason: 'cluster_upgrade_required',
-            requiredClusterTier: RAG_REQUIRED_CLUSTER_TIER,
-            currentClusterTier: data.clusterTier,
-            upgradeUrl: `/settings/cluster?upgrade=${RAG_REQUIRED_CLUSTER_TIER}&feature=${feature}`,
-          });
-          return;
-        }
-      }
+      // RAG features no longer require cluster tier checks
+      // Only subscription tier (PRO, TEAMS, ENTERPRISE) is required
+      // This enables Knowledge-Guided Conversational Forms for all paying customers
 
       // All checks passed
       setResult({ hasAccess: true });

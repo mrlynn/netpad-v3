@@ -44,6 +44,7 @@ import {
   OpenInNew,
   FileUpload,
   Google,
+  DriveFileMove,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
@@ -55,6 +56,7 @@ import { FeaturedTemplatesSection } from '@/components/Templates/FeaturedTemplat
 import { ClusterSetupBanner } from '@/components/Cluster/ClusterSetupBanner';
 import { useClusterStatus } from '@/hooks/useClusterStatus';
 import { GoogleFormsImportWizard } from '@/components/GoogleFormsImport';
+import { MoveToApplicationDialog } from '@/components/common/MoveToApplicationDialog';
 
 interface SavedForm {
   id: string;
@@ -338,6 +340,8 @@ export default function AppFormsPage() {
   });
   const [importMenuAnchor, setImportMenuAnchor] = useState<HTMLElement | null>(null);
   const [googleFormsImportOpen, setGoogleFormsImportOpen] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [formToMove, setFormToMove] = useState<SavedForm | null>(null);
 
   const appSlug = currentApplication?.slug || '';
   const applicationId = currentApplication?.applicationId;
@@ -413,6 +417,52 @@ export default function AppFormsPage() {
 
   const handleMenuClose = () => {
     setMenuAnchor({ el: null, formId: null });
+  };
+
+  const handleMoveClick = (form: SavedForm) => {
+    setFormToMove(form);
+    setMoveDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleMoveForm = async (targetApplicationId: string, targetApplicationName: string) => {
+    if (!formToMove || !currentOrgId) return;
+
+    try {
+      const response = await fetch(`/api/forms/${formToMove.id}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: currentOrgId,
+          targetApplicationId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to move form');
+      }
+
+      setSnackbar({
+        open: true,
+        message: `Form moved to "${targetApplicationName}"`,
+        severity: 'success',
+      });
+
+      // Reload forms to reflect the change
+      loadForms();
+    } catch (error) {
+      console.error('Error moving form:', error);
+      setSnackbar({
+        open: true,
+        message: error instanceof Error ? error.message : 'Failed to move form',
+        severity: 'error',
+      });
+      throw error;
+    } finally {
+      setFormToMove(null);
+    }
   };
 
   const filteredForms = forms.filter((form) => {
@@ -805,6 +855,17 @@ export default function AppFormsPage() {
         </MenuItem>
         <Divider />
         <MenuItem
+          onClick={() => {
+            const form = forms.find((f) => f.id === menuAnchor.formId);
+            if (form) handleMoveClick(form);
+          }}
+        >
+          <ListItemIcon>
+            <DriveFileMove fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Move to Application</ListItemText>
+        </MenuItem>
+        <MenuItem
           onClick={() => menuAnchor.formId && handleDelete(menuAnchor.formId)}
           sx={{ color: 'error.main' }}
         >
@@ -849,6 +910,19 @@ export default function AppFormsPage() {
           applicationId={applicationId}
         />
       )}
+
+      {/* Move to Application Dialog */}
+      <MoveToApplicationDialog
+        open={moveDialogOpen}
+        onClose={() => {
+          setMoveDialogOpen(false);
+          setFormToMove(null);
+        }}
+        onMove={handleMoveForm}
+        currentApplicationId={applicationId}
+        itemType="form"
+        itemName={formToMove?.name || 'Untitled Form'}
+      />
     </Box>
   );
 }

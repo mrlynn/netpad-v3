@@ -7,12 +7,14 @@
 import { getOrgDb } from '@/lib/platform/db';
 import { generateQueryEmbedding, getCurrentEmbeddingDimensions } from './embeddings';
 import { getReadyDocuments } from './storage';
+import { ensureVectorSearchIndex } from './indexManagement';
 import {
   RetrievedChunk,
   RAGRetrievalResult,
   RAGDocumentChunk,
   DEFAULT_RAG_RETRIEVAL_CONFIG,
 } from '@/types/rag';
+import { createDefaultRerankProvider, RerankProvider } from '@/lib/ai/reranking';
 
 // ============================================
 // Vector Search Index Configuration
@@ -27,6 +29,25 @@ const VECTOR_INDEX_NAME = 'rag_vector_index';
  * Collection name for document chunks
  */
 const CHUNKS_COLLECTION = 'rag_document_chunks';
+
+// ============================================
+// Reranking Provider Cache
+// ============================================
+
+/**
+ * Cached rerank provider (lazy loaded)
+ */
+let rerankProvider: RerankProvider | null | undefined = undefined;
+
+/**
+ * Get the reranking provider (cached)
+ */
+function getRerankProvider(): RerankProvider | null {
+  if (rerankProvider === undefined) {
+    rerankProvider = createDefaultRerankProvider();
+  }
+  return rerankProvider;
+}
 
 // ============================================
 // Retrieval Functions
@@ -158,10 +179,23 @@ export async function retrieveRelevantChunks(
         error.message.includes('vectorSearch') ||
         error.message.includes('$vectorSearch')
       ) {
+        console.error(`[RAG] Vector search index '${VECTOR_INDEX_NAME}' not found. Attempting to create it...`);
+
+        // Try to create the index automatically
+        try {
+          const indexResult = await ensureVectorSearchIndex(organizationId);
+          if (indexResult.created || indexResult.exists) {
+            console.log('[RAG] Vector search index created or already exists. Please retry your query.');
+            // Return empty results for now - user should retry
+            return [];
+          }
+        } catch (createError) {
+          console.error('[RAG] Failed to auto-create vector search index:', createError);
+        }
+
         throw new Error(
-          `Vector search index '${VECTOR_INDEX_NAME}' not found or not ready. ` +
-            'Ensure MongoDB Atlas Vector Search is configured. ' +
-            'See: docs/internal/knowledge-guided-conversational-forms-implementation-plan.md'
+          `Vector search index '${VECTOR_INDEX_NAME}' not found. ` +
+            'An index is being created in the background. Please try again in a few moments.'
         );
       }
     }
@@ -205,6 +239,88 @@ export async function retrieveWithMetadata(
     documentsSearched,
     latencyMs,
   };
+}
+
+/**
+ * Two-stage retrieval: Vector Search + Reranking
+ *
+ * Stage 1: Use Atlas Vector Search for fast semantic recall
+ * Stage 2: Use Atlas Reranking API for precise relevance scoring
+ *
+ * This approach improves retrieval quality by 10-30% compared to vector-only search.
+ *
+ * @param query - Search query text
+ * @param formId - Form ID to search within
+ * @param organizationId - Organization ID
+ * @param options - Retrieval options
+ * @returns Array of reranked chunks with updated scores
+ */
+export async function retrieveWithReranking(
+  query: string,
+  formId: string,
+  organizationId: string,
+  options: {
+    initialK?: number; // Candidates from vector search (default: 20)
+    finalK?: number; // Final results after reranking (default: 5)
+    minScore?: number;
+    documentIds?: string[];
+    skipRerank?: boolean; // Force skip reranking
+  } = {}
+): Promise<RetrievedChunk[]> {
+  const initialK = options.initialK ?? 20;
+  const finalK = options.finalK ?? 5;
+  const reranker = options.skipRerank ? null : getRerankProvider();
+
+  const startTime = Date.now();
+
+  // Stage 1: Vector search for initial candidates
+  // Retrieve more candidates than needed to allow reranker to select best
+  const candidates = await retrieveRelevantChunks(query, formId, organizationId, {
+    maxChunks: reranker ? initialK : finalK,
+    minScore: options.minScore,
+    documentIds: options.documentIds,
+  });
+
+  // If no reranker or not enough candidates, return vector results as-is
+  if (!reranker || candidates.length <= finalK) {
+    if (!reranker) {
+      console.log('[RAG] Reranking not available, using vector-only results');
+    }
+    return candidates.slice(0, finalK);
+  }
+
+  // Stage 2: Rerank candidates using Atlas Reranking API
+  const rerankStartTime = Date.now();
+  const documents = candidates.map((c) => c.text);
+
+  try {
+    const rerankResults = await reranker.rerank(query, documents, {
+      topK: finalK,
+      returnDocuments: false,
+    });
+
+    // Map rerank results back to chunks with updated scores
+    const rerankedChunks: RetrievedChunk[] = rerankResults.map((result) => ({
+      ...candidates[result.index],
+      score: result.relevanceScore, // Final score from reranker
+      vectorScore: candidates[result.index].score, // Preserve original vector score
+      rerankScore: result.relevanceScore, // Explicit rerank score
+    }));
+
+    const totalLatency = Date.now() - startTime;
+    const rerankLatency = Date.now() - rerankStartTime;
+
+    console.log(
+      `[RAG] Two-stage retrieval: ${candidates.length} candidates → ${rerankedChunks.length} final ` +
+        `(total: ${totalLatency}ms, rerank: ${rerankLatency}ms)`
+    );
+
+    return rerankedChunks;
+  } catch (error) {
+    // Graceful fallback to vector-only results on rerank failure
+    console.error('[RAG] Reranking failed, falling back to vector results:', error);
+    return candidates.slice(0, finalK);
+  }
 }
 
 // ============================================

@@ -195,6 +195,9 @@ async function handleGET(
               formId: form.id,
               hasDataSource: !!form.dataSource,
               organizationId: form.organizationId,
+              hasConversationalConfig: !!form.conversationalConfig,
+              conversationalConfig: JSON.stringify(form.conversationalConfig),
+              formType: form.formType,
             });
 
             return NextResponse.json({

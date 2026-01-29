@@ -22,7 +22,7 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material';
-import { Settings, Save, Delete, Download as DownloadIcon, Schema } from '@mui/icons-material';
+import { Settings, Save, Delete, Download as DownloadIcon, Schema, MenuBook } from '@mui/icons-material';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -206,6 +206,39 @@ export default function AppSettingsPage() {
               </Button>
             </Box>
           </Box>
+
+          <Divider sx={{ my: 4 }} />
+
+          {/* RAG / Knowledge Base Section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <MenuBook sx={{ color: '#00bcd4' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Knowledge Base (RAG)
+            </Typography>
+          </Box>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure knowledge-guided conversational forms with document uploads, vector search, and custom storage.
+            Manage RAG settings, view usage metrics, and choose between platform or user-cluster storage modes.
+          </Typography>
+
+          <Button
+            variant="outlined"
+            startIcon={<MenuBook />}
+            onClick={() => router.push(`/apps/${currentApplication.slug}/settings/rag`)}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderColor: '#00bcd4',
+              color: '#00bcd4',
+              '&:hover': {
+                borderColor: '#00acc1',
+                bgcolor: 'rgba(0, 188, 212, 0.05)',
+              },
+            }}
+          >
+            Manage RAG Settings
+          </Button>
 
           <Divider sx={{ my: 4 }} />
 

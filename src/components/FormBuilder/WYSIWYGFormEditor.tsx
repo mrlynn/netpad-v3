@@ -11,11 +11,13 @@ import {
   InputBase,
   Collapse,
   Alert,
+  Button,
 } from '@mui/material';
 import {
   Add,
   DragIndicator,
   Info,
+  MenuBook,
 } from '@mui/icons-material';
 import { FieldConfig, LayoutFieldType, FormHeader, FormType, FormTheme } from '@/types/form';
 import { WYSIWYGFieldCard } from './WYSIWYGFieldCard';
@@ -55,6 +57,8 @@ interface WYSIWYGFormEditorProps {
   formType?: FormType;
   // Theme configuration for WYSIWYG preview
   theme?: FormTheme;
+  // Callback to open conversational config (e.g., knowledge base modal)
+  onOpenConversationalConfig?: () => void;
 }
 
 export function WYSIWYGFormEditor({
@@ -76,7 +80,9 @@ export function WYSIWYGFormEditor({
   onFormDescriptionChange,
   formType,
   theme: themeProp,
+  onOpenConversationalConfig,
 }: WYSIWYGFormEditorProps) {
+
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -457,16 +463,38 @@ export function WYSIWYGFormEditor({
           <Box sx={{ maxWidth: 700, mx: 'auto' }}>
             {/* Conversational Mode Warning */}
             {formType === 'conversational' && (
-              <Alert 
-                severity="warning" 
+              <Alert
+                severity="warning"
                 icon={<Info />}
                 sx={{ mb: 2 }}
+                action={
+                  onOpenConversationalConfig && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<MenuBook />}
+                      onClick={onOpenConversationalConfig}
+                      sx={{
+                        textTransform: 'none',
+                        whiteSpace: 'nowrap',
+                        borderColor: 'rgba(237, 108, 2, 0.5)',
+                        color: '#ed6c02',
+                        '&:hover': {
+                          borderColor: '#ed6c02',
+                          bgcolor: 'rgba(237, 108, 2, 0.04)',
+                        },
+                      }}
+                    >
+                      Knowledge Base
+                    </Button>
+                  )
+                }
               >
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
                   Conversational Mode Active
                 </Typography>
                 <Typography variant="caption">
-                  This form uses AI conversation to collect data. Form fields should match your extraction schema defined in Settings → Conversational Config. 
+                  This form uses AI conversation to collect data. Form fields should match your extraction schema defined in Settings → Conversational Config.
                   Fields are used for data mapping and workflow integration. To sync fields with your extraction schema, go to Settings → Conversational Config → Extraction Schema and click "Generate Form Fields from Extraction Schema".
                 </Typography>
               </Alert>

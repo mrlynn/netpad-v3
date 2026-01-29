@@ -39,6 +39,7 @@ import { evaluateFormula } from '@/utils/computedFields';
 import { getResolvedTheme } from '@/lib/formThemes';
 import { TurnstileWidget, TurnstileWidgetRef } from './TurnstileWidget';
 import { FormHeaderDisplay } from '@/components/FormBuilder/FormHeaderDisplay';
+import { sanitizeHtml } from '@/components/FormBuilder/RichTextEditor';
 
 // Generate a random honeypot field name to avoid pattern detection
 function generateHoneypotFieldName(): string {
@@ -909,6 +910,26 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
   // Render layout elements (non-data display)
   const renderLayoutField = (layout: LayoutConfig) => {
+    const isHtml = layout.contentType === 'html';
+
+    // Shared styles for HTML content
+    const htmlContentStyles = {
+      '& a': {
+        color: theme.primaryColor || '#00ED64',
+        textDecoration: 'underline',
+      },
+      '& ul, & ol': {
+        pl: 3,
+        my: 0.5,
+      },
+      '& li': {
+        mb: 0.25,
+      },
+      '& p': {
+        my: 0.5,
+      },
+    };
+
     switch (layout.type) {
       case 'section-header':
         return (
@@ -920,23 +941,49 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
               bgcolor: layout.backgroundColor || 'transparent',
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: layout.textColor || 'text.primary',
-                mb: layout.subtitle ? 0.5 : 0
-              }}
-            >
-              {layout.title}
-            </Typography>
-            {layout.subtitle && (
+            {isHtml && layout.title ? (
               <Typography
-                variant="body2"
-                sx={{ color: layout.textColor || 'text.secondary' }}
+                variant="h6"
+                component="div"
+                sx={{
+                  fontWeight: 600,
+                  color: layout.textColor || theme.textColor || 'text.primary',
+                  mb: layout.subtitle ? 0.5 : 0,
+                  ...htmlContentStyles,
+                }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(layout.title) }}
+              />
+            ) : (
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  color: layout.textColor || theme.textColor || 'text.primary',
+                  mb: layout.subtitle ? 0.5 : 0
+                }}
               >
-                {layout.subtitle}
+                {layout.title}
               </Typography>
+            )}
+            {layout.subtitle && (
+              isHtml ? (
+                <Typography
+                  variant="body2"
+                  component="div"
+                  sx={{
+                    color: layout.textColor || theme.textSecondaryColor || 'text.secondary',
+                    ...htmlContentStyles,
+                  }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(layout.subtitle) }}
+                />
+              ) : (
+                <Typography
+                  variant="body2"
+                  sx={{ color: layout.textColor || theme.textSecondaryColor || 'text.secondary' }}
+                >
+                  {layout.subtitle}
+                </Typography>
+              )
             )}
           </Box>
         );
@@ -947,22 +994,35 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             sx={{
               py: 1.5,
               px: 2,
-              bgcolor: layout.backgroundColor || alpha('#2196f3', 0.05),
+              bgcolor: layout.backgroundColor || (isDarkMode ? alpha('#2196f3', 0.12) : alpha('#2196f3', 0.05)),
               borderRadius: 1,
               borderLeft: '3px solid',
               borderColor: layout.borderColor || '#2196f3',
             }}
           >
-            <Typography
-              variant="body2"
-              sx={{
-                color: layout.textColor || 'text.secondary',
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.6
-              }}
-            >
-              {layout.content}
-            </Typography>
+            {isHtml && layout.content ? (
+              <Typography
+                variant="body2"
+                component="div"
+                sx={{
+                  color: layout.textColor || theme.textSecondaryColor || 'text.secondary',
+                  lineHeight: 1.6,
+                  ...htmlContentStyles,
+                }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(layout.content) }}
+              />
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: layout.textColor || theme.textSecondaryColor || 'text.secondary',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: 1.6
+                }}
+              >
+                {layout.content}
+              </Typography>
+            )}
           </Box>
         );
 
@@ -1019,7 +1079,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
       return (
         <TextField
           fullWidth
-          label={config.label}
           value={computedValue !== null ? String(computedValue) : ''}
           InputProps={{
             readOnly: true,
@@ -1053,7 +1112,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={config.label}
                   required={config.required}
                   placeholder={config.placeholder}
                 />
@@ -1074,7 +1132,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={config.label}
                 required={config.required}
                 placeholder={config.placeholder}
               />
@@ -1085,10 +1142,8 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
       return (
         <FormControl fullWidth>
-          <InputLabel>{config.label}</InputLabel>
           <Select
             value={value || ''}
-            label={config.label}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
             multiple={config.lookup.multiple}
@@ -1121,7 +1176,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
       return (
         <TextField
           fullWidth
-          label={paramLabel}
           value={value ?? urlConfig?.defaultValue ?? ''}
           onChange={(e) => !isReadonly && setFieldValue(config.path, e.target.value)}
           InputProps={{
@@ -1148,10 +1202,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         if (displayStyle === 'switch') {
           return (
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                {config.label}
-                {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-              </Typography>
               <FormControlLabel
                 control={
                   <Switch
@@ -1178,10 +1228,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         if (displayStyle === 'buttons') {
           return (
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                {config.label}
-                {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-              </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Chip
                   label={yesLabel}
@@ -1232,7 +1278,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
                   }}
                 />
               }
-              label={config.label}
+              label={value ? yesLabel : noLabel}
             />
           );
         }
@@ -1246,7 +1292,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
                 onChange={(e) => setFieldValue(config.path, e.target.checked)}
               />
             }
-            label={config.label}
+            label={value ? yesLabel : noLabel}
           />
         );
       }
@@ -1270,10 +1316,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           const currentValue = typeof value === 'number' ? value : minVal;
           return (
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                {config.label}
-                {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-              </Typography>
               <Box sx={{ px: 1 }}>
                 {/* Labels for endpoints */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -1330,10 +1372,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           const options = Array.from({ length: maxVal - minVal + 1 }, (_, i) => minVal + i);
           return (
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                {config.label}
-                {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-              </Typography>
               {/* Labels for endpoints */}
               {(lowLabel || highLabel) && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -1380,10 +1418,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           const options = Array.from({ length: maxVal - minVal + 1 }, (_, i) => minVal + i);
           return (
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                {config.label}
-                {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-              </Typography>
               {/* Labels for endpoints */}
               {(lowLabel || highLabel) && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -1419,7 +1453,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="number"
-            label={config.label}
             placeholder={config.placeholder}
             value={value ?? ''}
             onChange={(e) => {
@@ -1498,10 +1531,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             {/* NPS Scale 0-10 */}
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center', mb: 1 }}>
               {Array.from({ length: 11 }, (_, i) => i).map((score) => {
@@ -1557,11 +1586,9 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="date"
-            label={config.label}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
-            InputLabelProps={{ shrink: true }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: `${theme.inputBorderRadius || theme.borderRadius || 8}px`,
@@ -1609,14 +1636,18 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           />
         );
 
-      case 'email':
+      case 'email': {
+        // Only show placeholder if meaningfully different from label
+        const normalizeStr = (str: string) => str.replace(/[\s*]+$/, '').toLowerCase();
+        const placeholderIsDifferent = config.placeholder &&
+          normalizeStr(config.placeholder) !== normalizeStr(config.label || '');
+        const emailPlaceholder = placeholderIsDifferent ? config.placeholder : undefined;
         return (
           <TextField
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="email"
-            label={config.label}
-            placeholder={config.placeholder}
+            placeholder={emailPlaceholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
@@ -1666,15 +1697,20 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             }}
           />
         );
+      }
 
-      case 'url':
+      case 'url': {
+        // Only show placeholder if meaningfully different from label
+        const normalizeStr = (str: string) => str.replace(/[\s*]+$/, '').toLowerCase();
+        const placeholderIsDifferent = config.placeholder &&
+          normalizeStr(config.placeholder) !== normalizeStr(config.label || '');
+        const urlPlaceholder = placeholderIsDifferent ? config.placeholder : undefined;
         return (
           <TextField
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="url"
-            label={config.label}
-            placeholder={config.placeholder}
+            placeholder={urlPlaceholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
@@ -1724,6 +1760,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             }}
           />
         );
+      }
 
       case 'color': {
         const colorValue = value || '#000000';
@@ -1732,10 +1769,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* Color preview box */}
@@ -1818,12 +1851,10 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
             type="time"
-            label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             required={config.required}
-            InputLabelProps={{ shrink: true }}
             inputProps={{
               step: minuteStep * 60, // step is in seconds
             }}
@@ -1990,7 +2021,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         return (
           <TextField
             fullWidth
-            label={config.label}
             placeholder={config.placeholder || 'Enter comma-separated values'}
             value={arrayValue.join(', ')}
             onChange={(e) => {
@@ -2073,11 +2103,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
-
             {/* Upload Area */}
             <Box
               component="label"
@@ -2180,7 +2205,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           <TextField
             fullWidth
             type="tel"
-            label={config.label}
             placeholder={config.placeholder || '+1 (555) 000-0000'}
             value={phoneValue}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
@@ -2201,14 +2225,12 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           <TextField
             fullWidth
             type="time"
-            label={config.label}
             placeholder={config.placeholder}
             value={value || ''}
             onChange={(e) => setFieldValue(config.path, e.target.value)}
             onFocus={() => trackFieldFocus(config.path)}
             onBlur={() => trackFieldBlur(config.path, !!value)}
             required={config.required}
-            InputLabelProps={{ shrink: true }}
             inputProps={{
               step: minuteStep * 60, // step is in seconds
             }}
@@ -2224,7 +2246,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             fullWidth
             multiline
             rows={4}
-            label={config.label}
             placeholder={config.placeholder || 'Enter detailed response...'}
             value={value || ''}
             onChange={(e) => {
@@ -2272,7 +2293,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
                 <TextField
                   {...params}
                   variant={inputVariant as 'outlined' | 'filled' | 'standard'}
-                  label={config.label}
                   required={config.required}
                   placeholder={config.placeholder || 'Select an option'}
                   sx={{
@@ -2327,20 +2347,9 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <FormControl fullWidth required={config.required}>
-            <InputLabel
-              sx={{
-                color: theme.textSecondaryColor || '#5C6C75',
-                '&.Mui-focused': {
-                  color: theme.primaryColor || '#00ED64',
-                },
-              }}
-            >
-              {config.label}
-            </InputLabel>
             <Select
               variant={inputVariant as 'outlined' | 'filled' | 'standard'}
               value={value || ''}
-              label={config.label}
               onChange={(e) => {
                 setFieldValue(config.path, e.target.value);
                 trackFieldChange(config.path);
@@ -2389,10 +2398,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <RadioGroup
               value={value ?? ''}
               onChange={(e) => {
@@ -2480,10 +2485,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             {(minSelections > 0 || maxSelections < options.length) && (
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
                 {minSelections > 0 && `Select at least ${minSelections}`}
@@ -2566,10 +2567,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
               {Array.from({ length: maxRating - minRating + 1 }, (_, i) => i + minRating).map((rating) => (
                 <Box
@@ -2638,10 +2635,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
               {tagsValue.map((tag: string, idx: number) => (
                 <Chip
@@ -2711,7 +2704,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
           return (
             <TextField
               fullWidth
-              label={config.label}
               placeholder={config.placeholder || 'Enter full address'}
               value={addressValue.formatted || ''}
               onChange={(e) => updateAddressField('formatted', e.target.value)}
@@ -2735,10 +2727,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {components.includes('street1') && (
                 <TextField
@@ -2849,10 +2837,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Paper
               elevation={0}
               sx={{
@@ -2992,10 +2976,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             {allowTyped ? (
               // Typed signature mode
               <Box>
@@ -3096,10 +3076,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ overflowX: 'auto' }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: `200px repeat(${columns.length}, 1fr)`, gap: 1 }}>
                 {/* Header row */}
@@ -3167,10 +3143,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
               Drag items to reorder or use the arrows
             </Typography>
@@ -3237,10 +3209,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', gap: 1.5 }}>
               <TextField
                 type="date"
@@ -3293,10 +3261,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ px: 1 }}>
               {(lowLabel || highLabel) && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -3386,10 +3350,6 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
 
         return (
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-              {config.label}
-              {config.required && <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>}
-            </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
               {options.map((opt) => (
                 <Box
@@ -3435,13 +3395,17 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
         );
       }
 
-      default:
+      default: {
+        // Only show placeholder if meaningfully different from label
+        const normalizeStr = (str: string) => str.replace(/[\s*]+$/, '').toLowerCase();
+        const placeholderIsDifferent = config.placeholder &&
+          normalizeStr(config.placeholder) !== normalizeStr(config.label || '');
+        const effectivePlaceholder = placeholderIsDifferent ? config.placeholder : undefined;
         return (
           <TextField
             fullWidth
             variant={inputVariant as 'outlined' | 'filled' | 'standard'}
-            label={config.label}
-            placeholder={config.placeholder}
+            placeholder={effectivePlaceholder}
             value={value || ''}
             onChange={(e) => {
               setFieldValue(config.path, e.target.value);
@@ -3502,6 +3466,7 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
             }}
           />
         );
+      }
     }
   };
 
@@ -4216,6 +4181,25 @@ export function FormRenderer({ form, onSubmit, initialData = {}, isPreview = fal
                         Encrypted field
                       </Typography>
                     </Box>
+                  )}
+                  {/* Google Forms-style: label always above the input */}
+                  {!config.layout && !LAYOUT_FIELD_TYPES.includes(config.type as LayoutFieldType) && config.label && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        mb: 0.75,
+                        color: theme.textColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                      }}
+                    >
+                      {config.label}
+                      {config.required && (
+                        <Typography component="span" sx={{ color: theme.errorColor || 'error.main', ml: 0.25, fontWeight: 400 }}>*</Typography>
+                      )}
+                    </Typography>
                   )}
                   {renderField(config)}
                 </Box>

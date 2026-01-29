@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -20,6 +20,9 @@ import {
   Alert,
   Collapse,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import {
   Add,
@@ -36,9 +39,14 @@ import {
   MedicalServices,
   RateReview,
   MenuBook,
+  Warning,
+  Upload,
+  Settings,
+  Close,
 } from '@mui/icons-material';
 import { RAGConfig, RAGRetrievalConfig, DEFAULT_RAG_RETRIEVAL_CONFIG } from '@/types/rag';
-import DocumentAttachmentPanel from './DocumentAttachmentPanel';
+import { KnowledgeBaseModal } from './KnowledgeBaseModal';
+import { KnowledgeTab } from './KnowledgeTab';
 import { FormType, FieldConfig } from '@/types/form';
 import {
   ConversationalFormConfig,
@@ -153,6 +161,7 @@ export function ConversationalConfigEditor({
   organizationId,
 }: ConversationalConfigEditorProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['basics', 'topics']);
+  const [kbModalOpen, setKbModalOpen] = useState(false);
   const isConversational = formType === 'conversational';
 
   // Load templates from registry and convert to UI format
@@ -334,6 +343,34 @@ export function ConversationalConfigEditor({
 
   const ragEnabled = config?.rag?.enabled || false;
 
+  // Knowledge base document count
+  const [documentCount, setDocumentCount] = useState<number>(0);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  // Load document count when conversational mode is enabled
+  useEffect(() => {
+    if (isConversational && formId && organizationId) {
+      loadDocumentCount();
+    }
+  }, [isConversational, formId, organizationId, kbModalOpen]);
+
+  const loadDocumentCount = async () => {
+    setLoadingDocs(true);
+    try {
+      const response = await fetch(
+        `/api/rag/documents?formId=${formId}&organizationId=${organizationId}`
+      );
+      const data = await response.json();
+      if (data.success) {
+        setDocumentCount(data.documents?.length || 0);
+      }
+    } catch (error) {
+      console.error('Failed to load document count:', error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
   return (
     <Box>
       {/* Enable/Disable Toggle */}
@@ -445,6 +482,105 @@ export function ConversationalConfigEditor({
           >
             Auto-generate topics and extraction schema from your {fieldConfigs.filter(f => f.included && !f.layout).length} form fields
           </Alert>
+        )}
+
+        {/* Knowledge Base Quick Access */}
+        {formId && organizationId && (
+          <>
+            {/* Warning banner when no documents exist */}
+            {documentCount === 0 && !loadingDocs && (
+              <Alert
+                severity="warning"
+                icon={<Warning />}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    startIcon={<Upload />}
+                    onClick={() => setKbModalOpen(true)}
+                  >
+                    Upload Documents
+                  </Button>
+                }
+                sx={{ mb: 2 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  No Knowledge Sources Configured
+                </Typography>
+                <Typography variant="caption">
+                  Upload documents to enable context-aware responses. Your form will use AI conversation but won't have domain-specific knowledge.
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Knowledge base info banner (always visible) */}
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                mb: 3,
+                bgcolor: alpha('#00bcd4', 0.03),
+                borderColor: alpha('#00bcd4', 0.2),
+              }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box display="flex" alignItems="center" gap={1.5}>
+                  <MenuBook sx={{ color: '#00bcd4', fontSize: 24 }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Knowledge Base
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {loadingDocs
+                        ? 'Loading...'
+                        : documentCount > 0
+                        ? `${documentCount} document${documentCount > 1 ? 's' : ''} uploaded`
+                        : 'No documents uploaded yet'}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box display="flex" gap={1}>
+                  <Button
+                    size="small"
+                    startIcon={<Upload />}
+                    onClick={() => setKbModalOpen(true)}
+                    variant="outlined"
+                    sx={{
+                      borderColor: alpha('#00bcd4', 0.5),
+                      color: '#00bcd4',
+                      '&:hover': {
+                        borderColor: '#00bcd4',
+                        bgcolor: alpha('#00bcd4', 0.05),
+                      },
+                    }}
+                  >
+                    {documentCount > 0 ? 'Manage Documents' : 'Upload Documents'}
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<Settings />}
+                    onClick={() => {
+                      // Scroll to RAG section and expand it
+                      toggleSection('rag');
+                      setTimeout(() => {
+                        const ragSection = document.querySelector('[data-section="rag"]');
+                        ragSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 100);
+                    }}
+                    variant="text"
+                    sx={{
+                      color: '#00bcd4',
+                      '&:hover': {
+                        bgcolor: alpha('#00bcd4', 0.05),
+                      },
+                    }}
+                  >
+                    Advanced Settings
+                  </Button>
+                </Box>
+              </Box>
+            </Paper>
+          </>
         )}
 
         {/* Basics Section */}
@@ -1111,7 +1247,7 @@ export function ConversationalConfigEditor({
         </Paper>
 
         {/* RAG / Knowledge Base Section */}
-        <Paper sx={{ mb: 2 }}>
+        <Paper sx={{ mb: 2 }} data-section="rag">
           <Box
             sx={{
               p: 2,
@@ -1181,84 +1317,90 @@ export function ConversationalConfigEditor({
 
               {ragEnabled && (
                 <>
-                  {/* Document Management Panel */}
+                  {/* Knowledge Base Configuration */}
                   {formId && organizationId ? (
-                    <Box sx={{ mb: 3 }}>
-                      <DocumentAttachmentPanel
-                        formId={formId}
-                        organizationId={organizationId}
-                        selectedDocuments={config?.rag?.documents || []}
-                        onDocumentsChange={handleRAGDocumentsChange}
-                        ragEnabled={ragEnabled}
-                      />
-                    </Box>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        mb: 2,
+                        bgcolor: alpha('#00bcd4', 0.03),
+                        border: '1px solid',
+                        borderColor: alpha('#00bcd4', 0.2),
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <MenuBook sx={{ fontSize: 20, color: '#00bcd4' }} />
+                            Knowledge Base
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {config?.rag?.documents?.length || 0} document(s) selected
+                          </Typography>
+                        </Box>
+                        <Button
+                          variant="contained"
+                          size="medium"
+                          onClick={() => setKbModalOpen(true)}
+                          startIcon={<MenuBook />}
+                          sx={{
+                            bgcolor: '#00bcd4',
+                            '&:hover': {
+                              bgcolor: '#00acc1',
+                            },
+                          }}
+                        >
+                          Configure Knowledge Base
+                        </Button>
+                      </Box>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Upload documents, configure retrieval settings, and manage your AI's knowledge sources.
+                      </Typography>
+                    </Paper>
                   ) : (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                       Save the form first to manage knowledge documents.
                     </Alert>
                   )}
-
-                  {/* Retrieval Configuration */}
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                      Retrieval Settings
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <TextField
-                        label="Max Chunks"
-                        type="number"
-                        value={config?.rag?.retrievalConfig?.maxChunks ?? DEFAULT_RAG_RETRIEVAL_CONFIG.maxChunks}
-                        onChange={(e) =>
-                          updateRetrievalConfig({
-                            maxChunks: parseInt(e.target.value) || DEFAULT_RAG_RETRIEVAL_CONFIG.maxChunks,
-                          })
-                        }
-                        size="small"
-                        sx={{ width: 120 }}
-                        inputProps={{ min: 1, max: 20 }}
-                        helperText="Per query"
-                      />
-                    </Box>
-
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        Minimum Relevance Score:{' '}
-                        {Math.round(
-                          (config?.rag?.retrievalConfig?.minScore ?? DEFAULT_RAG_RETRIEVAL_CONFIG.minScore) * 100
-                        )}
-                        %
-                      </Typography>
-                      <Slider
-                        value={
-                          (config?.rag?.retrievalConfig?.minScore ?? DEFAULT_RAG_RETRIEVAL_CONFIG.minScore) * 100
-                        }
-                        onChange={(_, value) =>
-                          updateRetrievalConfig({
-                            minScore: (value as number) / 100,
-                          })
-                        }
-                        min={50}
-                        max={95}
-                        step={5}
-                        marks={[
-                          { value: 50, label: '50%' },
-                          { value: 70, label: '70%' },
-                          { value: 95, label: '95%' },
-                        ]}
-                        sx={{ color: '#00bcd4' }}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        Higher scores mean more relevant but fewer results
-                      </Typography>
-                    </Box>
-                  </Paper>
                 </>
               )}
             </Box>
           </Collapse>
         </Paper>
       </Collapse>
+
+      {/* Knowledge Base Configuration - Now using KnowledgeTab */}
+      {formId && organizationId && (
+        <Dialog
+          open={kbModalOpen}
+          onClose={() => setKbModalOpen(false)}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: { height: '80vh' }
+          }}
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6">Knowledge Base</Typography>
+              <IconButton onClick={() => setKbModalOpen(false)} size="small">
+                <Close />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0 }}>
+            <KnowledgeTab
+              formId={formId}
+              organizationId={organizationId}
+              ragEnabled={config?.rag?.enabled || false}
+              selectedDocuments={config?.rag?.documents || []}
+              onDocumentsChange={handleRAGDocumentsChange}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </Box>
   );
 }

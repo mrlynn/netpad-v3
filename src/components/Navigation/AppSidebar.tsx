@@ -781,6 +781,24 @@ export function AppSidebar() {
     return () => window.removeEventListener('netpad:form-changed', handleFormChange as EventListener);
   }, [currentApplication?.applicationId, currentOrgId]);
 
+  // Listen for workflow changes (create, delete, update) to refresh sidebar
+  useEffect(() => {
+    const handleWorkflowChange = (e: CustomEvent<{ applicationId?: string }>) => {
+      const appId = e.detail?.applicationId || currentApplication?.applicationId;
+      if (appId) {
+        // Force reload by marking as not loaded, then load
+        setAppContents((prev) => ({
+          ...prev,
+          [appId]: { ...prev[appId], loaded: false },
+        }));
+        loadAppContent(appId);
+      }
+    };
+
+    window.addEventListener('netpad:workflow-changed', handleWorkflowChange as EventListener);
+    return () => window.removeEventListener('netpad:workflow-changed', handleWorkflowChange as EventListener);
+  }, [currentApplication?.applicationId, currentOrgId]);
+
   const currentAppSlug = currentApplication?.slug || pathname?.match(/^\/apps\/([^/]+)/)?.[1];
 
   const handleNewApp = () => {

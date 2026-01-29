@@ -5,9 +5,11 @@
  * environment configuration with priority-based fallback.
  *
  * Priority Order (MongoDB-focused):
- * 1. Atlas AI Services (native MongoDB integration)
- * 2. Voyage AI Direct (MongoDB's official embedding partner)
- * 3. OpenAI (fallback, existing implementation)
+ * 1. Atlas Embedding API (NEW - MongoDB-native Voyage AI integration)
+ * 2. Voyage AI Direct (fallback for self-hosted without Atlas)
+ * 3. OpenAI (final fallback)
+ *
+ * Note: Legacy Atlas AI provider is deprecated in favor of the new Atlas Embedding API
  */
 
 import {
@@ -30,6 +32,10 @@ import {
   AtlasAIEmbeddingProvider,
   createAtlasAIEmbeddingProvider,
 } from './atlas-ai';
+import {
+  AtlasEmbeddingAPIProvider,
+  createAtlasEmbeddingAPIProvider,
+} from './atlas-embedding-api';
 
 /**
  * Create an embedding provider based on configuration
@@ -97,9 +103,9 @@ export function createEmbeddingProvider(
  *
  * Priority order:
  * 1. If EMBEDDING_PROVIDER is set, use that specific provider
- * 2. Atlas AI (if Voyage API key is available - Atlas uses Voyage)
- * 3. Voyage AI Direct (if VOYAGE_API_KEY is set)
- * 4. OpenAI (if OPENAI_API_KEY is set)
+ * 2. Atlas Embedding API (if ATLAS_MODEL_API_KEY or VOYAGE_API_KEY is set)
+ * 3. Voyage AI Direct (fallback for self-hosted without Atlas)
+ * 4. OpenAI (final fallback)
  *
  * @returns Embedding provider or null if none configured
  */
@@ -111,37 +117,35 @@ export function createDefaultEmbeddingProvider(): EmbeddingProvider | null {
   }
 
   // Auto-detect based on available credentials
-  // Priority 1: Atlas AI (uses Voyage API key)
-  // In a MongoDB-focused product, Atlas AI takes precedence
-  const voyageKey = process.env.VOYAGE_API_KEY;
-  if (voyageKey) {
-    // Prefer Atlas AI if Voyage key is available
-    // (Atlas AI provides MongoDB-native integration benefits)
-    const useAtlasAI = process.env.USE_ATLAS_AI !== 'false';
-    if (useAtlasAI) {
-      console.log('[Embedding Factory] Using Atlas AI Services (via Voyage)');
-      return createEmbeddingProvider({
-        type: 'atlas-ai',
-        apiKey: voyageKey,
-        model: process.env.VOYAGE_MODEL || DEFAULT_MODELS['atlas-ai'],
+  const atlasApiKey = process.env.ATLAS_MODEL_API_KEY || process.env.VOYAGE_API_KEY;
+  const useAtlasAPI = process.env.ATLAS_EMBEDDING_API !== 'false';
+
+  if (atlasApiKey) {
+    // Priority 1: Atlas Embedding API (NEW - recommended for MongoDB Atlas users)
+    if (useAtlasAPI) {
+      console.log('[Embedding Factory] Using Atlas Embedding API');
+      return createAtlasEmbeddingAPIProvider({
+        apiKey: atlasApiKey,
+        model: process.env.VOYAGE_MODEL || 'voyage-4',
+        outputDimensions: process.env.VOYAGE_EMBEDDING_DIMENSIONS
+          ? parseInt(process.env.VOYAGE_EMBEDDING_DIMENSIONS)
+          : undefined,
       });
     }
 
-    // Priority 2: Direct Voyage AI
+    // Priority 2: Direct Voyage AI (fallback for self-hosted without Atlas)
     console.log('[Embedding Factory] Using Voyage AI Direct');
-    return createEmbeddingProvider({
-      type: 'voyage',
-      apiKey: voyageKey,
+    return createVoyageEmbeddingProvider({
+      apiKey: atlasApiKey,
       model: process.env.VOYAGE_MODEL || DEFAULT_MODELS.voyage,
     });
   }
 
-  // Priority 3: OpenAI (fallback)
+  // Priority 3: OpenAI (final fallback)
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
     console.log('[Embedding Factory] Using OpenAI (fallback)');
-    return createEmbeddingProvider({
-      type: 'openai',
+    return createOpenAIEmbeddingProvider({
       apiKey: openaiKey,
       model: process.env.OPENAI_EMBEDDING_MODEL || DEFAULT_MODELS.openai,
     });
@@ -337,4 +341,5 @@ export {
   OpenAIEmbeddingProvider,
   VoyageEmbeddingProvider,
   AtlasAIEmbeddingProvider,
+  AtlasEmbeddingAPIProvider,
 };

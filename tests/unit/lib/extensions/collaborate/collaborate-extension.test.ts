@@ -48,8 +48,12 @@ describe('@netpad/collaborate Extension', () => {
       expect(collaborateExtension.features).toContain('custom:contributor_leaderboard');
     });
 
-    it('should have exactly 3 features', () => {
-      expect(collaborateExtension.features).toHaveLength(3);
+    it('should declare custom:workflow_nodes feature', () => {
+      expect(collaborateExtension.features).toContain('custom:workflow_nodes');
+    });
+
+    it('should have exactly 4 features', () => {
+      expect(collaborateExtension.features).toHaveLength(4);
     });
   });
 

@@ -83,6 +83,7 @@ export interface WorkflowSettings {
   timezone: string;              // For scheduled triggers
   embedSettings?: WorkflowEmbedSettings;  // Embedding configuration
   durableExecution?: DurableExecutionSettings; // Cloud premium durable execution
+  canvasVisual?: CanvasVisualSettings; // Canvas visual customization
 }
 
 /**
@@ -147,6 +148,86 @@ export interface RetryPolicy {
   backoffMultiplier: number;
   initialDelayMs: number;
 }
+
+/**
+ * Canvas Visual Settings
+ *
+ * Allows users to customize the visual appearance of the workflow canvas.
+ */
+export interface CanvasVisualSettings {
+  /**
+   * Background pattern type
+   * - dots: Classic dot grid pattern
+   * - lines: Horizontal and vertical line grid
+   * - cross: Cross/plus pattern at intersections
+   */
+  backgroundPattern: 'dots' | 'lines' | 'cross';
+
+  /**
+   * Gap between pattern elements in pixels
+   */
+  backgroundGap: number;
+
+  /**
+   * Size of pattern elements (dot radius or line thickness)
+   */
+  backgroundSize: number;
+
+  /**
+   * Custom background pattern color (optional)
+   * If not set, uses theme-appropriate defaults
+   */
+  backgroundPatternColor?: string;
+
+  /**
+   * Custom canvas background color (optional)
+   * If not set, uses theme-appropriate defaults
+   */
+  canvasBackgroundColor?: string;
+
+  /**
+   * Show the NetPad watermark logo
+   */
+  showWatermark: boolean;
+
+  /**
+   * Watermark opacity (0-1)
+   */
+  watermarkOpacity: number;
+
+  /**
+   * Snap to grid enabled
+   */
+  snapToGrid: boolean;
+
+  /**
+   * Snap grid size in pixels [x, y]
+   */
+  snapGridSize: [number, number];
+
+  /**
+   * Default edge animation
+   */
+  animatedEdges: boolean;
+
+  /**
+   * Default edge stroke width
+   */
+  edgeStrokeWidth: number;
+}
+
+export const DEFAULT_CANVAS_VISUAL_SETTINGS: CanvasVisualSettings = {
+  backgroundPattern: 'dots',
+  backgroundGap: 20,
+  backgroundSize: 1,
+  showWatermark: true,
+  watermarkOpacity: 0.035,
+  snapToGrid: true,
+  snapGridSize: [15, 15],
+  animatedEdges: true,
+  edgeStrokeWidth: 0.5,
+};
+
 
 export interface WorkflowVariable {
   id: string;
@@ -818,6 +899,7 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     auditLogging: true,
     retentionDays: 30,
   },
+  canvasVisual: DEFAULT_CANVAS_VISUAL_SETTINGS,
 };
 
 /**

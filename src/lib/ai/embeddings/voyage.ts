@@ -52,13 +52,23 @@ interface VoyageErrorResponse {
 
 /**
  * Pricing for Voyage AI embedding models (per 1M tokens)
- * Updated as of January 2025
+ * Updated as of January 2026
  */
 const VOYAGE_EMBEDDING_PRICING: Record<string, number> = {
+  // Voyage v4 models (latest)
+  'voyage-4': 0.06, // $0.06 per 1M tokens
+  'voyage-4-lite': 0.02, // $0.02 per 1M tokens
+  'voyage-4-large': 0.06, // $0.06 per 1M tokens
+
+  // Voyage v3 models (legacy)
   'voyage-3': 0.06, // $0.06 per 1M tokens
   'voyage-3-lite': 0.02, // $0.02 per 1M tokens
-  'voyage-code-3': 0.06, // $0.06 per 1M tokens
   'voyage-3-large': 0.06, // $0.06 per 1M tokens
+
+  // Domain-specific models
+  'voyage-finance-2': 0.06, // $0.06 per 1M tokens
+  'voyage-law-2': 0.06, // $0.06 per 1M tokens
+  'voyage-code-3': 0.06, // $0.06 per 1M tokens
 };
 
 /**
@@ -301,7 +311,7 @@ export class VoyageEmbeddingProvider implements EmbeddingProvider {
     const totalTokens = estimateTotalTokens(texts);
     const pricePerMillion =
       VOYAGE_EMBEDDING_PRICING[this.modelName] ||
-      VOYAGE_EMBEDDING_PRICING['voyage-3'];
+      VOYAGE_EMBEDDING_PRICING['voyage-4']; // Updated default to v4
     return (totalTokens / 1_000_000) * pricePerMillion;
   }
 

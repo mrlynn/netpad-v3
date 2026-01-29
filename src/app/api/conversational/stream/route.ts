@@ -101,6 +101,8 @@ function createSSEStream(
  * }
  */
 export async function POST(request: NextRequest) {
+  console.log('🔴🔴🔴 [RAG DEBUG] POST HANDLER CALLED 🔴🔴🔴');
+
   try {
     // Validate authentication and feature access
     // Note: Using 'ai_form_generator' feature for now - may need dedicated feature later
@@ -123,6 +125,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    console.log('🟡🟡🟡 [RAG DEBUG] Request body parsed 🟡🟡🟡');
+    console.log('🟡 Full config:', JSON.stringify(body.config, null, 2));
 
     // Validate required fields
     if (!body.conversationId || typeof body.conversationId !== 'string') {
@@ -306,9 +311,18 @@ export async function POST(request: NextRequest) {
     let ragContext: RAGTurnContext | null = null;
     let ragSources: RAGSource[] = [];
 
+    console.log('🟢🟢🟢 [RAG DEBUG] About to check RAG configuration 🟢🟢🟢');
+    console.log('🟢 RAG Config Present:', !!body.config.rag);
+    console.log('🟢 RAG Enabled:', body.config.rag?.enabled);
+    console.log('🟢 Documents Count:', body.config.rag?.documents?.length || 0);
+    console.log('🟢 Documents:', body.config.rag?.documents);
+    console.log('🟢 isRAGEnabled():', isRAGEnabled(body.config));
+    console.log('🟢 Form ID:', body.formId);
+    console.log('🟢 User Message:', body.message);
+
     if (isRAGEnabled(body.config)) {
       try {
-        console.log('[Conversational Stream] RAG enabled, processing with retrieval');
+        console.log('🔵🔵🔵 [RAG DEBUG] RAG IS ENABLED - Processing with retrieval 🔵🔵🔵');
         const ragResult = await processWithRAG(
           body.message,
           state,

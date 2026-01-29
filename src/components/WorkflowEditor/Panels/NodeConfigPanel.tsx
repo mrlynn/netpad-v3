@@ -43,6 +43,7 @@ import {
   Palette as PaletteIcon,
   Circle as CircleIcon,
   CheckCircle as SavedIcon,
+  ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 import { WorkflowNode, RetryPolicy, StickyNoteStyle } from '@/types/workflow';
 import { useWorkflowActions, useWorkflowEditor } from '@/contexts/WorkflowContext';
@@ -273,6 +274,27 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
     return upstream;
   }, [selectedNode, nodes, edges]);
 
+  // Upstream nodes: nodes that feed into the selected node (for reference ID display)
+  const upstreamNodes = useMemo(() => {
+    if (!selectedNode) return [];
+    const list: WorkflowNode[] = [];
+    const visited = new Set<string>();
+    function traverse(nodeId: string) {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+      const incomingEdges = edges.filter((e) => e.target === nodeId);
+      for (const edge of incomingEdges) {
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        if (sourceNode) {
+          list.push(sourceNode);
+          traverse(sourceNode.id);
+        }
+      }
+    }
+    traverse(selectedNode.id);
+    return list;
+  }, [selectedNode, nodes, edges]);
+
   // Track if this is the initial sync (to avoid triggering autosave on mount)
   const isInitialSyncRef = useRef(true);
   const autosaveTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
@@ -487,6 +509,98 @@ export function NodeConfigPanel({ open, onClose, onTestWorkflow }: NodeConfigPan
               }
               label="Enabled"
             />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Node references: how to reference this node and upstream nodes in templates */}
+        <Accordion defaultExpanded>
+          <AccordionSummary expandIcon={<ExpandIcon />}>
+            <DataIcon sx={{ mr: 1, fontSize: 20 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Node references
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Use these IDs in templates (e.g. in Send Email or Transform) as <code>{'{{nodes.<id>.data.field}}'}</code>. Use the variable picker in each field to insert the exact path.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              <strong>Where does the ID come from?</strong> Nodes you add from the palette get an auto-generated ID (e.g. <code>mongodb-write_abc123</code>). Nodes from an imported workflow or app template (e.g. Collaborator Recruitment) keep the IDs defined in that template (e.g. <code>save_to_mongodb</code>, <code>trigger</code>).
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                This node&apos;s reference ID
+              </Typography>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  p: 1,
+                  bgcolor: alpha(theme.palette.grey[500], 0.08),
+                  borderRadius: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '0.8rem',
+                  wordBreak: 'break-all',
+                }}
+              >
+                <Typography component="code" variant="body2" sx={{ flex: 1, fontFamily: 'inherit', fontSize: 'inherit' }}>
+                  nodes.{selectedNode.id}
+                </Typography>
+                <Tooltip title="Copy reference ID">
+                  <IconButton
+                    size="small"
+                    onClick={() => navigator.clipboard.writeText(`nodes.${selectedNode.id}`)}
+                  >
+                    <CopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+            {upstreamNodes.length > 0 && (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  Upstream nodes (data you can reference)
+                </Typography>
+                {upstreamNodes.map((node) => (
+                  <Box
+                    key={node.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1,
+                      mb: 0.5,
+                      bgcolor: alpha(theme.palette.grey[500], 0.06),
+                      borderRadius: 1,
+                      fontFamily: 'monospace',
+                      fontSize: '0.8rem',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ minWidth: 80, fontWeight: 500 }}>
+                      {node.label || node.type}
+                    </Typography>
+                    <Typography component="code" variant="body2" sx={{ flex: 1, fontFamily: 'inherit', fontSize: 'inherit' }}>
+                      nodes.{node.id}
+                    </Typography>
+                    <Tooltip title="Copy reference ID">
+                      <IconButton
+                        size="small"
+                        onClick={() => navigator.clipboard.writeText(`nodes.${node.id}`)}
+                      >
+                        <CopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ))}
+              </>
+            )}
+            {upstreamNodes.length === 0 && !isTriggerNode && (
+              <Typography variant="caption" color="text.secondary">
+                Connect nodes from the left to see upstream reference IDs here.
+              </Typography>
+            )}
           </AccordionDetails>
         </Accordion>
 
