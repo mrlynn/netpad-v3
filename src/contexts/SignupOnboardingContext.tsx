@@ -93,6 +93,13 @@ interface SignupOnboardingContextValue extends SignupOnboardingState {
   skipStep: () => void;
   complete: () => Promise<void>;
   refreshStatus: () => Promise<void>;
+
+  /**
+   * Auto-complete onboarding for solo users.
+   * Creates a default workspace and marks onboarding complete,
+   * allowing users to skip directly to IntentOnboarding.
+   */
+  autoCompleteForSolo: () => Promise<boolean>;
 }
 
 // ============================================
@@ -132,7 +139,7 @@ function generateSlug(name: string): string {
 // ============================================
 
 export function SignupOnboardingProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
 
   const [state, setState] = useState<SignupOnboardingState>({
     isLoading: true,
@@ -477,6 +484,63 @@ export function SignupOnboardingProvider({ children }: { children: ReactNode }) 
     }
   }, []);
 
+  // Auto-complete onboarding for solo users
+  // Creates a default workspace silently and skips to IntentOnboarding
+  const autoCompleteForSolo = useCallback(async (): Promise<boolean> => {
+    setState((prev) => ({ ...prev, isProcessing: true, error: null }));
+
+    try {
+      // Generate default workspace name from email or fallback
+      const emailPrefix = user?.email?.split('@')[0] || 'my';
+      const defaultWorkspaceName = `${emailPrefix}'s Workspace`;
+      const defaultSlug = generateSlug(defaultWorkspaceName);
+
+      // Step 1: Create workspace
+      const createResponse = await fetch('/api/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: defaultWorkspaceName,
+          slug: defaultSlug,
+        }),
+      });
+
+      if (!createResponse.ok) {
+        // If org already exists, that's fine - user already has a workspace
+        const errorData = await createResponse.json();
+        if (!errorData.error?.includes('already exists') && !errorData.error?.includes('already have')) {
+          throw new Error(errorData.error || 'Failed to create workspace');
+        }
+      }
+
+      // Step 2: Mark signup onboarding as complete with skipped steps
+      await fetch('/api/onboarding/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completed: true,
+          skippedSteps: ['welcome', 'workspace', 'database', 'team-invites'],
+        }),
+      });
+
+      setState((prev) => ({
+        ...prev,
+        isProcessing: false,
+        isActive: false,
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('[SignupOnboarding] Auto-complete failed:', error);
+      setState((prev) => ({
+        ...prev,
+        isProcessing: false,
+        error: error instanceof Error ? error.message : 'Failed to setup workspace',
+      }));
+      return false;
+    }
+  }, [user?.email]);
+
   const value: SignupOnboardingContextValue = {
     ...state,
     nextStep,
@@ -495,6 +559,7 @@ export function SignupOnboardingProvider({ children }: { children: ReactNode }) 
     skipStep,
     complete,
     refreshStatus,
+    autoCompleteForSolo,
   };
 
   return (

@@ -3,21 +3,28 @@
 /**
  * SignupOnboardingGate Component
  *
- * Wrapper component that conditionally shows the signup onboarding flow
- * or renders children based on onboarding status.
+ * For solo users, auto-completes signup onboarding silently and passes through
+ * to IntentOnboarding. Users can customize their workspace later in settings.
+ *
+ * This creates a default workspace in the background, allowing users to
+ * get to the "What do you want to build?" experience immediately.
  */
 
-import React, { ReactNode } from 'react';
-import { Box, alpha, useTheme } from '@mui/material';
+import React, { ReactNode, useEffect, useState } from 'react';
+import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { useSignupOnboarding } from '@/contexts/SignupOnboardingContext';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
-import { SignupOnboardingFlow } from './SignupOnboardingFlow';
 
 interface SignupOnboardingGateProps {
   children: ReactNode;
+  /**
+   * If true, shows the full onboarding flow instead of auto-completing.
+   * Useful for team/enterprise onboarding or explicit workspace setup.
+   */
+  forceFullOnboarding?: boolean;
 }
 
-function FullScreenLoader() {
+function FullScreenLoader({ message = 'Loading...' }: { message?: string }) {
   const theme = useTheme();
 
   return (
@@ -38,25 +45,67 @@ function FullScreenLoader() {
           gap: 2,
         }}
       >
-        <NetPadLoader size="large" variant="ascii" message="Loading..." />
+        <NetPadLoader size="large" variant="ascii" message={message} />
       </Box>
     </Box>
   );
 }
 
-export function SignupOnboardingGate({ children }: SignupOnboardingGateProps) {
-  const { isLoading, isActive } = useSignupOnboarding();
+export function SignupOnboardingGate({
+  children,
+  forceFullOnboarding = false,
+}: SignupOnboardingGateProps) {
+  const { isLoading, isActive, isProcessing, autoCompleteForSolo, error } = useSignupOnboarding();
+  const [isAutoCompleting, setIsAutoCompleting] = useState(false);
+  const [autoCompleteAttempted, setAutoCompleteAttempted] = useState(false);
 
-  // Show loader while checking status
-  if (isLoading) {
-    return <FullScreenLoader />;
+  // Auto-complete signup onboarding for solo users
+  useEffect(() => {
+    // Only run if:
+    // 1. Not forcing full onboarding
+    // 2. Onboarding is active (needs to be done)
+    // 3. Not currently loading or processing
+    // 4. Haven't already attempted auto-complete
+    if (
+      !forceFullOnboarding &&
+      isActive &&
+      !isLoading &&
+      !isProcessing &&
+      !isAutoCompleting &&
+      !autoCompleteAttempted
+    ) {
+      setIsAutoCompleting(true);
+      setAutoCompleteAttempted(true);
+
+      autoCompleteForSolo().then((success) => {
+        setIsAutoCompleting(false);
+        if (!success) {
+          console.warn('[SignupOnboardingGate] Auto-complete failed, user will see IntentOnboarding anyway');
+        }
+      });
+    }
+  }, [
+    forceFullOnboarding,
+    isActive,
+    isLoading,
+    isProcessing,
+    isAutoCompleting,
+    autoCompleteAttempted,
+    autoCompleteForSolo,
+  ]);
+
+  // Show loader while checking status or auto-completing
+  if (isLoading || isAutoCompleting || isProcessing) {
+    return <FullScreenLoader message="Setting up your workspace..." />;
   }
 
-  // Show onboarding flow if active
-  if (isActive) {
-    return <SignupOnboardingFlow />;
+  // If auto-complete was attempted and there's an error, log it but continue
+  // The user will still be able to use the app, they just might need to set up workspace manually later
+  if (error && autoCompleteAttempted) {
+    console.warn('[SignupOnboardingGate] Workspace setup had an issue:', error);
+    // Continue to children anyway - don't block the user
   }
 
-  // Otherwise render children
+  // Render children (which will be IntentOnboarding if that gate is active)
   return <>{children}</>;
 }
