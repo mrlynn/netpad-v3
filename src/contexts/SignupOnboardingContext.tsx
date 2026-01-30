@@ -485,35 +485,15 @@ export function SignupOnboardingProvider({ children }: { children: ReactNode }) 
   }, []);
 
   // Auto-complete onboarding for solo users
-  // Creates a default workspace silently and skips to IntentOnboarding
+  // Just marks signup onboarding complete - IntentOnboarding will handle org/project creation
   const autoCompleteForSolo = useCallback(async (): Promise<boolean> => {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }));
 
     try {
-      // Generate default workspace name from email or fallback
-      const emailPrefix = user?.email?.split('@')[0] || 'my';
-      const defaultWorkspaceName = `${emailPrefix}'s Workspace`;
-      const defaultSlug = generateSlug(defaultWorkspaceName);
-
-      // Step 1: Create workspace
-      const createResponse = await fetch('/api/organizations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: defaultWorkspaceName,
-          slug: defaultSlug,
-        }),
-      });
-
-      if (!createResponse.ok) {
-        // If org already exists, that's fine - user already has a workspace
-        const errorData = await createResponse.json();
-        if (!errorData.error?.includes('already exists') && !errorData.error?.includes('already have')) {
-          throw new Error(errorData.error || 'Failed to create workspace');
-        }
-      }
-
-      // Step 2: Mark signup onboarding as complete with skipped steps
+      // Don't create org here - let IntentOnboarding's autoScaffoldForUser handle it
+      // This ensures the org, project, and app are all created together correctly
+      
+      // Just mark signup onboarding as complete with skipped steps
       await fetch('/api/onboarding/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -535,11 +515,11 @@ export function SignupOnboardingProvider({ children }: { children: ReactNode }) 
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error: error instanceof Error ? error.message : 'Failed to setup workspace',
+        error: error instanceof Error ? error.message : 'Failed to complete onboarding',
       }));
       return false;
     }
-  }, [user?.email]);
+  }, []);
 
   const value: SignupOnboardingContextValue = {
     ...state,
