@@ -88,6 +88,221 @@ export interface OrgMembership {
 }
 
 // ============================================
+// Groups & Teams
+// ============================================
+
+export interface OrgGroup {
+  _id?: ObjectId;
+  groupId: string;                    // "grp_abc123"
+  organizationId: string;
+  name: string;
+  slug: string;                       // URL-friendly: "engineering-team"
+  description?: string;
+  memberIds: string[];                // Array of userIds
+  defaultRole?: OrgRole;              // Default role inherited by members
+  metadata?: Record<string, unknown>; // Extensible metadata
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================
+// Custom Roles (Enterprise)
+// ============================================
+
+export interface CustomRole {
+  _id?: ObjectId;
+  roleId: string;                     // "role_abc123"
+  organizationId: string;
+  name: string;                       // "billing-admin", "form-reviewer"
+  slug: string;                       // URL-friendly identifier
+  description?: string;
+  baseRole?: OrgRole;                 // Optional: inherit from built-in role
+  permissions: string[];              // Explicit permission strings
+  isSystem?: boolean;                 // true for built-in roles (non-deletable)
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// All available permissions in the system
+export const AVAILABLE_PERMISSIONS = [
+  // Organization
+  'org:read',
+  'org:update',
+  'org:delete',
+  'org:manage_billing',
+  'org:manage_settings',
+  
+  // Members
+  'members:read',
+  'members:invite',
+  'members:remove',
+  'members:update_role',
+  
+  // Groups
+  'groups:read',
+  'groups:create',
+  'groups:update',
+  'groups:delete',
+  'groups:manage_members',
+  
+  // Roles
+  'roles:read',
+  'roles:create',
+  'roles:update',
+  'roles:delete',
+  'roles:assign',
+  
+  // Projects
+  'projects:read',
+  'projects:create',
+  'projects:update',
+  'projects:delete',
+  
+  // Forms
+  'forms:read',
+  'forms:create',
+  'forms:update',
+  'forms:delete',
+  'forms:publish',
+  'forms:manage_permissions',
+  
+  // Submissions/Responses
+  'responses:read',
+  'responses:export',
+  'responses:delete',
+  
+  // Connections
+  'connections:read',
+  'connections:create',
+  'connections:update',
+  'connections:delete',
+  'connections:use',
+  'connections:view_credentials',
+  
+  // Workflows
+  'workflows:read',
+  'workflows:create',
+  'workflows:update',
+  'workflows:delete',
+  'workflows:execute',
+  
+  // Integrations
+  'integrations:read',
+  'integrations:create',
+  'integrations:update',
+  'integrations:delete',
+  
+  // Audit
+  'audit:read',
+] as const;
+
+export type Permission = typeof AVAILABLE_PERMISSIONS[number];
+
+// Built-in role → permission mapping
+export const BUILTIN_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
+  owner: AVAILABLE_PERMISSIONS as unknown as Permission[],
+  admin: [
+    'org:read', 'org:update', 'org:manage_settings',
+    'members:read', 'members:invite', 'members:remove', 'members:update_role',
+    'groups:read', 'groups:create', 'groups:update', 'groups:delete', 'groups:manage_members',
+    'roles:read', 'roles:assign',
+    'projects:read', 'projects:create', 'projects:update', 'projects:delete',
+    'forms:read', 'forms:create', 'forms:update', 'forms:delete', 'forms:publish', 'forms:manage_permissions',
+    'responses:read', 'responses:export', 'responses:delete',
+    'connections:read', 'connections:create', 'connections:update', 'connections:delete', 'connections:use',
+    'workflows:read', 'workflows:create', 'workflows:update', 'workflows:delete', 'workflows:execute',
+    'integrations:read', 'integrations:create', 'integrations:update', 'integrations:delete',
+    'audit:read',
+  ],
+  member: [
+    'org:read',
+    'members:read',
+    'groups:read',
+    'roles:read',
+    'projects:read', 'projects:create', 'projects:update',
+    'forms:read', 'forms:create', 'forms:update', 'forms:publish',
+    'responses:read', 'responses:export',
+    'connections:read', 'connections:use',
+    'workflows:read', 'workflows:create', 'workflows:update', 'workflows:execute',
+    'integrations:read',
+  ],
+  viewer: [
+    'org:read',
+    'members:read',
+    'groups:read',
+    'roles:read',
+    'projects:read',
+    'forms:read',
+    'responses:read',
+    'connections:read',
+    'workflows:read',
+    'integrations:read',
+  ],
+};
+
+// ============================================
+// Role Assignments
+// ============================================
+
+export type AssignmentTargetType = 'user' | 'group';
+export type AssignmentScopeType = 'org' | 'project' | 'form';
+
+export interface RoleAssignmentScope {
+  type: AssignmentScopeType;
+  resourceId?: string;                // projectId or formId (omit for org-wide)
+}
+
+export interface RoleAssignment {
+  _id?: ObjectId;
+  assignmentId: string;               // "asgn_abc123"
+  organizationId: string;
+  
+  // Who is being assigned the role
+  targetType: AssignmentTargetType;
+  targetId: string;                   // userId or groupId
+  
+  // What role is being assigned
+  roleType: 'builtin' | 'custom';
+  roleId: string;                     // OrgRole name or customRole.roleId
+  
+  // Where does this role apply (optional scoping)
+  scope?: RoleAssignmentScope;
+  
+  // Audit trail
+  grantedBy: string;
+  grantedAt: Date;
+  expiresAt?: Date;                   // Optional: time-limited access
+  reason?: string;                    // Why was this granted
+}
+
+// ============================================
+// Effective Permissions (computed)
+// ============================================
+
+export interface EffectivePermissions {
+  userId: string;
+  organizationId: string;
+  
+  // All permissions this user has (computed from roles + groups)
+  permissions: Permission[];
+  
+  // Breakdown of where permissions come from
+  sources: Array<{
+    type: 'direct' | 'group' | 'builtin';
+    sourceId: string;                 // roleId or groupId
+    sourceName: string;
+    permissions: Permission[];
+  }>;
+  
+  // Scoped permissions (project/form level overrides)
+  scopedPermissions?: Record<string, Permission[]>; // resourceId → permissions
+  
+  computedAt: Date;
+}
+
+// ============================================
 // Project
 // ============================================
 

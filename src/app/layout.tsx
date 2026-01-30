@@ -15,6 +15,7 @@ import { ImpersonationBanner } from '@/components/Admin/ImpersonationBanner';
 import { SystemBroadcast } from '@/components/common/SystemBroadcast';
 import { Analytics } from "@vercel/analytics/next"
 import { NavigationTimer } from '@/lib/performance/NavigationTimer';
+import { TerminalProvider } from '@/components/WebTerminal';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://netpad.io'),
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                           <PipelineProvider>{children}</PipelineProvider>
                           <NavigationTimer />
                           <DevPanelWrapper />
+                          <TerminalProvider />
                           <Analytics />
                         </IntentOnboardingProvider>
                       </SidebarProvider>
