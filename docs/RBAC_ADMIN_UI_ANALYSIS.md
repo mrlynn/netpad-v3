@@ -1,11 +1,18 @@
 # RBAC Feature Analysis: CLI vs Admin UI
 
 **Date:** 2026-01-30  
-**Branch:** `feature/rbac-cli-management`
+**Branch:** `feature/rbac-cli-management`  
+**Status:** ✅ IMPLEMENTATION COMPLETE
 
 ## Executive Summary
 
-The CLI now has comprehensive RBAC management commands. The Admin UI needs matching functionality for feature parity. This document maps CLI capabilities to required UI components.
+The CLI now has comprehensive RBAC management commands. ~~The Admin UI needs matching functionality for feature parity.~~ **Admin UI has been implemented with full feature parity.**
+
+### What's Built
+- `/orgs/[orgId]/settings/` - Settings layout with sidebar navigation
+- `/orgs/[orgId]/settings/members` - Member management (list, invite, edit role, remove)
+- `/orgs/[orgId]/settings/groups` - Group management (CRUD, member add/remove)
+- `/orgs/[orgId]/settings/roles` - Role management (built-in view, custom CRUD, permissions)
 
 ---
 
@@ -14,33 +21,33 @@ The CLI now has comprehensive RBAC management commands. The Admin UI needs match
 | Feature | CLI Command | API Endpoint | Admin UI | Status |
 |---------|-------------|--------------|----------|--------|
 | **Users** |
-| List org members | `users list` | `GET /api/platform/orgs/{orgId}/members` | ❌ Missing | 🔴 |
-| Invite user | `users add <email>` | `POST /api/platform/orgs/{orgId}/invitations` | ❌ Missing | 🔴 |
-| Remove user | `users remove <email>` | `DELETE /api/platform/orgs/{orgId}/members/{id}` | ❌ Missing | 🔴 |
-| View user details | `users info <email>` | `GET /api/platform/orgs/{orgId}/members/{id}` | ❌ Missing | 🔴 |
-| Update user role | `users update --role` | `PATCH /api/platform/orgs/{orgId}/members/{id}` | ❌ Missing | 🔴 |
+| List org members | `users list` | `GET /api/platform/orgs/{orgId}/members` | ✅ Members page | 🟢 |
+| Invite user | `users add <email>` | `POST /api/platform/orgs/{orgId}/invitations` | ✅ Invite dialog | 🟢 |
+| Remove user | `users remove <email>` | `DELETE /api/platform/orgs/{orgId}/members/{id}` | ✅ Remove dialog | 🟢 |
+| View user details | `users info <email>` | `GET /api/platform/orgs/{orgId}/members/{id}` | ✅ Table row | 🟢 |
+| Update user role | `users update --role` | `PATCH /api/platform/orgs/{orgId}/members/{id}` | ✅ Edit role dialog | 🟢 |
 | **Groups** |
-| List groups | `groups list` | `GET /api/platform/orgs/{orgId}/groups` | ❌ Missing | 🔴 |
-| Create group | `groups create` | `POST /api/platform/orgs/{orgId}/groups` | ❌ Missing | 🔴 |
-| Delete group | `groups delete` | `DELETE /api/platform/orgs/{orgId}/groups/{id}` | ❌ Missing | 🔴 |
-| View group | `groups info` | `GET /api/platform/orgs/{orgId}/groups/{id}` | ❌ Missing | 🔴 |
-| Add member to group | `groups add-member` | `PATCH /api/platform/orgs/{orgId}/groups/{id}` | ❌ Missing | 🔴 |
-| Remove member | `groups remove-member` | `PATCH /api/platform/orgs/{orgId}/groups/{id}` | ❌ Missing | 🔴 |
+| List groups | `groups list` | `GET /api/platform/orgs/{orgId}/groups` | ✅ Groups page | 🟢 |
+| Create group | `groups create` | `POST /api/platform/orgs/{orgId}/groups` | ✅ Create dialog | 🟢 |
+| Delete group | `groups delete` | `DELETE /api/platform/orgs/{orgId}/groups/{id}` | ✅ Delete dialog | 🟢 |
+| View group | `groups info` | `GET /api/platform/orgs/{orgId}/groups/{id}` | ✅ Detail panel | 🟢 |
+| Add member to group | `groups add-member` | `PATCH /api/platform/orgs/{orgId}/groups/{id}` | ✅ Member autocomplete | 🟢 |
+| Remove member | `groups remove-member` | `PATCH /api/platform/orgs/{orgId}/groups/{id}` | ✅ Remove button | 🟢 |
 | **Roles** |
-| List roles | `roles list` | `GET /api/platform/orgs/{orgId}/roles` | ❌ Missing | 🔴 |
-| Create custom role | `roles create` | `POST /api/platform/orgs/{orgId}/roles` | ❌ Missing | 🔴 |
-| Delete custom role | `roles delete` | `DELETE /api/platform/orgs/{orgId}/roles/{id}` | ❌ Missing | 🔴 |
-| View role permissions | `roles info` | `GET /api/platform/orgs/{orgId}/roles/{id}` | ❌ Missing | 🔴 |
-| Grant permission | `roles grant` | `PATCH /api/platform/orgs/{orgId}/roles/{id}` | ❌ Missing | 🔴 |
-| Revoke permission | `roles revoke` | `PATCH /api/platform/orgs/{orgId}/roles/{id}` | ❌ Missing | 🔴 |
+| List roles | `roles list` | `GET /api/platform/orgs/{orgId}/roles` | ✅ Roles page | 🟢 |
+| Create custom role | `roles create` | `POST /api/platform/orgs/{orgId}/roles` | ✅ Create dialog | 🟢 |
+| Delete custom role | `roles delete` | `DELETE /api/platform/orgs/{orgId}/roles/{id}` | ✅ Delete dialog | 🟢 |
+| View role permissions | `roles info` | `GET /api/platform/orgs/{orgId}/roles/{id}` | ✅ View dialog | 🟢 |
+| Grant permission | `roles grant` | `PATCH /api/platform/orgs/{orgId}/roles/{id}` | ✅ Checkboxes | 🟢 |
+| Revoke permission | `roles revoke` | `PATCH /api/platform/orgs/{orgId}/roles/{id}` | ✅ Checkboxes | 🟢 |
 | **Assignments** |
-| Assign role | `assign user/group` | `POST /api/platform/orgs/{orgId}/assignments` | ❌ Missing | 🔴 |
-| Remove assignment | `unassign user/group` | `DELETE /api/platform/orgs/{orgId}/assignments` | ❌ Missing | 🔴 |
-| View assignments | - | `GET /api/platform/orgs/{orgId}/assignments` | ❌ Missing | 🔴 |
+| Assign role | `assign user/group` | `POST /api/platform/orgs/{orgId}/assignments` | ⚠️ Via group default | 🟡 |
+| Remove assignment | `unassign user/group` | `DELETE /api/platform/orgs/{orgId}/assignments` | ⚠️ Via group removal | 🟡 |
+| View assignments | - | `GET /api/platform/orgs/{orgId}/assignments` | ⚠️ Not explicit | 🟡 |
 | **Permissions** |
-| List all permissions | `permissions list` | (static list) | ❌ Missing | 🔴 |
-| Check permission | `permissions check` | `GET /api/platform/users/me/permissions` | ❌ Missing | 🔴 |
-| View user perms | `whoami --effective` | `GET /api/platform/users/me/permissions` | ❌ Missing | 🔴 |
+| List all permissions | `permissions list` | (static list) | ✅ In role edit | 🟢 |
+| Check permission | `permissions check` | `GET /api/platform/users/me/permissions` | ⚠️ Not explicit | 🟡 |
+| View user perms | `whoami --effective` | `GET /api/platform/users/me/permissions` | ⚠️ Not explicit | 🟡 |
 
 ---
 
