@@ -73,3 +73,6 @@ export interface TerminalContextType {
   };
   history: string[];
 }
+
+// Alias for command handlers
+export type TerminalContext = TerminalContextType;

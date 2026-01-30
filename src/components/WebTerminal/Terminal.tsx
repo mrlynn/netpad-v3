@@ -18,6 +18,15 @@ import {
   saveShellState,
 } from './shellFeatures';
 import { expandGlobsInArgs, hasGlobChars } from './globExpansion';
+import {
+  handleUsersCommand,
+  handleGroupsCommand,
+  handleRolesCommand,
+  handleAssignCommand,
+  handleUnassignCommand,
+  handlePermissionsCommand,
+  handleWhoamiCommand,
+} from './rbacCommands';
 
 // NetPad dark theme
 const NETPAD_THEME: TerminalTheme = {
@@ -468,6 +477,85 @@ export function WebTerminal({
       });
       
       return result;
+    }
+    
+    // Handle RBAC commands
+    const rbacContext = {
+      currentOrg: currentOrg || fsContext.orgId,
+      currentProject: currentProject || fsContext.projectId,
+      history: commandHistoryRef.current,
+    };
+    
+    // Parse options from args
+    const parseArgsAndOptions = (args: string[]): { parsedArgs: string[]; options: Record<string, string | boolean> } => {
+      const parsedArgs: string[] = [];
+      const options: Record<string, string | boolean> = {};
+      
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg.startsWith('--')) {
+          const key = arg.slice(2);
+          if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+            options[key] = args[i + 1];
+            i++;
+          } else {
+            options[key] = true;
+          }
+        } else if (arg.startsWith('-') && arg.length === 2) {
+          const key = arg.slice(1);
+          if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+            options[key] = args[i + 1];
+            i++;
+          } else {
+            options[key] = true;
+          }
+        } else {
+          parsedArgs.push(arg);
+        }
+      }
+      return { parsedArgs, options };
+    };
+    
+    if (command === 'users') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleUsersCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'groups') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleGroupsCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'roles') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleRolesCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'assign') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleAssignCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'unassign') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleUnassignCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'permissions') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handlePermissionsCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
+    }
+    
+    if (command === 'whoami') {
+      const { parsedArgs, options } = parseArgsAndOptions(args);
+      const result = await handleWhoamiCommand(parsedArgs, options, rbacContext);
+      return { success: result.success, output: result.output };
     }
     
     // Send to API for processing (legacy commands)

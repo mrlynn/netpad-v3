@@ -9,6 +9,7 @@ import { ParsedCommand, CommandType, AIInterpretation } from './types';
 
 // Structured command patterns
 const NETPAD_COMMANDS = [
+  // Core commands
   'create',
   'list',
   'show',
@@ -25,6 +26,14 @@ const NETPAD_COMMANDS = [
   'whoami',
   'use',
   'describe',
+  
+  // RBAC commands
+  'users',
+  'groups',
+  'roles',
+  'assign',
+  'unassign',
+  'permissions',
 ];
 
 // Natural language indicators
@@ -283,5 +292,77 @@ export const COMMAND_HELP = {
     description: 'Clear the terminal screen',
     usage: 'clear',
     examples: ['clear'],
+  },
+  
+  // RBAC Commands
+  users: {
+    description: 'Manage organization users',
+    usage: 'users <action> [args]',
+    examples: [
+      'users list',
+      'users add jane@example.com',
+      'users remove jane@example.com',
+      'users info jane@example.com',
+      'users update jane@example.com --role admin',
+    ],
+  },
+  groups: {
+    description: 'Manage user groups/teams',
+    usage: 'groups <action> [args]',
+    examples: [
+      'groups list',
+      'groups create "Engineering"',
+      'groups delete engineering',
+      'groups add-member engineering jane@example.com',
+      'groups remove-member engineering jane@example.com',
+      'groups info engineering',
+    ],
+  },
+  roles: {
+    description: 'Manage roles and permissions',
+    usage: 'roles <action> [args]',
+    examples: [
+      'roles list',
+      'roles create "Billing Admin" --base viewer',
+      'roles delete billing-admin',
+      'roles grant billing-admin org:manage_billing',
+      'roles revoke billing-admin org:manage_billing',
+      'roles info billing-admin',
+    ],
+  },
+  assign: {
+    description: 'Assign a role to a user or group',
+    usage: 'assign <user|group> <target> <role>',
+    examples: [
+      'assign user jane@example.com editor',
+      'assign group engineering admin',
+      'assign user bob@example.com viewer --scope project:proj_123',
+      'assign user temp@example.com member --expires 2025-03-01',
+    ],
+  },
+  unassign: {
+    description: 'Remove a role assignment',
+    usage: 'unassign <user|group> <target> <role>',
+    examples: [
+      'unassign user jane@example.com editor',
+      'unassign group engineering admin',
+    ],
+  },
+  permissions: {
+    description: 'View available permissions or check access',
+    usage: 'permissions [action]',
+    examples: [
+      'permissions list',
+      'permissions check forms:create',
+      'permissions user jane@example.com',
+    ],
+  },
+  whoami: {
+    description: 'Show current user info and permissions',
+    usage: 'whoami [--effective]',
+    examples: [
+      'whoami',
+      'whoami --effective',
+    ],
   },
 };
