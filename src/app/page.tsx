@@ -46,7 +46,7 @@ import { DeployToVercelButton } from '@/components/Deploy';
 import { netpadColors } from '@/theme/theme';
 import { SpotlightCard, hexToRgb } from '@/components/marketing';
 import { IntentOnboardingGate } from '@/components/Onboarding/IntentOnboardingGate';
-import { InstantFormBuilder, PillarsTabs, WorkflowDemoRenderer } from '@/components/Landing';
+import { InstantFormBuilder, PillarsTabs, WorkflowDemoRenderer, DualDeployDemo } from '@/components/Landing';
 import { useAutoNavigateToApp } from '@/hooks/useAutoNavigateToApp';
 
 // The four pillars of NetPad
@@ -541,6 +541,13 @@ function LandingPageContent() {
             </Typography>
           </Box>
           <PillarsTabs />
+        </Container>
+      </Box>
+
+      {/* Dual Deploy Demo - Build Once, Deploy Twice */}
+      <Box sx={{ bgcolor: alpha('#000', 0.3) }}>
+        <Container maxWidth="lg">
+          <DualDeployDemo />
         </Container>
       </Box>
 
