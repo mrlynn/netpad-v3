@@ -89,7 +89,7 @@ function TraditionalForm({
 }) {
   if (submitted) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Box sx={{ textAlign: 'center', py: 4, minHeight: 340, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <CheckCircle sx={{ fontSize: 48, color: '#00ED64', mb: 2 }} />
         <Typography variant="h6" sx={{ color: '#fff', mb: 1 }}>
           Thank you, {data.name}!
@@ -102,7 +102,7 @@ function TraditionalForm({
   }
 
   return (
-    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, minHeight: 340 }}>
       <TextField
         label="Your Name"
         value={data.name}
@@ -530,6 +530,7 @@ export function DualDeployDemo() {
             border: '1px solid',
             borderColor: activeTab === 0 ? '#00ED64' : alpha('#fff', 0.1),
             transition: 'border-color 0.2s',
+            minHeight: 400,
           }}
         >
           <Box 
