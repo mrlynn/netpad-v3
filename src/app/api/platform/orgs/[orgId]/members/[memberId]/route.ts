@@ -7,8 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/auth/session';
+import { Db } from 'mongodb';
 import { getPlatformDb } from '@/lib/platform/db';
 import { PlatformUser, OrgRole } from '@/types/platform';
 import { hasPermission } from '@/lib/platform/rbac';
@@ -18,7 +18,7 @@ interface RouteParams {
 }
 
 // Helper to find user by userId or email
-async function findMember(db: any, orgId: string, memberId: string) {
+async function findMember(db: Db, orgId: string, memberId: string) {
   // Try to find by userId first
   let user = await db.collection<PlatformUser>('users').findOne({
     userId: memberId,
@@ -39,8 +39,8 @@ async function findMember(db: any, orgId: string, memberId: string) {
 // GET /api/platform/orgs/[orgId]/members/[memberId]
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canRead = await hasPermission(session.user.id, orgId, 'members:read');
+    const canRead = await hasPermission(session.userId, orgId, 'members:read');
     if (!canRead) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/platform/orgs/[orgId]/members/[memberId]
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canUpdate = await hasPermission(session.user.id, orgId, 'members:update_role');
+    const canUpdate = await hasPermission(session.userId, orgId, 'members:update_role');
     if (!canUpdate) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -146,8 +146,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/platform/orgs/[orgId]/members/[memberId]
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -155,7 +155,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canRemove = await hasPermission(session.user.id, orgId, 'members:remove');
+    const canRemove = await hasPermission(session.userId, orgId, 'members:remove');
     if (!canRemove) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -187,7 +187,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Prevent removing yourself
-    if (user.userId === session.user.id) {
+    if (user.userId === session.userId) {
       return NextResponse.json({ 
         error: 'Cannot remove yourself. Use "Leave Organization" instead.' 
       }, { status: 400 });

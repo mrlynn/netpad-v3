@@ -6,8 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/auth/session';
+
 import { getPlatformDb } from '@/lib/platform/db';
 import { generateId } from '@/lib/utils/ids';
 import { 
@@ -33,8 +33,8 @@ const BUILTIN_ROLES: Array<{ roleId: OrgRole; name: string; description: string;
 // GET /api/platform/orgs/[orgId]/roles
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canRead = await hasPermission(session.user.id, orgId, 'roles:read');
+    const canRead = await hasPermission(session.userId, orgId, 'roles:read');
     if (!canRead) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST /api/platform/orgs/[orgId]/roles
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canCreate = await hasPermission(session.user.id, orgId, 'roles:create');
+    const canCreate = await hasPermission(session.userId, orgId, 'roles:create');
     if (!canCreate) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       baseRole: baseRole || undefined,
       permissions: validPermissions,
       isSystem: false,
-      createdBy: session.user.id,
+      createdBy: session.userId,
       createdAt: now,
       updatedAt: now,
     };

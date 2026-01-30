@@ -7,8 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/auth/session';
+
 import { getPlatformDb } from '@/lib/platform/db';
 import { RoleAssignment } from '@/types/platform';
 import { hasPermission, assignRole, removeRoleAssignment } from '@/lib/platform/rbac';
@@ -20,8 +20,8 @@ interface RouteParams {
 // GET /api/platform/orgs/[orgId]/assignments
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canRead = await hasPermission(session.user.id, orgId, 'roles:read');
+    const canRead = await hasPermission(session.userId, orgId, 'roles:read');
     if (!canRead) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST /api/platform/orgs/[orgId]/assignments
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canAssign = await hasPermission(session.user.id, orgId, 'roles:assign');
+    const canAssign = await hasPermission(session.userId, orgId, 'roles:assign');
     if (!canAssign) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       targetId,
       roleType,
       roleId,
-      session.user.id,
+      session.userId,
       {
         scope,
         expiresAt: expiresAt ? new Date(expiresAt) : undefined,
@@ -167,8 +167,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/platform/orgs/[orgId]/assignments
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -181,7 +181,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check permission
-    const canAssign = await hasPermission(session.user.id, orgId, 'roles:assign');
+    const canAssign = await hasPermission(session.userId, orgId, 'roles:assign');
     if (!canAssign) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

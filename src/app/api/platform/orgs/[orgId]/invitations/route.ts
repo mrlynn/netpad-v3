@@ -6,8 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/auth/session';
+
 import { getPlatformDb } from '@/lib/platform/db';
 import { OrgInvitation, OrgRole, PlatformUser } from '@/types/platform';
 import { hasPermission } from '@/lib/platform/rbac';
@@ -29,8 +29,8 @@ function generateToken(): string {
 // GET /api/platform/orgs/[orgId]/invitations
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canRead = await hasPermission(session.user.id, orgId, 'members:read');
+    const canRead = await hasPermission(session.userId, orgId, 'members:read');
     if (!canRead) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -65,8 +65,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST /api/platform/orgs/[orgId]/invitations
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const db = await getPlatformDb();
 
     // Check permission
-    const canInvite = await hasPermission(session.user.id, orgId, 'members:invite');
+    const canInvite = await hasPermission(session.userId, orgId, 'members:invite');
     if (!canInvite) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       email: email.toLowerCase(),
       role: role as OrgRole,
       status: 'pending',
-      invitedBy: session.user.id,
+      invitedBy: session.userId,
       token: generateToken(),
       createdAt: now,
       expiresAt,

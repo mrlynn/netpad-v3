@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/auth/session';
+
 import { getPlatformDb } from '@/lib/platform/db';
 import { getEffectivePermissions } from '@/lib/platform/rbac';
 import { PlatformUser } from '@/types/platform';
@@ -14,8 +14,8 @@ import { PlatformUser } from '@/types/platform';
 // GET /api/platform/users/me/permissions
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Get user info
     const user = await db.collection<PlatformUser>('users').findOne({
-      userId: session.user.id,
+      userId: session.userId,
     });
 
     if (!user) {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Not a member of this organization' }, { status: 403 });
       }
 
-      const effective = await getEffectivePermissions(session.user.id, orgId);
+      const effective = await getEffectivePermissions(session.userId, orgId);
 
       return NextResponse.json({
         user: {
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     // No orgId - return permissions for all orgs user belongs to
     const orgsWithPermissions = await Promise.all(
       (user.organizations || []).map(async (membership) => {
-        const effective = await getEffectivePermissions(session.user.id, membership.orgId);
+        const effective = await getEffectivePermissions(session.userId, membership.orgId);
         
         // Get org name
         const org = await db.collection('organizations').findOne({ orgId: membership.orgId });
