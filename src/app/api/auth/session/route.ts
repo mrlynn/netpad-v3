@@ -21,13 +21,7 @@ export async function GET(req: NextRequest) {
     // Only try to fetch user if we have a userId
     try {
       // The session now stores platform userId (user_xxx), try to find the platform user first
-      console.log('[Session API] Looking up user with session.userId:', session.userId);
       const platformUser = await findPlatformUserById(session.userId);
-      console.log('[Session API] Found platformUser:', platformUser ? { 
-        userId: platformUser.userId, 
-        email: platformUser.email, 
-        waitlistStatus: platformUser.waitlistStatus 
-      } : null);
 
       let authUser = null;
       if (platformUser?.authId) {

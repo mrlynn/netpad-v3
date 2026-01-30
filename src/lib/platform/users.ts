@@ -81,16 +81,10 @@ export async function createUser(
  */
 export async function findUserByEmail(email: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  const user = await timedQuery(
+  return timedQuery(
     { operation: 'findOne', collection: 'users', filter: { email: email.toLowerCase() } },
     () => collection.findOne({ email: email.toLowerCase() })
   );
-  console.log('[findUserByEmail]', { 
-    searchEmail: email.toLowerCase(), 
-    found: !!user, 
-    waitlistStatus: user?.waitlistStatus 
-  });
-  return user;
 }
 
 /**
