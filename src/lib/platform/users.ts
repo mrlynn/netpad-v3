@@ -81,21 +81,42 @@ export async function createUser(
  */
 export async function findUserByEmail(email: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  return timedQuery(
+  const user = await timedQuery(
     { operation: 'findOne', collection: 'users', filter: { email: email.toLowerCase() } },
     () => collection.findOne({ email: email.toLowerCase() })
   );
+  console.log('[findUserByEmail]', { 
+    searchEmail: email.toLowerCase(), 
+    found: !!user, 
+    waitlistStatus: user?.waitlistStatus 
+  });
+  return user;
 }
 
 /**
- * Find user by ID
+ * Find user by ID (supports both new userId format and legacy ObjectId)
  */
 export async function findUserById(userId: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  return timedQuery(
+  
+  // First try by userId field (new format: user_xxx)
+  const byUserId = await timedQuery(
     { operation: 'findOne', collection: 'users', filter: { userId } },
     () => collection.findOne({ userId })
   );
+  
+  if (byUserId) return byUserId;
+  
+  // Fallback: try by _id for legacy sessions (ObjectId format)
+  const { ObjectId } = await import('mongodb');
+  if (ObjectId.isValid(userId)) {
+    return timedQuery(
+      { operation: 'findOne', collection: 'users', filter: { _id: userId } },
+      () => collection.findOne({ _id: new ObjectId(userId) } as any)
+    );
+  }
+  
+  return null;
 }
 
 /**

@@ -54,13 +54,28 @@ export async function GET(
     // Handle the OAuth callback
     const result = await handleOAuthCallback(provider, code, state);
 
+    // DEBUG: Log the user details
+    console.log('[OAuth Callback] User result:', {
+      email: result.user.email,
+      userId: result.user.userId,
+      waitlistStatus: result.user.waitlistStatus,
+      isNewUser: result.isNewUser,
+    });
+
     // Create session with waitlist status
     await createSession(result.user.userId, result.user.email, {
       isPasskeyAuth: false,
       waitlistStatus: result.user.waitlistStatus,
     });
 
-    // Determine redirect URL
+    // If user is pending/rejected waitlist status, redirect to waitlist page
+    // This prevents them from seeing onboarding or protected routes
+    if (result.user.waitlistStatus === 'pending' || result.user.waitlistStatus === 'rejected') {
+      console.log('[OAuth Callback] Redirecting to waitlist - status:', result.user.waitlistStatus);
+      return NextResponse.redirect(new URL('/waitlist/pending', request.url));
+    }
+
+    // Determine redirect URL for approved users
     const redirectUrl = result.redirectTo || '/';
 
     // Add success message for new users
