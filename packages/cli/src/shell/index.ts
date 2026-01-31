@@ -109,12 +109,8 @@ export async function startShell(): Promise<void> {
       return;
     }
 
-    // Handle help
-    if (expandedInput.toLowerCase() === 'help') {
-      printHelp();
-      prompt();
-      return;
-    }
+    // Handle help - now delegated to handleHelp for dynamic help
+    // (static printHelp is only used for --help flag)
 
     // Handle history
     if (expandedInput.toLowerCase() === 'history') {

@@ -23,6 +23,7 @@ const LOCAL_COMMANDS = [
   'alias', 'unalias', 'echo', 'env', 'export',
   'users', 'groups', 'roles', 'assign', 'unassign', 'permissions', 'whoami',
   'login', 'login-key', 'logout',
+  'help', 'help-topic', 'help-search',
 ];
 
 // Helper for auth required errors
@@ -117,6 +118,15 @@ export async function executeLocalCommand(
 
     case 'logout':
       return handleLogout();
+
+    case 'help':
+      return handleHelp(args, api);
+
+    case 'help-topic':
+      return handleHelpTopic(args, api);
+
+    case 'help-search':
+      return handleHelpSearch(args, api);
 
     default:
       return { success: false, error: `Unknown command: ${command}` };
@@ -398,6 +408,190 @@ function formatLongEntry(entry: FSEntry): string {
   const name = colorFn(entry.name + (entry.type !== 'file' && entry.type !== 'form' && entry.type !== 'workflow' ? '/' : ''));
   
   return `${chalk.gray(typeStr)} ${name}`;
+}
+
+/**
+ * Handle help command
+ * - help - Show quick command reference
+ * - help <topic> - Show specific help topic
+ * - help search <query> - Search help topics
+ */
+async function handleHelp(args: string[], api: ShellAPIClient): Promise<CommandResult> {
+  // If no args, show quick help and topic categories
+  if (args.length === 0) {
+    return showQuickHelp(api);
+  }
+
+  // If first arg is "search", search topics
+  if (args[0] === 'search' && args.length > 1) {
+    return handleHelpSearch(args.slice(1), api);
+  }
+
+  // Otherwise, show specific topic
+  return handleHelpTopic(args, api);
+}
+
+/**
+ * Show quick command reference and topic list
+ */
+async function showQuickHelp(api: ShellAPIClient): Promise<CommandResult> {
+  const quickHelp = `
+${chalk.bold.cyan('NetPad CLI - Quick Reference')}
+
+${chalk.bold('Navigation:')}
+  ${chalk.cyan('ls')} [path]              List contents
+  ${chalk.cyan('cd')} <path>              Change directory
+  ${chalk.cyan('pwd')}                    Print working directory
+  ${chalk.cyan('cat')} <file>             View file/entity details
+
+${chalk.bold('Entity Commands:')}
+  ${chalk.cyan('list')} forms|workflows   List entities
+  ${chalk.cyan('show')} <type> <id>       Show entity details
+  ${chalk.cyan('create')} <type> <name>   Create new entity
+
+${chalk.bold('RBAC Commands:')}
+  ${chalk.cyan('users')} list|add|remove  Manage members
+  ${chalk.cyan('groups')} list|create     Manage groups
+  ${chalk.cyan('roles')} list|create      Manage roles
+
+${chalk.bold('Help System:')}
+  ${chalk.cyan('help')} <topic>           View topic (e.g., ${chalk.yellow('help form-builder')})
+  ${chalk.cyan('help search')} <query>    Search help topics
+`;
+
+  // Try to fetch topic categories from API
+  try {
+    const baseUrl = api.getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/help`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      let topicList = `\n${chalk.bold('Help Topics:')}`;
+      for (const category of data.categories.slice(0, 5)) {
+        topicList += `\n  ${chalk.yellow(category.category)}:`;
+        const topicNames = category.topics.slice(0, 3).map((t: {id: string}) => chalk.cyan(t.id));
+        topicList += ` ${topicNames.join(', ')}`;
+        if (category.topics.length > 3) {
+          topicList += chalk.gray(` +${category.topics.length - 3} more`);
+        }
+      }
+      topicList += `\n\n${chalk.gray('Run "help <topic-id>" for details')}`;
+      
+      return { success: true, output: quickHelp + topicList };
+    }
+  } catch {
+    // Ignore API errors, just show quick help
+  }
+
+  return { success: true, output: quickHelp };
+}
+
+/**
+ * Handle help-topic command - show specific topic
+ */
+async function handleHelpTopic(args: string[], api: ShellAPIClient): Promise<CommandResult> {
+  if (args.length === 0) {
+    return {
+      success: false,
+      error: `Usage: ${chalk.cyan('help <topic-id>')}\n` +
+        `Example: ${chalk.cyan('help form-builder')}\n` +
+        `Search: ${chalk.cyan('help search forms')}`,
+    };
+  }
+
+  const topicId = args.join('-');
+  const baseUrl = api.getBaseUrl();
+
+  try {
+    const response = await fetch(`${baseUrl}/api/help/${topicId}?format=terminal`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        // Try searching instead
+        const searchResponse = await fetch(`${baseUrl}/api/help?search=${encodeURIComponent(args.join(' '))}`);
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          if (searchData.results?.length > 0) {
+            const suggestions = searchData.results.slice(0, 5)
+              .map((r: {id: string, title: string}) => `  ${chalk.cyan(r.id)} - ${r.title}`)
+              .join('\n');
+            return {
+              success: false,
+              error: `Topic "${topicId}" not found.\n\n${chalk.yellow('Did you mean:')}\n${suggestions}`,
+            };
+          }
+        }
+        return {
+          success: false,
+          error: `Help topic "${topicId}" not found.\nTry: ${chalk.cyan('help search <query>')}`,
+        };
+      }
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const content = await response.text();
+    return { success: true, output: content };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to fetch help: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+}
+
+/**
+ * Handle help-search command
+ */
+async function handleHelpSearch(args: string[], api: ShellAPIClient): Promise<CommandResult> {
+  if (args.length === 0) {
+    return {
+      success: false,
+      error: `Usage: ${chalk.cyan('help search <query>')}\nExample: ${chalk.cyan('help search forms')}`,
+    };
+  }
+
+  const query = args.join(' ');
+  const baseUrl = api.getBaseUrl();
+
+  try {
+    const response = await fetch(`${baseUrl}/api/help?search=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.results?.length === 0) {
+      return {
+        success: true,
+        output: chalk.yellow(`No help topics found for "${query}"`) + '\n' +
+          chalk.gray('Try a different search term'),
+      };
+    }
+
+    let output = `${chalk.bold(`Help topics matching "${query}"`)} (${data.count} results)\n\n`;
+    
+    for (const topic of data.results.slice(0, 10)) {
+      output += `  ${chalk.cyan(topic.id)}\n`;
+      output += `    ${topic.title}\n`;
+      output += `    ${chalk.gray(topic.description.substring(0, 80))}${topic.description.length > 80 ? '...' : ''}\n\n`;
+    }
+
+    if (data.count > 10) {
+      output += chalk.gray(`  ... and ${data.count - 10} more results\n`);
+    }
+
+    output += `\n${chalk.gray('View topic:')} ${chalk.cyan('help <topic-id>')}`;
+
+    return { success: true, output };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to search help: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
 /**
