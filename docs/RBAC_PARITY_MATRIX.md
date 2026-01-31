@@ -61,53 +61,38 @@ This document tracks feature parity between the three RBAC interfaces:
 |---------|:---:|:--------:|:------------:|:--------------:|:---:|
 | List all permissions | ✅ `permissions list` | ✅ `permissions list` | ❌ | ❌ | N/A (code) |
 | Check user permission | ✅ `permissions check` | ✅ `permissions check` | ❌ | ❌ | ✅ |
-| View user's effective perms | ✅ `permissions user` | ✅ `permissions user` | ❌ **MISSING** | ❌ **MISSING** | ✅ |
+| View user's effective perms | ✅ `permissions user` | ✅ `permissions user` | ✅ Members → View Permissions | ❌ | ✅ |
 
 ---
 
-## Key Gaps to Fix
+## Key Gaps (Resolved)
 
-### 1. Role Assignments UI (HIGH PRIORITY)
+### ✅ 1. Role Assignments UI (COMPLETED)
 
-**Problem**: No way to assign custom roles or additional roles to users via Web UI.
+**Solution**: Added `/orgs/[orgId]/settings/assignments` page with:
+- Assign roles to users or groups
+- View all assignments in filterable table
+- Delete assignments
+- Reason tracking for audit
 
-The CLI/Terminal can do:
-```bash
-# Assign "billing-admin" custom role to user
-assign user_alice role_billing_admin
+### ✅ 2. Effective Permissions View (COMPLETED)
 
-# Assign role to a group
-assign grp_engineering role_developer --group
+**Solution**: Added "View Permissions" dialog to Members page:
+- Shows all permission sources (direct role, groups, assignments)
+- Displays the final merged permission set
+- Counts total permissions
 
-# Scoped assignment (project level)
-assign user_bob admin --scope project proj_marketing
-```
-
-**Missing Web UI**:
-- No "Assign Role" button on Users page
-- No "Role Assignments" tab/page
-- No way to see a user's additional roles beyond their base membership role
-
-### 2. Effective Permissions View (MEDIUM)
-
-**Problem**: Can't see what permissions a user actually has.
-
-The permission resolution is complex:
-1. Base org role (owner/admin/member/viewer)
-2. Group default roles
-3. Direct role assignments
-4. Group role assignments
-
-**Need**: A "View Effective Permissions" dialog/page that shows:
-- All roles assigned
-- Source of each role (direct, group, etc.)
-- Final merged permission set
-
-### 3. Admin Member Management (LOW)
+### 3. Admin Member Management (LOW PRIORITY)
 
 **Problem**: `/admin/users` shows all platform users but can't manage org membership.
 
 **Consider**: Adding "Manage Org Membership" actions from admin view.
+
+### 4. Scoped Assignments UI (FUTURE)
+
+**Problem**: API supports project/form-level scoped assignments, but UI doesn't expose this yet.
+
+**Consider**: Adding scope selection to the assignment dialog.
 
 ---
 
@@ -153,12 +138,13 @@ Effective Permissions:
 
 ## Action Items
 
-1. [ ] Create `/orgs/[orgId]/settings/assignments` page
-2. [ ] Add "Assign Role" dialog component
-3. [ ] Add "View Permissions" dialog to users list
-4. [ ] Add assignments tab to user detail view
-5. [ ] Add assignments tab to group detail view
-6. [ ] Mirror assignments UI in `/admin` for platform admins
+1. [x] Create `/orgs/[orgId]/settings/assignments` page
+2. [x] Add "Assign Role" dialog component
+3. [x] Add "View Permissions" dialog to members list
+4. [ ] Add assignments tab to user detail view (optional enhancement)
+5. [ ] Add assignments tab to group detail view (optional enhancement)
+6. [ ] Mirror assignments UI in `/admin` for platform admins (optional)
+7. [ ] Add scoped assignment support to UI (project/form level)
 
 ---
 
