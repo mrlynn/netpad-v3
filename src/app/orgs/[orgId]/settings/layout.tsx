@@ -29,6 +29,7 @@ import {
   Settings as SettingsIcon,
   CreditCard as BillingIcon,
   Extension as IntegrationsIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 
@@ -60,6 +61,12 @@ const settingsNavItems = [
     href: '/roles',
     icon: SecurityIcon,
     description: 'Configure custom roles and access control',
+  },
+  {
+    label: 'Role Assignments',
+    href: '/assignments',
+    icon: AssignmentIcon,
+    description: 'Assign roles to users and groups',
   },
   { divider: true },
   {
