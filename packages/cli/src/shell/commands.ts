@@ -7,6 +7,8 @@
 import chalk from 'chalk';
 import { ShellState } from './index.js';
 import { ShellAPIClient, FSEntry } from './api.js';
+import { getConfig, clearCredentials, saveConfig, loadConfig } from '../lib/config.js';
+import * as readline from 'readline';
 
 export interface CommandResult {
   success: boolean;
@@ -22,6 +24,29 @@ const LOCAL_COMMANDS = [
   'users', 'groups', 'roles', 'assign', 'unassign', 'permissions', 'whoami',
   'login', 'logout',
 ];
+
+// Helper for auth required errors
+function authRequiredError(): CommandResult {
+  return {
+    success: false,
+    error: chalk.yellow('⚠ Not authenticated') + '\n\n' +
+      'To use this command, you need to log in first:\n' +
+      `  ${chalk.cyan('netpad login')} ${chalk.gray('(run outside the shell)')}\n\n` +
+      chalk.gray('Get an API key at: https://app.netpad.app/settings/api'),
+  };
+}
+
+// Helper for API errors
+function handleApiError(error?: string): CommandResult {
+  if (error?.includes('401') || error?.includes('Unauthorized')) {
+    return {
+      success: false,
+      error: chalk.yellow('⚠ Session expired or invalid') + '\n' +
+        `Run ${chalk.cyan('netpad login')} to re-authenticate`,
+    };
+  }
+  return { success: false, error: error || 'Command failed' };
+}
 
 export function isLocalCommand(command: string): boolean {
   return LOCAL_COMMANDS.includes(command?.toLowerCase());
@@ -83,10 +108,10 @@ export async function executeLocalCommand(
       return executeRBACCommand(cmd, args, state, api);
 
     case 'login':
-      return { success: false, error: 'Use "netpad login" command outside the shell for authentication' };
+      return handleLogin(state);
 
     case 'logout':
-      return { success: false, error: 'Use "netpad logout" command outside the shell to clear credentials' };
+      return handleLogout();
 
     default:
       return { success: false, error: `Unknown command: ${command}` };
@@ -94,6 +119,17 @@ export async function executeLocalCommand(
 }
 
 async function handleLs(args: string[], state: ShellState, api: ShellAPIClient): Promise<CommandResult> {
+  // Check if authenticated
+  if (!api.isAuthenticated()) {
+    return {
+      success: false,
+      error: chalk.yellow('⚠ Not authenticated') + '\n\n' +
+        'To use this command, you need to log in first:\n' +
+        `  ${chalk.cyan('netpad login')} ${chalk.gray('(run outside the shell)')}\n\n` +
+        chalk.gray('Or get an API key at: https://app.netpad.app/settings/api'),
+    };
+  }
+  
   const path = args[0] || state.currentPath;
   const showAll = args.includes('-a') || args.includes('--all');
   const longFormat = args.includes('-l') || args.includes('--long');
@@ -101,6 +137,14 @@ async function handleLs(args: string[], state: ShellState, api: ShellAPIClient):
   const result = await api.executeFS('ls', path);
   
   if (!result.success) {
+    // Check for auth errors specifically
+    if (result.error?.includes('401') || result.error?.includes('Unauthorized')) {
+      return {
+        success: false,
+        error: chalk.yellow('⚠ Session expired or invalid') + '\n' +
+          `Run ${chalk.cyan('netpad login')} to re-authenticate`,
+      };
+    }
     return { success: false, error: result.error || 'Failed to list directory' };
   }
   
@@ -154,6 +198,10 @@ async function handleCd(args: string[], state: ShellState, api: ShellAPIClient):
 }
 
 async function handleCat(args: string[], state: ShellState, api: ShellAPIClient): Promise<CommandResult> {
+  if (!api.isAuthenticated()) {
+    return authRequiredError();
+  }
+  
   if (!args[0]) {
     return { success: false, error: 'cat: missing file operand' };
   }
@@ -162,24 +210,32 @@ async function handleCat(args: string[], state: ShellState, api: ShellAPIClient)
   const result = await api.executeFS('cat', path);
   
   if (!result.success) {
-    return { success: false, error: result.error || `cat: ${args[0]}: No such file` };
+    return handleApiError(result.error) || { success: false, error: `cat: ${args[0]}: No such file` };
   }
   
   return { success: true, output: result.content || result.output || '' };
 }
 
 async function handleTree(args: string[], state: ShellState, api: ShellAPIClient): Promise<CommandResult> {
+  if (!api.isAuthenticated()) {
+    return authRequiredError();
+  }
+  
   const path = args[0] || state.currentPath;
   const result = await api.executeFS('tree', path);
   
   if (!result.success) {
-    return { success: false, error: result.error || 'Failed to display tree' };
+    return handleApiError(result.error);
   }
   
   return { success: true, output: result.output || '' };
 }
 
 async function handleFind(args: string[], state: ShellState, api: ShellAPIClient): Promise<CommandResult> {
+  if (!api.isAuthenticated()) {
+    return authRequiredError();
+  }
+  
   if (!args[0]) {
     return { success: false, error: 'find: missing search pattern' };
   }
@@ -187,13 +243,17 @@ async function handleFind(args: string[], state: ShellState, api: ShellAPIClient
   const result = await api.executeFS('find', state.currentPath, { pattern: args[0] });
   
   if (!result.success) {
-    return { success: false, error: result.error || 'Search failed' };
+    return handleApiError(result.error);
   }
   
   return { success: true, output: result.output || chalk.gray('No matches found') };
 }
 
 async function handleGrep(args: string[], state: ShellState, api: ShellAPIClient): Promise<CommandResult> {
+  if (!api.isAuthenticated()) {
+    return authRequiredError();
+  }
+  
   if (args.length < 2) {
     return { success: false, error: 'grep: usage: grep <pattern> <file>' };
   }
@@ -204,7 +264,7 @@ async function handleGrep(args: string[], state: ShellState, api: ShellAPIClient
   const result = await api.executeFS('grep', path, { pattern });
   
   if (!result.success) {
-    return { success: false, error: result.error || 'grep failed' };
+    return handleApiError(result.error);
   }
   
   return { success: true, output: result.output || '' };
@@ -271,6 +331,11 @@ async function executeRBACCommand(
   state: ShellState,
   api: ShellAPIClient
 ): Promise<CommandResult> {
+  // Check auth first
+  if (!api.isAuthenticated()) {
+    return authRequiredError();
+  }
+  
   // Build full command string
   const fullCommand = [command, ...args].join(' ');
   
@@ -278,6 +343,11 @@ async function executeRBACCommand(
     path: state.currentPath,
     history: state.history,
   });
+  
+  // Handle API errors
+  if (!result.success && result.error) {
+    return handleApiError(result.error);
+  }
   
   return {
     success: result.success,
@@ -323,4 +393,54 @@ function formatLongEntry(entry: FSEntry): string {
   const name = colorFn(entry.name + (entry.type !== 'file' && entry.type !== 'form' && entry.type !== 'workflow' ? '/' : ''));
   
   return `${chalk.gray(typeStr)} ${name}`;
+}
+
+/**
+ * Handle login command - simplified in-shell login
+ */
+async function handleLogin(state: ShellState): Promise<CommandResult> {
+  const config = getConfig();
+  
+  if (config.apiKey || config.sessionToken) {
+    return {
+      success: true,
+      output: chalk.green('✓ Already authenticated') + 
+        (config.orgId ? `\n  Organization: ${chalk.cyan(config.orgId)}` : '') +
+        '\n\n' + chalk.gray('To re-authenticate, run "logout" first, then "login"'),
+    };
+  }
+  
+  console.log(chalk.blue('\nNetPad Login\n'));
+  console.log(chalk.gray('Choose a login method:\n'));
+  console.log(`  ${chalk.cyan('1.')} API Key ${chalk.gray('(paste your key)')}`);
+  console.log(`  ${chalk.cyan('2.')} Browser ${chalk.gray('(opens login page)')}`);
+  console.log();
+  
+  // For API key login, prompt inline
+  const output = `${chalk.yellow('To login with API key:')}\n` +
+    `  Run: ${chalk.cyan('netpad login --api-key YOUR_KEY')}\n\n` +
+    `${chalk.yellow('To login via browser:')}\n` +
+    `  Run: ${chalk.cyan('netpad login')} ${chalk.gray('(outside shell)')}\n\n` +
+    chalk.gray('Get your API key at: https://app.netpad.app/settings/api');
+  
+  return { success: true, output };
+}
+
+/**
+ * Handle logout command
+ */
+function handleLogout(): CommandResult {
+  const config = getConfig();
+  
+  if (!config.apiKey && !config.sessionToken) {
+    return { success: true, output: chalk.gray('Not logged in') };
+  }
+  
+  clearCredentials();
+  
+  return {
+    success: true,
+    output: chalk.green('✓ Logged out successfully') +
+      '\n' + chalk.gray('Credentials cleared from ~/.netpad/config.json'),
+  };
 }

@@ -38,7 +38,13 @@ export async function startShell(): Promise<void> {
 
   // Check authentication
   if (!api.isAuthenticated()) {
-    console.log(chalk.yellow('⚠ Not authenticated. Run "login" to authenticate with NetPad.\n'));
+    console.log(chalk.yellow('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    console.log(chalk.yellow('  ⚠  Not authenticated'));
+    console.log(chalk.gray('  Most commands require login. To authenticate:'));
+    console.log(`     ${chalk.cyan('netpad login')} ${chalk.gray('(run in another terminal)')}`);
+    console.log(chalk.yellow('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+  } else {
+    console.log(chalk.green('✓ Authenticated') + chalk.gray(` (org: ${api.getOrgId() || 'none'})\n`));
   }
 
   // Create readline interface

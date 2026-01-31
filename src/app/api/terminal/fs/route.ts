@@ -11,7 +11,35 @@ import { getOrgDb } from '@/lib/platform/db';
 import { getUserOrganizations } from '@/lib/platform/organizations';
 import { listProjects } from '@/lib/platform/projects';
 import { listApplications } from '@/lib/platform/applications';
+import { validateAPIKey } from '@/lib/api/keys';
 import { WithId, Document, ObjectId } from 'mongodb';
+
+/**
+ * Authenticate request via session or API key
+ * Returns userId if authenticated, null otherwise
+ */
+async function authenticateRequest(request: NextRequest): Promise<{ userId: string; orgId?: string } | null> {
+  // First try session auth
+  const session = await getSession();
+  if (session?.userId) {
+    return { userId: session.userId };
+  }
+
+  // Try API key auth via Authorization header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const apiKey = authHeader.slice(7);
+    const validKey = await validateAPIKey(apiKey);
+    if (validKey) {
+      return { 
+        userId: validKey.createdBy, 
+        orgId: validKey.organizationId 
+      };
+    }
+  }
+
+  return null;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -91,52 +119,54 @@ function parsePath(path: string): { segments: string[]; context: PathContext } {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.userId) {
+    // Authenticate via session or API key
+    const auth = await authenticateRequest(request);
+    if (!auth) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
+    const { userId } = auth;
     const body: FSRequest = await request.json();
     const { action, path } = body;
     const { segments, context } = parsePath(path);
     const depth = segments.length;
 
     // Get user's organizations
-    const userOrgs = await getUserOrganizations(session.userId);
+    const userOrgs = await getUserOrganizations(userId);
     
     switch (action) {
       case 'validate':
-        return handleValidate(depth, segments, context, userOrgs, session.userId);
+        return handleValidate(depth, segments, context, userOrgs, userId);
       
       case 'ls':
-        return handleLs(depth, segments, context, userOrgs, session.userId, body.long, body.all);
+        return handleLs(depth, segments, context, userOrgs, userId, body.long, body.all);
       
       case 'cat':
-        return handleCat(depth, segments, context, userOrgs, session.userId, body.format);
+        return handleCat(depth, segments, context, userOrgs, userId, body.format);
       
       case 'tree':
-        return handleTree(depth, segments, context, userOrgs, session.userId, body.depth || 2);
+        return handleTree(depth, segments, context, userOrgs, userId, body.depth || 2);
       
       case 'find':
-        return handleFind(depth, segments, context, userOrgs, session.userId, body.pattern || '');
+        return handleFind(depth, segments, context, userOrgs, userId, body.pattern || '');
       
       case 'grep':
-        return handleGrep(depth, segments, context, userOrgs, session.userId, body.pattern || '', body.options);
+        return handleGrep(depth, segments, context, userOrgs, userId, body.pattern || '', body.options);
       
       case 'create':
-        return handleCreate(depth, segments, context, userOrgs, session.userId, body.name);
+        return handleCreate(depth, segments, context, userOrgs, userId, body.name);
       
       case 'move':
-        return handleMoveOrCopy('move', body.source, body.destination, userOrgs, session.userId);
+        return handleMoveOrCopy('move', body.source, body.destination, userOrgs, userId);
       
       case 'copy':
-        return handleMoveOrCopy('copy', body.source, body.destination, userOrgs, session.userId);
+        return handleMoveOrCopy('copy', body.source, body.destination, userOrgs, userId);
       
       case 'tail':
-        return handleTailOrHead('tail', depth, segments, context, userOrgs, session.userId, body.lines || 10);
+        return handleTailOrHead('tail', depth, segments, context, userOrgs, userId, body.lines || 10);
       
       case 'head':
-        return handleTailOrHead('head', depth, segments, context, userOrgs, session.userId, body.lines || 10);
+        return handleTailOrHead('head', depth, segments, context, userOrgs, userId, body.lines || 10);
       
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` });

@@ -10,9 +10,36 @@ import { getSession } from '@/lib/auth/session';
 import { aiService } from '@/lib/ai/aiService';
 import { getOrgDb, getOrgFormsCollection } from '@/lib/platform/db';
 import { getUserOrganizations } from '@/lib/platform/organizations';
+import { validateAPIKey } from '@/lib/api/keys';
 import { generateInterpretationPrompt, parseAIInterpretation } from '@/components/WebTerminal/commandInterpreter';
 import { AIServiceContext } from '@/types/ai-analytics';
 import { WithId, Document, ObjectId, Db } from 'mongodb';
+
+/**
+ * Authenticate request via session or API key
+ */
+async function authenticateRequest(request: NextRequest): Promise<{ userId: string; orgId?: string } | null> {
+  // First try session auth
+  const session = await getSession();
+  if (session?.userId) {
+    return { userId: session.userId };
+  }
+
+  // Try API key auth via Authorization header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const apiKey = authHeader.slice(7);
+    const validKey = await validateAPIKey(apiKey);
+    if (validKey) {
+      return { 
+        userId: validKey.createdBy, 
+        orgId: validKey.organizationId 
+      };
+    }
+  }
+
+  return null;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -74,22 +101,23 @@ const AVAILABLE_COMMANDS = [
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getSession();
-    if (!session?.userId) {
+    // Check authentication (session or API key)
+    const auth = await authenticateRequest(request);
+    if (!auth) {
       return NextResponse.json(
         { success: false, output: '', error: 'Authentication required' },
         { status: 401 }
       );
     }
 
+    const { userId } = auth;
     const body: TerminalRequest = await request.json();
     const { input, parsed, context } = body;
 
-    // Get user's organization - either from context or fetch their first org
-    let orgId = context.org;
+    // Get user's organization - either from API key, context, or fetch their first org
+    let orgId = auth.orgId || context.org;
     if (!orgId) {
-      const userOrgs = await getUserOrganizations(session.userId);
+      const userOrgs = await getUserOrganizations(userId);
       if (userOrgs.length > 0) {
         orgId = userOrgs[0].orgId;
       }
@@ -104,7 +132,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const user = { id: session.userId, email: session.email, orgId };
+    const user = { id: userId, email: '', orgId }; // Email not available from API key auth
 
     // Route based on command type
     if (parsed.type === 'natural') {
