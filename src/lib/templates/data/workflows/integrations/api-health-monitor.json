@@ -1,0 +1,44 @@
+{
+  "id": "api-health-monitor",
+  "name": "API Health Monitor",
+  "description": "Periodically check API endpoints and alert on failures. Track uptime and response times.",
+  "icon": "🏥",
+  "category": "integrations",
+  "nodeCount": 5,
+  "complexity": "moderate",
+  "estimatedTime": "15 min",
+  "tags": ["monitoring", "api", "health", "uptime", "alerts"],
+  "nodes": [
+    {
+      "type": "schedule-trigger",
+      "label": "Every 5 Minutes",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "type": "http-request",
+      "label": "Check Endpoint",
+      "position": { "x": 300, "y": 200 }
+    },
+    {
+      "type": "conditional",
+      "label": "Is Healthy?",
+      "position": { "x": 500, "y": 200 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Log Status",
+      "position": { "x": 700, "y": 100 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send Alert",
+      "position": { "x": 700, "y": 300 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3, "label": "Healthy" },
+    { "source": 2, "target": 4, "label": "Failed" }
+  ]
+}

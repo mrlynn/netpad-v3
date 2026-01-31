@@ -1,0 +1,58 @@
+{
+  "id": "support-ticket-router",
+  "name": "Support Ticket Router",
+  "description": "Automatically categorize and route support tickets to the right team based on issue type and priority.",
+  "icon": "🎫",
+  "category": "forms",
+  "nodeCount": 7,
+  "complexity": "moderate",
+  "estimatedTime": "20 min",
+  "tags": ["support", "tickets", "routing", "helpdesk"],
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Ticket Submitted",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "type": "switch",
+      "label": "Route by Category",
+      "position": { "x": 300, "y": 200 }
+    },
+    {
+      "type": "email-send",
+      "label": "Billing Team",
+      "position": { "x": 550, "y": 50 }
+    },
+    {
+      "type": "email-send",
+      "label": "Technical Team",
+      "position": { "x": 550, "y": 200 }
+    },
+    {
+      "type": "email-send",
+      "label": "General Support",
+      "position": { "x": 550, "y": 350 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Create Ticket Record",
+      "position": { "x": 750, "y": 200 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send Confirmation",
+      "position": { "x": 950, "y": 200 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2, "label": "Billing" },
+    { "source": 1, "target": 3, "label": "Technical" },
+    { "source": 1, "target": 4, "label": "General" },
+    { "source": 2, "target": 5 },
+    { "source": 3, "target": 5 },
+    { "source": 4, "target": 5 },
+    { "source": 5, "target": 6 }
+  ]
+}

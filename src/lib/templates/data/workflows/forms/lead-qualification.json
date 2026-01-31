@@ -1,0 +1,51 @@
+{
+  "id": "lead-qualification",
+  "name": "Lead Qualification Pipeline",
+  "description": "Score and route leads based on form responses. High-value leads go to sales, others to nurture campaigns.",
+  "icon": "🎯",
+  "category": "forms",
+  "nodeCount": 6,
+  "complexity": "moderate",
+  "estimatedTime": "15 min",
+  "tags": ["sales", "leads", "routing", "scoring"],
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Lead Form Submitted",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "type": "transform",
+      "label": "Calculate Lead Score",
+      "position": { "x": 300, "y": 200 }
+    },
+    {
+      "type": "switch",
+      "label": "Route by Score",
+      "position": { "x": 500, "y": 200 }
+    },
+    {
+      "type": "email-send",
+      "label": "Notify Sales Team",
+      "position": { "x": 700, "y": 100 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send to Nurture",
+      "position": { "x": 700, "y": 300 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save Lead Record",
+      "position": { "x": 900, "y": 200 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3, "label": "High Score" },
+    { "source": 2, "target": 4, "label": "Low Score" },
+    { "source": 3, "target": 5 },
+    { "source": 4, "target": 5 }
+  ]
+}

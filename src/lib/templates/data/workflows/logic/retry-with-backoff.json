@@ -1,0 +1,45 @@
+{
+  "id": "retry-with-backoff",
+  "name": "Retry with Exponential Backoff",
+  "description": "Call an external API with automatic retries and exponential backoff on failures.",
+  "icon": "🔄",
+  "category": "logic",
+  "nodeCount": 5,
+  "complexity": "advanced",
+  "estimatedTime": "20 min",
+  "tags": ["retry", "backoff", "resilience", "api"],
+  "nodes": [
+    {
+      "type": "webhook-trigger",
+      "label": "Request Received",
+      "position": { "x": 100, "y": 150 }
+    },
+    {
+      "type": "http-request",
+      "label": "Call External API",
+      "position": { "x": 300, "y": 150 }
+    },
+    {
+      "type": "conditional",
+      "label": "Success?",
+      "position": { "x": 500, "y": 150 }
+    },
+    {
+      "type": "delay",
+      "label": "Wait & Retry",
+      "position": { "x": 500, "y": 300 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save Result",
+      "position": { "x": 700, "y": 150 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 4, "label": "Success" },
+    { "source": 2, "target": 3, "label": "Failed" },
+    { "source": 3, "target": 1 }
+  ]
+}

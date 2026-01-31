@@ -1,0 +1,44 @@
+{
+  "id": "document-processor",
+  "name": "AI Document Processor",
+  "description": "Extract structured data from uploaded documents using AI. Perfect for invoices, receipts, or contracts.",
+  "icon": "📄",
+  "category": "ai",
+  "nodeCount": 5,
+  "complexity": "advanced",
+  "estimatedTime": "30 min",
+  "tags": ["document", "extraction", "ai", "ocr"],
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Document Uploaded",
+      "position": { "x": 100, "y": 150 }
+    },
+    {
+      "type": "http-request",
+      "label": "Extract with AI",
+      "position": { "x": 300, "y": 150 }
+    },
+    {
+      "type": "transform",
+      "label": "Structure Data",
+      "position": { "x": 500, "y": 150 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save Extracted Data",
+      "position": { "x": 700, "y": 150 }
+    },
+    {
+      "type": "email-send",
+      "label": "Send Confirmation",
+      "position": { "x": 900, "y": 150 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3 },
+    { "source": 3, "target": 4 }
+  ]
+}

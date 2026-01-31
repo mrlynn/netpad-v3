@@ -1,0 +1,57 @@
+{
+  "id": "approval-workflow",
+  "name": "Request Approval Workflow",
+  "description": "Multi-step approval process with notifications. Perfect for expense reports, time-off requests, or purchase orders.",
+  "icon": "✅",
+  "category": "forms",
+  "nodeCount": 7,
+  "complexity": "moderate",
+  "estimatedTime": "25 min",
+  "tags": ["approval", "review", "notifications", "manager"],
+  "nodes": [
+    {
+      "type": "form-trigger",
+      "label": "Request Submitted",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Save Request",
+      "position": { "x": 300, "y": 200 }
+    },
+    {
+      "type": "email-send",
+      "label": "Notify Approver",
+      "position": { "x": 500, "y": 200 }
+    },
+    {
+      "type": "conditional",
+      "label": "Check Decision",
+      "position": { "x": 700, "y": 200 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Update: Approved",
+      "position": { "x": 900, "y": 100 }
+    },
+    {
+      "type": "mongodb-write",
+      "label": "Update: Rejected",
+      "position": { "x": 900, "y": 300 }
+    },
+    {
+      "type": "email-send",
+      "label": "Notify Requester",
+      "position": { "x": 1100, "y": 200 }
+    }
+  ],
+  "edges": [
+    { "source": 0, "target": 1 },
+    { "source": 1, "target": 2 },
+    { "source": 2, "target": 3 },
+    { "source": 3, "target": 4, "label": "Approved" },
+    { "source": 3, "target": 5, "label": "Rejected" },
+    { "source": 4, "target": 6 },
+    { "source": 5, "target": 6 }
+  ]
+}
