@@ -156,6 +156,29 @@ export function requireOrgId(options: ApiOptions): string {
  * Handle API error and exit
  */
 export function handleError(response: ApiResponse, context: string = 'Operation'): never {
-  console.error(chalk.red(`${context} failed: ${response.error}`));
+  // Network errors
+  if (response.status === 0) {
+    if (response.error?.includes('fetch failed') || response.error?.includes('ECONNREFUSED')) {
+      console.error(chalk.red(`${context} failed: Cannot connect to NetPad API`));
+      console.error(chalk.dim('Check that the server is running or configure a different URL.'));
+    } else {
+      console.error(chalk.red(`${context} failed: ${response.error}`));
+    }
+  }
+  // Authentication errors
+  else if (response.status === 401 || response.status === 403) {
+    console.error(chalk.red(`${context} failed: Authentication required`));
+    console.error(chalk.dim(`Run ${chalk.cyan('netpad login')} to authenticate.`));
+  }
+  // Not found
+  else if (response.status === 404) {
+    console.error(chalk.red(`${context} failed: Resource not found`));
+    console.error(chalk.dim('Check that the organization ID and resource exist.'));
+  }
+  // Other errors
+  else {
+    console.error(chalk.red(`${context} failed: ${response.error}`));
+  }
+  
   process.exit(1);
 }

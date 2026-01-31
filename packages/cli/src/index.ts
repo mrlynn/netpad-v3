@@ -61,7 +61,7 @@ program
   .option('-p, --project <projectId>', 'Project ID')
   .option('--overwrite', 'Overwrite existing application/plugin')
   .option('--no-deps', 'Skip installing dependencies')
-  .option('--api-url <url>', 'NetPad API URL (default: https://app.netpad.app)')
+  .option('--api-url <url>', 'NetPad API URL (default: https://netpad.io)')
   .option('--api-key <key>', 'NetPad API key')
   .action(installCommand);
 
@@ -84,6 +84,8 @@ program
   .option('-t, --type <type>', 'Package type: application, plugin, or all', 'all')
   .option('--verified', 'Only show verified packages')
   .option('--limit <number>', 'Limit results', '20')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
   .action(searchCommand);
 
 // Create app command

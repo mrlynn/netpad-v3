@@ -33,7 +33,7 @@ function authRequiredError(): CommandResult {
     error: chalk.yellow('⚠ Not authenticated') + '\n\n' +
       'To use this command, you need to log in first:\n' +
       `  ${chalk.cyan('netpad login')} ${chalk.gray('(run outside the shell)')}\n\n` +
-      chalk.gray('Get an API key at: https://app.netpad.app/settings/api'),
+      chalk.gray('Get an API key at: https://netpad.io/settings/api'),
   };
 }
 
@@ -141,7 +141,7 @@ async function handleLs(args: string[], state: ShellState, api: ShellAPIClient):
       error: chalk.yellow('⚠ Not authenticated') + '\n\n' +
         'To use this command, you need to log in first:\n' +
         `  ${chalk.cyan('netpad login')} ${chalk.gray('(run outside the shell)')}\n\n` +
-        chalk.gray('Or get an API key at: https://app.netpad.app/settings/api'),
+        chalk.gray('Or get an API key at: https://netpad.io/settings/api'),
     };
   }
   
