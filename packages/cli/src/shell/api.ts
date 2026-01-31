@@ -104,10 +104,14 @@ export class ShellAPIClient {
     history?: string[];
   }): Promise<CommandResult> {
     try {
+      // Parse the command to determine type
+      const parsed = this.parseInput(input);
+      
       const response = await this.fetch('/api/terminal', {
         method: 'POST',
         body: JSON.stringify({
           input,
+          parsed,
           context: {
             path: context.path,
             org: this.orgId,
@@ -117,10 +121,12 @@ export class ShellAPIClient {
       });
 
       if (!response.ok) {
+        // Try to get error details from response
+        const errorText = await response.text().catch(() => '');
         return {
           success: false,
           output: '',
-          error: `API error: ${response.status} ${response.statusText}`,
+          error: `API error: ${response.status} ${response.statusText}${errorText ? ` - ${errorText.substring(0, 100)}` : ''}`,
         };
       }
 
@@ -132,6 +138,97 @@ export class ShellAPIClient {
         error: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
+  }
+
+  /**
+   * Parse input to determine command type
+   */
+  private parseInput(input: string): {
+    type: 'structured' | 'natural' | 'help' | 'clear';
+    command?: string;
+    args?: string[];
+    options?: Record<string, string | boolean>;
+    raw: string;
+    naturalLanguage?: string;
+  } {
+    const trimmed = input.trim();
+    
+    if (!trimmed) {
+      return { type: 'structured', raw: '' };
+    }
+    
+    if (trimmed.toLowerCase() === 'clear') {
+      return { type: 'clear', raw: trimmed };
+    }
+    
+    if (trimmed.toLowerCase() === 'help' || trimmed === '?') {
+      return { type: 'help', raw: trimmed };
+    }
+    
+    // Known structured commands
+    const KNOWN_COMMANDS = [
+      'create', 'list', 'show', 'deploy', 'export', 'import', 'search',
+      'install', 'delete', 'edit', 'describe', 'stats', 'explain',
+    ];
+    
+    const parts = trimmed.split(/\s+/);
+    const firstWord = parts[0].toLowerCase();
+    
+    // Check if it's a known command
+    if (KNOWN_COMMANDS.includes(firstWord)) {
+      const args: string[] = [];
+      const options: Record<string, string | boolean> = {};
+      
+      for (let i = 1; i < parts.length; i++) {
+        const part = parts[i];
+        if (part.startsWith('--')) {
+          const key = part.slice(2);
+          if (i + 1 < parts.length && !parts[i + 1].startsWith('-')) {
+            options[key] = parts[i + 1];
+            i++;
+          } else {
+            options[key] = true;
+          }
+        } else if (part.startsWith('-')) {
+          const key = part.slice(1);
+          if (i + 1 < parts.length && !parts[i + 1].startsWith('-')) {
+            options[key] = parts[i + 1];
+            i++;
+          } else {
+            options[key] = true;
+          }
+        } else {
+          args.push(part);
+        }
+      }
+      
+      return {
+        type: 'structured',
+        command: firstWord,
+        args,
+        options,
+        raw: trimmed,
+      };
+    }
+    
+    // Natural language patterns (questions, requests)
+    const isNaturalLanguage = /^(what|how|why|where|when|who|can|show|find|get|create|make|build|help|please|i want|i need)/i.test(trimmed) || 
+                              trimmed.endsWith('?');
+    
+    if (isNaturalLanguage) {
+      return {
+        type: 'natural',
+        raw: trimmed,
+        naturalLanguage: trimmed,
+      };
+    }
+    
+    // Default to natural language for AI interpretation
+    return {
+      type: 'natural',
+      raw: trimmed,
+      naturalLanguage: trimmed,
+    };
   }
 
   async getCompletions(path: string): Promise<string[]> {
