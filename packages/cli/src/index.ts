@@ -16,6 +16,12 @@ import { versionCommand } from './commands/version.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
 import { whoamiCommand } from './commands/whoami.js';
+// RBAC Commands
+import { usersCommand } from './commands/users.js';
+import { groupsCommand } from './commands/groups.js';
+import { rolesCommand } from './commands/roles.js';
+import { assignCommand, unassignCommand } from './commands/assign.js';
+import { permissionsCommand } from './commands/permissions.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -135,7 +141,74 @@ program
 program
   .command('whoami')
   .description('Show current authentication status')
+  .option('--effective', 'Show effective permissions')
   .action(whoamiCommand);
+
+// ============================================
+// RBAC Commands
+// ============================================
+
+// Users command
+program
+  .command('users [action] [target]')
+  .description('Manage organization members')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--role <role>', 'Role to assign (admin|member|viewer)')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(usersCommand);
+
+// Groups command
+program
+  .command('groups [action] [arg1] [arg2]')
+  .description('Manage user groups/teams')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--role <role>', 'Default role for group members')
+  .option('--description <desc>', 'Group description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(groupsCommand);
+
+// Roles command
+program
+  .command('roles [action] [arg1] [arg2]')
+  .description('Manage roles and permissions')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--base <role>', 'Inherit from builtin role')
+  .option('--description <desc>', 'Role description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(rolesCommand);
+
+// Assign command
+program
+  .command('assign [targetType] [targetId] [roleId]')
+  .description('Assign a role to a user or group')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--scope <type:id>', 'Scope to project or form')
+  .option('--expires <date>', 'Expiration date')
+  .option('--reason <text>', 'Reason for assignment')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(assignCommand);
+
+// Unassign command
+program
+  .command('unassign [targetType] [targetId] [roleId]')
+  .description('Remove a role assignment from a user or group')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(unassignCommand);
+
+// Permissions command
+program
+  .command('permissions [action] [arg1]')
+  .description('View and check permissions')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(permissionsCommand);
 
 // Parse arguments
 program.parse();
