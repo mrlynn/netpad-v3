@@ -47,6 +47,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Mail as MailIcon,
+  Security as SecurityIcon,
+  CheckCircle as CheckIcon,
 } from '@mui/icons-material';
 
 interface OrgMember {
@@ -66,6 +68,19 @@ interface Invitation {
   status: string;
   createdAt: string;
   expiresAt: string;
+}
+
+interface PermissionSource {
+  type: 'builtin' | 'group' | 'custom';
+  sourceId: string;
+  sourceName: string;
+  permissions: string[];
+}
+
+interface EffectivePermissions {
+  userId: string;
+  permissions: string[];
+  sources: PermissionSource[];
 }
 
 const ROLE_COLORS: Record<string, 'error' | 'warning' | 'success' | 'info'> = {
@@ -91,7 +106,10 @@ export default function MembersPage() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<OrgMember | null>(null);
+  const [memberPermissions, setMemberPermissions] = useState<EffectivePermissions | null>(null);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -167,6 +185,27 @@ export default function MembersPage() {
       setDeleteDialogOpen(true);
     }
     handleMenuClose();
+  };
+
+  const handleViewPermissions = async () => {
+    if (!menuMember) return;
+    
+    setSelectedMember(menuMember);
+    setPermissionsDialogOpen(true);
+    setLoadingPermissions(true);
+    setMemberPermissions(null);
+    handleMenuClose();
+
+    try {
+      const response = await fetch(`/api/platform/orgs/${orgId}/members/${menuMember.userId}/permissions`);
+      if (!response.ok) throw new Error('Failed to fetch permissions');
+      const data = await response.json();
+      setMemberPermissions(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load permissions');
+    } finally {
+      setLoadingPermissions(false);
+    }
   };
 
   const handleInvite = async () => {
@@ -419,6 +458,10 @@ export default function MembersPage() {
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
       >
+        <MenuItem onClick={handleViewPermissions}>
+          <SecurityIcon fontSize="small" sx={{ mr: 1 }} />
+          View Permissions
+        </MenuItem>
         <MenuItem onClick={handleEditClick}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Change Role
@@ -517,6 +560,109 @@ export default function MembersPage() {
             disabled={updating}
           >
             {updating ? 'Removing...' : 'Remove Member'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Permissions Dialog */}
+      <Dialog 
+        open={permissionsDialogOpen} 
+        onClose={() => { setPermissionsDialogOpen(false); setMemberPermissions(null); }} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SecurityIcon />
+            Effective Permissions
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {loadingPermissions ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="text.secondary">Loading permissions...</Typography>
+            </Box>
+          ) : memberPermissions ? (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Showing effective permissions for <strong>{selectedMember?.email}</strong>
+              </Typography>
+
+              {/* Permission Sources */}
+              <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                Permission Sources
+              </Typography>
+              <Box sx={{ mb: 3 }}>
+                {memberPermissions.sources.map((source, idx) => (
+                  <Paper 
+                    key={idx} 
+                    sx={{ 
+                      p: 2, 
+                      mb: 1, 
+                      bgcolor: alpha(theme.palette.background.paper, 0.6),
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Chip 
+                        label={source.type} 
+                        size="small" 
+                        color={source.type === 'builtin' ? 'primary' : source.type === 'group' ? 'secondary' : 'default'}
+                      />
+                      <Typography variant="body2" fontWeight={500}>
+                        {source.sourceName}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {source.permissions.slice(0, 10).map((perm) => (
+                        <Chip 
+                          key={perm} 
+                          label={perm} 
+                          size="small" 
+                          variant="outlined" 
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      ))}
+                      {source.permissions.length > 10 && (
+                        <Chip 
+                          label={`+${source.permissions.length - 10} more`} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      )}
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+
+              {/* All Permissions */}
+              <Typography variant="subtitle2" gutterBottom>
+                All Permissions ({memberPermissions.permissions.length})
+              </Typography>
+              <Paper sx={{ p: 2, bgcolor: alpha(theme.palette.background.paper, 0.6), maxHeight: 200, overflow: 'auto' }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {memberPermissions.permissions.map((perm) => (
+                    <Chip 
+                      key={perm} 
+                      label={perm} 
+                      size="small" 
+                      icon={<CheckIcon sx={{ fontSize: 14 }} />}
+                      color="success"
+                      variant="outlined"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  ))}
+                </Box>
+              </Paper>
+            </Box>
+          ) : (
+            <Typography color="error">Failed to load permissions</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setPermissionsDialogOpen(false); setMemberPermissions(null); }}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>
