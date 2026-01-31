@@ -24,6 +24,9 @@ import { groupsCommand } from './commands/groups.js';
 import { rolesCommand } from './commands/roles.js';
 import { assignCommand, unassignCommand } from './commands/assign.js';
 import { permissionsCommand } from './commands/permissions.js';
+// Data Commands
+import { queryCommand } from './commands/query.js';
+import { scaffoldCommand } from './commands/scaffold.js';
 // Shell
 import { startShell } from './shell/index.js';
 import { readFileSync } from 'fs';
@@ -215,6 +218,32 @@ program
   .option('--api-url <url>', 'NetPad API URL')
   .option('--api-key <key>', 'NetPad API key')
   .action(permissionsCommand);
+
+// ============================================
+// Data & Developer Commands
+// ============================================
+
+// Query command
+program
+  .command('query <type>')
+  .description('Query data (currently supports: submissions)')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('-w, --where <condition>', 'Filter condition (e.g., "rating < 3")')
+  .option('--filter <json>', 'MongoDB filter as JSON')
+  .option('-l, --limit <number>', 'Limit results (max 100)', '20')
+  .option('--json', 'Output raw JSON')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(queryCommand);
+
+// Scaffold command
+program
+  .command('scaffold <framework> <formId>')
+  .description('Generate React/Next.js component from a form')
+  .option('-o, --output <path>', 'Output directory (prints to console if not specified)')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(scaffoldCommand);
 
 // Shell command - explicitly start interactive shell
 program
