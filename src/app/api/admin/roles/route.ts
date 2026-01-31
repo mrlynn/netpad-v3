@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const db = await getPlatformDb();
 
     // Check if user is platform admin
-    const user = await db.collection('users').findOne({ id: session.userId });
+    const user = await db.collection('users').findOne({ userId: session.userId });
     if (!user?.platformRole || !['platform_admin', 'super_admin'].includes(user.platformRole)) {
       return NextResponse.json({ error: 'Forbidden - Platform admin access required' }, { status: 403 });
     }
@@ -58,13 +58,13 @@ export async function GET(request: NextRequest) {
 
     // Fetch custom roles with pagination
     const [customRoles, totalCustom] = await Promise.all([
-      db.collection<CustomRole>('roles')
+      db.collection<CustomRole>('customRoles')
         .find(query)
         .sort({ name: 1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
-      db.collection<CustomRole>('roles').countDocuments(query),
+      db.collection<CustomRole>('customRoles').countDocuments(query),
     ]);
 
     // Get unique org IDs and fetch org names

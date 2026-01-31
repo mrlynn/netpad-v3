@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const db = await getPlatformDb();
 
     // Check if user is platform admin
-    const user = await db.collection('users').findOne({ id: session.userId });
+    const user = await db.collection('users').findOne({ userId: session.userId });
     if (!user?.platformRole || !['platform_admin', 'super_admin'].includes(user.platformRole)) {
       return NextResponse.json({ error: 'Forbidden - Platform admin access required' }, { status: 403 });
     }
