@@ -37,6 +37,7 @@ import {
   Rocket,
   Share,
   SmartToy,
+  Assignment,
 } from '@mui/icons-material';
 import { CommandPalette, useCommandPalette } from '@/components/Admin/CommandPalette';
 import Link from 'next/link';
@@ -78,6 +79,14 @@ const adminFeatures: AdminFeature[] = [
     icon: <Security sx={{ fontSize: 32 }} />,
     color: '#673AB7',
     statsKey: 'roles',
+  },
+  {
+    title: 'Role Assignments',
+    description: 'View all role assignments across organizations',
+    href: '/admin/assignments',
+    icon: <Assignment sx={{ fontSize: 32 }} />,
+    color: '#009688',
+    statsKey: 'assignments',
   },
   {
     title: 'Waitlist',
