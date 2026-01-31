@@ -82,6 +82,7 @@ interface CommandResult {
 // Available commands for AI interpretation
 const AVAILABLE_COMMANDS = [
   'create form <name> - Create a new form',
+  'create form "<description>" --ai - AI-generate a form from natural language description',
   'create workflow <name> - Create a new workflow',
   'create template <name> - Create a new template',
   'list forms - List all forms',
@@ -92,8 +93,8 @@ const AVAILABLE_COMMANDS = [
   'show workflow <id> - Show workflow details',
   'search <query> - Search forms and templates',
   'deploy form <id> [--env production|preview] - Deploy a form',
+  'export submissions [--form <id>] [--format csv|json] - Export submission data',
   'export form <id> [--format json|yaml] - Export form definition',
-  'export data <form-id> [--format csv|json] - Export submission data',
   'describe form <id> - Get AI description of a form',
   'explain <topic> - Get help on a topic',
   'stats [--form <id>] - Show statistics',
@@ -101,6 +102,8 @@ const AVAILABLE_COMMANDS = [
   'query submissions where <field> <op> <value> - Natural language query (e.g., where rating < 3)',
   'scaffold react <form-id> [--output path] - Generate React component using @netpad/forms',
   'scaffold nextjs <form-id> [--output path] - Generate Next.js page with form and API route',
+  'watch submissions [--form <id>] - Watch for new submissions in real-time',
+  'watch form <id> - Watch for changes to a form',
 ];
 
 export async function POST(request: NextRequest) {
@@ -385,6 +388,22 @@ async function executeCommand(
       return await handleScaffold(framework === 'next' ? 'nextjs' : framework, formId, options, user, db);
     }
 
+    case 'watch': {
+      const type = args[0]?.toLowerCase();
+      if (!['submissions', 'form', 'forms'].includes(type)) {
+        return null;
+      }
+      return await handleWatch(type, args.slice(1), options, user, db);
+    }
+
+    case 'export': {
+      const type = args[0]?.toLowerCase();
+      if (!['submissions', 'form', 'forms', 'data'].includes(type)) {
+        return null;
+      }
+      return await handleExport(type, args.slice(1), options, user, db);
+    }
+
     default:
       // Unknown command - return null to trigger AI fallback
       return null;
@@ -613,26 +632,205 @@ async function handleCreate(
     return {
       success: false,
       output: '',
-      error: 'Please specify a name',
-      suggestions: [`create ${type} "My ${type}"`],
+      error: 'Please specify a name or description',
+      suggestions: [
+        `create ${type} "My ${type}"`,
+        `create form "customer feedback with star rating" --ai`,
+      ],
     };
   }
 
   // Clean up name (remove quotes)
   const cleanName = name.replace(/^["']|["']$/g, '');
 
-  // Note: For forms, you should typically use the Form Builder UI
-  // This is a simplified create for quick drafts
+  // AI-powered form generation
+  if (type === 'form' && options.ai) {
+    return await handleAIFormGeneration(cleanName, options, user, db);
+  }
+
+  // Regular creation - suggest using UI or AI
+  if (type === 'form') {
+    return {
+      success: false,
+      output: '',
+      error: 'To create a form, either use the UI or use AI generation.',
+      suggestions: [
+        `create form "${cleanName}" --ai  (AI-generate from description)`,
+        'Visit /forms/new to use the visual builder',
+        'list forms - See your existing forms',
+      ],
+    };
+  }
+
   return {
     success: false,
     output: '',
     error: `Creating ${type}s via terminal is not yet supported. Please use the UI.`,
     suggestions: [
-      type === 'form' ? 'Visit /forms/new to create a form' : undefined,
       type === 'workflow' ? 'Visit /workflows/new to create a workflow' : undefined,
-      'list forms - See your existing forms',
+      `list ${type}s - See your existing ${type}s`,
     ].filter(Boolean) as string[],
   };
+}
+
+/**
+ * AI Form Generation handler
+ * Takes a natural language description and generates a complete form
+ */
+async function handleAIFormGeneration(
+  description: string,
+  options: Record<string, string | boolean>,
+  user: { id: string; email?: string; orgId: string },
+  db: Db
+): Promise<CommandResult> {
+  try {
+    const aiContext: AIServiceContext = {
+      userId: user.id,
+      orgId: user.orgId,
+      isGuest: false,
+      feature: 'ai_form_generation',
+      endpoint: '/api/terminal/create',
+    };
+
+    const prompt = `You are a form builder assistant. Generate a JSON form configuration based on this description:
+
+"${description}"
+
+Return ONLY valid JSON (no markdown, no explanation) with this structure:
+{
+  "name": "Form Name",
+  "description": "Brief description",
+  "fieldConfigs": [
+    {
+      "path": "fieldName",
+      "type": "short_text|long_text|email|number|phone|date|datetime|dropdown|radio|checkboxes|rating|slider|switch|file|signature|address|url",
+      "label": "Field Label",
+      "required": true|false,
+      "placeholder": "Optional placeholder",
+      "helpText": "Optional help text",
+      "options": ["option1", "option2"] // Only for dropdown, radio, checkboxes
+    }
+  ]
+}
+
+Field type guidelines:
+- Use "short_text" for names, titles, brief answers
+- Use "long_text" for descriptions, comments, feedback
+- Use "email" for email addresses
+- Use "number" for quantities, ages, amounts
+- Use "rating" for satisfaction scores (1-5 stars)
+- Use "slider" for ranges (e.g., 1-10 scale)
+- Use "dropdown" for single selection from many options
+- Use "radio" for single selection from few options (2-5)
+- Use "checkboxes" for multiple selections
+- Use "date" for dates, "datetime" for date+time
+- Use "switch" for yes/no, true/false toggles
+- Use "file" for uploads
+- Use "signature" for signatures
+
+Generate appropriate fields based on the description. Be thorough but don't over-engineer.`;
+
+    const response = await aiService.complete(
+      aiContext,
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 2000, temperature: 0.3 }
+    );
+
+    if (!response.success || !response.data) {
+      return {
+        success: false,
+        output: '',
+        error: response.error || 'AI generation failed. Try again or use the visual builder.',
+      };
+    }
+
+    // Parse the AI response
+    let formConfig;
+    try {
+      // Clean up response - remove markdown code blocks if present
+      let jsonStr = response.data.trim();
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+      formConfig = JSON.parse(jsonStr);
+    } catch (parseError) {
+      return {
+        success: false,
+        output: '',
+        error: 'AI returned invalid JSON. Try rephrasing your description.',
+        suggestions: [
+          'create form "simple contact form with name, email, message" --ai',
+          'create form "feedback survey with rating and comments" --ai',
+        ],
+      };
+    }
+
+    // Generate a unique form ID
+    const formId = `form_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const slug = (formConfig.name || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50);
+
+    // Ensure field configs have required properties
+    const fieldConfigs = (formConfig.fieldConfigs || []).map((field: Record<string, unknown>, index: number) => ({
+      ...field,
+      path: field.path || `field_${index}`,
+      id: `field_${Date.now()}_${index}`,
+    }));
+
+    // Create the form in the database
+    const newForm = {
+      formId,
+      name: formConfig.name || 'AI Generated Form',
+      description: formConfig.description || description,
+      slug,
+      fieldConfigs,
+      status: 'draft',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: user.id,
+      organizationId: user.orgId,
+      formType: 'data-entry',
+      aiGenerated: true,
+      aiPrompt: description,
+    };
+
+    await db.collection('forms').insertOne(newForm);
+
+    // Format output
+    const output = [
+      '\x1b[32m✓\x1b[0m \x1b[1mForm created successfully!\x1b[0m',
+      '',
+      `\x1b[36mName:\x1b[0m ${newForm.name}`,
+      `\x1b[36mID:\x1b[0m ${formId}`,
+      `\x1b[36mSlug:\x1b[0m ${slug}`,
+      `\x1b[36mFields:\x1b[0m ${fieldConfigs.length}`,
+      '',
+      '\x1b[90m─'.repeat(50) + '\x1b[0m',
+      '',
+      '\x1b[1mGenerated Fields:\x1b[0m',
+      ...fieldConfigs.map((f: Record<string, unknown>) => 
+        `  • ${f.label || f.path} \x1b[90m(${f.type}${f.required ? ', required' : ''})\x1b[0m`
+      ),
+      '',
+      '\x1b[90m─'.repeat(50) + '\x1b[0m',
+      '',
+      '\x1b[33mNext steps:\x1b[0m',
+      `  • Edit in builder: /forms/${formId}/edit`,
+      `  • Preview: show form ${formId}`,
+      `  • Generate component: scaffold react ${formId}`,
+    ];
+
+    return {
+      success: true,
+      output: output.join('\n'),
+      data: { formId, slug, form: newForm },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      output: '',
+      error: `AI generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
 /**
@@ -1192,4 +1390,304 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 */`;
+}
+
+/**
+ * Watch command handler - Real-time monitoring of submissions or form changes
+ * Note: Full streaming requires SSE/WebSocket endpoint. This provides polling info.
+ */
+async function handleWatch(
+  type: string,
+  args: string[],
+  options: Record<string, string | boolean>,
+  user: { id: string; email?: string; orgId: string },
+  db: Db
+): Promise<CommandResult> {
+  const formId = options.form as string || args[0];
+  
+  if (type === 'submissions') {
+    // Get current count and latest submission
+    const filter: Record<string, unknown> = {};
+    if (formId) filter.formId = formId;
+    
+    const [count, latest] = await Promise.all([
+      db.collection('form_submissions').countDocuments(filter),
+      db.collection('form_submissions')
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .limit(1)
+        .toArray(),
+    ]);
+    
+    const latestTime = latest[0]?.createdAt 
+      ? new Date(latest[0].createdAt).toISOString().replace('T', ' ').slice(0, 19)
+      : 'N/A';
+    
+    const output = [
+      '\x1b[1m\x1b[36m👁️  Watch Mode\x1b[0m',
+      '',
+      `\x1b[90mMonitoring:\x1b[0m ${formId ? `Form ${formId}` : 'All submissions'}`,
+      `\x1b[90mCurrent count:\x1b[0m ${count}`,
+      `\x1b[90mLatest:\x1b[0m ${latestTime}`,
+      '',
+      '\x1b[90m─'.repeat(50) + '\x1b[0m',
+      '',
+      '\x1b[33m⚡ Real-time streaming:\x1b[0m',
+      '',
+      'For live updates, use one of these methods:',
+      '',
+      '\x1b[1m1. Web Terminal (recommended):\x1b[0m',
+      '   The web terminal at /terminal supports live streaming.',
+      '',
+      '\x1b[1m2. API Polling:\x1b[0m',
+      '   Poll the submissions endpoint:',
+      `   \x1b[36mGET /api/forms/${formId || '<form-id>'}/submissions?since=<timestamp>\x1b[0m`,
+      '',
+      '\x1b[1m3. Webhook:\x1b[0m',
+      '   Configure a webhook in Form Settings → Integrations',
+      '',
+      '\x1b[1m4. MongoDB Change Stream:\x1b[0m',
+      '   Connect directly with your MongoDB connection string.',
+      '',
+      '\x1b[90mTip: Use "query submissions --form <id> --limit 5" to see recent entries\x1b[0m',
+    ];
+    
+    return {
+      success: true,
+      output: output.join('\n'),
+      data: { count, latest: latest[0], formId },
+    };
+  }
+  
+  if (type === 'form' || type === 'forms') {
+    if (!formId && !args[0]) {
+      return {
+        success: false,
+        output: '',
+        error: 'Please specify a form ID to watch',
+        suggestions: ['watch form <form-id>', 'list forms'],
+      };
+    }
+    
+    const targetFormId = formId || args[0];
+    const form = await db.collection('forms').findOne({
+      $or: [
+        { formId: targetFormId },
+        { _id: ObjectId.isValid(targetFormId) ? new ObjectId(targetFormId) : null },
+        { slug: targetFormId },
+      ],
+    });
+    
+    if (!form) {
+      return {
+        success: false,
+        output: '',
+        error: `Form not found: ${targetFormId}`,
+      };
+    }
+    
+    const output = [
+      '\x1b[1m\x1b[36m👁️  Watching Form\x1b[0m',
+      '',
+      `\x1b[36mName:\x1b[0m ${form.name}`,
+      `\x1b[36mID:\x1b[0m ${form.formId || form._id}`,
+      `\x1b[36mStatus:\x1b[0m ${form.status || 'draft'}`,
+      `\x1b[36mFields:\x1b[0m ${(form.fieldConfigs || []).length}`,
+      `\x1b[36mLast updated:\x1b[0m ${form.updatedAt ? new Date(form.updatedAt).toISOString() : 'N/A'}`,
+      '',
+      '\x1b[90mForm change monitoring is available via:\x1b[0m',
+      '  • MongoDB Change Streams on the forms collection',
+      '  • Webhooks configured in Form Settings',
+    ];
+    
+    return {
+      success: true,
+      output: output.join('\n'),
+      data: { form },
+    };
+  }
+  
+  return {
+    success: false,
+    output: '',
+    error: 'Unknown watch type',
+    suggestions: ['watch submissions --form <id>', 'watch form <id>'],
+  };
+}
+
+/**
+ * Export command handler - Export submissions or form definitions
+ */
+async function handleExport(
+  type: string,
+  args: string[],
+  options: Record<string, string | boolean>,
+  user: { id: string; email?: string; orgId: string },
+  db: Db
+): Promise<CommandResult> {
+  const format = (options.format as string)?.toLowerCase() || 'json';
+  const formId = options.form as string || args[0];
+  
+  if (type === 'submissions' || type === 'data') {
+    // Build filter
+    const filter: Record<string, unknown> = {};
+    if (formId) filter.formId = formId;
+    
+    const limit = Math.min(parseInt(options.limit as string) || 100, 1000);
+    
+    const submissions = await db.collection('form_submissions')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+    
+    if (submissions.length === 0) {
+      return {
+        success: true,
+        output: '\x1b[33mNo submissions found to export.\x1b[0m',
+        data: [],
+      };
+    }
+    
+    if (format === 'csv') {
+      // Generate CSV
+      const allFields = new Set<string>();
+      submissions.forEach(s => {
+        Object.keys(s.data || {}).forEach(k => allFields.add(k));
+      });
+      
+      const fields = ['_id', 'formId', 'createdAt', ...Array.from(allFields)];
+      const header = fields.join(',');
+      
+      const rows = submissions.map(s => {
+        return fields.map(f => {
+          let val;
+          if (f === '_id') val = String(s._id);
+          else if (f === 'formId') val = s.formId || '';
+          else if (f === 'createdAt') val = s.createdAt ? new Date(s.createdAt).toISOString() : '';
+          else val = s.data?.[f] ?? '';
+          
+          // Escape CSV values
+          const strVal = String(val);
+          if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
+            return `"${strVal.replace(/"/g, '""')}"`;
+          }
+          return strVal;
+        }).join(',');
+      });
+      
+      const csv = [header, ...rows].join('\n');
+      
+      return {
+        success: true,
+        output: csv,
+        data: { format: 'csv', count: submissions.length },
+      };
+    }
+    
+    // JSON format (default)
+    const jsonOutput = JSON.stringify(submissions.map(s => ({
+      id: String(s._id),
+      formId: s.formId,
+      createdAt: s.createdAt,
+      data: s.data,
+    })), null, 2);
+    
+    return {
+      success: true,
+      output: jsonOutput,
+      data: { format: 'json', count: submissions.length },
+    };
+  }
+  
+  if (type === 'form' || type === 'forms') {
+    const targetFormId = formId || args[0];
+    
+    if (!targetFormId) {
+      return {
+        success: false,
+        output: '',
+        error: 'Please specify a form ID',
+        suggestions: ['export form <form-id>', 'list forms'],
+      };
+    }
+    
+    const form = await db.collection('forms').findOne({
+      $or: [
+        { formId: targetFormId },
+        { _id: ObjectId.isValid(targetFormId) ? new ObjectId(targetFormId) : null },
+        { slug: targetFormId },
+      ],
+    });
+    
+    if (!form) {
+      return {
+        success: false,
+        output: '',
+        error: `Form not found: ${targetFormId}`,
+      };
+    }
+    
+    // Clean form for export (remove internal fields)
+    const exportForm = {
+      name: form.name,
+      description: form.description,
+      slug: form.slug,
+      fieldConfigs: form.fieldConfigs,
+      formType: form.formType,
+      multiPageConfig: form.multiPageConfig,
+      theme: form.theme,
+      conversationalConfig: form.conversationalConfig,
+      variables: form.variables,
+    };
+    
+    if (format === 'yaml') {
+      // Simple YAML conversion (basic, not full YAML spec)
+      const yamlLines: string[] = [];
+      const toYaml = (obj: unknown, indent = 0): void => {
+        const spaces = '  '.repeat(indent);
+        if (Array.isArray(obj)) {
+          obj.forEach(item => {
+            if (typeof item === 'object' && item !== null) {
+              yamlLines.push(`${spaces}-`);
+              toYaml(item, indent + 1);
+            } else {
+              yamlLines.push(`${spaces}- ${JSON.stringify(item)}`);
+            }
+          });
+        } else if (typeof obj === 'object' && obj !== null) {
+          Object.entries(obj).forEach(([key, val]) => {
+            if (val === undefined || val === null) return;
+            if (typeof val === 'object') {
+              yamlLines.push(`${spaces}${key}:`);
+              toYaml(val, indent + 1);
+            } else {
+              yamlLines.push(`${spaces}${key}: ${JSON.stringify(val)}`);
+            }
+          });
+        }
+      };
+      
+      toYaml(exportForm);
+      return {
+        success: true,
+        output: yamlLines.join('\n'),
+        data: { format: 'yaml', formId: form.formId || String(form._id) },
+      };
+    }
+    
+    // JSON format (default)
+    return {
+      success: true,
+      output: JSON.stringify(exportForm, null, 2),
+      data: { format: 'json', formId: form.formId || String(form._id) },
+    };
+  }
+  
+  return {
+    success: false,
+    output: '',
+    error: 'Unknown export type',
+    suggestions: ['export submissions --form <id>', 'export form <id>'],
+  };
 }
