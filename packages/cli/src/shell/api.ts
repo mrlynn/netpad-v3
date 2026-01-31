@@ -30,17 +30,25 @@ export interface CommandResult {
 }
 
 export class ShellAPIClient {
-  private baseUrl: string;
-  private apiKey: string | undefined;
-  private sessionToken: string | undefined;
-  private orgId: string | undefined;
+  private get config() {
+    // Always get fresh config (reloads from disk)
+    return getConfig();
+  }
 
-  constructor() {
-    const config = getConfig();
-    this.baseUrl = config.apiUrl || 'https://app.netpad.app';
-    this.apiKey = config.apiKey;
-    this.sessionToken = config.sessionToken;
-    this.orgId = config.orgId;
+  private get baseUrl(): string {
+    return this.config.apiUrl || 'http://localhost:3000';
+  }
+
+  private get apiKey(): string | undefined {
+    return this.config.apiKey;
+  }
+
+  private get sessionToken(): string | undefined {
+    return this.config.sessionToken;
+  }
+
+  private get orgId(): string | undefined {
+    return this.config.orgId;
   }
 
   private async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
@@ -142,14 +150,21 @@ export class ShellAPIClient {
   }
 
   isAuthenticated(): boolean {
-    return !!(this.apiKey || this.sessionToken);
+    const config = getConfig();
+    return !!(config.apiKey || config.sessionToken);
   }
 
   getOrgId(): string | undefined {
-    return this.orgId;
+    return getConfig().orgId;
   }
 
   getBaseUrl(): string {
-    return this.baseUrl;
+    return getConfig().apiUrl || 'http://localhost:3000';
+  }
+  
+  /** Force reload of credentials (called after login/logout) */
+  reloadCredentials(): void {
+    // Getters always read fresh, but this method signals intent
+    console.log('Credentials reloaded');
   }
 }

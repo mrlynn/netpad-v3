@@ -9,7 +9,7 @@
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { setApiKey, setSessionToken, setOrgId, setProjectId, getEffectiveConfig } from '../lib/config.js';
+import { setApiKey, setSessionToken, setOrgId, setProjectId, getEffectiveConfig, loadConfig } from '../lib/config.js';
 import open from 'open';
 
 interface LoginOptions {
@@ -23,10 +23,13 @@ interface LoginOptions {
 }
 
 export async function loginCommand(options: LoginOptions) {
-  // Default to localhost for development, or use environment variable
-  const defaultApiUrl = process.env.NETPAD_API_URL || 
-                       (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://app.netpad.app');
-  const apiUrl = options.apiUrl || defaultApiUrl;
+  // Check saved config first, then env vars, then defaults
+  const savedConfig = loadConfig();
+  const defaultApiUrl = options.apiUrl || 
+                       savedConfig.apiUrl ||
+                       process.env.NETPAD_API_URL || 
+                       'http://localhost:3000';
+  const apiUrl = defaultApiUrl;
 
   console.log(chalk.blue('NetPad CLI Login\n'));
   console.log(chalk.gray(`API URL: ${apiUrl}\n`));

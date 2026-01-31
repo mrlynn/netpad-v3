@@ -396,7 +396,7 @@ function formatLongEntry(entry: FSEntry): string {
 }
 
 /**
- * Handle login command - simplified in-shell login
+ * Handle login command - launches interactive login
  */
 async function handleLogin(state: ShellState): Promise<CommandResult> {
   const config = getConfig();
@@ -410,20 +410,40 @@ async function handleLogin(state: ShellState): Promise<CommandResult> {
     };
   }
   
-  console.log(chalk.blue('\nNetPad Login\n'));
-  console.log(chalk.gray('Choose a login method:\n'));
-  console.log(`  ${chalk.cyan('1.')} API Key ${chalk.gray('(paste your key)')}`);
-  console.log(`  ${chalk.cyan('2.')} Browser ${chalk.gray('(opens login page)')}`);
-  console.log();
+  // Spawn the login command as a child process
+  const { spawn } = await import('child_process');
+  const apiUrl = config.apiUrl || 'http://localhost:3000';
   
-  // For API key login, prompt inline
-  const output = `${chalk.yellow('To login with API key:')}\n` +
-    `  Run: ${chalk.cyan('netpad login --api-key YOUR_KEY')}\n\n` +
-    `${chalk.yellow('To login via browser:')}\n` +
-    `  Run: ${chalk.cyan('netpad login')} ${chalk.gray('(outside shell)')}\n\n` +
-    chalk.gray('Get your API key at: https://app.netpad.app/settings/api');
+  console.log(chalk.blue('\nStarting login flow...\n'));
   
-  return { success: true, output };
+  return new Promise((resolve) => {
+    const child = spawn('npx', ['netpad', 'login', '--api-url', apiUrl], {
+      stdio: 'inherit',
+      shell: true,
+    });
+    
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({
+          success: true,
+          output: chalk.green('\n✓ Login complete! You can now use all commands.'),
+        });
+      } else {
+        resolve({
+          success: false,
+          error: chalk.red('\nLogin failed or was cancelled.'),
+        });
+      }
+    });
+    
+    child.on('error', (err) => {
+      resolve({
+        success: false,
+        error: `${chalk.yellow('Could not start login process.')}\n` +
+          `Run ${chalk.cyan(`netpad login --api-url ${apiUrl}`)} in another terminal.`,
+      });
+    });
+  });
 }
 
 /**
