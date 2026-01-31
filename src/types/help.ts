@@ -115,6 +115,12 @@ export type HelpTopicId =
   | 'application-contracts'
   | 'marketplace'
   | 'npm-packages'
+  // RBAC / Access Control
+  | 'rbac-overview'
+  | 'rbac-users'
+  | 'rbac-groups'
+  | 'rbac-roles'
+  | 'rbac-permissions'
   // Admin-only topics
   | 'admin-dashboard'
   | 'admin-user-management'

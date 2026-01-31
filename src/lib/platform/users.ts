@@ -10,6 +10,7 @@
 import { ObjectId } from 'mongodb';
 import { getUsersCollection, getPlatformAuditCollection } from './db';
 import { generateSecureId } from '../encryption';
+import { shouldPromoteToAdmin, promoteToInstanceAdmin } from './instanceAdmin';
 import {
   PlatformUser,
   OAuthConnection,
@@ -88,14 +89,29 @@ export async function findUserByEmail(email: string): Promise<PlatformUser | nul
 }
 
 /**
- * Find user by ID
+ * Find user by ID (supports both new userId format and legacy ObjectId)
  */
 export async function findUserById(userId: string): Promise<PlatformUser | null> {
   const collection = await getUsersCollection();
-  return timedQuery(
+  
+  // First try by userId field (new format: user_xxx)
+  const byUserId = await timedQuery(
     { operation: 'findOne', collection: 'users', filter: { userId } },
     () => collection.findOne({ userId })
   );
+  
+  if (byUserId) return byUserId;
+  
+  // Fallback: try by _id for legacy sessions (ObjectId format)
+  const { ObjectId } = await import('mongodb');
+  if (ObjectId.isValid(userId)) {
+    return timedQuery(
+      { operation: 'findOne', collection: 'users', filter: { _id: userId } },
+      () => collection.findOne({ _id: new ObjectId(userId) } as any)
+    );
+  }
+  
+  return null;
 }
 
 /**
@@ -206,6 +222,15 @@ export async function ensurePlatformUser(
   await collection.insertOne(user);
   console.log('[PlatformUser] Created new user:', { userId: user.userId, email: user.email });
 
+  // Check if this user should be auto-promoted to instance admin
+  // (first user or matches NETPAD_INSTANCE_ADMIN_EMAIL)
+  const shouldPromote = await shouldPromoteToAdmin(user.email);
+  if (shouldPromote) {
+    await promoteToInstanceAdmin(user.userId);
+    user.instanceRole = 'instance_admin';
+    console.log('[PlatformUser] Auto-promoted to instance admin:', { userId: user.userId, email: user.email });
+  }
+
   await logUserEvent({
     eventType: 'user.created',
     userId: user.userId,
@@ -216,6 +241,7 @@ export async function ensurePlatformUser(
     details: {
       authMethod: 'passkey-or-magic-link',
       authId,
+      autoPromotedToAdmin: shouldPromote,
     },
     timestamp: new Date(),
   });

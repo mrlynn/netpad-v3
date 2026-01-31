@@ -33,9 +33,11 @@ const PROTECTED_ROUTES = [
   '/workflows',
   '/my-forms',
   '/applications',
+  '/apps', // App dashboard routes
   '/marketplace',
   '/data',
   '/admin',
+  '/onboarding', // Must be protected so waitlist check applies
   '/api/projects',
   '/api/organizations',
   '/api/forms',

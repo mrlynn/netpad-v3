@@ -36,6 +36,7 @@ import { FieldConfigDrawer } from './FieldConfigDrawer';
 import { FloatingActionToolbar } from './FloatingActionToolbar';
 import { ConnectionStatusChip } from './ConnectionStatusChip';
 import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
+import FormExportDialog from './FormExportDialog';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings, FormConfiguration } from '@/types/form';
 import { FormReaction } from '@/types/reactions';
 import { FormHooksConfig } from '@/types/formHooks';
@@ -124,6 +125,8 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     conversationalConfig?: import('@/types/conversational').ConversationalFormConfig;
   } | null>(null);
   const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFormConfig, setExportFormConfig] = useState<Record<string, unknown> | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -291,17 +294,9 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
     // Clean the form for export (removes sensitive data)
     const exportedForm = cleanFormForExport(formConfig as any);
 
-    // Create and download the file
-    const blob = new Blob([JSON.stringify(exportedForm, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(currentFormName || 'form').toLowerCase().replace(/\s+/g, '-')}-definition.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
+    // Show export dialog with preview
+    setExportFormConfig(exportedForm);
+    setExportDialogOpen(true);
     setMoreMenuAnchor(null);
   }, [fieldConfigs, currentFormId, currentFormName, currentFormDescription, currentFormSlug, variables, multiPageConfig, lifecycleConfig, themeConfig, formType, searchConfig, conversationalConfig, botProtection, draftSettings, hooksConfig]);
 
@@ -1900,6 +1895,19 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
           console.log('[FormBuilder] Published to marketplace:', result);
         }}
       />
+
+      {/* Form Export Dialog */}
+      {exportFormConfig && (
+        <FormExportDialog
+          open={exportDialogOpen}
+          onClose={() => {
+            setExportDialogOpen(false);
+            setExportFormConfig(null);
+          }}
+          formConfig={exportFormConfig}
+          formName={currentFormName || 'Untitled Form'}
+        />
+      )}
     </Box>
   );
 }

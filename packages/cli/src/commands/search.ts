@@ -22,7 +22,7 @@ export async function searchCommand(query: string | undefined, options: SearchOp
     apiKey: options.apiKey,
   });
 
-  const apiUrl = auth?.apiUrl || process.env.NETPAD_API_URL || 'https://app.netpad.app';
+  const apiUrl = auth?.apiUrl || process.env.NETPAD_API_URL || 'https://netpad.io';
 
   try {
     const params = new URLSearchParams();
@@ -39,16 +39,33 @@ export async function searchCommand(query: string | undefined, options: SearchOp
 
     const url = `${apiUrl}/api/marketplace/npm/search?${params.toString()}`;
     
-    const response = await fetch(url, {
-      headers: auth ? {
-        'Authorization': getAuthHeader(auth),
-      } : {},
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: auth ? {
+          'Authorization': getAuthHeader(auth),
+        } : {},
+      });
+    } catch (err) {
+      const error = err as Error;
+      if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
+        console.error(chalk.red(`Error: Cannot connect to NetPad API at ${apiUrl}`));
+        console.error(chalk.gray('Check that the server is running or use --api-url to specify a different URL.'));
+      } else {
+        console.error(chalk.red(`Error: ${error.message}`));
+      }
+      process.exit(1);
+    }
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(chalk.red(`Error: ${data.error || 'Failed to search packages'}`));
+      if (response.status === 401 || response.status === 403) {
+        console.error(chalk.red('Error: Authentication required'));
+        console.error(chalk.gray(`Run ${chalk.cyan('netpad login')} to authenticate, or provide --api-key`));
+      } else {
+        console.error(chalk.red(`Error: ${data.error || 'Failed to search packages'}`));
+      }
       process.exit(1);
     }
 

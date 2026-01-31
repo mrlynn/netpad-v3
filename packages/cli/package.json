@@ -1,6 +1,6 @@
 {
   "name": "@netpad/cli",
-  "version": "0.2.1",
+  "version": "0.4.1",
   "description": "NetPad CLI tool for managing applications and plugins from npm",
   "type": "module",
   "bin": {

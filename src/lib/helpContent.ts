@@ -8966,4 +8966,314 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
     relatedTopics: ['form-reactions', 'node-field-event-trigger', 'node-form-field-update'],
     keywords: ['hook', 'react', 'useFormReactions', 'trigger', 'state', 'callback'],
   },
+
+  // ============================================
+  // RBAC / Access Control
+  // ============================================
+
+  'rbac-overview': {
+    id: 'rbac-overview',
+    title: 'Access Control Overview',
+    description:
+      'Role-Based Access Control (RBAC) for managing organization users, groups, and permissions.',
+    content: [
+      {
+        type: 'heading',
+        content: 'What is RBAC?',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad uses Role-Based Access Control (RBAC) to manage who can access what in your organization. Users are assigned roles, either directly or through groups, and roles determine what permissions they have.',
+      },
+      {
+        type: 'heading',
+        content: 'Key Concepts',
+      },
+      {
+        type: 'list',
+        content: [
+          'Users: Organization members with assigned roles',
+          'Groups: Teams of users for easier permission management',
+          'Roles: Built-in or custom sets of permissions',
+          'Permissions: Granular actions users can perform',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Built-in Roles',
+      },
+      {
+        type: 'list',
+        content: [
+          'Owner: Full control over the organization',
+          'Admin: Manage members, settings, and resources',
+          'Member: Create and manage own forms/workflows',
+          'Viewer: Read-only access to resources',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Use groups to manage permissions for teams. Instead of assigning roles to individuals, add them to groups like "Engineering" or "Marketing".',
+      },
+    ],
+    relatedTopics: ['rbac-users', 'rbac-groups', 'rbac-roles', 'rbac-permissions'],
+    keywords: ['rbac', 'access control', 'permissions', 'roles', 'security'],
+  },
+
+  'rbac-users': {
+    id: 'rbac-users',
+    title: 'Managing Users',
+    description: 'Invite, manage, and remove organization members.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Inviting Users',
+      },
+      {
+        type: 'text',
+        content:
+          'Invite new members from Organization Settings → Members. Enter their email and select a role. They will receive an invitation email to join.',
+      },
+      {
+        type: 'heading',
+        content: 'User Roles',
+      },
+      {
+        type: 'list',
+        content: [
+          'Admin: Full management access (cannot delete org)',
+          'Member: Create and manage own resources',
+          'Viewer: Read-only access',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'CLI Commands',
+      },
+      {
+        type: 'code',
+        content: [
+          '# List members',
+          'netpad users list -o <orgId>',
+          '',
+          '# Invite user',
+          'netpad users add jane@example.com --role member',
+          '',
+          '# Change role',
+          'netpad users update jane@example.com --role admin',
+          '',
+          '# Remove user',
+          'netpad users remove jane@example.com',
+        ],
+      },
+      {
+        type: 'warning',
+        content:
+          'You cannot demote the last owner. Transfer ownership before changing your role.',
+      },
+    ],
+    relatedTopics: ['rbac-overview', 'rbac-groups', 'rbac-roles'],
+    keywords: ['users', 'members', 'invite', 'remove', 'role'],
+  },
+
+  'rbac-groups': {
+    id: 'rbac-groups',
+    title: 'Managing Groups',
+    description: 'Create teams and manage group membership for easier permission management.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Why Use Groups?',
+      },
+      {
+        type: 'text',
+        content:
+          'Groups let you organize users into teams. Instead of assigning permissions to individuals, assign them to groups. When team composition changes, just update group membership.',
+      },
+      {
+        type: 'heading',
+        content: 'Group Features',
+      },
+      {
+        type: 'list',
+        content: [
+          'Default Role: All group members inherit this role',
+          'Member Management: Add/remove users easily',
+          'Bulk Permissions: Assign roles to entire teams',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'CLI Commands',
+      },
+      {
+        type: 'code',
+        content: [
+          '# List groups',
+          'netpad groups list -o <orgId>',
+          '',
+          '# Create group with default role',
+          'netpad groups create "Engineering" --role member',
+          '',
+          '# Add member to group',
+          'netpad groups add-member engineering jane@example.com',
+          '',
+          '# Remove member from group',
+          'netpad groups remove-member engineering jane@example.com',
+        ],
+      },
+      {
+        type: 'tip',
+        content:
+          'Create groups that match your team structure: Engineering, Marketing, Contractors, etc.',
+      },
+    ],
+    relatedTopics: ['rbac-overview', 'rbac-users', 'rbac-roles'],
+    keywords: ['groups', 'teams', 'membership', 'organize'],
+  },
+
+  'rbac-roles': {
+    id: 'rbac-roles',
+    title: 'Managing Roles',
+    description: 'View built-in roles and create custom roles with specific permissions.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Built-in Roles',
+      },
+      {
+        type: 'text',
+        content:
+          'NetPad provides four built-in roles that cannot be modified: Owner, Admin, Member, and Viewer. Each has a predefined set of permissions.',
+      },
+      {
+        type: 'heading',
+        content: 'Custom Roles',
+      },
+      {
+        type: 'text',
+        content:
+          'Create custom roles for specific needs. Custom roles can inherit from built-in roles and add or remove permissions.',
+      },
+      {
+        type: 'heading',
+        content: 'CLI Commands',
+      },
+      {
+        type: 'code',
+        content: [
+          '# List all roles',
+          'netpad roles list -o <orgId>',
+          '',
+          '# Create custom role (inheriting from viewer)',
+          'netpad roles create "Form Reviewer" --base viewer',
+          '',
+          '# Grant permission to role',
+          'netpad roles grant form-reviewer responses:export',
+          '',
+          '# Revoke permission from role',
+          'netpad roles revoke form-reviewer responses:delete',
+        ],
+      },
+      {
+        type: 'example',
+        content:
+          'Common custom roles: "Billing Admin" (org:manage_billing), "Content Editor" (forms:update, forms:publish), "Data Analyst" (responses:read, responses:export)',
+      },
+    ],
+    relatedTopics: ['rbac-overview', 'rbac-permissions', 'rbac-groups'],
+    keywords: ['roles', 'custom roles', 'built-in roles', 'permissions'],
+  },
+
+  'rbac-permissions': {
+    id: 'rbac-permissions',
+    title: 'Permissions Reference',
+    description: 'Complete list of available permissions and what they control.',
+    content: [
+      {
+        type: 'heading',
+        content: 'Permission Format',
+      },
+      {
+        type: 'text',
+        content:
+          'Permissions follow the format category:action (e.g., forms:create, members:invite).',
+      },
+      {
+        type: 'heading',
+        content: 'Organization Permissions',
+      },
+      {
+        type: 'list',
+        content: [
+          'org:read - View organization details',
+          'org:update - Update organization settings',
+          'org:delete - Delete the organization',
+          'org:manage_billing - Manage billing and subscription',
+          'org:manage_settings - Configure organization settings',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Member Permissions',
+      },
+      {
+        type: 'list',
+        content: [
+          'members:read - View organization members',
+          'members:invite - Invite new members',
+          'members:remove - Remove members',
+          'members:update_role - Change member roles',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Form Permissions',
+      },
+      {
+        type: 'list',
+        content: [
+          'forms:read - View forms',
+          'forms:create - Create new forms',
+          'forms:update - Edit forms',
+          'forms:delete - Delete forms',
+          'forms:publish - Publish/unpublish forms',
+          'forms:manage_permissions - Manage form access',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'Response Permissions',
+      },
+      {
+        type: 'list',
+        content: [
+          'responses:read - View form submissions',
+          'responses:export - Export submissions',
+          'responses:delete - Delete submissions',
+        ],
+      },
+      {
+        type: 'heading',
+        content: 'CLI Commands',
+      },
+      {
+        type: 'code',
+        content: [
+          '# List all permissions',
+          'netpad permissions list',
+          '',
+          '# Check if you have a permission',
+          'netpad permissions check forms:create -o <orgId>',
+          '',
+          '# View your effective permissions',
+          'netpad permissions me -o <orgId>',
+        ],
+      },
+    ],
+    relatedTopics: ['rbac-overview', 'rbac-roles'],
+    keywords: ['permissions', 'access', 'capabilities', 'authorization'],
+  },
 };

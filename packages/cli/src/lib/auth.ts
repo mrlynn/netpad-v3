@@ -29,7 +29,7 @@ export function getAuthConfig(options: {
 
   // Default to localhost for development
   const defaultApiUrl = process.env.NETPAD_API_URL || 
-                       (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://app.netpad.app');
+                       (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://netpad.io');
   
   const apiUrl = options.apiUrl || config.apiUrl || defaultApiUrl;
 

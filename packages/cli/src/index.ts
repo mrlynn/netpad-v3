@@ -3,7 +3,9 @@
 /**
  * NetPad CLI
  * 
- * Command-line tool for managing NetPad applications and plugins from npm
+ * Command-line tool for managing NetPad applications and plugins from npm.
+ * When run with no arguments, launches an interactive shell that mirrors
+ * the web terminal experience.
  */
 
 import { Command } from 'commander';
@@ -16,6 +18,20 @@ import { versionCommand } from './commands/version.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
 import { whoamiCommand } from './commands/whoami.js';
+// RBAC Commands
+import { usersCommand } from './commands/users.js';
+import { groupsCommand } from './commands/groups.js';
+import { rolesCommand } from './commands/roles.js';
+import { assignCommand, unassignCommand } from './commands/assign.js';
+import { permissionsCommand } from './commands/permissions.js';
+// Data Commands
+import { queryCommand } from './commands/query.js';
+import { scaffoldCommand } from './commands/scaffold.js';
+import { watchCommand } from './commands/watch.js';
+import { exportCommand } from './commands/export.js';
+import { createFormCommand } from './commands/create-form.js';
+// Shell
+import { startShell } from './shell/index.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -51,7 +67,7 @@ program
   .option('-p, --project <projectId>', 'Project ID')
   .option('--overwrite', 'Overwrite existing application/plugin')
   .option('--no-deps', 'Skip installing dependencies')
-  .option('--api-url <url>', 'NetPad API URL (default: https://app.netpad.app)')
+  .option('--api-url <url>', 'NetPad API URL (default: https://netpad.io)')
   .option('--api-key <key>', 'NetPad API key')
   .action(installCommand);
 
@@ -74,6 +90,8 @@ program
   .option('-t, --type <type>', 'Package type: application, plugin, or all', 'all')
   .option('--verified', 'Only show verified packages')
   .option('--limit <number>', 'Limit results', '20')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
   .action(searchCommand);
 
 // Create app command
@@ -135,7 +153,148 @@ program
 program
   .command('whoami')
   .description('Show current authentication status')
+  .option('--effective', 'Show effective permissions')
   .action(whoamiCommand);
 
-// Parse arguments
-program.parse();
+// ============================================
+// RBAC Commands
+// ============================================
+
+// Users command
+program
+  .command('users [action] [target]')
+  .description('Manage organization members')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--role <role>', 'Role to assign (admin|member|viewer)')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(usersCommand);
+
+// Groups command
+program
+  .command('groups [action] [arg1] [arg2]')
+  .description('Manage user groups/teams')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--role <role>', 'Default role for group members')
+  .option('--description <desc>', 'Group description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(groupsCommand);
+
+// Roles command
+program
+  .command('roles [action] [arg1] [arg2]')
+  .description('Manage roles and permissions')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--base <role>', 'Inherit from builtin role')
+  .option('--description <desc>', 'Role description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(rolesCommand);
+
+// Assign command
+program
+  .command('assign [targetType] [targetId] [roleId]')
+  .description('Assign a role to a user or group')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--scope <type:id>', 'Scope to project or form')
+  .option('--expires <date>', 'Expiration date')
+  .option('--reason <text>', 'Reason for assignment')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(assignCommand);
+
+// Unassign command
+program
+  .command('unassign [targetType] [targetId] [roleId]')
+  .description('Remove a role assignment from a user or group')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(unassignCommand);
+
+// Permissions command
+program
+  .command('permissions [action] [arg1]')
+  .description('View and check permissions')
+  .option('-o, --org <orgId>', 'Organization ID')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(permissionsCommand);
+
+// ============================================
+// Data & Developer Commands
+// ============================================
+
+// Query command
+program
+  .command('query <type>')
+  .description('Query data (currently supports: submissions)')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('-w, --where <condition>', 'Filter condition (e.g., "rating < 3")')
+  .option('--filter <json>', 'MongoDB filter as JSON')
+  .option('-l, --limit <number>', 'Limit results (max 100)', '20')
+  .option('--json', 'Output raw JSON')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(queryCommand);
+
+// Scaffold command
+program
+  .command('scaffold <framework> <formId>')
+  .description('Generate React/Next.js component from a form')
+  .option('-o, --output <path>', 'Output directory (prints to console if not specified)')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(scaffoldCommand);
+
+// Watch command
+program
+  .command('watch <type> [target]')
+  .description('Monitor submissions or form changes in real-time')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('-i, --interval <seconds>', 'Polling interval in seconds', '5')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(watchCommand);
+
+// Export command
+program
+  .command('export <type> [target]')
+  .description('Export submissions or form definitions')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('--format <format>', 'Output format: json, csv, yaml', 'json')
+  .option('-o, --output <path>', 'Output file (prints to stdout if not specified)')
+  .option('-l, --limit <number>', 'Limit results', '100')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(exportCommand);
+
+// Create Form command (AI-powered)
+program
+  .command('create-form <description>')
+  .description('Create a form using AI from natural language description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(createFormCommand);
+
+// Shell command - explicitly start interactive shell
+program
+  .command('shell')
+  .alias('sh')
+  .description('Start interactive shell (default when no command given)')
+  .action(async () => {
+    await startShell();
+  });
+
+// Check if no arguments provided (just "netpad") - start shell
+if (process.argv.length <= 2) {
+  // No command provided, start interactive shell
+  startShell().catch(err => {
+    console.error('Failed to start shell:', err.message);
+    process.exit(1);
+  });
+} else {
+  // Parse arguments normally
+  program.parse();
+}

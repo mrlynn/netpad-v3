@@ -60,7 +60,13 @@ export async function GET(
       waitlistStatus: result.user.waitlistStatus,
     });
 
-    // Determine redirect URL
+    // If user is pending/rejected waitlist status, redirect to waitlist page
+    // This prevents them from seeing onboarding or protected routes
+    if (result.user.waitlistStatus === 'pending' || result.user.waitlistStatus === 'rejected') {
+      return NextResponse.redirect(new URL('/waitlist/pending', request.url));
+    }
+
+    // Determine redirect URL for approved users
     const redirectUrl = result.redirectTo || '/';
 
     // Add success message for new users
