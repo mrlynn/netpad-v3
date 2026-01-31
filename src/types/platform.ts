@@ -376,7 +376,25 @@ export const ORG_PLAN_LIMITS: Record<OrgPlan, Partial<OrganizationSettings>> = {
 // Platform User (Extended)
 // ============================================
 
+/**
+ * Legacy platform role (kept for backwards compatibility)
+ * @deprecated Use instanceRole for self-hosted, cloudRole for cloud
+ */
 export type PlatformRole = 'admin' | 'support';
+
+/**
+ * Instance-level admin role for self-hosted deployments
+ * - instance_admin: Full control over the self-hosted instance
+ */
+export type InstanceRole = 'instance_admin';
+
+/**
+ * Cloud-specific roles (defined here for type safety, values from @netpad/cloud-features)
+ * - super_admin: NetPad staff with full access
+ * - cloud_ops: Operations team
+ * - cloud_support: Support team with limited access
+ */
+export type CloudRole = 'super_admin' | 'cloud_ops' | 'cloud_support';
 
 export interface OAuthConnection {
   provider: 'google' | 'github';
@@ -399,8 +417,14 @@ export interface PlatformUser {
   displayName?: string;
   avatarUrl?: string;
 
-  // Platform role (system-wide)
+  // Platform role (system-wide) - DEPRECATED, use instanceRole/cloudRole
   platformRole?: PlatformRole;
+
+  // Instance admin role (for self-hosted deployments)
+  instanceRole?: InstanceRole;
+
+  // Cloud role (for netpad.io cloud service, populated by @netpad/cloud-features)
+  cloudRole?: CloudRole;
 
   // Organization memberships
   organizations: OrgMembership[];

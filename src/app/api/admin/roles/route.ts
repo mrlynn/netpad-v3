@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
+import { isInstanceAdmin } from '@/lib/platform/instanceAdmin';
 import { CustomRole, Organization } from '@/types/platform';
 import { Filter } from 'mongodb';
 
@@ -28,13 +29,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getPlatformDb();
-
-    // Check if user is platform admin
-    const user = await db.collection('users').findOne({ userId: session.userId });
-    if (!user?.platformRole || !['platform_admin', 'super_admin'].includes(user.platformRole)) {
-      return NextResponse.json({ error: 'Forbidden - Platform admin access required' }, { status: 403 });
+    // Check if user is instance admin
+    const isAdmin = await isInstanceAdmin(session.userId);
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden - Instance admin access required' }, { status: 403 });
     }
+
+    const db = await getPlatformDb();
 
     // Get query params
     const { searchParams } = new URL(request.url);
