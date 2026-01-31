@@ -236,23 +236,71 @@ export async function createWorkflow(
 
   if (data.templateId) {
     try {
+      // First, try to find template in database
       const { getWorkflowTemplatesCollection } = await import('@/lib/platform/db');
       const templatesCollection = await getWorkflowTemplatesCollection(orgId);
       const templateQuery: any = { templateId: data.templateId };
       if (data.templateVersion) {
         templateQuery.version = data.templateVersion;
       }
-      const template = await templatesCollection.findOne(templateQuery);
+      const dbTemplate = await templatesCollection.findOne(templateQuery);
       
-      if (template && template.definition) {
-        if (template.definition.canvas) {
-          initialCanvas = template.definition.canvas;
+      if (dbTemplate && dbTemplate.definition) {
+        // Use database template
+        if (dbTemplate.definition.canvas) {
+          initialCanvas = dbTemplate.definition.canvas;
         }
-        if (template.definition.settings) {
-          initialSettings = { ...DEFAULT_WORKFLOW_SETTINGS, ...template.definition.settings };
+        if (dbTemplate.definition.settings) {
+          initialSettings = { ...DEFAULT_WORKFLOW_SETTINGS, ...dbTemplate.definition.settings };
         }
-        if (template.definition.variables) {
-          initialVariables = template.definition.variables;
+        if (dbTemplate.definition.variables) {
+          initialVariables = dbTemplate.definition.variables;
+        }
+        console.log(`[Workflow DB] Loaded template from database: ${data.templateId}`);
+      } else {
+        // Fallback: Try to find in static templates (for "Use Template" from gallery)
+        const { workflowTemplates } = await import('@/lib/templates/workflowTemplates');
+        const staticTemplate = workflowTemplates.find(t => t.id === data.templateId);
+        
+        if (staticTemplate && staticTemplate.nodes && staticTemplate.edges) {
+          // Convert static template format to canvas format
+          const nodeIdMap: Record<number, string> = {};
+          const canvasNodes: WorkflowCanvas['nodes'] = [];
+          const canvasEdges: WorkflowCanvas['edges'] = [];
+          
+          // Create nodes with proper IDs
+          staticTemplate.nodes.forEach((templateNode, index) => {
+            const nodeId = `${templateNode.type}_${nanoid(8)}`;
+            nodeIdMap[index] = nodeId;
+            
+            canvasNodes.push({
+              id: nodeId,
+              type: templateNode.type,
+              label: templateNode.label,
+              position: templateNode.position,
+              config: {},
+              enabled: true,
+            });
+          });
+          
+          // Create edges with mapped IDs
+          staticTemplate.edges.forEach((templateEdge) => {
+            const sourceId = nodeIdMap[templateEdge.source];
+            const targetId = nodeIdMap[templateEdge.target];
+            
+            if (sourceId && targetId) {
+              canvasEdges.push({
+                id: `edge_${nanoid(8)}`,
+                source: sourceId,
+                sourceHandle: 'output',
+                target: targetId,
+                targetHandle: 'input',
+              });
+            }
+          });
+          
+          initialCanvas = { nodes: canvasNodes, edges: canvasEdges };
+          console.log(`[Workflow DB] Loaded static template: ${data.templateId} (${canvasNodes.length} nodes)`);
         }
       }
     } catch (error) {
