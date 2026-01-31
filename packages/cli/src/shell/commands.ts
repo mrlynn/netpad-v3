@@ -104,8 +104,10 @@ export async function executeLocalCommand(
     case 'assign':
     case 'unassign':
     case 'permissions':
-    case 'whoami':
       return executeRBACCommand(cmd, args, state, api);
+
+    case 'whoami':
+      return handleWhoami(api);
 
     case 'login':
       return handleLogin(state);
@@ -396,6 +398,32 @@ function formatLongEntry(entry: FSEntry): string {
   const name = colorFn(entry.name + (entry.type !== 'file' && entry.type !== 'form' && entry.type !== 'workflow' ? '/' : ''));
   
   return `${chalk.gray(typeStr)} ${name}`;
+}
+
+/**
+ * Handle whoami command - show current auth status
+ */
+function handleWhoami(api: ShellAPIClient): CommandResult {
+  const config = getConfig();
+  
+  if (!api.isAuthenticated()) {
+    return {
+      success: true,
+      output: chalk.yellow('Not authenticated') + '\n' +
+        chalk.gray('Run "login" to authenticate'),
+    };
+  }
+  
+  const apiKeyDisplay = config.apiKey 
+    ? config.apiKey.substring(0, 12) + '...' + config.apiKey.slice(-4)
+    : chalk.gray('(none)');
+  
+  const output = `${chalk.green('✓ Authenticated')}\n\n` +
+    `  ${chalk.gray('API Key:')}  ${apiKeyDisplay}\n` +
+    `  ${chalk.gray('API URL:')}  ${config.apiUrl || 'http://localhost:3000'}\n` +
+    `  ${chalk.gray('Org ID:')}   ${config.orgId || chalk.gray('(none)')}\n`;
+  
+  return { success: true, output };
 }
 
 /**
