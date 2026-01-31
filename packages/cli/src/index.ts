@@ -3,7 +3,9 @@
 /**
  * NetPad CLI
  * 
- * Command-line tool for managing NetPad applications and plugins from npm
+ * Command-line tool for managing NetPad applications and plugins from npm.
+ * When run with no arguments, launches an interactive shell that mirrors
+ * the web terminal experience.
  */
 
 import { Command } from 'commander';
@@ -22,6 +24,8 @@ import { groupsCommand } from './commands/groups.js';
 import { rolesCommand } from './commands/roles.js';
 import { assignCommand, unassignCommand } from './commands/assign.js';
 import { permissionsCommand } from './commands/permissions.js';
+// Shell
+import { startShell } from './shell/index.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -210,5 +214,23 @@ program
   .option('--api-key <key>', 'NetPad API key')
   .action(permissionsCommand);
 
-// Parse arguments
-program.parse();
+// Shell command - explicitly start interactive shell
+program
+  .command('shell')
+  .alias('sh')
+  .description('Start interactive shell (default when no command given)')
+  .action(async () => {
+    await startShell();
+  });
+
+// Check if no arguments provided (just "netpad") - start shell
+if (process.argv.length <= 2) {
+  // No command provided, start interactive shell
+  startShell().catch(err => {
+    console.error('Failed to start shell:', err.message);
+    process.exit(1);
+  });
+} else {
+  // Parse arguments normally
+  program.parse();
+}

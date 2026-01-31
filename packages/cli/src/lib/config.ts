@@ -190,3 +190,11 @@ export function clearCredentials(): void {
   }
   saveConfig(config);
 }
+
+/**
+ * Get current config (alias for getEffectiveConfig)
+ * Used by shell and other components
+ */
+export function getConfig(): NetPadConfig {
+  return getEffectiveConfig();
+}
