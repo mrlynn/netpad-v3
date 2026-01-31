@@ -49,11 +49,11 @@ This document tracks feature parity between the three RBAC interfaces:
 
 | Feature | CLI | Terminal | Web UI (Org) | Web UI (Admin) | API |
 |---------|:---:|:--------:|:------------:|:--------------:|:---:|
-| Assign role to user | ✅ `assign` | ✅ `assign` | ❌ **MISSING** | ❌ **MISSING** | ✅ `/api/platform/orgs/[orgId]/assignments` |
-| Assign role to group | ✅ `assign --group` | ✅ `assign` | ❌ **MISSING** | ❌ **MISSING** | ✅ |
-| Unassign role | ✅ `unassign` | ✅ `unassign` | ❌ **MISSING** | ❌ **MISSING** | ✅ DELETE |
-| View user's role assignments | ✅ | ✅ | ❌ **MISSING** | ❌ **MISSING** | ✅ |
-| Scoped assignments (project/form) | ✅ `--scope` | ✅ `--scope` | ❌ **MISSING** | ❌ **MISSING** | ✅ |
+| Assign role to user | ✅ `assign` | ✅ `assign` | ✅ `/settings/assignments` | ❌ View only | ✅ `/api/platform/orgs/[orgId]/assignments` |
+| Assign role to group | ✅ `assign --group` | ✅ `assign` | ✅ `/settings/assignments` | ❌ View only | ✅ |
+| Unassign role | ✅ `unassign` | ✅ `unassign` | ✅ `/settings/assignments` | ❌ View only | ✅ DELETE |
+| View role assignments | ✅ | ✅ | ✅ `/settings/assignments` | ✅ `/admin/assignments` | ✅ |
+| Scoped assignments (project/form) | ✅ `--scope` | ✅ `--scope` | ❌ UI pending | ❌ | ✅ |
 
 ### Permissions
 
@@ -141,9 +141,9 @@ Effective Permissions:
 1. [x] Create `/orgs/[orgId]/settings/assignments` page
 2. [x] Add "Assign Role" dialog component
 3. [x] Add "View Permissions" dialog to members list
-4. [ ] Add assignments tab to user detail view (optional enhancement)
-5. [ ] Add assignments tab to group detail view (optional enhancement)
-6. [ ] Mirror assignments UI in `/admin` for platform admins (optional)
+4. [x] Add `/admin/assignments` for platform admins (view-only)
+5. [ ] Add assignments tab to user detail view (optional enhancement)
+6. [ ] Add assignments tab to group detail view (optional enhancement)
 7. [ ] Add scoped assignment support to UI (project/form level)
 
 ---
