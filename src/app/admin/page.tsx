@@ -17,6 +17,7 @@ import { AdminStatsDashboard } from '@/components/Admin/AdminStatsDashboard';
 import { Card, CardContent, CardActionArea } from '@mui/material';
 import {
   People,
+  Groups,
   HourglassEmpty,
   StoreMallDirectory,
   Analytics,
@@ -56,11 +57,27 @@ interface AdminFeature {
 const adminFeatures: AdminFeature[] = [
   {
     title: 'User Management',
-    description: 'View and manage all platform users, roles, and permissions',
+    description: 'View and manage all platform users',
     href: '/admin/users',
     icon: <People sx={{ fontSize: 32 }} />,
     color: '#2196F3',
     statsKey: 'users',
+  },
+  {
+    title: 'Groups',
+    description: 'View and manage groups across all organizations',
+    href: '/admin/groups',
+    icon: <Groups sx={{ fontSize: 32 }} />,
+    color: '#3F51B5',
+    statsKey: 'groups',
+  },
+  {
+    title: 'Roles & Permissions',
+    description: 'View built-in and custom roles across organizations',
+    href: '/admin/roles',
+    icon: <Security sx={{ fontSize: 32 }} />,
+    color: '#673AB7',
+    statsKey: 'roles',
   },
   {
     title: 'Waitlist',
