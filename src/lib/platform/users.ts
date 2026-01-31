@@ -10,6 +10,7 @@
 import { ObjectId } from 'mongodb';
 import { getUsersCollection, getPlatformAuditCollection } from './db';
 import { generateSecureId } from '../encryption';
+import { shouldPromoteToAdmin, promoteToInstanceAdmin } from './instanceAdmin';
 import {
   PlatformUser,
   OAuthConnection,
@@ -221,6 +222,15 @@ export async function ensurePlatformUser(
   await collection.insertOne(user);
   console.log('[PlatformUser] Created new user:', { userId: user.userId, email: user.email });
 
+  // Check if this user should be auto-promoted to instance admin
+  // (first user or matches NETPAD_INSTANCE_ADMIN_EMAIL)
+  const shouldPromote = await shouldPromoteToAdmin(user.email);
+  if (shouldPromote) {
+    await promoteToInstanceAdmin(user.userId);
+    user.instanceRole = 'instance_admin';
+    console.log('[PlatformUser] Auto-promoted to instance admin:', { userId: user.userId, email: user.email });
+  }
+
   await logUserEvent({
     eventType: 'user.created',
     userId: user.userId,
@@ -231,6 +241,7 @@ export async function ensurePlatformUser(
     details: {
       authMethod: 'passkey-or-magic-link',
       authId,
+      autoPromotedToAdmin: shouldPromote,
     },
     timestamp: new Date(),
   });
