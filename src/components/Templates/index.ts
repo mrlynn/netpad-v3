@@ -18,6 +18,7 @@ export { WorkflowTemplateGallery } from './WorkflowTemplateGallery';
 
 // Public template gallery (new - 100+ templates)
 export { TemplatesView } from './TemplatesView';
+export { WorkflowTemplatesView } from './WorkflowTemplatesView';
 export { TemplateDetailDialog } from './TemplateDetailDialog';
 export { TemplateIcon } from './TemplateIcon';
 export { InteractiveTemplatePreview } from './InteractiveTemplatePreview';
