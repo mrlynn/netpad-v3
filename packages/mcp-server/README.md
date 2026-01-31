@@ -131,13 +131,92 @@ Add to `~/.cursor/mcp.json`:
 }
 ```
 
-## Available Tools (80+ total)
+## Environment Variables
 
-### Import & Sharing Tools (1) - NEW
+### For Direct API Tools
+
+To use the direct API tools (`form_list`, `form_create`, `submission_export`, etc.), you need to configure your NetPad API key:
+
+```bash
+export NETPAD_API_KEY=np_live_your_key_here
+```
+
+**Get your API key:** [netpad.io/settings/api-keys](https://netpad.io/settings/api-keys)
+
+#### With Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "netpad": {
+      "command": "npx",
+      "args": ["@netpad/mcp-server"],
+      "env": {
+        "NETPAD_API_KEY": "np_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+#### With Cursor
+
+```json
+{
+  "mcpServers": {
+    "netpad": {
+      "command": "npx",
+      "args": ["@netpad/mcp-server"],
+      "env": {
+        "NETPAD_API_KEY": "np_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+#### Optional Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NETPAD_API_KEY` | - | Your NetPad API key (required for direct API tools) |
+| `NETPAD_API_URL` | `https://netpad.io` | Custom API URL (for self-hosted instances) |
+
+## Available Tools (95+ total)
+
+### Import & Sharing Tools (1)
 
 | Tool | Description |
 |------|-------------|
 | `create_import_link` | Generate a shareable one-click import URL for any form configuration |
+
+### Direct API Tools (14) - NEW! 🚀
+
+These tools execute **real API calls** against the NetPad API when `NETPAD_API_KEY` is configured. Unlike generation tools that output code, these perform actual operations.
+
+#### Form CRUD Tools (8)
+
+| Tool | Description |
+|------|-------------|
+| `api_status` | Check if API key is configured and show connection status |
+| `form_list` | List forms with filtering by project, status, or search |
+| `form_get` | Get full details of a specific form |
+| `form_create` | Create a new form with fields |
+| `form_update` | Update form name, description, or fields |
+| `form_delete` | Delete a form and its submissions |
+| `form_publish` | Publish a form to make it publicly accessible |
+| `form_unpublish` | Unpublish a form (set to draft) |
+
+#### Submission CRUD Tools (6)
+
+| Tool | Description |
+|------|-------------|
+| `submission_list` | List submissions with date filters and pagination |
+| `submission_get` | Get a single submission by ID |
+| `submission_create` | Submit new data to a form |
+| `submission_update` | Update submission data (when supported) |
+| `submission_delete` | Delete a submission |
+| `submission_export` | Export submissions as JSON or CSV |
 
 ### Form Building Tools (6)
 
@@ -411,6 +490,58 @@ Here's your conversational form:
 - Professional AI persona
 - Topics: Issue type, urgency, description, environment
 - Automatic data extraction to structured format
+```
+
+### Direct API: List and Manage Forms
+
+```
+User: Show me all my published forms
+
+Claude: [Uses form_list tool with status=published]
+✅ Found 5 form(s):
+
+1. Customer Feedback (customer-feedback) - 142 responses
+2. Contact Form (contact) - 89 responses
+3. Newsletter Signup (newsletter) - 1,203 responses
+4. Support Ticket (support-ticket) - 56 responses
+5. Job Application (careers-apply) - 23 responses
+```
+
+### Direct API: Create and Publish a Form
+
+```
+User: Create a bug report form with title, description, severity, and steps
+      to reproduce. Put it in project proj_abc123 and publish it.
+
+Claude: [Uses form_create, then form_publish]
+✅ Created and published your bug report form!
+
+Form ID: frm_xyz789
+Public URL: https://netpad.io/f/bug-report
+
+Fields:
+- Title (required, short text)
+- Description (required, long text)
+- Severity (dropdown: Low, Medium, High, Critical)
+- Steps to Reproduce (long text)
+```
+
+### Direct API: Export Submissions
+
+```
+User: Export all submissions from my contact form as CSV
+
+Claude: [Uses submission_export with format=csv]
+✅ Exported 89 submission(s) as CSV
+
+```csv
+id,submittedAt,name,email,message
+sub_001,2024-01-15T10:30:00Z,John Doe,john@example.com,"Hello..."
+sub_002,2024-01-15T11:45:00Z,Jane Smith,jane@example.com,"I have..."
+...
+```
+
+You can save this to a file or paste into a spreadsheet.
 ```
 
 ### Generate MongoDB Queries

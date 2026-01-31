@@ -146,6 +146,7 @@ import {
   type FormPreviewData,
   type TemplateItem,
 } from '@netpad/mcp-apps';
+import { registerCrudTools } from './crud-tools.js';
 
 // ============================================================================
 // MCP APPS UI RESOURCE HELPERS
@@ -5335,6 +5336,14 @@ Explain how to:
   })
 );
 
+  // ============================================================================
+  // DIRECT API CRUD TOOLS
+  // ============================================================================
+  
+  // Register CRUD tools for direct API operations
+  // These tools work when NETPAD_API_KEY is set
+  registerCrudTools(server);
+
   // Return the configured server
   return server;
 }
@@ -5378,6 +5387,9 @@ export {
 } from './extension-tools.js';
 
 export type { GenerateExtensionOptions, NodeCategory, ConfigFieldType } from './extension-tools.js';
+
+export { registerCrudTools } from './crud-tools.js';
+export { isApiKeyConfigured, getApiConfigStatus } from './lib/api-client.js';
 
 // ============================================================================
 // START THE SERVER (CLI mode)
