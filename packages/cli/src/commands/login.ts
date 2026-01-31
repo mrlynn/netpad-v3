@@ -191,7 +191,7 @@ async function loginWithOAuth(apiUrl: string, provider?: 'google' | 'github', op
   try {
     // Initiate device flow
     console.log(chalk.gray('Initiating OAuth device flow...'));
-    const deviceFlowResponse = await fetch(`${apiUrl}/api/auth/cli/device-flow`, {
+    const deviceFlowResponse = await fetch(`${apiUrl}/api/auth/cli/device`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider }),
@@ -223,21 +223,27 @@ async function loginWithOAuth(apiUrl: string, provider?: 'google' | 'github', op
     }
 
     // Poll for authorization
-    const sessionToken = await pollDeviceFlow(apiUrl, deviceFlow.device_code, deviceFlow.interval);
+    const authResult = await pollDeviceFlow(apiUrl, deviceFlow.device_code, deviceFlow.interval);
 
-    if (!sessionToken) {
+    if (!authResult) {
       console.error(chalk.red('Error: Authorization timed out or was cancelled'));
       process.exit(1);
     }
 
     console.log(chalk.green('✓ OAuth authorization successful\n'));
 
-    // Store session token
-    setSessionToken(sessionToken, options.profile);
-
-    // Get user info and organizations
-    const userInfo = await getUserInfo(apiUrl, sessionToken);
-    await selectOrgAndProject(apiUrl, sessionToken, userInfo.organizations, options, true);
+    // Store API key (device flow returns an API key, not a session token)
+    setApiKey(authResult.accessToken, options.profile);
+    
+    // Store org ID if provided
+    if (authResult.orgId) {
+      setOrgId(authResult.orgId, options.profile);
+      console.log(chalk.gray(`Organization: ${authResult.orgId}\n`));
+    }
+    
+    console.log(chalk.green('✓ CLI configured successfully!'));
+    console.log(chalk.gray('\nYou can now use NetPad CLI commands.'));
+    console.log(chalk.gray('Run "netpad" to start the interactive shell.\n'));
   } catch (error: any) {
     handleError(error, apiUrl);
   }
@@ -311,7 +317,7 @@ async function loginWithMagicLink(apiUrl: string, options: LoginOptions = {}) {
 /**
  * Poll device flow for authorization
  */
-async function pollDeviceFlow(apiUrl: string, deviceCode: string, interval: number): Promise<string | null> {
+async function pollDeviceFlow(apiUrl: string, deviceCode: string, interval: number): Promise<{ accessToken: string; orgId?: string } | null> {
   const maxAttempts = 120; // 10 minutes max (120 * 5 seconds)
   let attempts = 0;
 
@@ -319,11 +325,15 @@ async function pollDeviceFlow(apiUrl: string, deviceCode: string, interval: numb
     await new Promise(resolve => setTimeout(resolve, interval * 1000));
 
     try {
-      const response = await fetch(`${apiUrl}/api/auth/cli/device-flow/${deviceCode}`);
+      const response = await fetch(`${apiUrl}/api/auth/cli/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_code: deviceCode }),
+      });
       const data = await response.json();
 
       if (data.access_token) {
-        return data.access_token;
+        return { accessToken: data.access_token, orgId: data.org_id };
       }
 
       if (data.error === 'expired_token') {
