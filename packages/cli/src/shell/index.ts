@@ -10,6 +10,7 @@ import { printBanner, printHelp } from './banner.js';
 import { ShellAPIClient } from './api.js';
 import { executeLocalCommand, isLocalCommand } from './commands.js';
 import { buildPrompt } from './prompt.js';
+import { withLoader } from './loader.js';
 
 export interface ShellState {
   currentPath: string;
@@ -147,12 +148,15 @@ export async function startShell(): Promise<void> {
       return;
     }
 
-    // Execute via API
+    // Execute via API (with AI processing for natural language)
     try {
-      const result = await api.executeCommand(expandedInput, {
-        path: state.currentPath,
-        history: state.history,
-      });
+      // Show loader while AI processes
+      const result = await withLoader(
+        api.executeCommand(expandedInput, {
+          path: state.currentPath,
+          history: state.history,
+        })
+      );
 
       if (result.output) {
         console.log(result.output);

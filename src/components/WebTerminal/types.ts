@@ -61,6 +61,7 @@ export interface AIInterpretation {
   args: string[];
   confidence: number;
   explanation: string;
+  didYouMean?: string;  // Shows typo correction if detected
 }
 
 export interface TerminalContextType {

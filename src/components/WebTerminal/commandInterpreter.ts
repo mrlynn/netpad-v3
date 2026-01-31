@@ -175,30 +175,52 @@ export function generateInterpretationPrompt(
     recentHistory?: string[];
   }
 ): string {
-  return `You are a CLI command interpreter for NetPad, a form builder and data management platform.
+  // Core command verbs for similarity matching
+  const coreCommands = [
+    'ls', 'cd', 'pwd', 'cat', 'tree', 'find', 'grep',
+    'list', 'show', 'create', 'delete', 'deploy', 'export', 'import',
+    'search', 'help', 'clear', 'history', 'whoami',
+    'users', 'groups', 'roles', 'assign', 'unassign', 'permissions',
+  ];
 
-The user typed: "${input}"
+  return `You are a smart CLI command interpreter for NetPad, a MongoDB-powered form builder platform.
 
-Available commands:
-${context.availableCommands.map(cmd => `- ${cmd}`).join('\n')}
+USER INPUT: "${input}"
 
-${context.currentProject ? `Current project: ${context.currentProject}` : ''}
-${context.recentHistory?.length ? `Recent commands:\n${context.recentHistory.slice(-5).join('\n')}` : ''}
+## CORE COMMANDS (check for typos/similarity first):
+${coreCommands.join(', ')}
 
-Interpret the user's intent and respond with a JSON object:
+## AVAILABLE COMMANDS WITH DESCRIPTIONS:
+${context.availableCommands.map(cmd => `• ${cmd}`).join('\n')}
+
+${context.currentProject ? `\nCurrent project: ${context.currentProject}` : ''}
+${context.recentHistory?.length ? `\nRecent commands:\n${context.recentHistory.slice(-5).map(c => `  > ${c}`).join('\n')}` : ''}
+
+## YOUR TASK:
+1. **Check for typos**: If input looks like a misspelled command (e.g., "lsit" → "list", "craete" → "create", "shwo" → "show"), correct it
+2. **Check for similar commands**: Match input to the closest valid command (e.g., "display forms" → "list forms")
+3. **Parse natural language**: Convert requests like "I want to see all my forms" → "list forms"
+4. **Handle questions**: Questions about NetPad features should use "explain" command
+5. **Be helpful**: If unclear, suggest similar commands the user might want
+
+## RESPONSE FORMAT (JSON only):
 {
   "intent": "Brief description of what user wants",
-  "command": "The NetPad command to execute (or 'unknown' if unclear)",
+  "command": "The NetPad command to execute (or 'unknown' if truly unclear)",
   "args": ["array", "of", "arguments"],
   "confidence": 0.0-1.0,
-  "explanation": "Why you chose this interpretation"
+  "explanation": "Why you chose this interpretation (mention if typo was corrected)",
+  "didYouMean": "If correcting a typo, show what you corrected (optional)"
 }
 
-If the user is asking a question that can't be mapped to a command, use command "explain" with the topic as an argument.
-If the user wants to see something, use command "show" or "list" as appropriate.
-If creating something, use command "create" with the type as first argument.
+## EXAMPLES:
+- "lsit forms" → {"command": "list", "args": ["forms"], "confidence": 0.95, "didYouMean": "list forms (corrected typo)"}
+- "show me everything" → {"command": "list", "args": ["forms"], "confidence": 0.7, "explanation": "Interpreted as listing forms"}
+- "craete new form" → {"command": "create", "args": ["form"], "confidence": 0.9, "didYouMean": "create form (corrected typo)"}
+- "asdfgh" → {"command": "unknown", "confidence": 0.0, "explanation": "Input doesn't match any known command or pattern"}
+- "what can I do?" → {"command": "help", "args": [], "confidence": 0.9, "explanation": "User wants to see available commands"}
 
-Respond ONLY with the JSON object, no other text.`;
+Respond with ONLY the JSON object, no markdown or extra text.`;
 }
 
 /**
@@ -219,6 +241,7 @@ export function parseAIInterpretation(response: string): AIInterpretation | null
       args: Array.isArray(parsed.args) ? parsed.args : [],
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
       explanation: parsed.explanation || '',
+      didYouMean: parsed.didYouMean || undefined,
     };
   } catch (error) {
     console.error('Failed to parse AI interpretation:', error);

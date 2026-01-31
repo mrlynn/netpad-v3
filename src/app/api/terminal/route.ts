@@ -206,10 +206,15 @@ async function handleNaturalLanguage(
       });
     }
 
-    // Show interpretation to user
-    const interpretationMessage = interpretation.confidence < 0.8
-      ? `\x1b[33mInterpreting:\x1b[0m ${interpretation.explanation}\n\n`
-      : '';
+    // Build interpretation message
+    let interpretationMessage = '';
+    
+    // Show "Did you mean" for typo corrections
+    if (interpretation.didYouMean) {
+      interpretationMessage = `\x1b[33m💡 Did you mean:\x1b[0m ${interpretation.didYouMean}\n\n`;
+    } else if (interpretation.confidence < 0.8) {
+      interpretationMessage = `\x1b[33m🤔 Interpreting:\x1b[0m ${interpretation.explanation}\n\n`;
+    }
 
     // Execute the interpreted command
     const result = await executeCommand(
