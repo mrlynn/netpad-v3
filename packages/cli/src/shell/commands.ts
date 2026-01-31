@@ -22,7 +22,7 @@ const LOCAL_COMMANDS = [
   'pwd', 'ls', 'cd', 'cat', 'tree', 'find', 'grep',
   'alias', 'unalias', 'echo', 'env', 'export',
   'users', 'groups', 'roles', 'assign', 'unassign', 'permissions', 'whoami',
-  'login', 'logout',
+  'login', 'login-key', 'logout',
 ];
 
 // Helper for auth required errors
@@ -109,6 +109,9 @@ export async function executeLocalCommand(
 
     case 'login':
       return handleLogin(state);
+
+    case 'login-key':
+      return handleLoginKey(args);
 
     case 'logout':
       return handleLogout();
@@ -396,7 +399,7 @@ function formatLongEntry(entry: FSEntry): string {
 }
 
 /**
- * Handle login command - launches interactive login
+ * Handle login command - prompts for API key inline
  */
 async function handleLogin(state: ShellState): Promise<CommandResult> {
   const config = getConfig();
@@ -410,40 +413,82 @@ async function handleLogin(state: ShellState): Promise<CommandResult> {
     };
   }
   
-  // Spawn the login command as a child process
-  const { spawn } = await import('child_process');
   const apiUrl = config.apiUrl || 'http://localhost:3000';
   
-  console.log(chalk.blue('\nStarting login flow...\n'));
+  // In-shell login only supports API key (OAuth needs separate terminal)
+  const output = `
+${chalk.blue('NetPad Login')}
+
+${chalk.bold('Option 1: API Key')} ${chalk.gray('(recommended for CLI)')}
+  ${chalk.cyan('login-key')} ${chalk.yellow('<your-api-key>')}
   
-  return new Promise((resolve) => {
-    const child = spawn('npx', ['netpad', 'login', '--api-url', apiUrl], {
-      stdio: 'inherit',
-      shell: true,
+  Get your API key at: ${chalk.cyan(apiUrl + '/settings/api')}
+
+${chalk.bold('Option 2: Browser OAuth')} ${chalk.gray('(run in separate terminal)')}
+  ${chalk.gray('$')} ${chalk.cyan('netpad login --api-url ' + apiUrl)}
+`;
+  
+  return { success: true, output };
+}
+
+/**
+ * Handle login-key command - direct API key authentication
+ */
+async function handleLoginKey(args: string[]): Promise<CommandResult> {
+  if (!args[0]) {
+    return {
+      success: false,
+      error: `Usage: ${chalk.cyan('login-key')} ${chalk.yellow('<api-key>')}\n\n` +
+        chalk.gray('Example: login-key np_live_abc123...'),
+    };
+  }
+
+  const apiKey = args[0];
+  const config = loadConfig();
+  const apiUrl = config.apiUrl || 'http://localhost:3000';
+
+  // Validate the API key by making a test request
+  console.log(chalk.gray('Validating API key...'));
+
+  try {
+    const response = await fetch(`${apiUrl}/api/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
     });
-    
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve({
-          success: true,
-          output: chalk.green('\n✓ Login complete! You can now use all commands.'),
-        });
-      } else {
-        resolve({
-          success: false,
-          error: chalk.red('\nLogin failed or was cancelled.'),
-        });
-      }
-    });
-    
-    child.on('error', (err) => {
-      resolve({
+
+    if (!response.ok) {
+      return {
         success: false,
-        error: `${chalk.yellow('Could not start login process.')}\n` +
-          `Run ${chalk.cyan(`netpad login --api-url ${apiUrl}`)} in another terminal.`,
-      });
-    });
-  });
+        error: chalk.red('Invalid API key') + '\n' +
+          chalk.gray(`Server returned: ${response.status} ${response.statusText}`),
+      };
+    }
+
+    const data = await response.json();
+    
+    // Save the API key
+    const newConfig = { ...config, apiKey };
+    if (data.orgId) {
+      newConfig.orgId = data.orgId;
+    }
+    saveConfig(newConfig);
+
+    return {
+      success: true,
+      output: chalk.green('✓ Logged in successfully!') +
+        (data.email ? `\n  Email: ${chalk.cyan(data.email)}` : '') +
+        (data.orgId || newConfig.orgId ? `\n  Organization: ${chalk.cyan(data.orgId || newConfig.orgId)}` : '') +
+        '\n\n' + chalk.gray('You can now use all commands.'),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: chalk.red('Failed to validate API key') + '\n' +
+        chalk.gray(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`),
+    };
+  }
 }
 
 /**

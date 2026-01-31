@@ -91,7 +91,8 @@ ${chalk.bold('RBAC Commands:')}
 ${chalk.bold('Other Commands:')}
   ${chalk.cyan('search')} <query>         Search marketplace
   ${chalk.cyan('install')} <package>      Install from marketplace
-  ${chalk.cyan('login')}                  Authenticate with NetPad
+  ${chalk.cyan('login')}                  Show login options
+  ${chalk.cyan('login-key')} <key>        Login with API key
   ${chalk.cyan('logout')}                 Clear credentials
   ${chalk.cyan('clear')}                  Clear screen
   ${chalk.cyan('history')}                Show command history
