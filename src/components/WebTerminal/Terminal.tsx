@@ -732,6 +732,9 @@ export function WebTerminal({
         term.write(getWelcomeMessage());
         term.write(currentPromptRef.current);
         
+        // Scroll to bottom to ensure cursor is visible after welcome message
+        term.scrollToBottom();
+        
         // Capture Tab key before xterm processes it
         term.attachCustomKeyEventHandler((event) => {
           if (event.key === 'Tab') {
@@ -945,8 +948,14 @@ export function WebTerminal({
         (term as unknown as { _resizeObserver?: ResizeObserver })._resizeObserver = resizeObserver ?? undefined;
         
         // Fit after a short delay to ensure container is fully rendered
-        setTimeout(() => fitAddon.fit(), 50);
-        setTimeout(() => fitAddon.fit(), 200);
+        setTimeout(() => {
+          fitAddon.fit();
+          term?.scrollToBottom();
+        }, 50);
+        setTimeout(() => {
+          fitAddon.fit();
+          term?.scrollToBottom();
+        }, 200);
         
         setIsReady(true);
         
