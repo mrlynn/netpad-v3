@@ -579,7 +579,6 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 ## Support
 
 - 📚 **Documentation:** [docs.netpad.io](https://docs.netpad.io)
-- 💬 **Discord:** [Join our community](https://discord.gg/netpad)
 - 🐛 **Issues:** [GitHub Issues](https://github.com/mrlynn/netpad-v3/issues)
 - 📧 **Email:** support@netpad.io
 

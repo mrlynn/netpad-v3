@@ -27,6 +27,9 @@ import { permissionsCommand } from './commands/permissions.js';
 // Data Commands
 import { queryCommand } from './commands/query.js';
 import { scaffoldCommand } from './commands/scaffold.js';
+import { watchCommand } from './commands/watch.js';
+import { exportCommand } from './commands/export.js';
+import { createFormCommand } from './commands/create-form.js';
 // Shell
 import { startShell } from './shell/index.js';
 import { readFileSync } from 'fs';
@@ -244,6 +247,36 @@ program
   .option('--api-url <url>', 'NetPad API URL')
   .option('--api-key <key>', 'NetPad API key')
   .action(scaffoldCommand);
+
+// Watch command
+program
+  .command('watch <type> [target]')
+  .description('Monitor submissions or form changes in real-time')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('-i, --interval <seconds>', 'Polling interval in seconds', '5')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(watchCommand);
+
+// Export command
+program
+  .command('export <type> [target]')
+  .description('Export submissions or form definitions')
+  .option('-f, --form <formId>', 'Filter by form ID')
+  .option('--format <format>', 'Output format: json, csv, yaml', 'json')
+  .option('-o, --output <path>', 'Output file (prints to stdout if not specified)')
+  .option('-l, --limit <number>', 'Limit results', '100')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(exportCommand);
+
+// Create Form command (AI-powered)
+program
+  .command('create-form <description>')
+  .description('Create a form using AI from natural language description')
+  .option('--api-url <url>', 'NetPad API URL')
+  .option('--api-key <key>', 'NetPad API key')
+  .action(createFormCommand);
 
 // Shell command - explicitly start interactive shell
 program
