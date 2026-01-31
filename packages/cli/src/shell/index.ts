@@ -45,7 +45,23 @@ export async function startShell(): Promise<void> {
     console.log(`     ${chalk.cyan('netpad login')} ${chalk.gray('(run in another terminal)')}`);
     console.log(chalk.yellow('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
   } else {
-    console.log(chalk.green('✓ Authenticated') + chalk.gray(` (org: ${api.getOrgId() || 'none'})\n`));
+    // Show auth status and check AI availability
+    let statusLine = chalk.green('✓ Authenticated') + chalk.gray(` (org: ${api.getOrgId() || 'none'})`);
+    
+    // Check AI status asynchronously
+    api.checkAIStatus().then(aiStatus => {
+      if (aiStatus.available) {
+        console.log(statusLine + chalk.gray(` | AI: ${aiStatus.provider}/${aiStatus.model}`));
+      } else {
+        console.log(statusLine);
+        if (aiStatus.mode === 'self-hosted') {
+          console.log(chalk.gray('  💡 AI interpretation disabled (no AI provider configured on server)'));
+        }
+      }
+      console.log();
+    }).catch(() => {
+      console.log(statusLine + '\n');
+    });
   }
 
   // Create readline interface

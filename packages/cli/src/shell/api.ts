@@ -264,4 +264,29 @@ export class ShellAPIClient {
     // Getters always read fresh, but this method signals intent
     console.log('Credentials reloaded');
   }
+
+  /**
+   * Check AI service status on the server
+   */
+  async checkAIStatus(): Promise<{
+    available: boolean;
+    provider?: string;
+    model?: string;
+    mode: string;
+    message?: string;
+  }> {
+    try {
+      const response = await this.fetch('/api/ai/status');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch {
+      // Ignore errors
+    }
+    return {
+      available: false,
+      mode: 'unknown',
+      message: 'Could not check AI status',
+    };
+  }
 }

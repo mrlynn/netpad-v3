@@ -160,6 +160,18 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Check if AI is available (has an API key configured)
+ */
+function isAIAvailable(): boolean {
+  return !!(
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.OLLAMA_BASE_URL ||
+    process.env.OPENROUTER_API_KEY
+  );
+}
+
+/**
  * Handle natural language input using AI
  */
 async function handleNaturalLanguage(
@@ -167,6 +179,22 @@ async function handleNaturalLanguage(
   context: TerminalRequest['context'],
   user: { id: string; email?: string; orgId: string }
 ): Promise<NextResponse<CommandResult>> {
+  // Check if AI is available first
+  if (!isAIAvailable()) {
+    return NextResponse.json({
+      success: false,
+      output: '',
+      error: `Command not recognized: "${input}"\n\n` +
+        `\x1b[33mAI interpretation unavailable.\x1b[0m\n` +
+        `Use \x1b[36mhelp\x1b[0m to see available commands.`,
+      suggestions: [
+        'help - Show all commands',
+        'list forms - List your forms',
+        'ls - Browse the file system',
+      ],
+    });
+  }
+
   try {
     // Generate interpretation prompt
     const prompt = generateInterpretationPrompt(input, {
@@ -184,10 +212,20 @@ async function handleNaturalLanguage(
     );
 
     if (!aiResponse.success || !aiResponse.data) {
+      // AI call failed - gracefully degrade
+      const errorMsg = aiResponse.error || 'Failed to interpret command';
+      const isConfigError = errorMsg.includes('not configured') || errorMsg.includes('API key');
+      
       return NextResponse.json({
         success: false,
         output: '',
-        error: aiResponse.error || 'Failed to interpret command',
+        error: isConfigError
+          ? `Command not recognized: "${input}"\n\n\x1b[33mAI is not configured on this server.\x1b[0m\nUse \x1b[36mhelp\x1b[0m to see available commands.`
+          : `Could not interpret command. ${errorMsg}`,
+        suggestions: [
+          'help - Show all commands',
+          'list forms - List your forms',
+        ],
       });
     }
 
