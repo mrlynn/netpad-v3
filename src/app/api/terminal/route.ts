@@ -279,25 +279,34 @@ async function handleNaturalLanguage(
 
 /**
  * Handle structured command
+ * Falls back to AI interpretation if command is unknown or has invalid args
  */
 async function handleStructuredCommand(
   parsed: TerminalRequest['parsed'],
   context: TerminalRequest['context'],
   user: { id: string; email?: string; orgId: string }
 ): Promise<NextResponse<CommandResult>> {
-  return NextResponse.json(
-    await executeCommand(
-      parsed.command!,
-      parsed.args || [],
-      parsed.options || {},
-      context,
-      user
-    )
+  const result = await executeCommand(
+    parsed.command!,
+    parsed.args || [],
+    parsed.options || {},
+    context,
+    user
   );
+  
+  // If result is null, fall back to AI interpretation
+  if (result === null) {
+    // Reconstruct the original input for AI
+    const originalInput = parsed.raw || `${parsed.command} ${(parsed.args || []).join(' ')}`.trim();
+    return handleNaturalLanguage(originalInput, context, user);
+  }
+  
+  return NextResponse.json(result);
 }
 
 /**
  * Execute a command and return result
+ * If the command is unknown or has invalid args, returns null to trigger AI fallback
  */
 async function executeCommand(
   command: string,
@@ -305,25 +314,37 @@ async function executeCommand(
   options: Record<string, string | boolean>,
   context: TerminalRequest['context'],
   user: { id: string; email?: string; orgId: string }
-): Promise<CommandResult> {
+): Promise<CommandResult | null> {
   // Use the organization's database
   const db = await getOrgDb(user.orgId);
 
   switch (command.toLowerCase()) {
     case 'list': {
       const type = args[0]?.toLowerCase();
+      // Validate type - if invalid, return null to trigger AI
+      if (type && !['forms', 'workflows', 'templates', 'submissions'].includes(type)) {
+        return null; // Let AI handle it
+      }
       return await handleList(type, options, user, db);
     }
 
     case 'show': {
       const type = args[0]?.toLowerCase();
       const id = args[1];
+      // Validate type - if invalid, return null to trigger AI
+      if (type && !['form', 'workflow', 'template'].includes(type)) {
+        return null; // Let AI handle it
+      }
       return await handleShow(type, id, user, db);
     }
 
     case 'create': {
       const type = args[0]?.toLowerCase();
       const name = args.slice(1).join(' ');
+      // Validate type - if invalid, return null to trigger AI
+      if (type && !['form', 'workflow', 'template'].includes(type)) {
+        return null; // Let AI handle it
+      }
       return await handleCreate(type, name, options, user, db);
     }
 
@@ -343,12 +364,8 @@ async function executeCommand(
     }
 
     default:
-      return {
-        success: false,
-        output: '',
-        error: `Unknown command: ${command}`,
-        suggestions: ['help - Show available commands'],
-      };
+      // Unknown command - return null to trigger AI fallback
+      return null;
   }
 }
 

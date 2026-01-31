@@ -36,14 +36,29 @@ const NETPAD_COMMANDS = [
   'permissions',
 ];
 
-// Natural language indicators
+// Natural language indicators - these trigger AI interpretation
 const NATURAL_LANGUAGE_PATTERNS = [
-  /^(show|find|get|list|display)\s+(me\s+)?(all\s+)?/i,
-  /^(create|make|build|generate|add)\s+(a\s+|an\s+)?/i,
+  // Commands with conversational words (me, my, all, the, etc.)
+  /^(show|find|get|list|display|see)\s+(me\s+)?(my\s+)?(all\s+)?(the\s+)?/i,
+  /^(create|make|build|generate|add|new)\s+(a\s+|an\s+|new\s+)?/i,
+  /^(delete|remove|trash)\s+(the\s+|my\s+)?/i,
+  /^(update|edit|modify|change)\s+(the\s+|my\s+)?/i,
+  
+  // Questions
   /^(how\s+(do\s+i|can\s+i|to))/i,
-  /^(what|where|when|why|who)/i,
-  /^(can\s+you|please|i\s+want|i\s+need)/i,
+  /^(what|where|when|why|who|which)/i,
   /\?$/,
+  
+  // Polite requests
+  /^(can\s+you|could\s+you|please|i\s+want|i\s+need|i'd\s+like)/i,
+  /^(help\s+me|tell\s+me|give\s+me)/i,
+  
+  // Descriptive phrases
+  /\s(with|that\s+has|containing|named|called)\s/i,
+  /\s(about|like|similar\s+to)\s/i,
+  
+  // Natural conversation starters
+  /^(ok|okay|alright|sure|yes|yeah|hey|hi)\s/i,
 ];
 
 /**
@@ -74,18 +89,20 @@ export function parseCommand(input: string): ParsedCommand {
     return parseStructuredCommand(parts.slice(1), trimmed);
   }
   
-  // Handle direct command format (e.g., "create form")
-  if (NETPAD_COMMANDS.includes(firstWord)) {
-    return parseStructuredCommand(parts, trimmed);
-  }
-  
-  // Check for natural language patterns
+  // IMPORTANT: Check for natural language patterns BEFORE checking structured commands
+  // This catches things like "show me all forms" that start with a command word
+  // but are clearly natural language requests
   if (isNaturalLanguage(trimmed)) {
     return {
       type: 'natural',
       raw: trimmed,
       naturalLanguage: trimmed,
     };
+  }
+  
+  // Handle direct command format (e.g., "create form")
+  if (NETPAD_COMMANDS.includes(firstWord)) {
+    return parseStructuredCommand(parts, trimmed);
   }
   
   // Default: treat as natural language for AI interpretation
