@@ -97,6 +97,10 @@ const AVAILABLE_COMMANDS = [
   'describe form <id> - Get AI description of a form',
   'explain <topic> - Get help on a topic',
   'stats [--form <id>] - Show statistics',
+  'query submissions <filter> [--form <id>] [--limit N] - Query submissions with MongoDB filter',
+  'query submissions where <field> <op> <value> - Natural language query (e.g., where rating < 3)',
+  'scaffold react <form-id> [--output path] - Generate React component using @netpad/forms',
+  'scaffold nextjs <form-id> [--output path] - Generate Next.js page with form and API route',
 ];
 
 export async function POST(request: NextRequest) {
@@ -361,6 +365,24 @@ async function executeCommand(
     case 'explain': {
       const topic = args.join(' ');
       return await handleExplain(topic);
+    }
+
+    case 'query': {
+      const type = args[0]?.toLowerCase();
+      if (type !== 'submissions') {
+        return null; // Let AI handle unknown query types
+      }
+      const filterArgs = args.slice(1);
+      return await handleQuery(filterArgs, options, user, db);
+    }
+
+    case 'scaffold': {
+      const framework = args[0]?.toLowerCase();
+      const formId = args[1];
+      if (!['react', 'nextjs', 'next'].includes(framework)) {
+        return null; // Let AI handle unknown frameworks
+      }
+      return await handleScaffold(framework === 'next' ? 'nextjs' : framework, formId, options, user, db);
     }
 
     default:
@@ -789,4 +811,385 @@ async function handleExplain(topic: string): Promise<CommandResult> {
       error: `Failed to explain topic: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
+}
+
+/**
+ * Query command handler - MongoDB queries on submissions
+ * Supports:
+ *   query submissions --form <id> --filter '{"rating": {"$lt": 3}}'
+ *   query submissions where rating < 3 --form feedback
+ *   query submissions --form <id> --limit 10
+ */
+async function handleQuery(
+  args: string[],
+  options: Record<string, string | boolean>,
+  user: { id: string; email?: string; orgId: string },
+  db: Db
+): Promise<CommandResult> {
+  try {
+    const formId = options.form as string;
+    const limit = Math.min(parseInt(options.limit as string) || 20, 100);
+    
+    // Build the query filter
+    let filter: Record<string, unknown> = {};
+    
+    // If --form specified, filter by form
+    if (formId) {
+      filter.formId = formId;
+    }
+    
+    // Check for natural language "where" clause
+    const whereIndex = args.findIndex(a => a.toLowerCase() === 'where');
+    if (whereIndex !== -1) {
+      const whereClause = args.slice(whereIndex + 1);
+      if (whereClause.length >= 3) {
+        const field = whereClause[0];
+        const operator = whereClause[1];
+        const value = whereClause.slice(2).join(' ').replace(/['"]/g, '');
+        
+        // Parse the value (number, boolean, or string)
+        let parsedValue: unknown = value;
+        if (!isNaN(Number(value))) {
+          parsedValue = Number(value);
+        } else if (value.toLowerCase() === 'true') {
+          parsedValue = true;
+        } else if (value.toLowerCase() === 'false') {
+          parsedValue = false;
+        }
+        
+        // Map operators to MongoDB
+        const opMap: Record<string, string> = {
+          '=': '$eq', '==': '$eq', 'eq': '$eq', 'equals': '$eq',
+          '!=': '$ne', '<>': '$ne', 'ne': '$ne', 'not': '$ne',
+          '<': '$lt', 'lt': '$lt', 'less': '$lt',
+          '<=': '$lte', 'lte': '$lte',
+          '>': '$gt', 'gt': '$gt', 'greater': '$gt',
+          '>=': '$gte', 'gte': '$gte',
+          'contains': '$regex', 'like': '$regex',
+          'in': '$in',
+        };
+        
+        const mongoOp = opMap[operator.toLowerCase()];
+        if (mongoOp) {
+          if (mongoOp === '$regex') {
+            filter[`data.${field}`] = { $regex: parsedValue, $options: 'i' };
+          } else if (mongoOp === '$in') {
+            filter[`data.${field}`] = { $in: String(parsedValue).split(',').map(v => v.trim()) };
+          } else if (mongoOp === '$eq') {
+            filter[`data.${field}`] = parsedValue;
+          } else {
+            filter[`data.${field}`] = { [mongoOp]: parsedValue };
+          }
+        }
+      }
+    }
+    
+    // Check for JSON filter
+    if (options.filter) {
+      try {
+        const jsonFilter = JSON.parse(options.filter as string);
+        filter = { ...filter, ...jsonFilter };
+      } catch {
+        return {
+          success: false,
+          output: '',
+          error: 'Invalid JSON filter. Use format: --filter \'{"field": "value"}\'',
+        };
+      }
+    }
+    
+    // Execute the query
+    const submissions = await db.collection('form_submissions')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+    
+    if (submissions.length === 0) {
+      return {
+        success: true,
+        output: '\x1b[33mNo submissions found matching your query.\x1b[0m',
+        data: [],
+      };
+    }
+    
+    // Format output
+    const output = [
+      `\x1b[1m\x1b[36mQuery Results\x1b[0m (${submissions.length} of ${limit} max)`,
+      '',
+      '\x1b[90m' + 'ID'.padEnd(26) + 'Form'.padEnd(20) + 'Created'.padEnd(22) + 'Data Preview' + '\x1b[0m',
+      '\x1b[90m' + '─'.repeat(90) + '\x1b[0m',
+      ...submissions.map((s) => {
+        const id = String(s._id).slice(0, 24).padEnd(26);
+        const form = (s.formId || 'unknown').toString().slice(0, 18).padEnd(20);
+        const created = s.createdAt ? new Date(s.createdAt).toISOString().slice(0, 19).replace('T', ' ') : 'N/A';
+        const dataPreview = JSON.stringify(s.data || {}).slice(0, 40) + '...';
+        return `${id}${form}${created.padEnd(22)}${dataPreview}`;
+      }),
+      '',
+      `\x1b[90mFilter: ${JSON.stringify(filter)}\x1b[0m`,
+    ];
+    
+    // Add JSON output option hint
+    if (!options.json) {
+      output.push('\x1b[90mTip: Add --json for raw JSON output\x1b[0m');
+    }
+    
+    return {
+      success: true,
+      output: options.json ? JSON.stringify(submissions, null, 2) : output.join('\n'),
+      data: submissions,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      output: '',
+      error: `Query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+}
+
+/**
+ * Scaffold command handler - generates React/Next.js components
+ * Supports:
+ *   scaffold react <form-id>
+ *   scaffold nextjs <form-id> --output ./src/pages
+ */
+async function handleScaffold(
+  framework: string,
+  formId: string,
+  options: Record<string, string | boolean>,
+  user: { id: string; email?: string; orgId: string },
+  db: Db
+): Promise<CommandResult> {
+  if (!formId) {
+    return {
+      success: false,
+      output: '',
+      error: 'Please specify a form ID: scaffold react <form-id>',
+      suggestions: ['list forms - to see available forms'],
+    };
+  }
+  
+  try {
+    // Fetch the form
+    const form = await db.collection('forms').findOne({
+      $or: [
+        { formId: formId },
+        { _id: ObjectId.isValid(formId) ? new ObjectId(formId) : null },
+        { slug: formId },
+      ],
+    });
+    
+    if (!form) {
+      return {
+        success: false,
+        output: '',
+        error: `Form not found: ${formId}`,
+        suggestions: ['list forms - to see available forms'],
+      };
+    }
+    
+    const formName = form.name || 'MyForm';
+    const componentName = formName.replace(/[^a-zA-Z0-9]/g, '');
+    const fieldConfigs = form.fieldConfigs || [];
+    
+    let code: string;
+    let filename: string;
+    
+    if (framework === 'react') {
+      filename = `${componentName}.tsx`;
+      code = generateReactComponent(componentName, formName, form.formId || String(form._id), fieldConfigs);
+    } else {
+      filename = `${componentName.toLowerCase()}.tsx`;
+      code = generateNextJSPage(componentName, formName, form.formId || String(form._id), fieldConfigs);
+    }
+    
+    const output = [
+      `\x1b[1m\x1b[36mGenerated ${framework === 'react' ? 'React Component' : 'Next.js Page'}\x1b[0m`,
+      `\x1b[90mForm: ${formName} (${form.formId || form._id})\x1b[0m`,
+      `\x1b[90mFile: ${filename}\x1b[0m`,
+      '',
+      '\x1b[90m─'.repeat(60) + '\x1b[0m',
+      '',
+      code,
+      '',
+      '\x1b[90m─'.repeat(60) + '\x1b[0m',
+      '',
+      '\x1b[32m✓\x1b[0m Copy the code above or use --output <path> to save to file',
+      '',
+      '\x1b[33mNext steps:\x1b[0m',
+      '  1. npm install @netpad/forms',
+      '  2. Copy this component to your project',
+      '  3. Import and use: <' + componentName + ' onSubmit={handleSubmit} />',
+    ];
+    
+    return {
+      success: true,
+      output: output.join('\n'),
+      data: { filename, code, formId: form.formId || String(form._id) },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      output: '',
+      error: `Scaffold failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+}
+
+/**
+ * Generate a React component using @netpad/forms
+ */
+function generateReactComponent(
+  componentName: string,
+  formName: string,
+  formId: string,
+  fieldConfigs: unknown[]
+): string {
+  // Generate TypeScript interface from fields
+  const fields = fieldConfigs as Array<{ path: string; type: string; required?: boolean }>;
+  const interfaceFields = fields
+    .filter(f => f.path && !f.path.startsWith('_'))
+    .map(f => {
+      const optional = f.required ? '' : '?';
+      let tsType = 'string';
+      switch (f.type) {
+        case 'number': case 'rating': case 'slider': tsType = 'number'; break;
+        case 'checkbox': case 'switch': tsType = 'boolean'; break;
+        case 'checkboxes': case 'multi_select': tsType = 'string[]'; break;
+        case 'date': case 'datetime': tsType = 'Date | string'; break;
+        default: tsType = 'string';
+      }
+      return `  ${f.path}${optional}: ${tsType};`;
+    })
+    .join('\n');
+
+  return `'use client';
+
+import { NetPadForm } from '@netpad/forms';
+
+// Generated from: ${formName}
+// Form ID: ${formId}
+
+export interface ${componentName}Data {
+${interfaceFields}
+}
+
+interface ${componentName}Props {
+  onSubmit: (data: ${componentName}Data) => void | Promise<void>;
+  defaultValues?: Partial<${componentName}Data>;
+}
+
+export function ${componentName}({ onSubmit, defaultValues }: ${componentName}Props) {
+  return (
+    <NetPadForm
+      formId="${formId}"
+      onSubmit={onSubmit}
+      defaultValues={defaultValues}
+    />
+  );
+}
+
+export default ${componentName};`;
+}
+
+/**
+ * Generate a Next.js page with form and API route
+ */
+function generateNextJSPage(
+  componentName: string,
+  formName: string,
+  formId: string,
+  fieldConfigs: unknown[]
+): string {
+  const fields = fieldConfigs as Array<{ path: string; type: string; required?: boolean }>;
+  const interfaceFields = fields
+    .filter(f => f.path && !f.path.startsWith('_'))
+    .map(f => {
+      const optional = f.required ? '' : '?';
+      let tsType = 'string';
+      switch (f.type) {
+        case 'number': case 'rating': case 'slider': tsType = 'number'; break;
+        case 'checkbox': case 'switch': tsType = 'boolean'; break;
+        case 'checkboxes': case 'multi_select': tsType = 'string[]'; break;
+        default: tsType = 'string';
+      }
+      return `  ${f.path}${optional}: ${tsType};`;
+    })
+    .join('\n');
+
+  return `'use client';
+
+import { useState } from 'react';
+import { NetPadForm } from '@netpad/forms';
+
+// Generated from: ${formName}
+// Form ID: ${formId}
+
+export interface ${componentName}Data {
+${interfaceFields}
+}
+
+export default function ${componentName}Page() {
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (data: ${componentName}Data) => {
+    try {
+      const response = await fetch('/api/submit/${formId}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) throw new Error('Submission failed');
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-bold text-green-600">Thank you!</h1>
+        <p>Your submission has been received.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-8">
+      <h1 className="text-2xl font-bold mb-6">${formName}</h1>
+      {error && (
+        <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>
+      )}
+      <NetPadForm
+        formId="${formId}"
+        onSubmit={handleSubmit}
+      />
+    </div>
+  );
+}
+
+/*
+// API Route: app/api/submit/${formId}/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const data = await request.json();
+  
+  // TODO: Save to your database or forward to NetPad API
+  // const response = await fetch('https://netpad.io/api/forms/${formId}/submit', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer YOUR_API_KEY' },
+  //   body: JSON.stringify(data),
+  // });
+  
+  console.log('Form submission:', data);
+  return NextResponse.json({ success: true });
+}
+*/`;
 }
