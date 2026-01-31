@@ -1,6 +1,6 @@
 # @netpad/mcp-server
 
-An MCP (Model Context Protocol) server for AI-assisted NetPad application development. This comprehensive toolkit provides **80+ tools** for building forms, workflows, applications, and data-driven experiences with the NetPad platform.
+An MCP (Model Context Protocol) server for AI-assisted NetPad application development. This comprehensive toolkit provides **115+ tools** for building forms, workflows, applications, and data-driven experiences with the NetPad platform.
 
 > **Build forms in minutes, not hours.** Describe what you need to Claude, get a working form with one click.
 >
@@ -182,7 +182,7 @@ export NETPAD_API_KEY=np_live_your_key_here
 | `NETPAD_API_KEY` | - | Your NetPad API key (required for direct API tools) |
 | `NETPAD_API_URL` | `https://netpad.io` | Custom API URL (for self-hosted instances) |
 
-## Available Tools (95+ total)
+## Available Tools (113+ total)
 
 ### Import & Sharing Tools (1)
 
@@ -217,6 +217,50 @@ These tools execute **real API calls** against the NetPad API when `NETPAD_API_K
 | `submission_update` | Update submission data (when supported) |
 | `submission_delete` | Delete a submission |
 | `submission_export` | Export submissions as JSON or CSV |
+
+### RBAC Tools (18) - NEW! 🔐
+
+Manage users, groups, roles, and permissions via the NetPad API. Requires `NETPAD_API_KEY` with appropriate admin permissions.
+
+#### User Management Tools (4)
+
+| Tool | Description |
+|------|-------------|
+| `user_list` | List all members of an organization with their roles |
+| `user_get` | Get details of a specific user including roles and permissions |
+| `user_invite` | Invite a new member to the organization by email |
+| `user_remove` | Remove a member from the organization |
+
+#### Group Management Tools (7)
+
+| Tool | Description |
+|------|-------------|
+| `group_list` | List all groups/teams in an organization |
+| `group_get` | Get details of a specific group including members |
+| `group_create` | Create a new group/team |
+| `group_update` | Update group name or description |
+| `group_delete` | Delete a group |
+| `group_add_member` | Add a user to a group |
+| `group_remove_member` | Remove a user from a group |
+
+#### Role Management Tools (5)
+
+| Tool | Description |
+|------|-------------|
+| `role_list` | List available roles (built-in + custom) with capabilities |
+| `role_get` | Get details of a specific role including permissions |
+| `role_create` | Create a custom role with specific permissions |
+| `role_update` | Update custom role permissions |
+| `role_delete` | Delete a custom role |
+
+#### Assignment & Permission Tools (4)
+
+| Tool | Description |
+|------|-------------|
+| `role_assign` | Assign a role to a user or group |
+| `role_unassign` | Remove a role assignment |
+| `permission_check` | Check if a user has a specific permission |
+| `permission_list` | List all available permissions |
 
 ### Form Building Tools (6)
 
@@ -554,6 +598,75 @@ Here's the aggregation pipeline:
 - Groups submissions by year/month
 - Counts per period
 - Sorted chronologically
+```
+
+### RBAC: List Organization Members
+
+```
+User: Show me all members of my organization
+
+Claude: [Uses user_list tool]
+✅ Found 5 member(s) in organization
+
+1. John Smith (john@company.com) - Owner
+   Capabilities: manage_org, delete_org, manage_billing, manage_members, ...
+
+2. Jane Doe (jane@company.com) - Admin
+   Capabilities: manage_members, manage_all_forms, manage_all_connections, ...
+
+3. Bob Wilson (bob@company.com) - Member
+   Capabilities: create_forms, use_connections, view_forms, view_responses
+
+4. Alice Chen (alice@company.com) - Viewer
+   Capabilities: view_forms, view_responses
+```
+
+### RBAC: Invite a New Team Member
+
+```
+User: Invite sarah@company.com as an admin
+
+Claude: [Uses user_invite tool]
+✅ Invitation sent to sarah@company.com
+
+Invitation Details:
+- Role: admin
+- Status: pending
+- Expires: 2024-01-22T10:30:00Z
+
+The user will receive an email with instructions to join.
+```
+
+### RBAC: Check User Permissions
+
+```
+User: Can Bob create new forms?
+
+Claude: [Uses permission_check tool]
+✅ Permission check result
+
+User: Bob Wilson (bob@company.com)
+Permission: create_forms
+Has Permission: ✓ Yes
+
+Bob has the "member" role which includes the create_forms permission.
+```
+
+### RBAC: List Available Permissions
+
+```
+User: What permissions are available for forms?
+
+Claude: [Uses permission_list tool with resourceType=form]
+✅ Available permissions for form
+
+- form:read - View form configuration (owner, editor, analyst, viewer)
+- form:write - Edit form configuration (owner, editor)
+- form:delete - Delete the form (owner)
+- form:publish - Publish/unpublish the form (owner, editor)
+- form:manage_permissions - Manage form access (owner)
+- form:view_responses - View submissions (owner, editor, analyst)
+- form:export_responses - Export submissions (owner, editor, analyst)
 ```
 
 ## Development

@@ -147,6 +147,7 @@ import {
   type TemplateItem,
 } from '@netpad/mcp-apps';
 import { registerCrudTools } from './crud-tools.js';
+import { registerRbacTools } from './rbac-tools.js';
 
 // ============================================================================
 // MCP APPS UI RESOURCE HELPERS
@@ -5344,6 +5345,10 @@ Explain how to:
   // These tools work when NETPAD_API_KEY is set
   registerCrudTools(server);
 
+  // Register RBAC tools for user, group, role, and permission management
+  // These tools also require NETPAD_API_KEY with appropriate admin permissions
+  registerRbacTools(server);
+
   // Return the configured server
   return server;
 }
@@ -5389,6 +5394,7 @@ export {
 export type { GenerateExtensionOptions, NodeCategory, ConfigFieldType } from './extension-tools.js';
 
 export { registerCrudTools } from './crud-tools.js';
+export { registerRbacTools } from './rbac-tools.js';
 export { isApiKeyConfigured, getApiConfigStatus } from './lib/api-client.js';
 
 // ============================================================================
