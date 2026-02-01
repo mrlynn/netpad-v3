@@ -55,6 +55,7 @@ import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebarSafe } from '@/contexts/SidebarContext';
+import { useSimplifiedUISafe } from '@/hooks/useSimplifiedUI';
 import { ApplicationSwitcher } from './ApplicationSwitcher';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 
@@ -532,6 +533,7 @@ export function PersistentApplicationBar() {
   const { organization, currentOrgId } = useOrganization();
   const { user } = useAuth();
   const { isFocusMode } = useSidebarSafe();
+  const { useSimpleBreadcrumb, hideProjectLayer } = useSimplifiedUISafe();
 
   const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
@@ -876,7 +878,7 @@ export function PersistentApplicationBar() {
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Breadcrumb - hidden in focus mode (shows full hierarchy: Org > Project > App > [Form/Workflow]) */}
+        {/* Breadcrumb - hidden in focus mode, simplified for simple setups */}
         {!isFocusMode && organization && (
           <Box
             sx={{
@@ -887,11 +889,17 @@ export function PersistentApplicationBar() {
               fontSize: '0.75rem',
             }}
           >
-            <Home sx={{ fontSize: 14 }} />
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
-              {organization.name}
-            </Typography>
-            {projectName && (
+            {/* Only show org name if user has multiple orgs */}
+            {!useSimpleBreadcrumb && (
+              <>
+                <Home sx={{ fontSize: 14 }} />
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                  {organization.name}
+                </Typography>
+              </>
+            )}
+            {/* Only show project if user has multiple projects */}
+            {!hideProjectLayer && projectName && (
               <>
                 <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
                 <Typography variant="caption" sx={{ opacity: 0.7 }}>
@@ -899,7 +907,9 @@ export function PersistentApplicationBar() {
                 </Typography>
               </>
             )}
-            <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />
+            {/* Always show app name (but skip chevron if it's the first item) */}
+            {!useSimpleBreadcrumb && <ChevronRight sx={{ fontSize: 14, opacity: 0.5 }} />}
+            {useSimpleBreadcrumb && <Home sx={{ fontSize: 14 }} />}
             <Typography
               variant="caption"
               sx={{
