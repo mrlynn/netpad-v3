@@ -1295,6 +1295,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
               accessControl,
               organizationId,
               projectId,
+              applicationId: propApplicationId,
             }}
             organizationSlug={organization?.slug}
             disabled={fieldConfigs.length === 0}
