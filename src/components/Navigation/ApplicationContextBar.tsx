@@ -54,6 +54,7 @@ import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useApplicationSafe } from '@/contexts/ApplicationContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebarSafe } from '@/contexts/SidebarContext';
 import { ApplicationSwitcher } from './ApplicationSwitcher';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 
@@ -530,6 +531,7 @@ export function PersistentApplicationBar() {
   const currentApplication = applicationContext?.currentApplication ?? null;
   const { organization, currentOrgId } = useOrganization();
   const { user } = useAuth();
+  const { isFocusMode } = useSidebarSafe();
 
   const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
@@ -796,18 +798,14 @@ export function PersistentApplicationBar() {
           </Button>
         </Tooltip>
 
-        {/* Divider */}
-        <Divider orientation="vertical" flexItem sx={{ height: 24, my: 'auto' }} />
-
-        {/* Navigation Tabs */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {navTabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
+        {/* Focus mode: show exit button */}
+        {isFocusMode && (
+          <>
+            <Divider orientation="vertical" flexItem sx={{ height: 24, my: 'auto' }} />
+            <Tooltip title="Exit editor">
               <Box
-                key={tab.key}
                 component={Link}
-                href={tab.href}
+                href={getAppUrl(appSlug, activeTab === 'workflows' ? 'workflows' : 'forms')}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -816,29 +814,70 @@ export function PersistentApplicationBar() {
                   py: 0.5,
                   borderRadius: 1,
                   textDecoration: 'none',
-                  color: isActive ? (currentApplication.color || '#00ED64') : 'text.secondary',
-                  fontWeight: isActive ? 600 : 400,
+                  color: 'text.secondary',
                   fontSize: '0.8125rem',
-                  bgcolor: isActive ? alpha(currentApplication.color || '#00ED64', 0.1) : 'transparent',
                   '&:hover': {
-                    bgcolor: alpha(currentApplication.color || '#00ED64', 0.08),
-                    color: isActive ? (currentApplication.color || '#00ED64') : 'text.primary',
+                    bgcolor: alpha('#000', 0.05),
+                    color: 'text.primary',
                   },
                   transition: 'all 0.15s ease',
                 }}
               >
-                {tab.icon}
-                {tab.label}
+                <ArrowBack sx={{ fontSize: 16 }} />
+                Back to {activeTab === 'workflows' ? 'Workflows' : 'Forms'}
               </Box>
-            );
-          })}
-        </Box>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Navigation Tabs - hidden in focus mode */}
+        {!isFocusMode && (
+          <>
+            {/* Divider */}
+            <Divider orientation="vertical" flexItem sx={{ height: 24, my: 'auto' }} />
+
+            {/* Navigation Tabs */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {navTabs.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <Box
+                    key={tab.key}
+                    component={Link}
+                    href={tab.href}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      textDecoration: 'none',
+                      color: isActive ? (currentApplication.color || '#00ED64') : 'text.secondary',
+                      fontWeight: isActive ? 600 : 400,
+                      fontSize: '0.8125rem',
+                      bgcolor: isActive ? alpha(currentApplication.color || '#00ED64', 0.1) : 'transparent',
+                      '&:hover': {
+                        bgcolor: alpha(currentApplication.color || '#00ED64', 0.08),
+                        color: isActive ? (currentApplication.color || '#00ED64') : 'text.primary',
+                      },
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          </>
+        )}
 
         {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
-        {/* Breadcrumb - shows full hierarchy: Org > Project > App > [Form/Workflow] */}
-        {organization && (
+        {/* Breadcrumb - hidden in focus mode (shows full hierarchy: Org > Project > App > [Form/Workflow]) */}
+        {!isFocusMode && organization && (
           <Box
             sx={{
               display: 'flex',
