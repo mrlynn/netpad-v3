@@ -84,6 +84,54 @@ const TERMINAL_SAYINGS = [
 
 const getRandomSaying = () => TERMINAL_SAYINGS[Math.floor(Math.random() * TERMINAL_SAYINGS.length)];
 
+// AI Thinking Animation Frames
+const AI_LOADER_FRAMES = {
+  spinner: [
+    '\x1b[35m⠋\x1b[0m AI processing',
+    '\x1b[35m⠙\x1b[0m AI processing',
+    '\x1b[35m⠹\x1b[0m AI processing',
+    '\x1b[35m⠸\x1b[0m AI processing',
+    '\x1b[35m⠼\x1b[0m AI processing',
+    '\x1b[35m⠴\x1b[0m AI processing',
+    '\x1b[35m⠦\x1b[0m AI processing',
+    '\x1b[35m⠧\x1b[0m AI processing',
+    '\x1b[35m⠇\x1b[0m AI processing',
+    '\x1b[35m⠏\x1b[0m AI processing',
+  ],
+  wave: [
+    '\x1b[36m∿∿∿\x1b[90m∿∿∿∿\x1b[0m interpreting',
+    '\x1b[90m∿\x1b[36m∿∿∿\x1b[90m∿∿∿\x1b[0m interpreting',
+    '\x1b[90m∿∿\x1b[36m∿∿∿\x1b[90m∿∿\x1b[0m interpreting',
+    '\x1b[90m∿∿∿\x1b[36m∿∿∿\x1b[90m∿\x1b[0m interpreting',
+    '\x1b[90m∿∿∿∿\x1b[36m∿∿∿\x1b[0m interpreting',
+  ],
+  sparkle: [
+    '\x1b[33m✦\x1b[0m \x1b[90m·\x1b[0m \x1b[90m·\x1b[0m AI thinking',
+    '\x1b[90m·\x1b[0m \x1b[33m✦\x1b[0m \x1b[90m·\x1b[0m AI thinking',
+    '\x1b[90m·\x1b[0m \x1b[90m·\x1b[0m \x1b[33m✦\x1b[0m AI thinking',
+    '\x1b[90m·\x1b[0m \x1b[33m✦\x1b[0m \x1b[90m·\x1b[0m AI thinking',
+  ],
+  matrix: [
+    '\x1b[32m[\x1b[92m▓▓▓\x1b[32m░░░░░░░]\x1b[0m parsing',
+    '\x1b[32m[\x1b[92m▓▓▓▓▓\x1b[32m░░░░░]\x1b[0m analyzing',
+    '\x1b[32m[\x1b[92m▓▓▓▓▓▓▓\x1b[32m░░░]\x1b[0m thinking',
+    '\x1b[32m[\x1b[92m▓▓▓▓▓▓▓▓▓\x1b[32m░]\x1b[0m computing',
+  ],
+  brain: [
+    '\x1b[36m◐\x1b[0m thinking...',
+    '\x1b[36m◓\x1b[0m thinking...',
+    '\x1b[36m◑\x1b[0m thinking...',
+    '\x1b[36m◒\x1b[0m thinking...',
+  ],
+};
+
+// Get random loader style
+const getRandomLoaderFrames = () => {
+  const styles = Object.keys(AI_LOADER_FRAMES) as (keyof typeof AI_LOADER_FRAMES)[];
+  const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+  return AI_LOADER_FRAMES[randomStyle];
+};
+
 const WELCOME_BANNER = `
 \x1b[32m
 ╔══════════════════════════════════════════════════════════╗
@@ -121,10 +169,35 @@ interface WebTerminalProps {
 // Known commands and subcommands for tab completion
 const FS_COMMANDS = ['ls', 'cd', 'pwd', 'cat', 'tree', 'find', 'grep', 'mv', 'cp', 'touch', 'rm', 'tail', 'head'];
 const SHELL_COMMANDS = ['alias', 'unalias', 'echo'];
-const OTHER_COMMANDS = ['list', 'show', 'search', 'stats', 'explain', 'help', 'clear'];
+const RBAC_COMMANDS = ['users', 'groups', 'roles', 'assign', 'unassign', 'permissions', 'whoami'];
+const LOCAL_COMMANDS = ['clear', 'help'];
+const API_COMMANDS = ['list', 'show', 'search', 'stats', 'explain']; // These call API but may use AI
+const OTHER_COMMANDS = [...API_COMMANDS, ...LOCAL_COMMANDS];
 const ALL_COMMANDS = [...FS_COMMANDS, ...SHELL_COMMANDS, ...OTHER_COMMANDS];
 const LIST_TYPES = ['forms', 'workflows', 'templates'];
 const SHOW_TYPES = ['form', 'workflow', 'template'];
+
+// Commands that are handled locally (no AI needed)
+const LOCAL_ONLY_COMMANDS = new Set([
+  ...FS_COMMANDS,
+  ...SHELL_COMMANDS,
+  ...RBAC_COMMANDS,
+  ...LOCAL_COMMANDS,
+]);
+
+// Check if a command might need AI processing
+const commandNeedsAI = (input: string): boolean => {
+  const trimmed = input.trim().toLowerCase();
+  const firstWord = trimmed.split(/\s+/)[0];
+  
+  // Known local commands don't need AI
+  if (LOCAL_ONLY_COMMANDS.has(firstWord)) {
+    return false;
+  }
+  
+  // Everything else might need AI (API commands + natural language)
+  return true;
+};
 
 export function WebTerminal({
   onClose,
@@ -144,6 +217,11 @@ export function WebTerminal({
   const historyIndexRef = useRef(-1);
   const inputBufferRef = useRef('');
   const cursorPositionRef = useRef(0);
+  
+  // AI loader animation state
+  const loaderIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const loaderFramesRef = useRef<string[]>([]);
+  const loaderFrameIndexRef = useRef(0);
   
   // Filesystem state
   const [currentPath, setCurrentPath] = useState('/');
@@ -632,6 +710,36 @@ export function WebTerminal({
     };
   }, [executeSingleCommand]);
 
+  // Start the ASCII loader animation
+  const startLoader = useCallback(() => {
+    // Pick random animation style
+    loaderFramesRef.current = getRandomLoaderFrames();
+    loaderFrameIndexRef.current = 0;
+    
+    // Start animation
+    loaderIntervalRef.current = setInterval(() => {
+      const term = xtermRef.current;
+      if (!term) return;
+      
+      const frame = loaderFramesRef.current[loaderFrameIndexRef.current];
+      // Move to start of line, clear line, write frame
+      term.write(`\r\x1b[K  ${frame}`);
+      
+      loaderFrameIndexRef.current = 
+        (loaderFrameIndexRef.current + 1) % loaderFramesRef.current.length;
+    }, 100);
+  }, []);
+
+  // Stop the ASCII loader animation
+  const stopLoader = useCallback(() => {
+    if (loaderIntervalRef.current) {
+      clearInterval(loaderIntervalRef.current);
+      loaderIntervalRef.current = null;
+    }
+    // Clear the loader line
+    xtermRef.current?.write('\r\x1b[K');
+  }, []);
+
   // Update processInput ref when dependencies change
   useEffect(() => {
     processInputRef.current = async (input: string) => {
@@ -646,12 +754,21 @@ export function WebTerminal({
       commandHistoryRef.current = [...commandHistoryRef.current, trimmed];
       historyIndexRef.current = -1;
       
-      // Show processing indicator
+      // Check if this command might need AI processing
+      const needsAI = commandNeedsAI(trimmed);
+      
+      // Show processing indicator with animated loader only for AI commands
       setIsProcessing(true);
       xtermRef.current?.write('\r\n');
+      if (needsAI) {
+        startLoader();
+      }
       
       try {
         const result = await executeCommand(trimmed);
+        
+        // Stop loader before showing output (safe to call even if not started)
+        stopLoader();
         
         if (result.output) {
           const formattedOutput = formatOutput(result);
@@ -671,12 +788,15 @@ export function WebTerminal({
         
         onCommand?.(trimmed, result);
       } finally {
+        stopLoader(); // Ensure loader is stopped on error too
         setIsProcessing(false);
         // Use updated prompt (path may have changed)
         xtermRef.current?.write('\r\n' + currentPromptRef.current);
+        // Ensure cursor is visible after command execution
+        setTimeout(() => xtermRef.current?.scrollToBottom(), 10);
       }
     };
-  }, [executeCommand, onCommand]);
+  }, [executeCommand, onCommand, startLoader, stopLoader]);
 
   // Initialize terminal
   useEffect(() => {
@@ -956,6 +1076,11 @@ export function WebTerminal({
           fitAddon.fit();
           term?.scrollToBottom();
         }, 200);
+        // Additional scroll fix for drawer/embedded mode
+        setTimeout(() => {
+          fitAddon.fit();
+          term?.scrollToBottom();
+        }, 500);
         
         setIsReady(true);
         
@@ -1022,9 +1147,57 @@ export function WebTerminal({
           }}
         >
           <Box sx={{ display: 'flex', gap: 0.75 }}>
-            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#EF4444' }} />
-            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#FBBF24' }} />
-            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#00ED64' }} />
+            {/* Red - Close */}
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                bgcolor: '#EF4444',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  bgcolor: '#DC2626',
+                  transform: 'scale(1.1)',
+                },
+              }}
+              onClick={onClose}
+              title="Close"
+            />
+            {/* Yellow - Minimize */}
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                bgcolor: '#FBBF24',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  bgcolor: '#F59E0B',
+                  transform: 'scale(1.1)',
+                },
+              }}
+              onClick={onClose}
+              title="Minimize (Close)"
+            />
+            {/* Green - Fullscreen */}
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                bgcolor: '#00ED64',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  bgcolor: '#00C853',
+                  transform: 'scale(1.1)',
+                },
+              }}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            />
           </Box>
           
           <Typography
@@ -1078,10 +1251,15 @@ export function WebTerminal({
         sx={{
           flex: 1,
           p: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
           '& .xterm': {
             height: '100%',
+            flex: 1,
           },
           '& .xterm-viewport': {
+            scrollBehavior: 'smooth',
             '&::-webkit-scrollbar': {
               width: 8,
             },
@@ -1092,6 +1270,9 @@ export function WebTerminal({
               bgcolor: 'rgba(255,255,255,0.2)',
               borderRadius: 4,
             },
+          },
+          '& .xterm-screen': {
+            paddingBottom: '1rem',
           },
         }}
       />
