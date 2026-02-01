@@ -50,6 +50,7 @@ interface TerminalDrawerProps {
 export function TerminalDrawer({ currentProject, currentOrg }: TerminalDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Only render on client
@@ -149,8 +150,8 @@ export function TerminalDrawer({ currentProject, currentOrg }: TerminalDrawerPro
         }}
         PaperProps={{
           sx: {
-            height: isMinimized ? 'auto' : '50vh',
-            maxHeight: isMinimized ? 'auto' : '70vh',
+            height: isMinimized ? 'auto' : (isMaximized ? '90vh' : '50vh'),
+            maxHeight: isMinimized ? 'auto' : (isMaximized ? '90vh' : '70vh'),
             minHeight: isMinimized ? 'auto' : 300,
             bgcolor: 'transparent',
             boxShadow: isMinimized ? 'none' : undefined,
@@ -204,8 +205,8 @@ export function TerminalDrawer({ currentProject, currentOrg }: TerminalDrawerPro
         {!isMinimized && (
           <Box
             sx={{
-              height: 'calc(50vh - 40px)', // Account for header
-              maxHeight: 'calc(70vh - 40px)',
+              height: isMaximized ? 'calc(90vh - 40px)' : 'calc(50vh - 40px)', // Account for header
+              maxHeight: isMaximized ? 'calc(90vh - 40px)' : 'calc(70vh - 40px)',
               minHeight: 260,
               display: 'flex',
               flexDirection: 'column',
@@ -263,10 +264,13 @@ export function TerminalDrawer({ currentProject, currentOrg }: TerminalDrawerPro
                       },
                     }} 
                   />
-                  {/* Green - Expand (fullscreen behavior could be added) */}
+                  {/* Green - Maximize/Restore */}
                   <Box 
-                    onClick={() => setIsMinimized(false)}
-                    title="Expand"
+                    onClick={() => {
+                      setIsMinimized(false);
+                      setIsMaximized(!isMaximized);
+                    }}
+                    title={isMaximized ? "Restore" : "Maximize"}
                     sx={{ 
                       width: 12, 
                       height: 12, 
