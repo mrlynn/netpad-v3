@@ -169,10 +169,35 @@ interface WebTerminalProps {
 // Known commands and subcommands for tab completion
 const FS_COMMANDS = ['ls', 'cd', 'pwd', 'cat', 'tree', 'find', 'grep', 'mv', 'cp', 'touch', 'rm', 'tail', 'head'];
 const SHELL_COMMANDS = ['alias', 'unalias', 'echo'];
-const OTHER_COMMANDS = ['list', 'show', 'search', 'stats', 'explain', 'help', 'clear'];
+const RBAC_COMMANDS = ['users', 'groups', 'roles', 'assign', 'unassign', 'permissions', 'whoami'];
+const LOCAL_COMMANDS = ['clear', 'help'];
+const API_COMMANDS = ['list', 'show', 'search', 'stats', 'explain']; // These call API but may use AI
+const OTHER_COMMANDS = [...API_COMMANDS, ...LOCAL_COMMANDS];
 const ALL_COMMANDS = [...FS_COMMANDS, ...SHELL_COMMANDS, ...OTHER_COMMANDS];
 const LIST_TYPES = ['forms', 'workflows', 'templates'];
 const SHOW_TYPES = ['form', 'workflow', 'template'];
+
+// Commands that are handled locally (no AI needed)
+const LOCAL_ONLY_COMMANDS = new Set([
+  ...FS_COMMANDS,
+  ...SHELL_COMMANDS,
+  ...RBAC_COMMANDS,
+  ...LOCAL_COMMANDS,
+]);
+
+// Check if a command might need AI processing
+const commandNeedsAI = (input: string): boolean => {
+  const trimmed = input.trim().toLowerCase();
+  const firstWord = trimmed.split(/\s+/)[0];
+  
+  // Known local commands don't need AI
+  if (LOCAL_ONLY_COMMANDS.has(firstWord)) {
+    return false;
+  }
+  
+  // Everything else might need AI (API commands + natural language)
+  return true;
+};
 
 export function WebTerminal({
   onClose,
@@ -729,15 +754,20 @@ export function WebTerminal({
       commandHistoryRef.current = [...commandHistoryRef.current, trimmed];
       historyIndexRef.current = -1;
       
-      // Show processing indicator with animated loader
+      // Check if this command might need AI processing
+      const needsAI = commandNeedsAI(trimmed);
+      
+      // Show processing indicator with animated loader only for AI commands
       setIsProcessing(true);
       xtermRef.current?.write('\r\n');
-      startLoader();
+      if (needsAI) {
+        startLoader();
+      }
       
       try {
         const result = await executeCommand(trimmed);
         
-        // Stop loader before showing output
+        // Stop loader before showing output (safe to call even if not started)
         stopLoader();
         
         if (result.output) {
