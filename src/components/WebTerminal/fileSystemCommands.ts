@@ -198,11 +198,29 @@ async function handleLs(args: string[], ctx: FSCommandContext): Promise<FSComman
     
     const data = await response.json();
     
+    console.log('[ls] API response:', { 
+      path: resolvedPath, 
+      success: data.success, 
+      entriesCount: data.entries?.length, 
+      error: data.error,
+      responseStatus: response.status,
+    });
+    
     if (!data.success) {
       return {
         success: false,
         output: '',
         error: data.error || `ls: Cannot access '${targetPath}'`,
+      };
+    }
+    
+    // Handle missing or invalid entries
+    if (!data.entries || !Array.isArray(data.entries)) {
+      console.error('[ls] Invalid entries:', data);
+      return {
+        success: false,
+        output: '',
+        error: `ls: Invalid response from server`,
       };
     }
     
