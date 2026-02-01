@@ -228,10 +228,58 @@ export function TerminalDrawer({ currentProject, currentOrg }: TerminalDrawerPro
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#EF4444' }} />
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FBBF24' }} />
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#00ED64' }} />
+                <Box sx={{ display: 'flex', gap: 0.75 }}>
+                  {/* Red - Close */}
+                  <Box 
+                    onClick={() => setIsOpen(false)}
+                    title="Close"
+                    sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '50%', 
+                      bgcolor: '#EF4444',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: '#DC2626',
+                        transform: 'scale(1.1)',
+                      },
+                    }} 
+                  />
+                  {/* Yellow - Minimize */}
+                  <Box 
+                    onClick={() => setIsMinimized(true)}
+                    title="Minimize"
+                    sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '50%', 
+                      bgcolor: '#FBBF24',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: '#F59E0B',
+                        transform: 'scale(1.1)',
+                      },
+                    }} 
+                  />
+                  {/* Green - Expand (fullscreen behavior could be added) */}
+                  <Box 
+                    onClick={() => setIsMinimized(false)}
+                    title="Expand"
+                    sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '50%', 
+                      bgcolor: '#00ED64',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: '#00C853',
+                        transform: 'scale(1.1)',
+                      },
+                    }} 
+                  />
                 </Box>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', ml: 1 }}>
                   NetPad Terminal
