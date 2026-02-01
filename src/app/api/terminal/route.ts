@@ -270,9 +270,20 @@ async function handleNaturalLanguage(
       user
     );
 
+    if (!result) {
+      return NextResponse.json({
+        success: false,
+        output: '',
+        error: 'Command execution failed',
+      });
+    }
+
     return NextResponse.json({
-      ...result,
+      success: result.success ?? true,
       output: interpretationMessage + result.output,
+      error: result.error,
+      data: result.data,
+      suggestions: result.suggestions,
     });
   } catch (error) {
     console.error('AI interpretation error:', error);
@@ -688,7 +699,7 @@ async function handleAIFormGeneration(
       userId: user.id,
       orgId: user.orgId,
       isGuest: false,
-      feature: 'ai_form_generation',
+      feature: 'ai_form_generator',
       endpoint: '/api/terminal/create',
     };
 
@@ -1171,12 +1182,18 @@ async function handleScaffold(
   
   try {
     // Fetch the form
+    const orConditions: any[] = [
+      { formId: formId },
+      { slug: formId },
+    ];
+
+    // Only add ObjectId condition if formId is a valid ObjectId
+    if (ObjectId.isValid(formId)) {
+      orConditions.push({ _id: new ObjectId(formId) });
+    }
+
     const form = await db.collection('forms').findOne({
-      $or: [
-        { formId: formId },
-        { _id: ObjectId.isValid(formId) ? new ObjectId(formId) : null },
-        { slug: formId },
-      ],
+      $or: orConditions,
     });
     
     if (!form) {
@@ -1470,12 +1487,18 @@ async function handleWatch(
     }
     
     const targetFormId = formId || args[0];
+    const orConditionsTarget: any[] = [
+      { formId: targetFormId },
+      { slug: targetFormId },
+    ];
+
+    // Only add ObjectId condition if targetFormId is a valid ObjectId
+    if (ObjectId.isValid(targetFormId)) {
+      orConditionsTarget.push({ _id: new ObjectId(targetFormId) });
+    }
+
     const form = await db.collection('forms').findOne({
-      $or: [
-        { formId: targetFormId },
-        { _id: ObjectId.isValid(targetFormId) ? new ObjectId(targetFormId) : null },
-        { slug: targetFormId },
-      ],
+      $or: orConditionsTarget,
     });
     
     if (!form) {
@@ -1612,14 +1635,20 @@ async function handleExport(
       };
     }
     
+    const orConditionsAnalyze: any[] = [
+      { formId: targetFormId },
+      { slug: targetFormId },
+    ];
+
+    // Only add ObjectId condition if targetFormId is a valid ObjectId
+    if (ObjectId.isValid(targetFormId)) {
+      orConditionsAnalyze.push({ _id: new ObjectId(targetFormId) });
+    }
+
     const form = await db.collection('forms').findOne({
-      $or: [
-        { formId: targetFormId },
-        { _id: ObjectId.isValid(targetFormId) ? new ObjectId(targetFormId) : null },
-        { slug: targetFormId },
-      ],
+      $or: orConditionsAnalyze,
     });
-    
+
     if (!form) {
       return {
         success: false,

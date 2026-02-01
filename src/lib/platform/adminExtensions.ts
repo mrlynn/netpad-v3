@@ -52,8 +52,8 @@ export async function getCloudAdminFeatures(): Promise<AdminFeature[]> {
 
   try {
     // Dynamic import to avoid bundling in self-hosted builds
-    const cloudFeatures = await import('@netpad/cloud-features');
-    
+    const cloudFeatures = await import('@netpad/cloud-features') as any;
+
     if (typeof cloudFeatures.getAdminExtensions === 'function') {
       const extensions: AdminExtension = await cloudFeatures.getAdminExtensions();
       return extensions.features || [];

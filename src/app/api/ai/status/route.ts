@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPlatformMode, isCloudMode } from '@/lib/platform/mode';
+import { PLATFORM_MODE, isCloudMode } from '@/lib/platform/mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ interface AIStatusResponse {
  * Check if AI is configured and available
  */
 function checkAIAvailability(): AIStatusResponse {
-  const mode = getPlatformMode();
+  const mode = PLATFORM_MODE;
   const isCloud = isCloudMode();
 
   // Check for any supported AI provider

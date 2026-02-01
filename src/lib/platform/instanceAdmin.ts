@@ -42,7 +42,7 @@ export async function isInstanceAdmin(userId: string): Promise<boolean> {
   if (isCloudMode()) {
     try {
       // Dynamic import to avoid bundling cloud package in self-hosted builds
-      const cloudFeatures = await import('@netpad/cloud-features');
+      const cloudFeatures = await import('@netpad/cloud-features') as any;
       if (typeof cloudFeatures.isCloudAdmin === 'function') {
         return await cloudFeatures.isCloudAdmin(userId);
       }

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     // No orgId - return permissions for all orgs user belongs to
     const orgsWithPermissions = await Promise.all(
       (user.organizations || []).map(async (membership) => {
-        const effective = await getEffectivePermissions(session.userId, membership.orgId);
+        const effective = await getEffectivePermissions(session.userId!, membership.orgId);
         
         // Get org name
         const org = await db.collection('organizations').findOne({ orgId: membership.orgId });

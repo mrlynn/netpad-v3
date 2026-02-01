@@ -24,10 +24,12 @@ import {
   DataObject as JsonIcon,
 } from '@mui/icons-material';
 
+import { FormDefinition } from '@/types/template';
+
 interface FormExportDialogProps {
   open: boolean;
   onClose: () => void;
-  formConfig: Record<string, unknown>;
+  formConfig: FormDefinition | Record<string, unknown>;
   formName: string;
 }
 

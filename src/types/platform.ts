@@ -380,7 +380,7 @@ export const ORG_PLAN_LIMITS: Record<OrgPlan, Partial<OrganizationSettings>> = {
  * Legacy platform role (kept for backwards compatibility)
  * @deprecated Use instanceRole for self-hosted, cloudRole for cloud
  */
-export type PlatformRole = 'admin' | 'support';
+export type PlatformRole = 'admin' | 'support' | 'platform_admin' | 'super_admin';
 
 /**
  * Instance-level admin role for self-hosted deployments

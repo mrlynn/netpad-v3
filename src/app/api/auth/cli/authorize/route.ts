@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       {
         name: 'CLI Access',
         description: 'Auto-generated for CLI device flow',
-        permissions: ['full_access'], // CLI needs full access
+        permissions: ['admin'], // CLI needs full access
         environment: 'live',
       }
     );

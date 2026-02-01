@@ -38,6 +38,7 @@ import { ConnectionStatusChip } from './ConnectionStatusChip';
 import { PublishItemDialog } from '@/components/Marketplace/PublishItemDialog';
 import FormExportDialog from './FormExportDialog';
 import { FieldConfig, FormVariable, MultiPageConfig, FormLifecycle, FormTheme, FormType, SearchConfig, FormDataSource, FormAccessControl, BotProtectionConfig, DraftSettings, FormConfiguration } from '@/types/form';
+import { FormDefinition } from '@/types/template';
 import { FormReaction } from '@/types/reactions';
 import { FormHooksConfig } from '@/types/formHooks';
 import { generateFieldPath } from '@/utils/fieldPath';
@@ -126,7 +127,7 @@ export function FormBuilder({ initialFormId, initialFormConfig, organizationId: 
   } | null>(null);
   const [publishToMarketplaceOpen, setPublishToMarketplaceOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportFormConfig, setExportFormConfig] = useState<Record<string, unknown> | null>(null);
+  const [exportFormConfig, setExportFormConfig] = useState<FormDefinition | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);

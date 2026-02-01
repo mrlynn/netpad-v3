@@ -299,7 +299,7 @@ export async function createWorkflow(
             }
           });
           
-          initialCanvas = { nodes: canvasNodes, edges: canvasEdges };
+          initialCanvas = { nodes: canvasNodes, edges: canvasEdges, viewport: { x: 0, y: 0, zoom: 1 } };
           console.log(`[Workflow DB] Loaded static template: ${data.templateId} (${canvasNodes.length} nodes)`);
         }
       }
