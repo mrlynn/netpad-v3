@@ -56,6 +56,7 @@ import { getAppUrl } from '@/lib/routing';
 import { Application } from '@/types/application';
 import { TemplateIcon } from '@/components/Templates/TemplateIcon';
 import { useSidebarSafe } from '@/contexts/SidebarContext';
+import { useSimplifiedUISafe } from '@/hooks/useSimplifiedUI';
 
 // ============================================
 // Constants
@@ -712,6 +713,7 @@ export function AppSidebar() {
   const { applications, currentApplication, isLoading } = useApplication();
   const { recentApps } = useRecentApplications(5);
   const { isCollapsed, toggle } = useSidebarSafe();
+  const { useFlatAppList, appCount } = useSimplifiedUISafe();
 
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [showRecent, setShowRecent] = useState(true);
@@ -880,20 +882,25 @@ export function AppSidebar() {
         bgcolor: 'background.paper',
       }}
     >
-      {/* Header */}
-      <Box sx={{ p: 2, pb: 1 }}>
-        <Typography
-          variant="overline"
-          sx={{
-            color: 'text.secondary',
-            fontWeight: 600,
-            letterSpacing: 1,
-            fontSize: '0.7rem',
-          }}
-        >
-          Applications
-        </Typography>
-      </Box>
+      {/* Header - hidden for simple setups to reduce noise */}
+      {!useFlatAppList && (
+        <Box sx={{ p: 2, pb: 1 }}>
+          <Typography
+            variant="overline"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 600,
+              letterSpacing: 1,
+              fontSize: '0.7rem',
+            }}
+          >
+            Applications
+          </Typography>
+        </Box>
+      )}
+      
+      {/* Small top padding when header is hidden */}
+      {useFlatAppList && <Box sx={{ pt: 1 }} />}
 
       {/* Application Tree */}
       <Box sx={{ flex: 1, overflow: 'auto', px: 1 }}>
@@ -960,7 +967,7 @@ export function AppSidebar() {
               },
             }}
           >
-            New Application
+            {useFlatAppList ? 'New App' : 'New Application'}
           </Button>
         </Box>
       </Box>

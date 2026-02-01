@@ -52,6 +52,7 @@ import {
 import { NetPadLoader } from '@/components/common/NetPadLoader';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useApplication } from '@/contexts/ApplicationContext';
+import { useSimplifiedUISafe } from '@/hooks/useSimplifiedUI';
 import { useRouter, usePathname } from 'next/navigation';
 import { Project } from '@/types/platform';
 import { parseOrgProjectFromPath, getAppUrl } from '@/lib/routing';
@@ -73,6 +74,7 @@ export function OrgProjectSelector({ variant = 'default' }: OrgProjectSelectorPr
   const pathname = usePathname();
   const { organization, organizations, selectOrganization } = useOrganization();
   const { currentApplication } = useApplication();
+  const { hideOrgSelector, hideProjectLayer } = useSimplifiedUISafe();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -80,6 +82,9 @@ export function OrgProjectSelector({ variant = 'default' }: OrgProjectSelectorPr
   const [showOrgSwitcher, setShowOrgSwitcher] = useState(false);
 
   const menuOpen = Boolean(anchorEl);
+  
+  // For truly simple setups (1 org, 1 project), just show org name as label
+  const isSimpleMode = hideOrgSelector && hideProjectLayer;
 
   // Get current project from URL or application context
   const { projectId: urlProjectId } = parseOrgProjectFromPath(pathname);
@@ -165,6 +170,37 @@ export function OrgProjectSelector({ variant = 'default' }: OrgProjectSelectorPr
   const displayText = currentProject
     ? `${organization.name} / ${currentProject.name}`
     : organization.name;
+
+  // Simple mode: just show org name as a non-interactive label
+  if (isSimpleMode) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 1.5,
+          py: 0.75,
+        }}
+      >
+        <Business sx={{ fontSize: 18, color: 'text.secondary' }} />
+        <Typography
+          component="span"
+          sx={{
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            color: 'text.primary',
+            maxWidth: { xs: 150, sm: 200, md: 300 },
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {organization.name}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <>

@@ -126,23 +126,39 @@ export function ConnectionStatusChip({
   }
 
   return (
-    <Tooltip title="Click to connect to a database" arrow>
+    <Tooltip 
+      title={
+        <span>
+          <strong>Connect to save data</strong>
+          <br />
+          Click to connect this form to your MongoDB database
+        </span>
+      }
+      arrow
+    >
       <Chip
         size="small"
-        icon={<LinkOff sx={{ fontSize: 14 }} />}
-        label="Not connected"
+        icon={<Storage sx={{ fontSize: 14 }} />}
+        label="Connect database"
         onClick={onClick}
         sx={{
-          bgcolor: alpha('#ff9800', 0.1),
-          color: '#ff9800',
-          borderColor: alpha('#ff9800', 0.3),
-          border: '1px solid',
+          bgcolor: 'transparent',
+          color: 'text.secondary',
+          borderColor: 'divider',
+          border: '1px dashed',
           cursor: onClick ? 'pointer' : 'default',
+          transition: 'all 0.2s ease',
           '&:hover': onClick ? {
-            bgcolor: alpha('#ff9800', 0.15),
+            bgcolor: alpha('#00ED64', 0.08),
+            borderColor: '#00ED64',
+            color: '#00ED64',
+            borderStyle: 'solid',
+            '& .MuiChip-icon': {
+              color: '#00ED64',
+            },
           } : {},
           '& .MuiChip-icon': {
-            color: '#ff9800',
+            color: 'text.secondary',
           },
         }}
       />
