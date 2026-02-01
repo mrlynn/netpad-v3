@@ -16,6 +16,8 @@ const STORAGE_KEY = 'netpad_sidebar_collapsed';
 interface SidebarContextValue {
   isCollapsed: boolean;
   isAutoCollapsed: boolean;
+  /** True when user is in an editor (form/workflow) - components should simplify UI */
+  isFocusMode: boolean;
   toggle: () => void;
   expand: () => void;
   collapse: () => void;
@@ -31,10 +33,14 @@ interface SidebarContextValue {
 const isEditorRoute = (pathname: string): boolean => {
   // Form editor: /apps/[slug]/forms/[id]/edit
   if (/^\/apps\/[^/]+\/forms\/[^/]+\/edit/.test(pathname)) return true;
+  // New form: /apps/[slug]/forms/new
+  if (/^\/apps\/[^/]+\/forms\/new/.test(pathname)) return true;
   // Workflow editor: /apps/[slug]/workflows/[id] (not the list or /new)
   if (/^\/apps\/[^/]+\/workflows\/[^/]+$/.test(pathname) &&
       !pathname.endsWith('/workflows') &&
       !pathname.endsWith('/new')) return true;
+  // New workflow: /apps/[slug]/workflows/new
+  if (/^\/apps\/[^/]+\/workflows\/new/.test(pathname)) return true;
   return false;
 };
 
@@ -88,6 +94,9 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
 
   // The actual collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Focus mode - true when in an editor route
+  const isFocusMode = pathname ? isEditorRoute(pathname) : false;
 
   // Track previous pathname for route change detection
   const prevPathnameRef = useRef<string | null>(null);
@@ -185,6 +194,7 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
       value={{
         isCollapsed,
         isAutoCollapsed,
+        isFocusMode,
         toggle,
         expand,
         collapse,
@@ -217,6 +227,7 @@ export function useSidebarSafe(): SidebarContextValue {
     return {
       isCollapsed: false,
       isAutoCollapsed: false,
+      isFocusMode: false,
       toggle: () => {},
       expand: () => {},
       collapse: () => {},
