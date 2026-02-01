@@ -57,6 +57,7 @@ import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { ApplicationContextBar } from '@/components/Navigation/ApplicationContextBar';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { CreateButton } from '@/components/common/CreateButton';
 import { getOrgProjectUrl } from '@/lib/routing';
 import { Application, ApplicationStatus, ApplicationRelease } from '@/types/application';
 import { fetcher } from '@/lib/swr';
@@ -250,20 +251,11 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Create your first form for this application
         </Typography>
-        <Button
-          component={Link}
-          href={`${getOrgProjectUrl(orgId, projectId, 'builder')}?applicationId=${applicationId}`}
-          variant="contained"
-          sx={{
-            bgcolor: useTheme().palette.primary.main,
-            color: useTheme().palette.primary.contrastText,
-            textTransform: 'none',
-            fontWeight: 600,
-            '&:hover': { bgcolor: useTheme().palette.primary.dark },
-          }}
-        >
-          Create Form
-        </Button>
+        <CreateButton
+          label="Create Form"
+          createHref={`${getOrgProjectUrl(orgId, projectId, 'builder')}?applicationId=${applicationId}`}
+          templateHref="/templates"
+        />
       </Paper>
     );
   }
@@ -274,15 +266,11 @@ function ApplicationFormsTab({ applicationId, orgId, projectId }: ApplicationFor
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           Forms ({forms.length})
         </Typography>
-        <Button
-          component={Link}
-          href={`${getOrgProjectUrl(orgId, projectId, 'builder')}?applicationId=${applicationId}`}
-          variant="outlined"
-          size="small"
-          sx={{ textTransform: 'none' }}
-        >
-          Create Form
-        </Button>
+        <CreateButton
+          label="Create Form"
+          createHref={`${getOrgProjectUrl(orgId, projectId, 'builder')}?applicationId=${applicationId}`}
+          templateHref="/templates"
+        />
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {forms.map((form: any) => (
@@ -592,20 +580,11 @@ function ApplicationWorkflowsTab({ applicationId, orgId, projectId }: Applicatio
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Create your first workflow for this application
         </Typography>
-        <Button
-          component={Link}
-          href={`${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${applicationId}`}
-          variant="contained"
-          sx={{
-            bgcolor: useTheme().palette.primary.main,
-            color: useTheme().palette.primary.contrastText,
-            textTransform: 'none',
-            fontWeight: 600,
-            '&:hover': { bgcolor: useTheme().palette.primary.dark },
-          }}
-        >
-          Create Workflow
-        </Button>
+        <CreateButton
+          label="Create Workflow"
+          createHref={`${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${applicationId}`}
+          templateHref="/templates/workflows"
+        />
       </Paper>
     );
   }
@@ -616,15 +595,11 @@ function ApplicationWorkflowsTab({ applicationId, orgId, projectId }: Applicatio
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           Workflows ({workflows.length})
         </Typography>
-        <Button
-          component={Link}
-          href={`${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${applicationId}`}
-          variant="outlined"
-          size="small"
-          sx={{ textTransform: 'none' }}
-        >
-          Create Workflow
-        </Button>
+        <CreateButton
+          label="Create Workflow"
+          createHref={`${getOrgProjectUrl(orgId, projectId, 'workflows')}?applicationId=${applicationId}`}
+          templateHref="/templates/workflows"
+        />
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {workflows.map((workflow) => (

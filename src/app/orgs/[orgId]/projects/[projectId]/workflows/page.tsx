@@ -47,6 +47,7 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
+import { CreateButton } from '@/components/common/CreateButton';
 import { WorkflowStatus } from '@/types/workflow';
 import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 import { getOrgProjectUrl } from '@/lib/routing';
@@ -384,21 +385,17 @@ export default function WorkflowsPage() {
                 Automate actions with visual workflow automation
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setCreateDialogOpen(true)}
+            <CreateButton
+              label="Create Workflow"
+              onCreate={() => setCreateDialogOpen(true)}
+              templateHref="/templates/workflows"
               sx={{
-                bgcolor: '#9C27B0',
-                color: 'white',
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-                '&:hover': { bgcolor: '#7B1FA2' },
+                '& .MuiButton-root': {
+                  bgcolor: '#9C27B0',
+                  '&:hover': { bgcolor: '#7B1FA2' },
+                },
               }}
-            >
-              Create Workflow
-            </Button>
+            />
           </Box>
         </Container>
       </Box>

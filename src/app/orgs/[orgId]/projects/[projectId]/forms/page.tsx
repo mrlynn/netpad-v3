@@ -48,6 +48,7 @@ import {
 import Link from 'next/link';
 import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { NetPadLoader } from '@/components/common/NetPadLoader';
+import { CreateButton } from '@/components/common/CreateButton';
 import { getOrgProjectUrl } from '@/lib/routing';
 import { GoogleFormsImportWizard } from '@/components/GoogleFormsImport';
 
@@ -493,23 +494,11 @@ export default function FormsPage() {
                   <ListItemText>Import from Google Forms</ListItemText>
                 </MenuItem>
               </Menu>
-              <Button
-                component={Link}
-                href={getOrgProjectUrl(orgId, projectId, 'builder')}
-                variant="contained"
-                startIcon={<Add />}
-                fullWidth={false}
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  px: 3,
-                  '&:hover': { bgcolor: theme.palette.primary.dark },
-                }}
-              >
-                Create Form
-              </Button>
+              <CreateButton
+                label="Create Form"
+                createHref={getOrgProjectUrl(orgId, projectId, 'builder')}
+                templateHref="/templates"
+              />
             </Box>
           </Box>
         </Container>
