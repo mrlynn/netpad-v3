@@ -50,6 +50,7 @@ import { AppNavBar } from '@/components/Navigation/AppNavBar';
 import { WorkflowStatus } from '@/types/workflow';
 import { ProjectSelector } from '@/components/Projects/ProjectSelector';
 import { getOrgProjectUrl } from '@/lib/routing';
+import { workflowTemplates } from '@/lib/templates/workflowTemplates';
 
 interface WorkflowListItem {
   _id: string;
@@ -93,6 +94,9 @@ export default function WorkflowsPage() {
   // Get applicationId from URL if present (when coming from application context)
   const urlApplicationId = searchParams?.get('applicationId') || '';
 
+  // Get templateId from URL if present (when coming from "Use Template" flow)
+  const urlTemplateId = searchParams?.get('templateId') || '';
+
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,11 +110,16 @@ export default function WorkflowsPage() {
   const [applicationId, setApplicationId] = useState<string>(urlApplicationId);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [templates, setTemplates] = useState<Array<{ templateId: string; name: string; version: string; tags?: string[] }>>([]);
-  const [templateId, setTemplateId] = useState<string>('');
+  const [templateId, setTemplateId] = useState<string>(urlTemplateId);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   // Check for createNew query param (redirected from /workflows/new)
   const createNew = searchParams?.get('createNew') === 'true';
+
+  // Pre-fill form when URL template is provided (from "Use Template" flow)
+  const urlStaticTemplate = urlTemplateId 
+    ? workflowTemplates.find(t => t.id === urlTemplateId) 
+    : null;
 
   // Auto-open create dialog when:
   // 1. Coming from /workflows/new redirect (createNew=true), OR
@@ -119,11 +128,19 @@ export default function WorkflowsPage() {
     if (createNew && !loading) {
       // Redirected from /workflows/new - always open dialog
       setCreateDialogOpen(true);
+      
+      // Pre-fill workflow name from static template if available
+      if (urlStaticTemplate && !newWorkflowName) {
+        setNewWorkflowName(urlStaticTemplate.name);
+        if (urlStaticTemplate.description) {
+          setNewWorkflowDescription(urlStaticTemplate.description);
+        }
+      }
     } else if (urlApplicationId && !loading && workflows.length === 0) {
       // If coming from application context and no workflows exist, open create dialog
       setCreateDialogOpen(true);
     }
-  }, [createNew, urlApplicationId, loading, workflows.length]);
+  }, [createNew, urlApplicationId, loading, workflows.length, urlStaticTemplate, newWorkflowName]);
 
   // Menu state
   const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement; workflow: WorkflowListItem } | null>(null);
@@ -608,6 +625,16 @@ export default function WorkflowsPage() {
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create New Workflow</DialogTitle>
         <DialogContent>
+          {/* Show alert when using a template from URL */}
+          {urlStaticTemplate && (
+            <Alert 
+              severity="info" 
+              sx={{ mb: 2, mt: 1 }}
+              icon={<span>{urlStaticTemplate.icon}</span>}
+            >
+              Creating workflow from template: <strong>{urlStaticTemplate.name}</strong>
+            </Alert>
+          )}
           <TextField
             autoFocus
             margin="dense"
