@@ -37,6 +37,7 @@ import {
   Error as ErrorIcon,
   Schedule as ScheduleIcon,
   ContentCopy as CopyIcon,
+  ViewKanban as KanbanIcon,
 } from '@mui/icons-material';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
@@ -69,6 +70,7 @@ const PROVIDER_CONFIG: Record<string, { name: string; icon: React.ReactNode; col
   notion: { name: 'Notion', icon: <DatabaseIcon />, color: '#000000' },
   mongodb_atlas: { name: 'MongoDB Atlas Admin API', icon: <DatabaseIcon />, color: '#00684A' },
   mongodb_atlas_data_api: { name: 'MongoDB Atlas Data API', icon: <DatabaseIcon />, color: '#00684A' },
+  moltboard: { name: 'Moltboard', icon: <KanbanIcon />, color: '#FF5722' },
   smtp: { name: 'SMTP Email', icon: <CloudIcon />, color: '#EA4335' },
   sendgrid: { name: 'SendGrid Email', icon: <CloudIcon />, color: '#1A82E2' },
   custom_api_key: { name: 'API Key', icon: <KeyIcon />, color: '#607D8B' },
@@ -133,6 +135,10 @@ export function IntegrationCredentialsSettings() {
   const [formSendgridApiKey, setFormSendgridApiKey] = useState('');
   const [formSendgridFromEmail, setFormSendgridFromEmail] = useState('');
   const [formSendgridFromName, setFormSendgridFromName] = useState('');
+
+  // Moltboard form state
+  const [formMoltboardApiKey, setFormMoltboardApiKey] = useState('');
+  const [formMoltboardBaseUrl, setFormMoltboardBaseUrl] = useState('https://kanban.mlynn.org');
 
   // Fetch credentials
   useEffect(() => {
@@ -211,6 +217,11 @@ export function IntegrationCredentialsSettings() {
             apiKey: formSendgridApiKey,
             fromEmail: formSendgridFromEmail,
             fromName: formSendgridFromName || undefined,
+          };
+        } else if (formProvider === 'moltboard') {
+          credentialsPayload = {
+            apiKey: formMoltboardApiKey,
+            baseUrl: formMoltboardBaseUrl || 'https://kanban.mlynn.org',
           };
         } else {
           credentialsPayload = {
@@ -320,6 +331,9 @@ export function IntegrationCredentialsSettings() {
     setFormSendgridApiKey('');
     setFormSendgridFromEmail('');
     setFormSendgridFromName('');
+    // Reset Moltboard fields
+    setFormMoltboardApiKey('');
+    setFormMoltboardBaseUrl('https://kanban.mlynn.org');
   };
 
   // Test Atlas connection
@@ -354,6 +368,49 @@ export function IntegrationCredentialsSettings() {
         setConnectionTestResult({
           success: false,
           message: data.error || 'Failed to connect to Atlas',
+        });
+      }
+    } catch (err) {
+      setConnectionTestResult({
+        success: false,
+        message: 'Failed to test connection',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // Test Moltboard connection
+  const handleTestMoltboardConnection = async () => {
+    if (!organization?.orgId) return;
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${organization.orgId}/integrations/test-moltboard`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: formMoltboardApiKey,
+            baseUrl: formMoltboardBaseUrl,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConnectionTestResult({
+          success: true,
+          message: `Connected! Found ${data.boards} board${data.boards !== 1 ? 's' : ''}.`,
+        });
+      } else {
+        setConnectionTestResult({
+          success: false,
+          message: data.error || 'Failed to connect to Moltboard',
         });
       }
     } catch (err) {
@@ -584,7 +641,7 @@ export function IntegrationCredentialsSettings() {
                     setFormAuthType('api_key');
                   } else if (newProvider === 'smtp') {
                     setFormAuthType('basic_auth');
-                  } else if (newProvider === 'sendgrid') {
+                  } else if (newProvider === 'sendgrid' || newProvider === 'moltboard') {
                     setFormAuthType('api_key');
                   } else {
                     setFormAuthType('api_key');
@@ -598,6 +655,7 @@ export function IntegrationCredentialsSettings() {
                 <MenuItem value="notion">Notion</MenuItem>
                 <MenuItem value="mongodb_atlas">MongoDB Atlas (Admin API)</MenuItem>
                 <MenuItem value="mongodb_atlas_data_api">MongoDB Atlas (Data API)</MenuItem>
+                <MenuItem value="moltboard">Moltboard (Kanban)</MenuItem>
                 <MenuItem value="smtp">SMTP Email Server</MenuItem>
                 <MenuItem value="sendgrid">SendGrid Email</MenuItem>
                 <MenuItem value="custom_api_key">Custom API Key</MenuItem>
@@ -922,8 +980,58 @@ export function IntegrationCredentialsSettings() {
               </>
             )}
 
+            {/* Moltboard Configuration */}
+            {formProvider === 'moltboard' && (
+              <>
+                <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
+                  <strong>Moltboard Setup:</strong>
+                  <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                    <li>Go to your Moltboard instance (kanban.mlynn.org or moltboard.app)</li>
+                    <li>Navigate to Settings → API Keys</li>
+                    <li>Create an API key and copy it</li>
+                  </ol>
+                </Alert>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="API Key"
+                  type="password"
+                  value={formMoltboardApiKey}
+                  onChange={(e) => setFormMoltboardApiKey(e.target.value)}
+                  placeholder="moltboard_sk_xxx"
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Base URL"
+                  value={formMoltboardBaseUrl}
+                  onChange={(e) => setFormMoltboardBaseUrl(e.target.value)}
+                  placeholder="https://kanban.mlynn.org"
+                  helperText="Default: https://kanban.mlynn.org"
+                />
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleTestMoltboardConnection}
+                    disabled={!formMoltboardApiKey || testingConnection}
+                    startIcon={testingConnection ? <NetPadLoader size="small" variant="svg" showPhrases={false} /> : null}
+                  >
+                    {testingConnection ? 'Testing...' : 'Test Connection'}
+                  </Button>
+                  {connectionTestResult && (
+                    <Alert
+                      severity={connectionTestResult.success ? 'success' : 'error'}
+                      sx={{ flex: 1, py: 0 }}
+                    >
+                      {connectionTestResult.message}
+                    </Alert>
+                  )}
+                </Box>
+              </>
+            )}
+
             {/* Generic API Key providers */}
-            {!formProvider.startsWith('google_') && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'smtp' && formProvider !== 'sendgrid' && (
+            {!formProvider.startsWith('google_') && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'smtp' && formProvider !== 'sendgrid' && formProvider !== 'moltboard' && (
               <>
                 <FormControl fullWidth size="small">
                   <InputLabel>Authentication Type</InputLabel>
@@ -962,7 +1070,8 @@ export function IntegrationCredentialsSettings() {
               (formProvider === 'mongodb_atlas_data_api' && (!formAtlasAppId || !formAtlasDataApiKey)) ||
               (formProvider === 'smtp' && (!formSmtpHost || !formSmtpUsername || !formSmtpPassword)) ||
               (formProvider === 'sendgrid' && (!formSendgridApiKey || !formSendgridFromEmail)) ||
-              (formAuthType === 'api_key' && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'sendgrid' && !formApiKey)
+              (formProvider === 'moltboard' && !formMoltboardApiKey) ||
+              (formAuthType === 'api_key' && !formProvider.startsWith('mongodb_atlas') && formProvider !== 'sendgrid' && formProvider !== 'moltboard' && !formApiKey)
             }
             sx={{
               bgcolor: '#00ED64',
