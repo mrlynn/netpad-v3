@@ -110,7 +110,7 @@ export async function generateFilterFromQuery(
       ],
       temperature: 0.3,
       response_format: { type: 'json_object' }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     } as any);
 
     const content = completion.choices[0]?.message?.content;

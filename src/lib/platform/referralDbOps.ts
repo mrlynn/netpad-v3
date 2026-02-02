@@ -212,7 +212,7 @@ export async function initializeReferralDbOps(): Promise<void> {
     // Dynamically import cloud-features to avoid build errors when not installed
     // Use Function constructor to avoid TypeScript type checking the import
     const pkgName = '@netpad/cloud-features';
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-explicit-any
+    
     const cloudFeatures = (await new Function('p', 'return import(p)')(pkgName)) as any;
 
     // Check if the function exists (may not if cloud-features hasn't been rebuilt)

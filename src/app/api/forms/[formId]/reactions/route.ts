@@ -166,7 +166,7 @@ export async function POST(
     };
 
     // Push reaction to form's reactions array
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     const result = await formsCollection.findOneAndUpdate(
       { $or: [{ formId }, { id: formId }] },
       {
