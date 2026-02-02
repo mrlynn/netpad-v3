@@ -91,6 +91,64 @@ export interface WebhookConfig {
 }
 
 /**
+ * Configuration for Moltboard task creation on form submission
+ */
+export interface MoltboardIntegrationConfig {
+  /** Enable Moltboard integration */
+  enabled: boolean;
+
+  /** Credential ID for Moltboard API access (stored in vault) */
+  credentialId?: string;
+
+  /** Or direct API key (less secure, for testing) */
+  apiKey?: string;
+
+  /** API base URL (default: https://kanban.mlynn.org) */
+  baseUrl?: string;
+
+  /** Target board ID */
+  boardId: string;
+
+  /** Target column ID (where new tasks are created) */
+  columnId: string;
+
+  /**
+   * Task title template
+   * Supports {{fieldPath}} variables
+   * Example: "New inquiry from {{name}}"
+   */
+  titleTemplate: string;
+
+  /**
+   * Task description template (optional)
+   * Supports {{fieldPath}} variables
+   * Example: "Email: {{email}}\nMessage: {{message}}"
+   */
+  descriptionTemplate?: string;
+
+  /** Labels to add to the task */
+  labels?: string[];
+
+  /** Priority for the task */
+  priority?: 'p0' | 'p1' | 'p2' | 'p3';
+
+  /**
+   * Field path for due date (if form has a date field)
+   * Example: "deadline" - will read submission.deadline as due date
+   */
+  dueDateField?: string;
+
+  /**
+   * Additional field mappings
+   * Map form fields to task metadata
+   */
+  fieldMappings?: {
+    /** Field path to use as assignee ID */
+    assigneeField?: string;
+  };
+}
+
+/**
  * Configuration for what happens after successful submission
  */
 export interface OnSubmitSuccessConfig {
@@ -106,6 +164,9 @@ export interface OnSubmitSuccessConfig {
 
   /** Optional webhook notification */
   webhook?: WebhookConfig;
+
+  /** Optional Moltboard task creation */
+  moltboard?: MoltboardIntegrationConfig;
 }
 
 /**
