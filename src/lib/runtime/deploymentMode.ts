@@ -7,13 +7,13 @@
  *    - Multi-tenant platform with organizations
  *    - Uses Platform DB for submissions, then syncs to target MongoDB
  *    - Conversation transcripts stored in: _formMetadata.conversational
- *    - Set via: NETPAD_DEPLOYMENT_MODE=cloud
+ *    - Set via: NETPAD_PLATFORM_MODE=cloud
  *
  * 2. SELF-HOSTED (full NetPad on your infra)
  *    - Same codebase as cloud, but you manage everything
  *    - Uses Platform DB architecture
  *    - Conversation transcripts stored in: _formMetadata.conversational
- *    - Set via: NETPAD_DEPLOYMENT_MODE=self-hosted (or unset)
+ *    - Set via: NETPAD_PLATFORM_MODE=self-hosted (or unset)
  *
  * 3. STANDALONE (exported single-app)
  *    - Minimal codebase from templates/standalone-app/
@@ -30,10 +30,10 @@ export type DeploymentMode = 'cloud' | 'self-hosted';
 /**
  * Get the current deployment mode
  *
- * @returns 'cloud' if NETPAD_DEPLOYMENT_MODE=cloud, otherwise 'self-hosted'
+ * @returns 'cloud' if NETPAD_PLATFORM_MODE=cloud, otherwise 'self-hosted'
  */
 export function getDeploymentMode(): DeploymentMode {
-  const mode = process.env.NETPAD_DEPLOYMENT_MODE;
+  const mode = process.env.NETPAD_PLATFORM_MODE;
   if (mode === 'cloud') return 'cloud';
   return 'self-hosted';
 }

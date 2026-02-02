@@ -29,13 +29,13 @@ interface DeploymentModeBadgeProps {
 
 /**
  * Get the current deployment mode from environment variables.
- * This is determined by NETPAD_DEPLOYMENT_MODE or NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE.
+ * This is determined by NETPAD_PLATFORM_MODE or NEXT_PUBLIC_NETPAD_PLATFORM_MODE.
  */
 function getDeploymentMode(): DeploymentMode {
   // Check both server and client-accessible env vars
   const mode =
-    process.env.NETPAD_DEPLOYMENT_MODE ||
-    process.env.NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE;
+    process.env.NETPAD_PLATFORM_MODE ||
+    process.env.NEXT_PUBLIC_NETPAD_PLATFORM_MODE;
 
   if (mode === 'cloud') return 'cloud';
   return 'self-hosted';

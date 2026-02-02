@@ -25,7 +25,7 @@ export type DeploymentMode = 'cloud' | 'self-hosted';
  * Defaults to 'self-hosted' if not set (safer for local dev)
  */
 export function getDeploymentMode(): DeploymentMode {
-  const mode = process.env.NETPAD_DEPLOYMENT_MODE;
+  const mode = process.env.NETPAD_PLATFORM_MODE;
   if (mode === 'cloud') return 'cloud';
   return 'self-hosted';
 }

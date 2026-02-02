@@ -9,7 +9,7 @@
  * - Programmatic extension registration
  *
  * Loading priority:
- * 1. Cloud extension - controlled by NETPAD_DEPLOYMENT_MODE (cannot be toggled)
+ * 1. Cloud extension - controlled by NETPAD_PLATFORM_MODE (cannot be toggled)
  * 2. Plugin extensions from NETPAD_EXTENSIONS env var
  * 3. Database settings can disable extensions from step 2
  */
