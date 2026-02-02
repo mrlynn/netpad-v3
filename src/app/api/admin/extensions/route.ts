@@ -29,7 +29,7 @@ const KNOWN_EXTENSIONS = [
     name: 'Cloud Features',
     description: 'NetPad Cloud platform features including billing, Atlas provisioning, and waitlist management',
     systemControlled: true,
-    controlledBy: 'NETPAD_DEPLOYMENT_MODE environment variable',
+    controlledBy: 'NETPAD_PLATFORM_MODE environment variable',
   },
   {
     id: '@netpad/collaborate',
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
           category: n.category,
         })),
         systemControlled: knownExt.systemControlled,
-        controlledBy: knownExt.systemControlled ? 'NETPAD_DEPLOYMENT_MODE environment variable' : undefined,
+        controlledBy: knownExt.systemControlled ? 'NETPAD_PLATFORM_MODE environment variable' : undefined,
         // Database settings
         dbEnabled: dbSetting?.enabled ?? null,
         dbUpdatedAt: dbSetting?.updatedAt || null,

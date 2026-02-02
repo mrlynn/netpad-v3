@@ -52,7 +52,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: 'Cannot toggle system-controlled extension',
-          message: `${decodedExtensionId} is controlled by the NETPAD_DEPLOYMENT_MODE environment variable`,
+          message: `${decodedExtensionId} is controlled by the NETPAD_PLATFORM_MODE environment variable`,
         },
         { status: 400 }
       );

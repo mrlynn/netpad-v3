@@ -9,7 +9,7 @@
  * - Programmatic extension registration
  *
  * Loading priority:
- * 1. Cloud extension - controlled by NETPAD_DEPLOYMENT_MODE (cannot be toggled)
+ * 1. Cloud extension - controlled by NETPAD_PLATFORM_MODE (cannot be toggled)
  * 2. Plugin extensions from NETPAD_EXTENSIONS env var
  * 3. Database settings can disable extensions from step 2
  */
@@ -53,7 +53,7 @@ const knownExtensionLoaders: Record<string, () => Promise<unknown>> = {
     if (mod) return mod;
     // Fall back to dynamic import - use variable to avoid TypeScript type checking
     const pkgName = '@netpad/cloud-features';
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    
     return new Function('p', 'return import(p)')(pkgName).catch((e: Error) => {
       console.error('[Extensions] Failed to import @netpad/cloud-features:', e.message || e);
       return null;

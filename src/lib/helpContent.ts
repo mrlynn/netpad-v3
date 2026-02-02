@@ -6096,7 +6096,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'Premium features like advanced analytics',
           'Knowledge-guided forms (RAG) require PRO/TEAMS/ENTERPRISE subscription (any cluster tier)',
           'Data stored on our managed infrastructure',
-          'Environment variable: NETPAD_DEPLOYMENT_MODE=cloud',
+          'Environment variable: NETPAD_PLATFORM_MODE=cloud',
         ],
       },
       {
@@ -6117,7 +6117,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
           'RAG features available to ALL tiers when using Atlas Local',
           'No usage limits imposed by NetPad',
           'You manage updates, security, and backups',
-          'Environment variable: NETPAD_DEPLOYMENT_MODE=self-hosted',
+          'Environment variable: NETPAD_PLATFORM_MODE=self-hosted',
         ],
       },
       {
@@ -6332,7 +6332,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       },
       {
         type: 'code',
-        content: '# Enable self-hosted mode\nNETPAD_DEPLOYMENT_MODE=self-hosted\n\n# Point to your Atlas Local instance\nMONGODB_URI=mongodb://localhost:27017/',
+        content: '# Enable self-hosted mode\nNETPAD_PLATFORM_MODE=self-hosted\n\n# Point to your Atlas Local instance\nMONGODB_URI=mongodb://localhost:27017/',
       },
       {
         type: 'heading',
@@ -7941,8 +7941,8 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
-          'Cloud (NETPAD_DEPLOYMENT_MODE=cloud): Full features with Stripe billing and Atlas integration',
-          'Self-Hosted (NETPAD_DEPLOYMENT_MODE=self-hosted): Core features with usage tracking, no Stripe',
+          'Cloud (NETPAD_PLATFORM_MODE=cloud): Full features with Stripe billing and Atlas integration',
+          'Self-Hosted (NETPAD_PLATFORM_MODE=self-hosted): Core features with usage tracking, no Stripe',
           'Standalone (STANDALONE_MODE=true): Exported apps running independently',
         ],
       },
@@ -8181,8 +8181,8 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
-          'NETPAD_DEPLOYMENT_MODE: Set to "cloud" or "self-hosted"',
-          'NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE: Client-side deployment mode detection',
+          'NETPAD_PLATFORM_MODE: Set to "cloud" or "self-hosted"',
+          'NEXT_PUBLIC_NETPAD_PLATFORM_MODE: Client-side deployment mode detection',
           'For cloud mode, ensure @netpad/cloud-features is installed in node_modules',
         ],
       },
@@ -8193,10 +8193,10 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       {
         type: 'list',
         content: [
-          'Extension not loading: Check NETPAD_DEPLOYMENT_MODE is set to "cloud"',
+          'Extension not loading: Check NETPAD_PLATFORM_MODE is set to "cloud"',
           'Features unavailable: Verify @netpad/cloud-features package is installed',
           'Service errors: Check that database operations are configured for billing service',
-          'UI not adapting: Ensure NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE matches server setting',
+          'UI not adapting: Ensure NEXT_PUBLIC_NETPAD_PLATFORM_MODE matches server setting',
         ],
       },
       {
@@ -8210,7 +8210,7 @@ export const helpTopics: Record<HelpTopicId, HelpTopic> = {
       },
       {
         type: 'code',
-        content: '# Authenticate with npm\nnpm login --scope=@netpad\n\n# Install the package\nnpm install @netpad/cloud-features\n\n# Set deployment mode\nNETPAD_DEPLOYMENT_MODE=cloud',
+        content: '# Authenticate with npm\nnpm login --scope=@netpad\n\n# Install the package\nnpm install @netpad/cloud-features\n\n# Set deployment mode\nNETPAD_PLATFORM_MODE=cloud',
       },
       {
         type: 'tip',
