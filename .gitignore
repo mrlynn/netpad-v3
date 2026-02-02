@@ -55,11 +55,8 @@ next-env.d.ts
 # Claude Code local settings
 .claude/
 
-# AI assistant memory/context files
-memory-bank/
-
-# Internal documentation (not for public release)
-docs/internal/
+# Internal documentation (not for public repository)
+.netpad-internal/
 
 # OS generated files
 .Spotlight-V100
