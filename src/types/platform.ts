@@ -1587,6 +1587,7 @@ export type IntegrationProvider =
   | 'zapier'
   | 'mongodb_atlas'
   | 'mongodb_atlas_data_api'
+  | 'moltboard'      // Moltboard kanban integration
   | 'custom_oauth2'
   | 'custom_api_key';
 

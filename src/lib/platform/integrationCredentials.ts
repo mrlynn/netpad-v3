@@ -860,3 +860,123 @@ export async function listEmailCredentials(
     encryptedCredentials: '[REDACTED]',
   }));
 }
+
+// ============================================
+// Moltboard Helpers
+// ============================================
+
+/**
+ * Moltboard credentials for kanban integration
+ */
+export interface MoltboardCredentials {
+  apiKey: string;
+  baseUrl?: string;
+  defaultBoardId?: string;
+}
+
+/**
+ * Get Moltboard credentials from the integration vault
+ */
+export async function getMoltboardCredentials(
+  organizationId: string,
+  credentialId: string
+): Promise<{
+  apiKey: string;
+  baseUrl: string;
+  defaultBoardId?: string;
+} | null> {
+  const collection = await getIntegrationCredentialsCollection(organizationId);
+  const credential = await collection.findOne({
+    credentialId,
+    status: 'active',
+    provider: 'moltboard',
+  });
+
+  if (!credential) {
+    console.warn(`[IntegrationCreds] Moltboard credential not found or not active: ${credentialId}`);
+    return null;
+  }
+
+  try {
+    const decrypted = decrypt(credential.encryptedCredentials);
+    const credentials = JSON.parse(decrypted) as MoltboardCredentials;
+
+    // Update usage stats
+    await collection.updateOne(
+      { credentialId },
+      {
+        $set: { lastUsedAt: new Date(), updatedAt: new Date() },
+        $inc: { usageCount: 1 },
+      }
+    );
+
+    // Validate required fields
+    if (!credentials.apiKey) {
+      console.warn(`[IntegrationCreds] Moltboard credentials missing apiKey for ${credentialId}`);
+      return null;
+    }
+
+    return {
+      apiKey: credentials.apiKey,
+      baseUrl: credentials.baseUrl || 'https://kanban.mlynn.org',
+      defaultBoardId: credentials.defaultBoardId,
+    };
+  } catch (error) {
+    console.error(`[IntegrationCreds] Failed to decrypt Moltboard credentials for ${credentialId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Validate Moltboard credentials by making a test API call
+ */
+export async function validateMoltboardCredentials(
+  apiKey: string,
+  baseUrl: string = 'https://kanban.mlynn.org'
+): Promise<{ valid: boolean; error?: string; boards?: number }> {
+  try {
+    const response = await fetch(`${baseUrl}/api/boards`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return { valid: false, error: 'Invalid API key' };
+      }
+      return { valid: false, error: `API error: ${response.status}` };
+    }
+
+    const boards = await response.json();
+    return { valid: true, boards: boards.length };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
+}
+
+/**
+ * List all Moltboard credentials for an organization
+ */
+export async function listMoltboardCredentials(
+  organizationId: string
+): Promise<IntegrationCredential[]> {
+  const collection = await getIntegrationCredentialsCollection(organizationId);
+
+  const credentials = await collection
+    .find({
+      provider: 'moltboard',
+      status: { $ne: 'disabled' },
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  // Redact all credentials
+  return credentials.map((c) => ({
+    ...c,
+    encryptedCredentials: '[REDACTED]',
+  }));
+}

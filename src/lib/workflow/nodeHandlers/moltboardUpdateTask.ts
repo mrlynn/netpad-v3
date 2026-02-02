@@ -68,16 +68,33 @@ const handler: NodeHandler = async (context: ExtendedNodeContext) => {
 
   // Get API key from config or credentials
   let apiKey = config.apiKey;
-  const baseUrl = config.baseUrl || DEFAULT_BASE_URL;
+  let baseUrl = config.baseUrl || DEFAULT_BASE_URL;
 
   if (!apiKey && config.credentialId) {
-    // TODO: Implement credential lookup
-    await context.log('error', 'Credential lookup not yet implemented');
-    return failureResult(
-      NodeErrorCodes.MISSING_CONFIG,
-      'API key is required. Provide apiKey directly or configure credentials.',
-      false
-    );
+    // Look up credentials from the vault
+    try {
+      const { getMoltboardCredentials } = await import('@/lib/platform/integrationCredentials');
+      const creds = await getMoltboardCredentials(context.orgId, config.credentialId);
+      if (creds) {
+        apiKey = creds.apiKey;
+        baseUrl = creds.baseUrl;
+        await context.log('info', 'Using stored Moltboard credentials');
+      } else {
+        await context.log('error', 'Moltboard credentials not found or expired');
+        return failureResult(
+          NodeErrorCodes.MISSING_CONNECTION,
+          'Moltboard credentials not found or expired. Please reconfigure.',
+          false
+        );
+      }
+    } catch (error) {
+      await context.log('error', 'Failed to retrieve credentials', { error });
+      return failureResult(
+        NodeErrorCodes.INTERNAL_ERROR,
+        'Failed to retrieve Moltboard credentials.',
+        false
+      );
+    }
   }
 
   if (!apiKey) {
