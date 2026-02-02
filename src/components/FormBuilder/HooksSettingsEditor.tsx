@@ -32,8 +32,9 @@ import {
   Error as ErrorIcon,
   Info,
   Key,
+  ViewKanban as MoltboardIcon,
 } from '@mui/icons-material';
-import { FormHooksConfig, PrefillConfig, OnSubmitSuccessConfig, OnSubmitErrorConfig, WebhookConfig, RedirectConfig } from '@/types/formHooks';
+import { FormHooksConfig, PrefillConfig, OnSubmitSuccessConfig, OnSubmitErrorConfig, WebhookConfig, RedirectConfig, MoltboardIntegrationConfig } from '@/types/formHooks';
 import { FieldConfig } from '@/types/form';
 import { FormVariablePickerButton } from './FormVariablePicker';
 
@@ -355,11 +356,12 @@ interface SuccessSectionProps {
 function SuccessSection({ config, onChange, fieldConfigs }: SuccessSectionProps) {
   const [showRedirect, setShowRedirect] = useState(!!config?.redirect);
   const [showWebhook, setShowWebhook] = useState(!!config?.webhook);
+  const [showMoltboard, setShowMoltboard] = useState(!!config?.moltboard?.enabled);
 
   const updateConfig = (updates: Partial<OnSubmitSuccessConfig>) => {
     const newConfig = { ...config, ...updates };
     // Clean up empty values
-    if (!newConfig.message && !newConfig.redirect && !newConfig.webhook) {
+    if (!newConfig.message && !newConfig.redirect && !newConfig.webhook && !newConfig.moltboard?.enabled) {
       onChange(undefined);
     } else {
       onChange(newConfig);
@@ -456,6 +458,275 @@ function SuccessSection({ config, onChange, fieldConfigs }: SuccessSectionProps)
           onChange={(webhook) => updateConfig({ webhook })}
           fieldConfigs={fieldConfigs}
         />
+      )}
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Moltboard Integration */}
+      <FormControlLabel
+        control={
+          <Switch
+            size="small"
+            checked={showMoltboard}
+            onChange={(e) => {
+              setShowMoltboard(e.target.checked);
+              if (!e.target.checked) {
+                updateConfig({ moltboard: undefined });
+              } else {
+                updateConfig({
+                  moltboard: {
+                    enabled: true,
+                    boardId: '',
+                    columnId: '',
+                    titleTemplate: 'New submission: {{formName}}',
+                  },
+                });
+              }
+            }}
+          />
+        }
+        label={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <MoltboardIcon sx={{ fontSize: 16 }} />
+            <Typography variant="body2">Create Moltboard task</Typography>
+          </Box>
+        }
+      />
+
+      {showMoltboard && (
+        <MoltboardConfigEditor
+          config={config?.moltboard}
+          onChange={(moltboard) => updateConfig({ moltboard })}
+          fieldConfigs={fieldConfigs}
+        />
+      )}
+    </Box>
+  );
+}
+
+// ============================================
+// Moltboard Config Editor
+// ============================================
+
+interface MoltboardConfigEditorProps {
+  config?: MoltboardIntegrationConfig;
+  onChange: (config: MoltboardIntegrationConfig | undefined) => void;
+  fieldConfigs: FieldConfig[];
+}
+
+function MoltboardConfigEditor({ config, onChange, fieldConfigs }: MoltboardConfigEditorProps) {
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; boards?: any[] } | null>(null);
+  const [boards, setBoards] = useState<Array<{ id: string; name: string; columns: Array<{ id: string; title: string }> }>>([]);
+
+  const updateConfig = (updates: Partial<MoltboardIntegrationConfig>) => {
+    const newConfig = { ...config, ...updates } as MoltboardIntegrationConfig;
+    if (!newConfig.boardId || !newConfig.columnId || !newConfig.titleTemplate) {
+      // Keep it but mark it disabled if incomplete
+      onChange({ ...newConfig, enabled: !!(newConfig.boardId && newConfig.columnId && newConfig.titleTemplate) });
+    } else {
+      onChange({ ...newConfig, enabled: true });
+    }
+  };
+
+  // Fetch boards when API key is entered
+  const fetchBoards = async () => {
+    if (!config?.apiKey) return;
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      const baseUrl = config.baseUrl || 'https://kanban.mlynn.org';
+      const response = await fetch(`${baseUrl}/api/boards`, {
+        headers: { Authorization: `Bearer ${config.apiKey}` },
+      });
+
+      if (!response.ok) {
+        setTestResult({ success: false, message: 'Invalid API key or connection failed' });
+        return;
+      }
+
+      const data = await response.json();
+      setBoards(data);
+      setTestResult({ success: true, message: `Connected! Found ${data.length} board(s)` });
+    } catch (error) {
+      setTestResult({ success: false, message: 'Failed to connect to Moltboard' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const selectedBoard = boards.find(b => b.id === config?.boardId);
+
+  return (
+    <Box sx={{ pl: 2, mt: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+        Create a Moltboard task when this form is submitted.
+      </Typography>
+
+      <TextField
+        size="small"
+        fullWidth
+        type="password"
+        label="Moltboard API Key"
+        placeholder="moltboard_sk_xxx"
+        value={config?.apiKey || ''}
+        onChange={(e) => {
+          updateConfig({ apiKey: e.target.value || undefined });
+          setBoards([]);
+          setTestResult(null);
+        }}
+        sx={{ mb: 1 }}
+        helperText="Get your API key from Moltboard settings"
+      />
+
+      <TextField
+        size="small"
+        fullWidth
+        label="Base URL (optional)"
+        placeholder="https://kanban.mlynn.org"
+        value={config?.baseUrl || ''}
+        onChange={(e) => updateConfig({ baseUrl: e.target.value || undefined })}
+        sx={{ mb: 1 }}
+      />
+
+      <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={fetchBoards}
+          disabled={!config?.apiKey || testing}
+        >
+          {testing ? 'Connecting...' : 'Connect & Load Boards'}
+        </Button>
+        {testResult && (
+          <Chip
+            size="small"
+            label={testResult.message}
+            color={testResult.success ? 'success' : 'error'}
+            sx={{ height: 24, fontSize: '0.7rem' }}
+          />
+        )}
+      </Box>
+
+      {boards.length > 0 && (
+        <>
+          <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+            <InputLabel>Board</InputLabel>
+            <Select
+              value={config?.boardId || ''}
+              label="Board"
+              onChange={(e) => {
+                updateConfig({ boardId: e.target.value, columnId: '' });
+              }}
+            >
+              {boards.map(board => (
+                <MenuItem key={board.id} value={board.id}>
+                  {board.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {selectedBoard && (
+            <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+              <InputLabel>Column (where task is created)</InputLabel>
+              <Select
+                value={config?.columnId || ''}
+                label="Column (where task is created)"
+                onChange={(e) => updateConfig({ columnId: e.target.value })}
+              >
+                {selectedBoard.columns.map(col => (
+                  <MenuItem key={col.id} value={col.id}>
+                    {col.title}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              Task Title Template
+            </Typography>
+            <FormVariablePickerButton
+              fieldConfigs={fieldConfigs}
+              context="template"
+              useTemplateSyntax
+              onInsert={(value) => {
+                const current = config?.titleTemplate || '';
+                updateConfig({ titleTemplate: current + value });
+              }}
+            />
+          </Box>
+          <TextField
+            size="small"
+            fullWidth
+            placeholder="New inquiry from {{name}}"
+            value={config?.titleTemplate || ''}
+            onChange={(e) => updateConfig({ titleTemplate: e.target.value })}
+            helperText="Use {{fieldPath}} for form values"
+            sx={{ mb: 2 }}
+          />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              Task Description (optional)
+            </Typography>
+            <FormVariablePickerButton
+              fieldConfigs={fieldConfigs}
+              context="template"
+              useTemplateSyntax
+              onInsert={(value) => {
+                const current = config?.descriptionTemplate || '';
+                updateConfig({ descriptionTemplate: current + value });
+              }}
+            />
+          </Box>
+          <TextField
+            size="small"
+            fullWidth
+            multiline
+            rows={3}
+            placeholder="Email: {{email}}&#10;Message: {{message}}"
+            value={config?.descriptionTemplate || ''}
+            onChange={(e) => updateConfig({ descriptionTemplate: e.target.value || undefined })}
+            sx={{ mb: 2 }}
+          />
+
+          <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+            <InputLabel>Priority</InputLabel>
+            <Select
+              value={config?.priority || ''}
+              label="Priority"
+              onChange={(e) => updateConfig({ priority: (e.target.value as MoltboardIntegrationConfig['priority']) || undefined })}
+            >
+              <MenuItem value="">None</MenuItem>
+              <MenuItem value="p0">P0 - Critical</MenuItem>
+              <MenuItem value="p1">P1 - High</MenuItem>
+              <MenuItem value="p2">P2 - Medium</MenuItem>
+              <MenuItem value="p3">P3 - Low</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            size="small"
+            fullWidth
+            label="Labels (comma-separated)"
+            placeholder="form-submission, inquiry"
+            value={config?.labels?.join(', ') || ''}
+            onChange={(e) => {
+              const labels = e.target.value
+                .split(',')
+                .map(l => l.trim())
+                .filter(Boolean);
+              updateConfig({ labels: labels.length > 0 ? labels : undefined });
+            }}
+          />
+        </>
       )}
     </Box>
   );
