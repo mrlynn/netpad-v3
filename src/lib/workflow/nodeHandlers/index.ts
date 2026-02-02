@@ -60,3 +60,8 @@ import './semanticSearch';
 // Form Reactions
 import './fieldEventTrigger';
 import './formFieldUpdate';
+
+// Moltboard Integration
+import './moltboardCreateTask';
+import './moltboardUpdateTask';
+import './moltboardGetTasks';

@@ -66,6 +66,9 @@ const NODE_COLORS: Record<string, string> = {
   'form-field-update': '#2196F3',
   'html-output': '#00897B',
   'code': '#795548',
+  'moltboard:create-task': '#FF5722',
+  'moltboard:update-task': '#FF5722',
+  'moltboard:get-tasks': '#FF5722',
 };
 
 const NODE_ICONS: Record<string, string> = {
@@ -98,6 +101,9 @@ const NODE_ICONS: Record<string, string> = {
   'form-field-update': '✏️',
   'html-output': '📄',
   'code': '💻',
+  'moltboard:create-task': '📋',
+  'moltboard:update-task': '✏️',
+  'moltboard:get-tasks': '📥',
 };
 
 // Map node types to help topic IDs

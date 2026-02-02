@@ -52,6 +52,7 @@ import {
   ChevronRight as ExpandPaletteIcon,
   ViewModule as GridViewIcon,
   ViewList as ListViewIcon,
+  ViewKanban as KanbanIcon,
 } from '@mui/icons-material';
 import { NodeCategory } from '@/types/workflow';
 import { useExtensionNodes, ExtensionNodeDefinition } from '@/hooks/useExtensionNodes';
@@ -245,6 +246,30 @@ const PALETTE_NODES: PaletteNode[] = [
     description: 'Query MongoDB Atlas via Data API',
     icon: <MongoIcon />,
     color: '#00684A',
+    category: 'integrations',
+  },
+  {
+    type: 'moltboard:create-task',
+    label: 'Moltboard: Create Task',
+    description: 'Create a new task in Moltboard kanban',
+    icon: <KanbanIcon />,
+    color: '#FF5722',
+    category: 'integrations',
+  },
+  {
+    type: 'moltboard:update-task',
+    label: 'Moltboard: Update Task',
+    description: 'Update an existing Moltboard task',
+    icon: <KanbanIcon />,
+    color: '#FF5722',
+    category: 'integrations',
+  },
+  {
+    type: 'moltboard:get-tasks',
+    label: 'Moltboard: Get Tasks',
+    description: 'Retrieve tasks from Moltboard board',
+    icon: <KanbanIcon />,
+    color: '#FF5722',
     category: 'integrations',
   },
 
