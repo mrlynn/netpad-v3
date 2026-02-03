@@ -644,8 +644,8 @@ See `examples/export-output/` for complete examples of:
 
 ## Appendix B: Schema Reference
 
-See `docs/APPLICATION_BUNDLE_SCHEMA.md` for complete schema documentation.
+> Schema documentation is defined inline in the bundle format section above. See also `docs/bundle-format.md` (if available) for additional details.
 
 ## Appendix C: Runtime API Reference
 
-See `docs/RUNTIME_API.md` for complete runtime API documentation.
+> Runtime API documentation is included in the [API Documentation](API.md).

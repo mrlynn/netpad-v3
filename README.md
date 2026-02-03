@@ -204,10 +204,10 @@ See [API Documentation](docs/API.md) for complete reference.
 
 ## Documentation
 
-- [Platform Capabilities](docs/internal/NETPAD_PLATFORM_CAPABILITIES_2026.md) - Complete feature guide and capabilities overview
 - [Deployment Guide](docs/DEPLOY.md) - Deploy your own instance
 - [Architecture](docs/ARCHITECTURE-PRODUCTION.md) - Technical architecture overview
 - [API Documentation](docs/API.md) - REST API reference
+- [Documentation Guide](DOCUMENTATION_GUIDE.md) - Full documentation structure
 
 ## Contributing
 
