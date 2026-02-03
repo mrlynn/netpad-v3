@@ -37,7 +37,7 @@ NetPad supports three distinct deployment modes. Users are currently confused ab
 | Data location | Managed by NetPad |
 | Multi-tenancy | Yes (organizations, projects, teams) |
 | RAG/Vector Search | Requires Team tier + M10+ Atlas cluster |
-| Environment variable | `NETPAD_DEPLOYMENT_MODE=cloud` |
+| Environment variable | `NETPAD_PLATFORM_MODE=cloud` |
 | Billing | Stripe-integrated subscription tiers |
 | Updates | Automatic, managed by NetPad |
 
@@ -56,7 +56,7 @@ NetPad supports three distinct deployment modes. Users are currently confused ab
 | Data location | Your MongoDB Atlas cluster |
 | Multi-tenancy | Yes (same architecture as Cloud) |
 | RAG/Vector Search | Available to ALL tiers with Atlas Local |
-| Environment variable | `NETPAD_DEPLOYMENT_MODE=self-hosted` |
+| Environment variable | `NETPAD_PLATFORM_MODE=self-hosted` |
 | Billing | You manage (can disable Stripe features) |
 | Updates | Manual - you pull from GitHub |
 
@@ -186,14 +186,14 @@ Create a dedicated page or section:
 
 #### Cloud Mode
 ```bash
-NETPAD_DEPLOYMENT_MODE=cloud
-NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE=cloud  # For client-side badge
+NETPAD_PLATFORM_MODE=cloud
+NEXT_PUBLIC_NETPAD_PLATFORM_MODE=cloud  # For client-side badge
 ```
 
 #### Self-Hosted Mode
 ```bash
-NETPAD_DEPLOYMENT_MODE=self-hosted
-NEXT_PUBLIC_NETPAD_DEPLOYMENT_MODE=self-hosted
+NETPAD_PLATFORM_MODE=self-hosted
+NEXT_PUBLIC_NETPAD_PLATFORM_MODE=self-hosted
 MONGODB_URI=mongodb+srv://...
 # Optional: Atlas Local for RAG
 # docker run -d -p 27017:27017 mongodb/mongodb-atlas-local
