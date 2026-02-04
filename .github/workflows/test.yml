@@ -203,6 +203,7 @@ jobs:
           MONGODB_DATABASE: test
           NEXTAUTH_SECRET: test-secret-for-ci
           NEXTAUTH_URL: http://localhost:3000
+          ENABLE_TEST_AUTH: 'true'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
