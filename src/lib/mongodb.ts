@@ -1,29 +1,30 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DATABASE;
-
-if (!uri) {
-  throw new Error('MONGODB_URI environment variable is not set');
-}
-
-if (!dbName) {
-  throw new Error('MONGODB_DATABASE environment variable is not set');
-}
-
-// TypeScript now knows these are strings after the checks above
-const mongoUri: string = uri;
-const mongoDbName: string = dbName;
-
 let client: MongoClient | null = null;
 
+/**
+ * Get a connected database instance.
+ * Env vars are validated lazily (at call time, not import time)
+ * so Next.js builds don't crash when env vars aren't set.
+ */
 export async function connectDB() {
+  const uri = process.env.MONGODB_URI;
+  const dbName = process.env.MONGODB_DATABASE;
+
+  if (!uri) {
+    throw new Error('MONGODB_URI environment variable is not set');
+  }
+
+  if (!dbName) {
+    throw new Error('MONGODB_DATABASE environment variable is not set');
+  }
+
   if (!client) {
-    client = new MongoClient(mongoUri);
+    client = new MongoClient(uri);
     await client.connect();
   }
 
-  return client.db(mongoDbName);
+  return client.db(dbName);
 }
 
 // ============================================
