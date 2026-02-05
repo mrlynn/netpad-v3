@@ -30,7 +30,7 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/my-forms');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // The app should handle the failure gracefully — not crash or show a white screen.
       // /my-forms is a redirect page: on API failure it may show a loader, redirect to
@@ -58,7 +58,7 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should still be functional
       await expect(page.locator('body')).toBeVisible();
@@ -77,7 +77,7 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/my-forms');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // The app should handle 401 gracefully — redirect to auth, show a prompt,
       // or redirect to a safe page (settings/projects). It should not crash.
@@ -94,7 +94,7 @@ test.describe('API Error Handling', () => {
   test.describe('Validation Errors', () => {
     test('should display validation errors from API', async ({ page }) => {
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find the form
       const form = page.locator('form').first();
@@ -160,7 +160,7 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should load even after initial error
       await expect(page.locator('body')).toBeVisible();
@@ -168,7 +168,7 @@ test.describe('API Error Handling', () => {
 
     test('should allow retry after error', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for retry button if there was an error
       const retryButton = page.getByRole('button', { name: /retry|try again/i }).first();
@@ -176,7 +176,7 @@ test.describe('API Error Handling', () => {
 
       if (hasRetry) {
         await retryButton.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('body')).toBeVisible();
       }
 
@@ -187,7 +187,7 @@ test.describe('API Error Handling', () => {
   test.describe('Error Boundary', () => {
     test('should catch rendering errors', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should render without white screen
       const bodyText = await page.locator('body').textContent();
@@ -202,7 +202,7 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should not show raw error stack
       const hasRawError = await page.getByText(/TypeError|ReferenceError|undefined is not/i).isVisible().catch(() => false);
