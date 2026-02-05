@@ -12,7 +12,7 @@ test.describe('Theme Support', () => {
       // Emulate dark mode
       await page.emulateMedia({ colorScheme: 'dark' });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check if dark mode styles are applied
       const html = page.locator('html');
@@ -37,7 +37,7 @@ test.describe('Theme Support', () => {
       // Emulate light mode
       await page.emulateMedia({ colorScheme: 'light' });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should load successfully
       await expect(page.locator('body')).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Theme Support', () => {
   test.describe('Theme Toggle', () => {
     test('should have theme toggle if supported', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for theme toggle
       const themeToggle = page.locator(
@@ -64,7 +64,7 @@ test.describe('Theme Support', () => {
 
     test('should toggle theme when clicked', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const themeToggle = page.locator(
         '[aria-label*="theme"], [data-testid="theme-toggle"]'
@@ -95,7 +95,7 @@ test.describe('Theme Support', () => {
 
     test('should persist theme preference', async ({ page, context }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const themeToggle = page.locator('[aria-label*="theme"], [data-testid="theme-toggle"]').first();
       const hasToggle = await themeToggle.isVisible().catch(() => false);
@@ -110,7 +110,7 @@ test.describe('Theme Support', () => {
 
         // Reload page
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Theme should persist
         const isDarkAfterReload = await page.locator('html').evaluate((el) =>
@@ -127,7 +127,7 @@ test.describe('Theme Support', () => {
   test.describe('Theme Consistency', () => {
     test('should maintain theme across navigation', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Get initial background color as theme indicator
       const getThemeIndicator = async () => {
@@ -146,7 +146,7 @@ test.describe('Theme Support', () => {
 
       // Navigate to another page
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const navTheme = await getThemeIndicator();
 
@@ -160,7 +160,7 @@ test.describe('Theme Support', () => {
 
     test('should apply theme to all components', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check that common elements have appropriate colors
       const body = page.locator('body');
@@ -179,7 +179,7 @@ test.describe('Theme Support', () => {
       // Emulate reduced motion
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should load and be functional
       await expect(page.locator('body')).toBeVisible();
@@ -198,7 +198,7 @@ test.describe('Theme Support', () => {
     test('should maintain readability in dark mode', async ({ page }) => {
       await page.emulateMedia({ colorScheme: 'dark' });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check text contrast
       const textElements = page.locator('h1, h2, p').first();
@@ -220,7 +220,7 @@ test.describe('Theme Support', () => {
     test('should maintain readability in light mode', async ({ page }) => {
       await page.emulateMedia({ colorScheme: 'light' });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const textElements = page.locator('h1, h2, p').first();
       const hasText = await textElements.isVisible().catch(() => false);
