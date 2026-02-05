@@ -9,7 +9,7 @@ test.describe('Form Builder', () => {
   test.describe('Landing Page', () => {
     test('should display the landing page with main sections', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // For authenticated users, we may see the dashboard; for unauthenticated, the landing page
       // Check for main heading or navigation
@@ -35,12 +35,12 @@ test.describe('Form Builder', () => {
     test.beforeEach(async ({ page }) => {
       // Navigate to the app - authenticated users may be redirected to settings/dashboard
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     });
 
     test('should load the builder interface', async ({ page }) => {
       // Wait for the page to be fully loaded
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // The page should load successfully with content
       await expect(page.locator('body')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Form Builder', () => {
     });
 
     test('should display connection configuration section', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for key UI elements that indicate the app loaded correctly
       const hasFormsLink = await page.getByText(/forms/i).first().isVisible().catch(() => false);
@@ -69,7 +69,7 @@ test.describe('Form Builder', () => {
   test.describe('Forms Page', () => {
     test('should display the forms library', async ({ page }) => {
       await page.goto('/my-forms');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show something - forms page, settings, or redirect
       await expect(page.locator('body')).toBeVisible();
@@ -127,7 +127,7 @@ test.describe('Form Builder', () => {
   test.describe('Accessibility', () => {
     test('should have no major accessibility violations on landing page', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Basic accessibility checks
       // Check for navigation landmark or header (banner role)

@@ -36,7 +36,7 @@ test.describe('Form Submission', () => {
       // Navigate to a form preview (needs an existing form ID)
       // For now, test that the preview route works
       await page.goto('/forms/test-form-id/preview');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should either show form or redirect to login
       const hasForm = await page.locator('form').isVisible().catch(() => false);
@@ -50,7 +50,7 @@ test.describe('Form Submission', () => {
   test.describe('Form Validation UI', () => {
     test('should show validation styles on invalid inputs', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for any form on the page
       const form = page.locator('form').first();
@@ -79,7 +79,7 @@ test.describe('Form Submission', () => {
   test.describe('Form Field Types', () => {
     test('email input should validate email format', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find an email input
       const emailInput = page.locator('input[type="email"]').first();
@@ -108,7 +108,7 @@ test.describe('Form Submission', () => {
   test.describe('Form Submission States', () => {
     test('should disable submit button during submission', async ({ page }) => {
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const form = page.locator('form').first();
       const hasForm = await form.isVisible().catch(() => false);

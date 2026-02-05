@@ -11,7 +11,7 @@ test.describe('Authentication (Unauthenticated)', () => {
   test.describe('Login Page', () => {
     test('should display login form', async ({ page }) => {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should have email input (textbox with email placeholder or type)
       const emailInput = page.locator('input[type="email"], input[name="email"], [placeholder*="email" i]');
@@ -24,7 +24,7 @@ test.describe('Authentication (Unauthenticated)', () => {
 
     test('should show validation error for empty email', async ({ page }) => {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Try to submit without email
       const submitButton = page.getByRole('button', { name: /magic link|sign in|log in|continue|send/i });
@@ -36,7 +36,7 @@ test.describe('Authentication (Unauthenticated)', () => {
 
     test('should show validation error for invalid email format', async ({ page }) => {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Enter invalid email
       const emailInput = page.locator('input[type="email"], input[name="email"], [placeholder*="email" i]');
@@ -51,7 +51,7 @@ test.describe('Authentication (Unauthenticated)', () => {
 
     test('should have link to sign up', async ({ page }) => {
       await page.goto('/auth/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for sign up link (might be "Sign up free" or similar)
       const signUpLink = page.getByRole('link', { name: /sign up|create account|register/i });
@@ -65,7 +65,7 @@ test.describe('Authentication (Unauthenticated)', () => {
   test.describe('Signup Page', () => {
     test('should display signup form', async ({ page }) => {
       await page.goto('/signup');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should have email input
       const emailInput = page.locator('input[type="email"], input[name="email"]');
@@ -76,7 +76,7 @@ test.describe('Authentication (Unauthenticated)', () => {
   test.describe('Protected Routes', () => {
     test('should redirect to login when accessing my-forms', async ({ page }) => {
       await page.goto('/my-forms');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should redirect to login or show auth prompt
       const url = page.url();
@@ -88,7 +88,7 @@ test.describe('Authentication (Unauthenticated)', () => {
 
     test('should redirect to login when accessing settings', async ({ page }) => {
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const url = page.url();
       const isRedirectedToAuth = url.includes('/auth/') || url.includes('/login') || url.includes('/signup');
@@ -99,7 +99,7 @@ test.describe('Authentication (Unauthenticated)', () => {
 
     test('should redirect to login when accessing projects', async ({ page }) => {
       await page.goto('/projects');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const url = page.url();
       const isRedirectedToAuth = url.includes('/auth/') || url.includes('/login') || url.includes('/signup');

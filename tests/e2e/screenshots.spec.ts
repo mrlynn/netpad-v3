@@ -35,7 +35,7 @@ async function capture(page: any, name: string, options: { fullPage?: boolean; d
   const { fullPage = true, delay = 500 } = options;
 
   // Wait for network to be idle
-  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
 
   // Dismiss cookie banner if present
   await dismissCookieBanner(page);

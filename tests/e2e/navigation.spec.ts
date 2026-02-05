@@ -10,7 +10,7 @@ test.describe('Navigation', () => {
   test.describe('Main Navigation', () => {
     test('should have navigation bar on main pages', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should have nav element or banner (authenticated header)
       const nav = page.locator('nav, [role="banner"], header').first();
@@ -19,7 +19,7 @@ test.describe('Navigation', () => {
 
     test('should navigate between main sections', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Try clicking on navigation links if they exist
       const navLinks = page.locator('nav a');
@@ -32,7 +32,7 @@ test.describe('Navigation', () => {
 
         if (href && !href.startsWith('http')) {
           await firstLink.click();
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
 
           // Should navigate to a new page
           expect(page.url()).toBeDefined();
@@ -47,7 +47,7 @@ test.describe('Navigation', () => {
     test('should display breadcrumbs on nested pages', async ({ page }) => {
       // Navigate to a nested page that might have breadcrumbs
       await page.goto('/my-forms');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for breadcrumb navigation
       const breadcrumb = page.locator('[aria-label="breadcrumb"], nav[aria-label*="breadcrumb"], .breadcrumb');
@@ -61,7 +61,7 @@ test.describe('Navigation', () => {
   test.describe('Footer Navigation', () => {
     test('should have footer with links on landing page', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const footer = page.locator('footer');
       const hasFooter = await footer.isVisible().catch(() => false);
@@ -78,7 +78,7 @@ test.describe('Navigation', () => {
 
     test('footer links should be valid', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const footer = page.locator('footer');
       const hasFooter = await footer.isVisible().catch(() => false);
@@ -116,7 +116,7 @@ test.describe('Navigation', () => {
 
     test('404 page should have navigation back', async ({ page }) => {
       await page.goto('/this-page-definitely-does-not-exist-xyz123');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should have a way to get back - link, navigation, or just display 404 properly
       const homeLink = page.getByRole('link', { name: /home|back|return/i }).first();
@@ -134,7 +134,7 @@ test.describe('Navigation', () => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for hamburger menu or mobile nav toggle
       const mobileMenu = page.locator('[aria-label*="menu"], button[aria-expanded], .hamburger, [data-testid="mobile-menu"]');
@@ -153,7 +153,7 @@ test.describe('Navigation', () => {
     test('mobile menu should toggle', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const menuButton = page.locator('[aria-label*="menu"], button[aria-expanded]').first();
       const hasMenuButton = await menuButton.isVisible().catch(() => false);
@@ -175,7 +175,7 @@ test.describe('Navigation', () => {
   test.describe('Scroll Behavior', () => {
     test('should handle anchor links correctly', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find anchor links
       const anchorLinks = page.locator('a[href^="#"]');
@@ -207,7 +207,7 @@ test.describe('Navigation', () => {
 
       // Navigate to new page
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should be at top
       const scrollY = await page.evaluate(() => window.scrollY);
@@ -219,15 +219,15 @@ test.describe('Navigation', () => {
     test('should handle browser back button', async ({ page }) => {
       // Use static pages that don't redirect authenticated users
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate to another page
       await page.goto('/privacy');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Go back
       await page.goBack();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should be back at contact page
       expect(page.url()).toContain('/contact');
@@ -235,16 +235,16 @@ test.describe('Navigation', () => {
 
     test('should handle browser forward button', async ({ page }) => {
       await page.goto('/contact');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await page.goto('/privacy');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await page.goBack();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await page.goForward();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should be at privacy page
       expect(page.url()).toContain('/privacy');
