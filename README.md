@@ -15,7 +15,7 @@ Visit [https://netpad.io](https://netpad.io) to get started.
 ### 🔷 Forms
 - **Visual Form Builder** - Drag-and-drop WYSIWYG editor with 30+ field types
 - **Multi-Page Wizards** - Step-based forms with progress indicators
-- **Template Gallery** - 25+ pre-built templates across 10 categories (business, events, feedback, healthcare, etc.)
+- **Template Gallery** - 100+ pre-built templates across 15 categories (business, healthcare, education, HR, finance, legal, and more)
 - **Search Forms** - Query MongoDB collections with configurable operators (equals, contains, between, in, regex, etc.)
 - **Conditional Logic** - Show/hide fields based on other field values
 - **Computed Fields** - Formula-based calculations with expression engine
@@ -141,7 +141,7 @@ npm install @netpad/forms
 ```
 
 **Features:**
-- 28+ field types
+- 30+ field types
 - Multi-page wizard support
 - Conditional logic engine
 - TypeScript support
@@ -190,7 +190,7 @@ npx @netpad/cli
 
 ## API & Integration
 
-NetPad provides **165+ API endpoints** for comprehensive programmatic access:
+NetPad provides **360+ API endpoints** for comprehensive programmatic access:
 
 - **Forms API** - Form CRUD, submissions, analytics (40+ endpoints)
 - **Workflows API** - Workflow management, execution (15+ endpoints)
@@ -204,7 +204,7 @@ See [API Documentation](docs/API.md) for complete reference.
 
 ## Documentation
 
-- [Platform Capabilities](docs/internal/NETPAD_PLATFORM_CAPABILITIES_2026.md) - Complete feature guide and capabilities overview
+- [Documentation Guide](DOCUMENTATION_GUIDE.md) - Complete feature guide and capabilities overview
 - [Deployment Guide](docs/DEPLOY.md) - Deploy your own instance
 - [Architecture](docs/ARCHITECTURE-PRODUCTION.md) - Technical architecture overview
 - [API Documentation](docs/API.md) - REST API reference
