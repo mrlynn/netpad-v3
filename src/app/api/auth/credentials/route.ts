@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           oauthConnections: [],
           passkeys: [],
           trustedDevices: [],
-          waitlistStatus: 'pending', // Test users also start as pending
+          waitlistStatus: 'approved', // Test users are auto-approved to bypass waitlist
           createdAt: new Date(),
           updatedAt: new Date(),
         };
