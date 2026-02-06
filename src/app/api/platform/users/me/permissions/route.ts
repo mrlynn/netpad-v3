@@ -4,6 +4,8 @@
  * GET /api/platform/users/me/permissions - Get effective permissions for current user
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
