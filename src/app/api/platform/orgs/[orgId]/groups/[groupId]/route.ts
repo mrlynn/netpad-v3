@@ -6,6 +6,8 @@
  * DELETE /api/platform/orgs/[orgId]/groups/[groupId] - Delete group
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
