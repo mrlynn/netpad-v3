@@ -5,6 +5,8 @@
  * Creates the vector search index if it doesn't exist
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { ensureVectorSearchIndex, getVectorIndexStatus } from '@/lib/rag/indexManagement';

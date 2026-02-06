@@ -5,6 +5,8 @@
  * Returns effective permissions for a member, including sources.
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasPermission, getEffectivePermissions } from '@/lib/platform/rbac';
