@@ -4,6 +4,8 @@
  * GET /api/admin/assignments - List all role assignments across all organizations
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';

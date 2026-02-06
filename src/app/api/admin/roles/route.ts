@@ -6,6 +6,8 @@
  * Platform admins can view and manage roles across the entire platform.
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getPlatformDb } from '@/lib/platform/db';
