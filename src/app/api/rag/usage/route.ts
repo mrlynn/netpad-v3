@@ -5,6 +5,8 @@
  * Retrieves usage statistics and limits for an organization's RAG features
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAIRequest } from '@/lib/ai/aiRequestGuard';
 import { getOrganizationRAGConfig } from '@/lib/rag/config';
