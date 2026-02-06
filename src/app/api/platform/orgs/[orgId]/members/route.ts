@@ -4,6 +4,8 @@
  * GET /api/platform/orgs/[orgId]/members - List all members
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
