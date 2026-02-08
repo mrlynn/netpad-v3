@@ -6,6 +6,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "build": "echo 'Vercel Serverless Functions auto-compile TypeScript'",
     "dev": "vercel dev",
     "typecheck": "tsc --noEmit",
     "deploy": "vercel --prod"
