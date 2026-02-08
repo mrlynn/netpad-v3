@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@netpad/mcp-server": "^2.4.0",
+    "@netpad/mcp-server": "^3.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
