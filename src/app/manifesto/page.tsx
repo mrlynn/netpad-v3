@@ -337,7 +337,7 @@ export default function ManifestoPage() {
                 Language We Avoid
               </Typography>
               <Typography variant="body2" sx={{ color: alpha('#fff', 0.65), fontStyle: 'italic' }}>
-                "Magic", "Just works", over-promising language, and anything that obscures how things actually function.
+                &ldquo;Magic&rdquo;, &ldquo;Just works&rdquo;, over-promising language, and anything that obscures how things actually function.
               </Typography>
             </Box>
           </Paper>
