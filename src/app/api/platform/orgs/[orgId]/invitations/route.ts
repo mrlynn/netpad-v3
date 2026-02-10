@@ -11,8 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
 import { getPlatformDb } from '@/lib/platform/db';
-import { OrgInvitation, OrgRole, PlatformUser } from '@/types/platform';
+import { OrgInvitation, OrgRole, PlatformUser, Organization } from '@/types/platform';
 import { hasPermission } from '@/lib/platform/rbac';
+import { sendOrganizationInviteEmail } from '@/lib/auth/email';
 import { randomBytes } from 'crypto';
 
 interface RouteParams {
@@ -138,13 +139,33 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     await db.collection<OrgInvitation>('invitations').insertOne(invitation);
 
-    // TODO: Send invitation email
-    // await sendInvitationEmail(invitation, org, inviter);
+    // Get organization and inviter info for the email
+    const [organization, inviter] = await Promise.all([
+      db.collection<Organization>('organizations').findOne({ organizationId: orgId }),
+      db.collection<PlatformUser>('users').findOne({ userId: session.userId }),
+    ]);
+
+    // Send invitation email
+    const emailSent = await sendOrganizationInviteEmail({
+      to: email,
+      inviterName: inviter?.displayName || inviter?.email || 'A team member',
+      organizationName: organization?.name || 'your organization',
+      role: invitation.role,
+      token: invitation.token,
+      expiresInDays: 7,
+    });
+
+    if (!emailSent) {
+      console.warn(`[Platform Invites API] Failed to send email to ${email}, but invitation was created`);
+    }
 
     // Return invitation without token
-    const { token, ...safeInvitation } = invitation;
+    const { token: _, ...safeInvitation } = invitation;
 
-    return NextResponse.json({ invitation: safeInvitation }, { status: 201 });
+    return NextResponse.json({ 
+      invitation: safeInvitation,
+      emailSent,
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating invitation:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

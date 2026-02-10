@@ -12,7 +12,9 @@ import {
   listPendingInvitations,
   getOrganization,
 } from '@/lib/platform/organizations';
+import { findUserById } from '@/lib/platform/users';
 import { assertOrgPermission } from '@/lib/platform/permissions';
+import { sendOrganizationInviteEmail } from '@/lib/auth/email';
 import { OrgRole } from '@/types/platform';
 
 export const dynamic = 'force-dynamic';
@@ -142,11 +144,25 @@ export async function POST(
       session.userId
     );
 
-    // TODO: Send invitation email
-    // In a production app, you'd send an email here with a link like:
-    // `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invitation.token}`
+    // Get inviter's info for the email
+    const inviter = await findUserById(session.userId);
+    const inviterName = inviter?.displayName || inviter?.email || 'A team member';
+
+    // Send invitation email
+    const emailSent = await sendOrganizationInviteEmail({
+      to: email,
+      inviterName,
+      organizationName: organization.name,
+      role: invitation.role,
+      token: invitation.token,
+      expiresInDays: 7,
+    });
+
+    if (!emailSent) {
+      console.warn(`[Invites API] Failed to send email to ${email}, but invitation was created`);
+    }
+
     console.log(`[Invites API] Invitation created for ${email} to join ${organization.name}`);
-    console.log(`[Invites API] Invite token: ${invitation.token}`);
 
     return NextResponse.json({
       success: true,
@@ -157,7 +173,9 @@ export async function POST(
         status: invitation.status,
         expiresAt: invitation.expiresAt,
       },
-      message: `Invitation sent to ${email}`,
+      message: emailSent 
+        ? `Invitation sent to ${email}` 
+        : `Invitation created for ${email} (email delivery pending)`,
     });
   } catch (error) {
     console.error('[Invites API] Create error:', error);
