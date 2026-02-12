@@ -345,7 +345,7 @@ const builtInFunctions: Record<string, (...args: any[]) => any> = {
     const d = date instanceof Date ? date : new Date(date);
     return isNaN(d.getTime()) ? 0 : d.getDate();
   },
-  dateAdd: (date: any, amount: number, unit: string) => {
+  dateadd: (date: any, amount: number, unit: string) => {
     const d = date instanceof Date ? new Date(date) : new Date(date);
     if (isNaN(d.getTime())) return null;
     switch (unit.toLowerCase()) {
@@ -361,7 +361,7 @@ const builtInFunctions: Record<string, (...args: any[]) => any> = {
     }
     return d.toISOString();
   },
-  dateDiff: (date1: any, date2: any, unit: string) => {
+  datediff: (date1: any, date2: any, unit: string) => {
     const d1 = date1 instanceof Date ? date1 : new Date(date1);
     const d2 = date2 instanceof Date ? date2 : new Date(date2);
     if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
@@ -394,8 +394,8 @@ const builtInFunctions: Record<string, (...args: any[]) => any> = {
     }
     return null;
   },
-  isNull: (val: any) => val === null || val === undefined,
-  isEmpty: (val: any) => {
+  isnull: (val: any) => val === null || val === undefined,
+  isempty: (val: any) => {
     if (val === null || val === undefined) return true;
     if (typeof val === 'string' && val.trim() === '') return true;
     if (Array.isArray(val) && val.length === 0) return true;
