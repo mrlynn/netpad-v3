@@ -12,6 +12,7 @@
     "build:packages": "npm run build --prefix packages/templates && npm run build --prefix packages/forms && npm run build --prefix packages/collaborate && npm run build --prefix packages/demo-node",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
