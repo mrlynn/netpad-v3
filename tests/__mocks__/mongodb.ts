@@ -57,6 +57,14 @@ class MockCollection<T = any> {
     return Promise.resolve(null);
   }
 
+  findOneAndUpdate(filter: any, update: any, options?: any): Promise<T | null> {
+    return Promise.resolve(null);
+  }
+
+  findOneAndDelete(filter: any, options?: any): Promise<T | null> {
+    return Promise.resolve(null);
+  }
+
   insertOne(doc: T): Promise<{ insertedId: string; acknowledged: boolean }> {
     return Promise.resolve({
       insertedId: 'mock-id-' + Date.now(),
