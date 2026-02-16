@@ -82,3 +82,9 @@ playwright/.auth/
 # Sentry Config File
 .env.sentry-build-plugin
 .env.vercel
+
+# Playwright artifacts
+data/
+trace/
+playwright-report-download/
+index.html
