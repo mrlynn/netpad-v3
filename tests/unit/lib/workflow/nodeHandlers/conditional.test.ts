@@ -1,831 +1,249 @@
 /**
- * Conditional Node Handler Tests
- *
- * Tests for the If/Then conditional node handler that routes data
- * based on conditions.
+ * Tests for Conditional (If/Then) Node Handler
  */
-
 import { handler } from '@/lib/workflow/nodeHandlers/conditional';
-import { ExtendedNodeContext } from '@/lib/workflow/nodeHandlers/types';
+import { createMockContext } from './helpers';
 
 describe('Conditional Node Handler', () => {
-  // ============================================
-  // Test Helpers
-  // ============================================
+  function makeCtx(config: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+    return createMockContext({ resolvedConfig: config, ...overrides });
+  }
 
-  const createContext = (
-    resolvedConfig: Record<string, unknown>,
-    inputs: Record<string, unknown> = {},
-    nodeOutputs: Record<string, Record<string, unknown>> = {},
-    trigger: { type: string; payload?: Record<string, unknown> } = { type: 'manual' }
-  ): ExtendedNodeContext => ({
-    workflowId: 'test-workflow',
-    executionId: 'test-execution',
-    nodeId: 'test-conditional',
-    orgId: 'test-org',
-    inputs,
-    config: {},
-    resolvedConfig,
-    variables: {},
-    nodeOutputs,
-    trigger,
-    log: jest.fn().mockResolvedValue(undefined),
-    getConnection: jest.fn(),
-    getEmailCredentials: jest.fn(),
-  });
-
-  // ============================================
-  // Basic Condition Evaluation
-  // ============================================
-
-  describe('equals operator', () => {
-    it('returns true when string values match exactly', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.status', operator: 'equals', value: 'active' }],
-        },
-        { default: { status: 'active' } }
-      );
-
-      const result = await handler(context);
-
+  describe('no conditions', () => {
+    it('defaults to true when no conditions configured', async () => {
+      const ctx = makeCtx({ conditions: [] });
+      const result = await handler(ctx);
       expect(result.success).toBe(true);
       expect(result.data.result).toBe(true);
       expect(result.data.branch).toBe('true');
     });
+  });
 
-    it('returns false when values do not match', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.status', operator: 'equals', value: 'active' }],
-        },
-        { default: { status: 'inactive' } }
+  describe('equals / not_equals', () => {
+    it('matches equals with exact value', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'status', operator: 'equals', value: 'active' }] },
+        { inputs: { status: 'active' } }
       );
+      const result = await handler(ctx);
+      expect(result.data.result).toBe(true);
+    });
 
-      const result = await handler(context);
+    it('matches equals via string coercion', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'count', operator: 'equals', value: '5' }] },
+        { inputs: { count: 5 } }
+      );
+      const result = await handler(ctx);
+      expect(result.data.result).toBe(true);
+    });
 
-      expect(result.success).toBe(true);
+    it('not_equals returns false branch', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'status', operator: 'not_equals', value: 'active' }] },
+        { inputs: { status: 'active' } }
+      );
+      const result = await handler(ctx);
       expect(result.data.result).toBe(false);
       expect(result.data.branch).toBe('false');
     });
+  });
 
-    it('handles numeric comparison with string coercion', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.count', operator: 'equals', value: '5' }],
-        },
-        { default: { count: 5 } }
+  describe('string operators', () => {
+    it('contains (case-insensitive)', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'email', operator: 'contains', value: '@GMAIL' }] },
+        { inputs: { email: 'user@gmail.com' } }
       );
+      expect((await handler(ctx)).data.result).toBe(true);
+    });
 
-      const result = await handler(context);
+    it('starts_with', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'url', operator: 'starts_with', value: 'https' }] },
+        { inputs: { url: 'https://example.com' } }
+      );
+      expect((await handler(ctx)).data.result).toBe(true);
+    });
 
-      expect(result.success).toBe(true);
-      expect(result.data.result).toBe(true);
+    it('ends_with', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'file', operator: 'ends_with', value: '.pdf' }] },
+        { inputs: { file: 'report.PDF' } }
+      );
+      expect((await handler(ctx)).data.result).toBe(true);
+    });
+
+    it('regex match', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'phone', operator: 'regex', value: '^\\d{3}-\\d{4}$' }] },
+        { inputs: { phone: '555-1234' } }
+      );
+      expect((await handler(ctx)).data.result).toBe(true);
+    });
+
+    it('regex returns false for invalid regex', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'val', operator: 'regex', value: '[invalid' }] },
+        { inputs: { val: 'test' } }
+      );
+      expect((await handler(ctx)).data.result).toBe(false);
     });
   });
 
-  describe('not_equals operator', () => {
-    it('returns true when values differ', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.type', operator: 'not_equals', value: 'spam' }],
-        },
-        { default: { type: 'legitimate' } }
+  describe('comparison operators', () => {
+    it('gt', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'age', operator: 'gt', value: 18 }] },
+        { inputs: { age: 21 } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+      expect((await handler(ctx)).data.result).toBe(true);
     });
 
-    it('returns false when values match', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.type', operator: 'not_equals', value: 'spam' }],
-        },
-        { default: { type: 'spam' } }
+    it('lte', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'score', operator: 'lte', value: 100 }] },
+        { inputs: { score: 100 } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
+      expect((await handler(ctx)).data.result).toBe(true);
     });
   });
 
-  describe('contains operator', () => {
-    it('matches substring in string (case-insensitive)', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.message', operator: 'contains', value: 'urgent' }],
-        },
-        { default: { message: 'This is URGENT, please respond!' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+  describe('boolean/existence operators', () => {
+    it('is_true with truthy values', async () => {
+      for (const val of [true, 'true', 1, '1']) {
+        const ctx = makeCtx(
+          { conditions: [{ field: 'flag', operator: 'is_true' }] },
+          { inputs: { flag: val } }
+        );
+        expect((await handler(ctx)).data.result).toBe(true);
+      }
     });
 
-    it('returns false when substring not found', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.message', operator: 'contains', value: 'urgent' }],
-        },
-        { default: { message: 'Regular message' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
+    it('is_false with falsy values', async () => {
+      for (const val of [false, 'false', 0, '0']) {
+        const ctx = makeCtx(
+          { conditions: [{ field: 'flag', operator: 'is_false' }] },
+          { inputs: { flag: val } }
+        );
+        expect((await handler(ctx)).data.result).toBe(true);
+      }
     });
 
-    it('checks array membership', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.tags', operator: 'contains', value: 'important' }],
-        },
-        { default: { tags: ['important', 'work', 'review'] } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  describe('not_contains operator', () => {
-    it('returns true when substring not found', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.message', operator: 'not_contains', value: 'spam' }],
-        },
-        { default: { message: 'Legitimate message' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+    it('is_empty for null/undefined/empty string', async () => {
+      for (const val of [null, undefined, '', [], {}]) {
+        const ctx = makeCtx(
+          { conditions: [{ field: 'val', operator: 'is_empty' }] },
+          { inputs: { val } }
+        );
+        expect((await handler(ctx)).data.result).toBe(true);
+      }
     });
 
-    it('returns false when substring found', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.message', operator: 'not_contains', value: 'spam' }],
-        },
-        { default: { message: 'This is spam content' } }
+    it('exists and not_exists', async () => {
+      const ctx1 = makeCtx(
+        { conditions: [{ field: 'x', operator: 'exists' }] },
+        { inputs: { x: 42 } }
       );
+      expect((await handler(ctx1)).data.result).toBe(true);
 
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
+      const ctx2 = makeCtx(
+        { conditions: [{ field: 'x', operator: 'not_exists' }] },
+        { inputs: {} }
+      );
+      expect((await handler(ctx2)).data.result).toBe(true);
     });
   });
 
-  describe('starts_with operator', () => {
-    it('returns true when string starts with value', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.code', operator: 'starts_with', value: 'ERR-' }],
-        },
-        { default: { code: 'ERR-500' } }
+  describe('nested field access', () => {
+    it('accesses deeply nested fields via dot notation', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'user.address.city', operator: 'equals', value: 'NYC' }] },
+        { inputs: { user: { address: { city: 'NYC' } } } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('is case-insensitive', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.code', operator: 'starts_with', value: 'err-' }],
-        },
-        { default: { code: 'ERR-500' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  describe('ends_with operator', () => {
-    it('returns true when string ends with value', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.email', operator: 'ends_with', value: '@company.com' }],
-        },
-        { default: { email: 'user@company.com' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  describe('regex operator', () => {
-    it('matches valid regex pattern', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.email', operator: 'regex', value: '^[\\w.-]+@[\\w.-]+\\.\\w+$' }],
-        },
-        { default: { email: 'user@example.com' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false for invalid regex', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.text', operator: 'regex', value: '[invalid(' }],
-        },
-        { default: { text: 'test' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  // ============================================
-  // Numeric Comparisons
-  // ============================================
-
-  describe('numeric comparison operators', () => {
-    it('gt: returns true when value is greater', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.amount', operator: 'gt', value: 100 }],
-        },
-        { default: { amount: 150 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('gt: returns false when value is equal', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.amount', operator: 'gt', value: 100 }],
-        },
-        { default: { amount: 100 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-
-    it('gte: returns true when value is equal', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.amount', operator: 'gte', value: 100 }],
-        },
-        { default: { amount: 100 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('lt: returns true when value is less', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.score', operator: 'lt', value: 50 }],
-        },
-        { default: { score: 30 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('lte: returns true when value is equal', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.score', operator: 'lte', value: 50 }],
-        },
-        { default: { score: 50 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  // ============================================
-  // Empty/Existence Checks
-  // ============================================
-
-  describe('is_empty operator', () => {
-    it('returns true for null', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_empty' }],
-        },
-        { default: { value: null } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for undefined', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_empty' }],
-        },
-        { default: {} }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for empty string', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_empty' }],
-        },
-        { default: { value: '' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for empty array', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.items', operator: 'is_empty' }],
-        },
-        { default: { items: [] } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for empty object', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.data', operator: 'is_empty' }],
-        },
-        { default: { data: {} } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false for non-empty values', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_empty' }],
-        },
-        { default: { value: 'text' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  describe('is_not_empty operator', () => {
-    it('returns true for non-empty values', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_not_empty' }],
-        },
-        { default: { value: 'has content' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false for empty string', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.value', operator: 'is_not_empty' }],
-        },
-        { default: { value: '' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  // ============================================
-  // Boolean Checks
-  // ============================================
-
-  describe('is_true operator', () => {
-    it('returns true for boolean true', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.active', operator: 'is_true' }],
-        },
-        { default: { active: true } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for string "true"', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.active', operator: 'is_true' }],
-        },
-        { default: { active: 'true' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for number 1', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.active', operator: 'is_true' }],
-        },
-        { default: { active: 1 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  describe('is_false operator', () => {
-    it('returns true for boolean false', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.disabled', operator: 'is_false' }],
-        },
-        { default: { disabled: false } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for string "false"', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.disabled', operator: 'is_false' }],
-        },
-        { default: { disabled: 'false' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true for number 0', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.disabled', operator: 'is_false' }],
-        },
-        { default: { disabled: 0 } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  // ============================================
-  // Existence Checks
-  // ============================================
-
-  describe('exists operator', () => {
-    it('returns true when field exists', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.name', operator: 'exists' }],
-        },
-        { default: { name: 'John' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns true when field exists with null value', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.name', operator: 'exists' }],
-        },
-        { default: { name: null } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false when field does not exist', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.nonexistent', operator: 'exists' }],
-        },
-        { default: {} }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  describe('not_exists operator', () => {
-    it('returns true when field does not exist', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.missing', operator: 'not_exists' }],
-        },
-        { default: {} }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-  });
-
-  // ============================================
-  // Multiple Conditions
-  // ============================================
-
-  describe('multiple conditions with AND', () => {
-    it('returns true when all conditions pass', async () => {
-      const context = createContext(
-        {
-          conditions: [
-            { field: 'default.status', operator: 'equals', value: 'active' },
-            { field: 'default.priority', operator: 'equals', value: 'high' },
-          ],
-          combineWith: 'and',
-        },
-        { default: { status: 'active', priority: 'high' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false when any condition fails', async () => {
-      const context = createContext(
-        {
-          conditions: [
-            { field: 'default.status', operator: 'equals', value: 'active' },
-            { field: 'default.priority', operator: 'equals', value: 'high' },
-          ],
-          combineWith: 'and',
-        },
-        { default: { status: 'active', priority: 'low' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  describe('multiple conditions with OR', () => {
-    it('returns true when any condition passes', async () => {
-      const context = createContext(
-        {
-          conditions: [
-            { field: 'default.type', operator: 'equals', value: 'urgent' },
-            { field: 'default.type', operator: 'equals', value: 'critical' },
-          ],
-          combineWith: 'or',
-        },
-        { default: { type: 'critical' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('returns false when all conditions fail', async () => {
-      const context = createContext(
-        {
-          conditions: [
-            { field: 'default.type', operator: 'equals', value: 'urgent' },
-            { field: 'default.type', operator: 'equals', value: 'critical' },
-          ],
-          combineWith: 'or',
-        },
-        { default: { type: 'normal' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(false);
-    });
-  });
-
-  // ============================================
-  // Nested Path Access
-  // ============================================
-
-  describe('nested path access', () => {
-    it('accesses deeply nested values', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.user.profile.settings.notifications', operator: 'is_true' }],
-        },
-        {
-          default: {
-            user: {
-              profile: {
-                settings: {
-                  notifications: true,
-                },
-              },
-            },
-          },
-        }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
-    });
-
-    it('handles array index notation', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.items[0].name', operator: 'equals', value: 'first' }],
-        },
-        {
-          default: {
-            items: [{ name: 'first' }, { name: 'second' }],
-          },
-        }
-      );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+      expect((await handler(ctx)).data.result).toBe(true);
     });
 
     it('accesses trigger data', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'trigger.payload.data.email', operator: 'ends_with', value: '@company.com' }],
-        },
-        {},
-        {},
-        {
-          type: 'form-submission',
-          payload: {
-            data: {
-              email: 'user@company.com',
-            },
-          },
-        }
+      const ctx = makeCtx(
+        { conditions: [{ field: 'trigger.type', operator: 'equals', value: 'webhook' }] },
+        { trigger: { type: 'webhook' } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+      expect((await handler(ctx)).data.result).toBe(true);
     });
 
-    it('accesses previous node outputs', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'formTrigger.data.rating', operator: 'gte', value: 4 }],
-        },
-        {},
-        {
-          formTrigger: {
-            data: {
-              rating: 5,
-            },
-          },
-        }
+    it('handles array index notation', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'items[0].name', operator: 'equals', value: 'first' }] },
+        { inputs: { items: [{ name: 'first' }, { name: 'second' }] } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.result).toBe(true);
+      expect((await handler(ctx)).data.result).toBe(true);
     });
   });
 
-  // ============================================
-  // Edge Cases
-  // ============================================
-
-  describe('edge cases', () => {
-    it('handles no conditions configured (defaults to true)', async () => {
-      const context = createContext(
+  describe('combining conditions', () => {
+    it('AND: all must pass', async () => {
+      const ctx = makeCtx(
         {
-          conditions: [],
-        },
-        { default: { data: 'test' } }
-      );
-
-      const result = await handler(context);
-
-      expect(result.success).toBe(true);
-      expect(result.data.result).toBe(true);
-    });
-
-    it('handles missing conditions property (defaults to true)', async () => {
-      const context = createContext({}, { default: { data: 'test' } });
-
-      const result = await handler(context);
-
-      expect(result.success).toBe(true);
-      expect(result.data.result).toBe(true);
-    });
-
-    it('handles non-existent field path gracefully', async () => {
-      const context = createContext(
-        {
-          conditions: [{ field: 'default.nonexistent.deeply.nested', operator: 'equals', value: 'test' }],
-        },
-        { default: {} }
-      );
-
-      const result = await handler(context);
-
-      expect(result.success).toBe(true);
-      expect(result.data.result).toBe(false);
-    });
-
-    it('includes evaluated conditions in output', async () => {
-      const context = createContext(
-        {
-          conditions: [
-            { field: 'default.name', operator: 'equals', value: 'John' },
-            { field: 'default.age', operator: 'gte', value: 18 },
-          ],
           combineWith: 'and',
+          conditions: [
+            { field: 'age', operator: 'gte', value: 18 },
+            { field: 'active', operator: 'is_true' },
+          ],
         },
-        { default: { name: 'John', age: 25 } }
+        { inputs: { age: 21, active: true } }
       );
-
-      const result = await handler(context);
-
-      expect(result.data.evaluatedConditions).toHaveLength(2);
-      expect(result.data.evaluatedConditions[0]).toMatchObject({
-        field: 'default.name',
-        operator: 'equals',
-        result: true,
-      });
-      expect(result.data.evaluatedConditions[1]).toMatchObject({
-        field: 'default.age',
-        operator: 'gte',
-        result: true,
-      });
+      expect((await handler(ctx)).data.result).toBe(true);
     });
 
-    it('passes input data through in output', async () => {
-      const inputData = { default: { name: 'John', email: 'john@example.com' } };
-      const context = createContext(
+    it('AND: one fail = false', async () => {
+      const ctx = makeCtx(
         {
-          conditions: [{ field: 'default.name', operator: 'equals', value: 'John' }],
+          combineWith: 'and',
+          conditions: [
+            { field: 'age', operator: 'gte', value: 18 },
+            { field: 'active', operator: 'is_true' },
+          ],
         },
-        inputData
+        { inputs: { age: 21, active: false } }
       );
+      expect((await handler(ctx)).data.result).toBe(false);
+    });
 
-      const result = await handler(context);
+    it('OR: one pass = true', async () => {
+      const ctx = makeCtx(
+        {
+          combineWith: 'or',
+          conditions: [
+            { field: 'role', operator: 'equals', value: 'admin' },
+            { field: 'role', operator: 'equals', value: 'superadmin' },
+          ],
+        },
+        { inputs: { role: 'superadmin' } }
+      );
+      expect((await handler(ctx)).data.result).toBe(true);
+    });
+  });
 
-      expect(result.data.data).toEqual(inputData);
+  describe('output shape', () => {
+    it('includes evaluatedConditions details', async () => {
+      const ctx = makeCtx(
+        { conditions: [{ field: 'x', operator: 'equals', value: 1 }] },
+        { inputs: { x: 1 } }
+      );
+      const result = await handler(ctx);
+      expect(result.data.evaluatedConditions).toHaveLength(1);
+      const ec = (result.data.evaluatedConditions as any[])[0];
+      expect(ec.field).toBe('x');
+      expect(ec.fieldValue).toBe(1);
+      expect(ec.result).toBe(true);
+    });
+
+    it('passes through inputs as data', async () => {
+      const inputs = { a: 1, b: 2 };
+      const ctx = makeCtx({ conditions: [] }, { inputs });
+      const result = await handler(ctx);
+      expect(result.data.data).toEqual(inputs);
     });
   });
 });

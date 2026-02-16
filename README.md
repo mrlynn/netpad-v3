@@ -15,7 +15,7 @@ Visit [https://netpad.io](https://netpad.io) to get started.
 ### 🔷 Forms
 - **Visual Form Builder** - Drag-and-drop WYSIWYG editor with 30+ field types
 - **Multi-Page Wizards** - Step-based forms with progress indicators
-- **Template Gallery** - 25+ pre-built templates across 10 categories (business, events, feedback, healthcare, etc.)
+- **Template Gallery** - 100+ pre-built templates across 15 categories (business, customer service, education, events, finance, government, healthcare, HR, legal, marketing, nonprofit, real estate, sports, technology, travel)
 - **Search Forms** - Query MongoDB collections with configurable operators (equals, contains, between, in, regex, etc.)
 - **Conditional Logic** - Show/hide fields based on other field values
 - **Computed Fields** - Formula-based calculations with expression engine
