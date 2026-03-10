@@ -6,6 +6,7 @@ import { FormSubmission, BotProtectionConfig } from '@/types/form';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'mongodb';
 import { executeWebhookAsync } from '@/lib/hooks/executeWebhook';
+import { executeMoltboardAsync } from '@/lib/hooks/executeMoltboard';
 import { triggerFormWorkflowsAsync } from '@/lib/workflow/triggerWorkflow';
 import { getOrgFormsCollection, getPlatformDb } from '@/lib/platform/db';
 import { sendCollaboratorNotification } from '@/lib/auth/email';
@@ -469,6 +470,17 @@ export async function POST(
         });
       }
 
+      // Execute Moltboard integration if configured
+      if (form.hooks?.onSuccess?.moltboard?.enabled) {
+        executeMoltboardAsync(form.hooks.onSuccess.moltboard, {
+          formId: form.id!,
+          formName: form.name,
+          responseId: result.submissionId!,
+          data: cleanData,
+          organizationId: form.organizationId,
+        });
+      }
+
       // Trigger any workflows configured for this form
       if (form.organizationId) {
         console.log(`[Form Submit] Triggering workflows for form ${form.id} in org ${form.organizationId}`);
@@ -596,6 +608,17 @@ export async function POST(
         formName: form.name,
         responseId: submission.id,
         data: cleanData,
+      });
+    }
+
+    // Execute Moltboard integration if configured
+    if (form.hooks?.onSuccess?.moltboard?.enabled) {
+      executeMoltboardAsync(form.hooks.onSuccess.moltboard, {
+        formId: form.id!,
+        formName: form.name,
+        responseId: submission.id,
+        data: cleanData,
+        organizationId: form.organizationId,
       });
     }
 
