@@ -4,6 +4,11 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Resolve workspace packages to source for testing without build
+    '^@netpad/forms$': '<rootDir>/packages/forms/src/index.ts',
+    '^@netpad/forms/(.*)$': '<rootDir>/packages/forms/src/$1',
+    '^@netpad/templates$': '<rootDir>/packages/templates/src/index.ts',
+    '^@netpad/templates/(.*)$': '<rootDir>/packages/templates/src/$1',
     // Mock mongodb module to avoid ESM issues
     '^mongodb$': '<rootDir>/tests/__mocks__/mongodb.ts',
   },

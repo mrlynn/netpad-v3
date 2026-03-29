@@ -6,13 +6,14 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "build": "echo 'Vercel Serverless Functions auto-compile TypeScript'",
     "dev": "vercel dev",
     "typecheck": "tsc --noEmit",
     "deploy": "vercel --prod"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@netpad/mcp-server": "^2.4.0",
+    "@netpad/mcp-server": "^3.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

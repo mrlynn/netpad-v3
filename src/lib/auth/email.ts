@@ -608,3 +608,159 @@ export async function sendPasskeyRegisteredEmail(to: string, deviceName: string)
     return false;
   }
 }
+
+/**
+ * Parameters for organization invitation email
+ */
+export interface SendOrganizationInviteEmailParams {
+  to: string;
+  inviterName: string;
+  organizationName: string;
+  role: string;
+  token: string;
+  expiresInDays?: number;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  member: 'Member',
+  viewer: 'Viewer',
+};
+
+/**
+ * Send invitation email when someone is invited to join an organization
+ */
+export async function sendOrganizationInviteEmail({
+  to,
+  inviterName,
+  organizationName,
+  role,
+  token,
+  expiresInDays = 7,
+}: SendOrganizationInviteEmailParams): Promise<boolean> {
+  const inviteUrl = `${APP_URL}/invite/${token}`;
+  const roleLabel = ROLE_LABELS[role] || role;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're invited to join ${organizationName}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #001E2B;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #001E2B; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #0a2633; border-radius: 12px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid rgba(0, 237, 100, 0.2);">
+              <div style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 16px;">
+                <span style="color: #001E2B; font-size: 20px; font-weight: 700;">NetPad</span>
+              </div>
+              <h1 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">You're invited!</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="color: rgba(255, 255, 255, 0.85); font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                <strong style="color: #00ED64;">${inviterName}</strong> has invited you to join <strong style="color: #ffffff;">${organizationName}</strong> on NetPad.
+              </p>
+
+              <!-- Role badge -->
+              <div style="background: rgba(0, 237, 100, 0.1); border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+                <span style="color: rgba(255, 255, 255, 0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Your Role</span><br>
+                <span style="color: #00ED64; font-size: 18px; font-weight: 600;">${roleLabel}</span>
+              </div>
+
+              <!-- Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px;">
+                    <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #00ED64 0%, #00CC55 100%); color: #001E2B; text-decoration: none; font-size: 16px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">
+                      Accept Invitation
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: rgba(255, 255, 255, 0.5); font-size: 14px; line-height: 1.6; margin: 0 0 16px;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="color: #00ED64; font-size: 13px; line-height: 1.6; margin: 0 0 24px; word-break: break-all; background: rgba(0, 237, 100, 0.1); padding: 12px; border-radius: 6px;">
+                ${inviteUrl}
+              </p>
+
+              <!-- Expiration note -->
+              <div style="background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 8px; padding: 16px; margin-top: 8px;">
+                <p style="color: #ff9800; font-size: 13px; line-height: 1.5; margin: 0;">
+                  <strong>Note:</strong> This invitation expires in <strong>${expiresInDays} days</strong>. If you don't recognize ${inviterName} or ${organizationName}, you can safely ignore this email.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background: rgba(0, 0, 0, 0.2); text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; line-height: 1.5; margin: 0;">
+                NetPad - Build forms and workflows connected to MongoDB<br>
+                This is an automated message. Please do not reply.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  const text = `
+You're Invited to ${organizationName}!
+
+${inviterName} has invited you to join ${organizationName} on NetPad.
+
+Your Role: ${roleLabel}
+
+Accept the invitation by clicking this link:
+${inviteUrl}
+
+This invitation expires in ${expiresInDays} days.
+
+If you don't recognize ${inviterName} or ${organizationName}, you can safely ignore this email.
+
+--
+NetPad
+`;
+
+  try {
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject: `You're invited to join ${organizationName} on NetPad`,
+      text,
+      html,
+    });
+
+    if (process.env.NODE_ENV !== 'production' && !EMAIL_CONFIG.auth.user) {
+      console.log('\n📧 Organization Invite Email (Dev Mode)');
+      console.log('To:', to);
+      console.log('Organization:', organizationName);
+      console.log('Role:', roleLabel);
+      console.log('Invite URL:', inviteUrl);
+      console.log('Expires in:', expiresInDays, 'days\n');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to send organization invite email:', error);
+    return false;
+  }
+}
